@@ -123,11 +123,6 @@ public:
     ServiceProviderTestData runSubTypeTest( const ServiceProviderTestData &oldTestData,
                                             const QSharedPointer< KConfig > cache ) const;
 
-    static QString typeName( ServiceProviderType type );
-
-    /** @brief Get a list of short localized strings describing the supported features. */
-    static QStringList localizeFeatures( const QStringList &features );
-
     /** @brief Get the ID of this service provider. */
     QString id() const;
 

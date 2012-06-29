@@ -128,6 +128,8 @@ bool ServiceProviderDataWriter::write( QIODevice *device, const ServiceProvider 
     if( !data->charsetForUrlEncoding().isEmpty() ) {
         writeTextElement( "charsetForUrlEncoding", data->charsetForUrlEncoding() );
     }
+
+    // Write type specific data
     if( !data->scriptFileName().isEmpty() ) {
         // Write script file name without path (scripts are expected to be in the same path as the XML)
         writeStartElement( QLatin1String("script") );
@@ -137,6 +139,19 @@ bool ServiceProviderDataWriter::write( QIODevice *device, const ServiceProvider 
         writeCharacters( QFileInfo(data->scriptFileName()).fileName() );
         writeEndElement(); // script
     }
+    if ( !data->feedUrl().isEmpty() ) {
+        writeTextElement( "feedUrl", data->feedUrl() );
+    }
+    if ( !data->realtimeTripUpdateUrl().isEmpty() ) {
+        writeTextElement( "realtimeTripUpdateUrl", data->realtimeTripUpdateUrl() );
+    }
+    if ( !data->realtimeAlertsUrl().isEmpty() ) {
+        writeTextElement( "realtimeAlertsUrl", data->realtimeAlertsUrl() );
+    }
+    if ( !data->timeZone().isEmpty() ) {
+        writeTextElement( "timeZone", data->timeZone() );
+    }
+
     if( !data->cities().isEmpty() ) {
         writeStartElement( "cities" );
         foreach( const QString & city, data->cities() ) {

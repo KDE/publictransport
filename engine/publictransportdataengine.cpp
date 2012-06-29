@@ -132,7 +132,7 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
     QVariantHash dataServiceProvider;
     dataServiceProvider.insert( "id", data.id() );
     dataServiceProvider.insert( "fileName", data.fileName() );
-    dataServiceProvider.insert( "type", ServiceProvider::typeName(data.type()) );
+    dataServiceProvider.insert( "type", ServiceProviderGlobal::typeName(data.type()) );
     if ( data.type() == GtfsProvider ) {
         dataServiceProvider.insert( "feedUrl", data.feedUrl() );
 
@@ -180,7 +180,7 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
             features.removeOne( "(none)" );
             dataServiceProvider.insert( "features", features );
             dataServiceProvider.insert( "featuresLocalized",
-                                        ServiceProvider::localizeFeatures(features) );
+                                        ServiceProviderGlobal::localizeFeatures(features) );
         } else {
             kDebug() << "No cached feature data was found for provider" << data.id();
             // No cached feature data was found for the provider,

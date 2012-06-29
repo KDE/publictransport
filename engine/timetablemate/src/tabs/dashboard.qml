@@ -275,7 +275,9 @@ Flickable { id: flickable
             // When wrapped, align text in labels left, otherwise right
             onWrapChanged: {
                 var labels = [ lblDescription, lblVersion, lblChangelogEntry, lblUrl, lblAuthor,
-                               lblFileName, lblScriptFileName, lblScriptExtensions, lblNotes ]
+                               lblFileName, lblNotes, lblType,
+                               lblScriptFileName, lblScriptExtensions,
+                               lblFeedUrl, lblTripUpdatesUrl, lblAlertsUrl, lblTimeZone ]
                 var alignment = wrap ? Text.AlignLeft : Text.AlignRight;
                 for ( var i = 0; i < labels.length; ++i ) {
                     labels[i].horizontalAlignment = alignment
@@ -285,19 +287,51 @@ Flickable { id: flickable
             // Compute the maximum implicit width of all labels, ie. the label columns implicit width
             function implicitLabelWidth() {
                 var labels = [ lblDescription, lblVersion, lblChangelogEntry, lblUrl, lblAuthor,
-                               lblFileName, lblScriptFileName, lblScriptExtensions, lblNotes ]
+                               lblFileName, lblNotes, lblType,
+                               lblScriptFileName, lblScriptExtensions,
+                               lblFeedUrl, lblTripUpdatesUrl, lblAlertsUrl, lblTimeZone ]
                 var implicitWidth = 0
                 for ( var i = 0; i < labels.length; ++i )
                     implicitWidth = Math.max( implicitWidth, labels[i].implicitWidth );
                 return implicitWidth
             }
 
+            // Strip the path from a file path to get the file name
+            function fileNameFromPath( filePath ) {
+                var pos = filePath.lastIndexOf('/');
+                return pos == -1 ? filePath : filePath.substring(pos + 1);
+            }
+
+            // Show / hide type specific settings (ScriptedProvider, GtfsProvider, ...)
+            Connections {
+                target: project
+                onDataChanged: {
+                    var isScriptProvider = project.data.typeString == "script";
+                    var isGtfsProvider = project.data.typeString == "gtfs";
+                    var isInvalidProvider = !isScriptProvider && !isGtfsProvider;
+
+                    lblScriptFileName.visible = isScriptProvider;
+                    scriptFileName.visible = isScriptProvider;
+                    lblScriptExtensions.visible = isScriptProvider;
+                    scriptExtensions.visible = isScriptProvider;
+
+                    lblFeedUrl.visible = isGtfsProvider;
+                    feedUrl.visible = isGtfsProvider;
+                    lblTripUpdatesUrl.visible = isGtfsProvider;
+                    tripUpdatesUrl.visible = isGtfsProvider;
+                    lblAlertsUrl.visible = isGtfsProvider;
+                    alertsUrl.visible = isGtfsProvider;
+                    lblTimeZone.visible = isGtfsProvider;
+                    timeZone.visible = isGtfsProvider;
+                }
+            }
+
             // Show the description for the project
             Text { id: lblDescription; text: i18nc("@label", "Description:");
                    width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
             Text { id: description;
-                text: info.description.length == 0
-                    ? "<a href='#'>Add description in project settings</a>" : info.description;
+                text: project.data.description.length == 0
+                    ? "<a href='#'>Add description in project settings</a>" : project.data.description;
                 width: parent.fieldWidth; wrapMode: Text.Wrap
                 onLinkActivated: project.showSettingsDialog()
             }
@@ -306,31 +340,31 @@ Flickable { id: flickable
             Text { id: lblUrl; text: i18nc("@label", "URL:");
                    width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
             Text { id: url;
-                text: info.url.length == 0 ? "<a href='#'>Add URL in project settings</a>"
-                    : "<a href='#'>" + info.url + "</a>";
+                text: project.data.url.length == 0 ? "<a href='#'>Add URL in project settings</a>"
+                    : "<a href='#'>" + project.data.url + "</a>";
                 width: parent.fieldWidth; elide: Text.ElideMiddle
-                onLinkActivated: info.url.length == 0
+                onLinkActivated: project.data.url.length == 0
                     ? project.showSettingsDialog() : project.showWebTab()
             }
 
             // The version of the project
             Text { id: lblVersion; text: i18nc("@label", "Version:");
                    width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
-            Text { id: version; text: info.version; width: parent.fieldWidth }
+            Text { id: version; text: project.data.version; width: parent.fieldWidth }
 
             // Information about the last changelog entry
             Text { id: lblChangelogEntry; text: i18nc("@label", "Last Changelog Entry:");
                    width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
             Text { id: changelogEntry;
                 width: parent.fieldWidth; wrapMode: Text.Wrap
-                text: info.lastChangelogVersion.length == 0 || info.lastChangelogDescription.length == 0
+                text: project.data.lastChangelogVersion.length == 0 || project.data.lastChangelogDescription.length == 0
                     ? ("<a href='#'>" + i18nc("@info", "Add changelog entries in project settings") + "</a>") :
-                    (info.lastChangelogAuthor.length == 0
-                     ? i18nc("@info", "Version %1, <message>%2</message>", info.lastChangelogVersion,
-                             cutString(info.lastChangelogDescription, 100))
+                    (project.data.lastChangelogAuthor.length == 0
+                     ? i18nc("@info", "Version %1, <message>%2</message>", project.data.lastChangelogVersion,
+                             cutString(project.data.lastChangelogDescription, 100))
                      : i18nc("@info", "Version %1, <message>%2</message> (by %3)",
-                             info.lastChangelogVersion, cutString(info.lastChangelogDescription, 100),
-                             info.lastChangelogAuthor))
+                             project.data.lastChangelogVersion, cutString(project.data.lastChangelogDescription, 100),
+                             project.data.lastChangelogAuthor))
                 onLinkActivated: project.showSettingsDialog()
                 function cutString( string, maxChars ) {
                     return string.length > maxChars ? string.substring(0, maxChars) + "..." : string;
@@ -341,51 +375,39 @@ Flickable { id: flickable
             Text { id: lblAuthor; text: i18nc("@label", "Author:");
                 width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
             Text { id: author;
-                text: info.author.length == 0
+                text: project.data.author.length == 0
                     ? "<a href='#'>Add author information in project settings</a>"
-                    : (info.author + (info.email.length == 0
-                       ? "" : " (<a href='mailto:" + info.email + "'>" + info.email + "</a>)"))
+                    : (project.data.author + (project.data.email.length == 0
+                       ? "" : " (<a href='mailto:" + project.data.email + "'>" + project.data.email + "</a>)"))
                 wrapMode: Text.Wrap; width: parent.fieldWidth
-                onLinkActivated: info.author.email.length == 0
+                onLinkActivated: project.data.author.email.length == 0
                     ? project.showSettingsDialog() : Qt.openUrlExternally(link)
-            }
-
-            // Strip the path from a file path to get the file name
-            function fileNameFromPath( filePath ) {
-                var pos = filePath.lastIndexOf('/');
-                return pos == -1 ? filePath : filePath.substring(pos + 1);
             }
 
             // A link to the project source XML document, opens the document in a tab
             Text { id: lblFileName; text: i18nc("@label", "File Name:");
                 width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
             Text { id: fileName;
-                text: "<a href='#'>" + (info.fileName.length == 0
+                text: "<a href='#'>" + (project.data.fileName.length == 0
                         ? i18nc("@info", "Open source file")
-                        : projectInfo.fileNameFromPath(info.fileName)) + "</a>";
+                        : projectInfo.fileNameFromPath(project.data.fileName)) + "</a>";
                 width: parent.fieldWidth; elide: Text.ElideMiddle
                 onLinkActivated: project.showProjectSourceTab()
             }
 
-            // A link to the script document, opens the document in a tab
-            // If no script was created for the project, a button to do so gets created
-//             Component { id: scriptInfoText
-//                 Text { text: "<a href='#'>" + projectInfo.fileNameFromPath(info.scriptFileName) + "</a>"
-//                     width: projectInfo.fieldWidth; elide: Text.ElideMiddle
-//                     onLinkActivated: project.showScriptTab()
-//                 }
-//             }
-//             Component { id: createScriptButton
-//                 ActionButton { action: project.projectAction(Project.ShowScript); }
-//             }
+            Text { id: lblType; text: i18nc("@label", "Type:");
+                width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
+            Text { id: type;
+                text: project.data.typeName
+                width: parent.fieldWidth; elide: Text.ElideMiddle }
+
+            // A link to the script document, opens the script tab
             Text { id: lblScriptFileName; text: i18nc("@label", "Script File Name:");
                 width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
-//             Loader { id: scriptFileName;
-//                 sourceComponent: info.scriptFileName.length == 0 ? createScriptButton : scriptInfoText }
             Text { id: scriptFileName
-                text: "<a href='#'>" + (projectInfo.fileNameFromPath(info.scriptFileName).length == 0
+                text: "<a href='#'>" + (projectInfo.fileNameFromPath(project.data.scriptFileName).length == 0
                         ? i18nc("@info", "Create script file")
-                        : projectInfo.fileNameFromPath(info.scriptFileName)) + "</a>"
+                        : projectInfo.fileNameFromPath(project.data.scriptFileName)) + "</a>"
                 width: projectInfo.fieldWidth; elide: Text.ElideMiddle
                 onLinkActivated: project.showScriptTab()
             }
@@ -394,19 +416,49 @@ Flickable { id: flickable
             Text { id: lblScriptExtensions; text: i18nc("@label", "Script Extensions:");
                 width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
             Text { id: scriptExtensions;
-                text: info.scriptExtensions.length == 0
-                    ? i18nc("@info", "(none)") : info.scriptExtensions.join(", ")
+                text: project.data.scriptExtensions.length == 0
+                    ? i18nc("@info", "(none)") : project.data.scriptExtensions.join(", ")
+                width: parent.fieldWidth; elide: Text.ElideMiddle }
+
+            // GTFS feed URL
+            Text { id: lblFeedUrl; text: i18nc("@label", "GTFS Feed URL:");
+                width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
+            Text { id: feedUrl;
+                text: project.data.feedUrl.length == 0 ? i18nc("@info", "(none)") : project.data.feedUrl
+                width: parent.fieldWidth; elide: Text.ElideMiddle }
+
+            // GTFS trip updates URL
+            Text { id: lblTripUpdatesUrl; text: i18nc("@label", "TripUpdates URL:");
+                width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
+            Text { id: tripUpdatesUrl;
+                text: project.data.realtimeTripUpdateUrl.length == 0
+                    ? i18nc("@info", "(none)") : project.data.realtimeTripUpdateUrl
+                width: parent.fieldWidth; elide: Text.ElideMiddle }
+
+            // GTFS alerts URL
+            Text { id: lblAlertsUrl; text: i18nc("@label", "Alerts URL:");
+                width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
+            Text { id: alertsUrl;
+                text: project.data.realtimeAlertsUrl.length == 0
+                    ? i18nc("@info", "(none)") : project.data.realtimeAlertsUrl
+                width: parent.fieldWidth; elide: Text.ElideMiddle }
+
+            // Default time zone
+            Text { id: lblTimeZone; text: i18nc("@label", "Timezone:");
+                width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
+            Text { id: timeZone;
+                text: project.data.timeZone.length == 0 ? i18nc("@info", "(none)") : project.data.timeZone
                 width: parent.fieldWidth; elide: Text.ElideMiddle }
 
             // Notes
             Text { id: lblNotes; text: i18nc("@label", "Notes:");
                 width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
             Text { id: notes;
-                text: info.notes.length == 0 ? "(none)" : info.notes;
+                text: project.data.notes.length == 0 ? "(none)" : project.data.notes;
                 width: parent.fieldWidth; wrapMode: Text.WordWrap }
 //             PlasmaComponents.TextArea { id: notes;
 //                 readOnly: false // TODO
-//                 text: info.notes; width: parent.fieldWidth }
+//                 text: project.data.notes; width: parent.fieldWidth }
         }
 
     } // container

@@ -397,7 +397,7 @@ public:
         return name;
     };
 
-    inline const ServiceProviderData *info()
+    inline const ServiceProviderData *data()
     {
         return provider->data();
     };
@@ -537,14 +537,14 @@ public:
         provider = 0;
 
         ServiceProviderDataReader reader;
-        ServiceProviderData *data =
+        ServiceProviderData *readData =
                 reader.read( device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q );
-        if ( data ) {
-            if ( data->type() == ScriptedProvider ) {
-                provider = new ServiceProviderScript( data, q );
+        if ( readData ) {
+            if ( readData->type() == ScriptedProvider ) {
+                provider = new ServiceProviderScript( readData, q );
             } else {
                 // Do not create sub class instance for unknown types
-                provider = new ServiceProvider( data, q );
+                provider = new ServiceProvider( readData, q );
             }
         } else {
             kDebug() << "Service provider plugin is invalid" << reader.errorString() << fileName;
@@ -557,7 +557,7 @@ public:
             q->emit nameChanged( projectName() );
             q->emit iconNameChanged( iconName() );
             q->emit iconChanged( projectIcon() );
-            q->emit dataChanged( info() );
+            q->emit dataChanged( data() );
             return true;
         } else {
             kDebug() << "Service provider plugin has invalid type" << fileName;
@@ -703,7 +703,7 @@ public:
                 q->emit nameChanged( projectName() );
                 q->emit iconNameChanged( iconName() );
                 q->emit iconChanged( projectIcon() );
-                q->emit dataChanged( info() );
+                q->emit dataChanged( data() );
             }
         }
     };
@@ -716,7 +716,7 @@ public:
         q->emit nameChanged( projectName() );
         q->emit iconNameChanged( iconName() );
         q->emit iconChanged( projectIcon() );
-        q->emit dataChanged( info() );
+        q->emit dataChanged( data() );
     };
 
     void insertScriptTemplate( Project::ScriptTemplateType templateType
@@ -3540,6 +3540,7 @@ void Project::showSettingsDialog( QWidget *parent )
     // Check if a modified project source tab is opened and ask to save it before
     // editing the file in the settings dialog
     parent = d->parentWidget( parent );
+
     if ( d->projectSourceTab && d->projectSourceTab->isModified() ) {
         int result = KMessageBox::warningContinueCancel( parent,
                 i18nc("@info", "The project XML file was modified. Please save it first."),
@@ -3817,10 +3818,11 @@ QString Project::projectName() const
     return d->projectName();
 }
 
-const ServiceProviderData *Project::data()
+ServiceProviderData *Project::data()
 {
     Q_D( Project );
-    return d->info();
+    // Return as non const, because QML cannot use it otherwise
+    return const_cast< ServiceProviderData* >( d->data() );
 }
 
 Project::InstallType Project::Project::installationTypeFromFilePath( const QString &filePath )

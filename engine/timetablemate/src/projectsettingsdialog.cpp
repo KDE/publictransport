@@ -29,9 +29,10 @@
 #include "serviceproviderdatatester.h"
 
 // PublicTransport engine includes
-#include <engine/serviceproviderdatareader.h>
 #include <engine/serviceprovider.h>
+#include <engine/serviceproviderglobal.h>
 #include <engine/serviceproviderdata.h>
+#include <engine/serviceproviderdatareader.h>
 #include <engine/global.h>
 
 // KDE includes
@@ -65,6 +66,8 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
           m_cityName(0), m_cityReplacement(0), m_changelog(0),
           m_actions(new KActionCollection(this)), m_mapper(0)
 {
+    KGlobal::locale()->insertCatalog( "timezones4" );
+
     QWidget *widget = new QWidget( this );
     widget->setAutoFillBackground( false );
     ui_provider->setupUi( widget );
@@ -244,18 +247,27 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_plane" ), i18nc( "@item:listbox", "Plane" ), "Plane" );
 
+    providerTypeChanged( ui_provider->type->currentIndex() );
+    connect( ui_provider->type, SIGNAL(currentIndexChanged(int)),
+             this, SLOT(providerTypeChanged(int)) );
+
     // Connect all change signals of the widgets to the changed() signal
     m_mapper = new QSignalMapper( this );
+    connect( ui_provider->type, SIGNAL(currentIndexChanged(int)), m_mapper, SLOT(map()) );
+    connect( ui_provider->scriptFile, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->scriptExtensions, SIGNAL(itemChanged(QListWidgetItem*)), m_mapper, SLOT(map()) );
+    connect( ui_provider->gtfsFeed, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->gtfsTripUpdates, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->gtfsAlerts, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->timeZone, SIGNAL(itemSelectionChanged()), m_mapper, SLOT(map()) );
     connect( ui_provider->name, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->description, SIGNAL(textChanged()), m_mapper, SLOT(map()) );
     connect( ui_provider->version, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
-    connect( ui_provider->type, SIGNAL(currentIndexChanged(int)), m_mapper, SLOT(map()) );
     connect( ui_provider->useCityValue, SIGNAL(stateChanged(int)), m_mapper, SLOT(map()) );
     connect( ui_provider->onlyAllowPredefinedCities, SIGNAL(stateChanged(int)), m_mapper, SLOT(map()) );
     connect( ui_provider->url, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->shortUrl, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->minFetchWait, SIGNAL(valueChanged(int)), m_mapper, SLOT(map()) );
-    connect( ui_provider->scriptFile, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->author, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->shortAuthor, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->email, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
@@ -268,16 +280,21 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     connect( m_changelog, SIGNAL(removed(QWidget*,int)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(changed()), m_mapper, SLOT(map()) );
     // TODO Map changes in the changelog, ie. changing the version or message text
+    m_mapper->setMapping( ui_provider->type, ui_provider->type );
+    m_mapper->setMapping( ui_provider->scriptFile, ui_provider->scriptFile );
+    m_mapper->setMapping( ui_provider->scriptExtensions, ui_provider->scriptExtensions );
+    m_mapper->setMapping( ui_provider->gtfsFeed, ui_provider->gtfsFeed );
+    m_mapper->setMapping( ui_provider->gtfsTripUpdates, ui_provider->gtfsTripUpdates );
+    m_mapper->setMapping( ui_provider->gtfsAlerts, ui_provider->gtfsAlerts );
+    m_mapper->setMapping( ui_provider->timeZone, ui_provider->timeZone );
     m_mapper->setMapping( ui_provider->name, ui_provider->name );
     m_mapper->setMapping( ui_provider->description, ui_provider->description );
     m_mapper->setMapping( ui_provider->version, ui_provider->version );
-    m_mapper->setMapping( ui_provider->type, ui_provider->type );
     m_mapper->setMapping( ui_provider->useCityValue, ui_provider->useCityValue );
     m_mapper->setMapping( ui_provider->onlyAllowPredefinedCities, ui_provider->onlyAllowPredefinedCities );
     m_mapper->setMapping( ui_provider->url, ui_provider->url );
     m_mapper->setMapping( ui_provider->shortUrl, ui_provider->shortUrl );
     m_mapper->setMapping( ui_provider->minFetchWait, ui_provider->minFetchWait );
-    m_mapper->setMapping( ui_provider->scriptFile, ui_provider->scriptFile );
     m_mapper->setMapping( ui_provider->author, ui_provider->author );
     m_mapper->setMapping( ui_provider->shortAuthor, ui_provider->shortAuthor );
     m_mapper->setMapping( ui_provider->email, ui_provider->email );
@@ -537,7 +554,9 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     }
 
     // Update values that can be edited in this dialog
-    m_providerData->setType( static_cast<ServiceProviderType>(ui_provider->type->currentIndex() + 1) );
+    const ServiceProviderType providerType =
+            providerTypeFromComboBoxIndex( ui_provider->type->currentIndex() );
+    m_providerData->setType( providerType );
     m_providerData->setNames( names );
     m_providerData->setDescriptions( descriptions );
     m_providerData->setVersion( ui_provider->version->text() );
@@ -555,6 +574,49 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     m_providerData->setSampleCity( ui_provider->sampleCity->text() );
     m_providerData->setSampleStops( ui_provider->sampleStopNames->items() );
     m_providerData->setNotes( ui_provider->notes->textOrHtml() );
+    switch ( providerType ) {
+    case ScriptedProvider:
+        m_providerData->setScriptFile( ui_provider->scriptFile->text(),
+                                       scriptExtensionsFromWidget() );
+        break;
+    case GtfsProvider:
+        m_providerData->setFeedUrl( ui_provider->gtfsFeed->text() );
+        m_providerData->setRealtimeTripUpdateUrl( ui_provider->gtfsTripUpdates->text() );
+        m_providerData->setRealtimeAlertsUrl( ui_provider->gtfsAlerts->text() );
+        m_providerData->setTimeZone( ui_provider->timeZone->selection().isEmpty()
+                                     ? QString() : ui_provider->timeZone->selection().first() );
+        break;
+    default:
+        break;
+    }
+}
+
+QStringList ProjectSettingsDialog::scriptExtensionsFromWidget() const
+{
+    QStringList scriptExtensions;
+    for ( int i = 0; i < ui_provider->scriptExtensions->count(); ++i ) {
+        QListWidgetItem *item = ui_provider->scriptExtensions->item( i );
+        if ( item->checkState() == Qt::Checked ) {
+            scriptExtensions << item->text();
+        }
+    }
+    return scriptExtensions;
+}
+
+void ProjectSettingsDialog::checkScriptExtensionsInWidget( const QStringList &scriptExtensions ) const
+{
+    for ( int i = 0; i < ui_provider->scriptExtensions->count(); ++i ) {
+        QListWidgetItem *item = ui_provider->scriptExtensions->item( i );
+        item->setCheckState( scriptExtensions.contains(item->text()) ? Qt::Checked : Qt::Unchecked );
+    }
+}
+
+void ProjectSettingsDialog::providerTypeChanged( int newProviderTypeIndex )
+{
+    // Show settings widgets specific to the chosen provider type
+    const ServiceProviderType providerType = providerTypeFromComboBoxIndex( newProviderTypeIndex );
+    ui_provider->scriptSettingsWidget->setVisible( providerType == ScriptedProvider );
+    ui_provider->gtfsSettingsWidget->setVisible( providerType == GtfsProvider );
 }
 
 void ProjectSettingsDialog::changelogEntryWidgetAdded( ChangelogEntryWidget *entryWidget )
@@ -726,6 +788,7 @@ void ProjectSettingsDialog::createScriptFile()
 void ProjectSettingsDialog::detachScriptFile()
 {
     ui_provider->scriptFile->setText( QString() );
+    ui_provider->scriptExtensions->clear();
     m_newScriptTemplateType = Project::NoScriptTemplate;
 }
 
@@ -789,19 +852,24 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *info,
 
     m_providerData = info->clone( info->parent() );
     m_openedPath = fileName;
+    ui_provider->type->setCurrentIndex( providerTypeToComboBoxIndex(info->type()) );
+    ui_provider->scriptFile->setText( info->scriptFileName() );
+    checkScriptExtensionsInWidget( info->scriptExtensions() );
+    ui_provider->gtfsFeed->setText( info->feedUrl() );
+    ui_provider->gtfsTripUpdates->setText( info->realtimeTripUpdateUrl() );
+    ui_provider->gtfsAlerts->setText( info->realtimeAlertsUrl() );
+    ui_provider->timeZone->setSelected( info->timeZone(), true );
+
     ui_provider->savePath->setText( fileName );
-//     ui_provider->savePath->setToolTip( Project::savePathInfoStringFromFilePath(fileName) );
     ui_provider->currentLanguage->setCurrentItem( "en" );
     ui_provider->name->setText( info->names()["en"] );
     ui_provider->description->setText( info->descriptions()["en"] );
     ui_provider->version->setText( info->version() );
-    ui_provider->type->setCurrentIndex( static_cast<int>(info->type()) - 1 );
     ui_provider->useCityValue->setChecked( info->useSeparateCityValue() );
     ui_provider->onlyAllowPredefinedCities->setChecked( info->onlyUseCitiesInList() );
     ui_provider->url->setText( info->url() );
     ui_provider->shortUrl->setText( info->shortUrl() );
     ui_provider->minFetchWait->setValue( info->minFetchWait() );
-    ui_provider->scriptFile->setText( info->scriptFileName() );
     ui_provider->author->setText( info->author() );
     ui_provider->shortAuthor->setText( info->shortAuthor() );
     ui_provider->email->setText( info->email() );

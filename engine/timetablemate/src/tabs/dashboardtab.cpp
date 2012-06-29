@@ -22,6 +22,7 @@
 #include "../project.h"
 
 // PublicTransport engine includes
+#include <engine/serviceprovider.h>
 #include <engine/serviceproviderdata.h>
 
 // KDE includes
@@ -51,17 +52,13 @@ DashboardTab::DashboardTab( Project *project, QWidget *parent )
     }
     const QString svgFileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.svg" );
 
-    // Register Project and ServiceProviderData in Qt's meta object system and for QML
+    // Register classes in Qt's meta object system and for QML
     qRegisterMetaType< const ServiceProviderData* >( "const ServiceProviderData*" );
     qRegisterMetaType< Project* >( "Project*" );
     qRegisterMetaType< TestModel* >( "TestModel*" );
     qmlRegisterType< ServiceProviderData, 1 >( "TimetableMate", 1, 0, "ServiceProviderData" );
     qmlRegisterType< Project, 1 >( "TimetableMate", 1, 0, "Project" );
     qmlRegisterType< Tabs, 1 >( "TimetableMate", 1, 0, "Tabs" );
-//      qmlRegisterUncreatableType<
-//     TEST
-//     qRegisterMetaType< QToolButton* >( "QToolButton*" );
-//     qmlRegisterType< QToolButton, 1 >( "TimetableMate", 1, 0, "QToolButton" );
 
     // Create dashboard widget
     QWidget *container = new QWidget( parent );
@@ -75,7 +72,6 @@ DashboardTab::DashboardTab( Project *project, QWidget *parent )
 
     m_qmlView->setResizeMode( QDeclarativeView::SizeRootObjectToView );
     m_qmlView->rootContext()->setContextProperty( "project", project );
-    m_qmlView->rootContext()->setContextProperty( "info", project->data()->clone(this) );
     m_qmlView->rootContext()->setContextProperty( "svgFileName", svgFileName );
 
     // Add Plasma QML import paths
@@ -84,8 +80,6 @@ DashboardTab::DashboardTab( Project *project, QWidget *parent )
         m_qmlView->engine()->addImportPath( importPath );
     }
 
-//     m_qmlView->setHorizontalScrollBarPolicy( Qt::ScrollBarAsNeeded );
-//     m_qmlView->setVerticalScrollBarPolicy( Qt::ScrollBarAsNeeded );
     m_qmlView->setSource( fileName );
     QVBoxLayout *layout = new QVBoxLayout( container );
     layout->addWidget( m_qmlView );
