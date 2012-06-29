@@ -3541,19 +3541,6 @@ void Project::showSettingsDialog( QWidget *parent )
     // editing the file in the settings dialog
     parent = d->parentWidget( parent );
 
-    if ( d->projectSourceTab && d->projectSourceTab->isModified() ) {
-        int result = KMessageBox::warningContinueCancel( parent,
-                i18nc("@info", "The project XML file was modified. Please save it first."),
-                QString(), KStandardGuiItem::save() );
-        if ( result == KMessageBox::Continue ) {
-            // Save clicked, save project XML file
-            d->projectSourceTab->save();
-        } else {
-            // Cancel clicked, do not save and do not open settings dialog
-            return;
-        }
-    }
-
     // Create settings dialog
     QPointer< ProjectSettingsDialog > dialog( new ProjectSettingsDialog(parent) );
     dialog->setProviderData( d->provider->data(), d->filePath );
