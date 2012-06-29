@@ -123,8 +123,19 @@ Maybe you want to suggest changes in this document like new/better hints.
 
       Hint: On installation it creates relative symbolic links for default service
         providers of supported countries, eg. "de_default.xml" -> "de_db.xml".
+        It requires Google Protocol Buffers for GTFS, libprotobuf, which needs pthread.
       Dependent: plasma-applet-publictransport, plasma-applet-graphicaltimetableline,
         plasma-applet-flights, plasma-runner-publictransport, timetablemate
+
+  - engine/timetablemate
+      Description: A little IDE to create new scripts for the publictransport
+        Plasma data engine that adds support for new service providers.
+
+      Hint: This can be used to create new scripts for the data engine,
+        but isn't needed by end users, that aren't interested in that.
+        It requires KWebkitPart, for compilation the headers are also required.
+      Requires: libpublictransporthelper, plasma-engine-publictransport,
+        publictransport-icons
 
   - engine-openstreetmap
       Description: A Plasma data engine that gets public transport stop names
@@ -172,15 +183,5 @@ Maybe you want to suggest changes in this document like new/better hints.
   - runner
       Description: A runner that shows publictransport departures/arrivals/journeys.
 
-      Requires: libpublictransporthelper, plasma-engine-publictransport,
-        publictransport-icons
-
-  - timetablemate
-      Description: A little IDE to create new scripts for the publictransport
-        Plasma data engine that adds support for new service providers.
-
-      Hint: This can be used to create new scripts for the data engine,
-        but isn't needed by end users, that aren't interested in that.
-        It requires KWebkitPart, for compilation the headers are also required.
       Requires: libpublictransporthelper, plasma-engine-publictransport,
         publictransport-icons
