@@ -1,16 +1,24 @@
-project(plasma-engine-publictransport)
+
+project( plasma-engine-publictransport )
 
 # Find the required Libaries
-find_package(KDE4 REQUIRED)
-include(KDE4Defaults)
-add_definitions (${QT_DEFINITIONS} ${KDE4_DEFINITIONS})
+find_package( KDE4 REQUIRED )
+include( KDE4Defaults )
+add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
 include_directories(
    ${CMAKE_SOURCE_DIR}
    ${CMAKE_BINARY_DIR}
    ${KDE4_INCLUDES} )
 
+# Add custom CMake modules
+set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
+
+# Find mime type relevant stuff
 set( SHARED_MIME_INFO_MINIMUM_VERSION "0.30" )
 find_package( SharedMimeInfo )
+
+# Find protocol buffers
+find_package( ProtocolBuffers REQUIRED )
 
 add_subdirectory( serviceProviders )
 
@@ -24,15 +32,7 @@ if ( INSTALL_TIMETABLEMATE )
 endif ( INSTALL_TIMETABLEMATE )
 
 # Generate gtfs-realtime protocol buffer sources
-add_custom_command(
-    OUTPUT gtfs-realtime.pb.h gtfs-realtime.pb.cc
-    COMMAND protoc gtfs-realtime.proto --cpp_out=${CMAKE_CURRENT_BINARY_DIR}
-    DEPENDS gtfs-realtime.proto
-    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} )
-
-# Mark the files as generated
-set_source_files_properties( gtfs-realtime.pb.h gtfs-realtime.pb.cc
-                             PROPERTIES GENERATED TRUE )
+WRAP_PROTO( PROTO_SRC gtfs-realtime.proto )
 
 # Source files
 set( publictransport_engine_SRCS
@@ -51,13 +51,12 @@ set( publictransport_engine_SRCS
     generaltransitfeed_importer.cpp
     generaltransitfeed_database.cpp
     generaltransitfeed_realtime.cpp
-    gtfs-realtime.pb.cc
     scripting.cpp
     global.cpp
 )
 
 # Now make sure all files get to the right place
-kde4_add_plugin( plasma_engine_publictransport ${publictransport_engine_SRCS} )
+kde4_add_plugin( plasma_engine_publictransport ${publictransport_engine_SRCS} ${PROTO_SRC} )
 
 target_link_libraries( plasma_engine_publictransport
     ${KDE4_PLASMA_LIBS} ${KDE4_KIO_LIBS} ${KDE4_THREADWEAVER_LIBS} ${QT_QTSCRIPT_LIBRARY}
@@ -78,4 +77,4 @@ install( FILES serviceproviderplugin.xml DESTINATION ${XDG_MIME_INSTALL_DIR} )
 update_xdg_mimetypes( ${XDG_MIME_INSTALL_DIR} )
 
 install( FILES publictransport.operations
-         DESTINATION ${DATA_INSTALL_DIR}/plasma/services)
+         DESTINATION ${DATA_INSTALL_DIR}/plasma/services )
