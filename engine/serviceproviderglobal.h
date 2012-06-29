@@ -35,7 +35,14 @@ public:
     /** @brief Get the ServiceProviderType enumerable for the given string. */
     static ServiceProviderType typeFromString( const QString &serviceProviderType );
 
+    /** @brief Get a string for the given @p type, not to be displayed to users, all lower case. */
     static QString typeToString( ServiceProviderType type );
+
+    /** @brief Get the name for the given @p type, translated, to be displayed to users. */
+    static QString typeName( ServiceProviderType type );
+
+    /** @brief Get a list of short localized strings describing the supported features. */
+    static QStringList localizeFeatures( const QStringList &features );
 
     /** @brief Get the service provider ID for the given service provider plugin file name. */
     static QString idFromFileName( const QString &serviceProviderPluginFileName );

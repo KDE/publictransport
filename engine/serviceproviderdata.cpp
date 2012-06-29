@@ -122,13 +122,21 @@ ServiceProviderData &ServiceProviderData::operator=( const ServiceProviderData &
     m_credit = info.m_credit;
     m_hashCityNameToValue = info.m_hashCityNameToValue;
     m_fileName = info.m_fileName;
-    m_scriptFileName = info.m_scriptFileName;
-    m_scriptExtensions = info.m_scriptExtensions;
     m_charsetForUrlEncoding = info.m_charsetForUrlEncoding;
     m_fallbackCharset = info.m_fallbackCharset;
     m_sampleStopNames = info.m_sampleStopNames;
     m_sampleCity = info.m_sampleCity;
-    m_notes = info.notes();
+    m_notes = info.m_notes;
+
+    // For ScriptedProvider
+    m_scriptFileName = info.m_scriptFileName;
+    m_scriptExtensions = info.m_scriptExtensions;
+
+    // For GtfsProvider
+    m_feedUrl = info.m_feedUrl;
+    m_tripUpdatesUrl = info.m_tripUpdatesUrl;
+    m_alertsUrl = info.m_alertsUrl;
+    m_timeZone = info.m_timeZone;
     return *this;
 }
 
@@ -156,6 +164,11 @@ void ServiceProviderData::finish()
 QString ServiceProviderData::typeString() const
 {
     return ServiceProviderGlobal::typeToString( m_serviceProviderType );
+}
+
+QString ServiceProviderData::typeName() const
+{
+    return ServiceProviderGlobal::typeName( m_serviceProviderType );
 }
 
 int ServiceProviderData::versionNumberFromString( const QString &version, int *startPos ) {

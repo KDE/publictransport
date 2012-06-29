@@ -51,6 +51,8 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 
+const qreal ServiceProviderGtfs::PROGRESS_PART_FOR_FEED_DOWNLOAD = 0.1;
+
 ServiceProviderGtfs::ServiceProviderGtfs(
         const ServiceProviderData *data, QObject *parent, const QSharedPointer<KConfig> &cache )
         : ServiceProvider(data, parent, cache), m_tripUpdates(0), m_alerts(0), m_service(0)

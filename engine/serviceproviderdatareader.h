@@ -69,6 +69,24 @@ public:
     ServiceProviderDataReader() : QXmlStreamReader() {};
 
     /**
+     * @brief Reads the XML file for the given @p serviceProvider.
+     *
+     * If the provider XML file can be found but has errors, error information gets written to the
+     * cache to prevent reading the file again as long as it does not change.
+     *
+     * @param providerId The ID of the service provider which XML file should be read.
+     *   The ID starts with a country code, followed by an underscore and it's name.
+     *   If it's empty, the default service provider for the users country will
+     *   be used, if there is any.
+     * @param errorMessage A pointer to a QString to fill with an error message if there was an
+     *   error. Can be 0.
+     *
+     * @return A pointer to the read ServiceProviderData object or 0 if there was an error reading
+     *   the data.
+     **/
+    static ServiceProviderData *read( const QString &providerId, QString *errorMessage = 0 );
+
+    /**
      * @brief Reads service provider data from @p device.
      *
      * @param device The QIODevice to read the xml data from.

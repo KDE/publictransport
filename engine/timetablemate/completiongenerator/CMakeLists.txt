@@ -27,5 +27,4 @@ kde4_add_executable( completiongenerator
                      ${completiongenerator_SRCS} )
 
 target_link_libraries( completiongenerator ${KDE4_KDECORE_LIBS}
-        ${QT_LIBRARIES} ${QT_QTNETWORK_LIBRARY} ${QT_QTCORE_LIBRARY}
-        ${QT_QTSCRIPT_LIBRARY} ${KDE4_THREADWEAVER_LIBS} )
+        ${QT_QTNETWORK_LIBRARY} ${QT_QTSCRIPT_LIBRARY} )

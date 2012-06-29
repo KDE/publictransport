@@ -132,7 +132,7 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
     QVariantHash dataServiceProvider;
     dataServiceProvider.insert( "id", data.id() );
     dataServiceProvider.insert( "fileName", data.fileName() );
-    dataServiceProvider.insert( "type", ServiceProvider::typeName(data.type()) );
+    dataServiceProvider.insert( "type", ServiceProviderGlobal::typeName(data.type()) );
     if ( data.type() == GtfsProvider ) {
         dataServiceProvider.insert( "feedUrl", data.feedUrl() );
 
@@ -180,7 +180,7 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
             features.removeOne( "(none)" );
             dataServiceProvider.insert( "features", features );
             dataServiceProvider.insert( "featuresLocalized",
-                                        ServiceProvider::localizeFeatures(features) );
+                                        ServiceProviderGlobal::localizeFeatures(features) );
         } else {
             kDebug() << "No cached feature data was found for provider" << data.id();
             // No cached feature data was found for the provider,
@@ -295,7 +295,7 @@ PublicTransportEngine::ProviderPointer PublicTransportEngine::providerFromId(
         if ( newlyCreated ) {
             *newlyCreated = true;
         }
-        ServiceProvider *provider = ServiceProvider::createProvider( id );
+        ServiceProvider *provider = createProvider( id );
         if ( !provider ) {
             return ProviderPointer::create();
         }
@@ -454,7 +454,7 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
     // Read provider data from the XML file
     QString _errorMessage;
     const QScopedPointer<ServiceProviderData> data(
-            ServiceProvider::readProviderData(providerId, &_errorMessage) );
+            ServiceProviderDataReader::read(providerId, &_errorMessage) );
     if ( data.isNull() ) {
         // Could not read provider data
         if ( testData.isXmlStructureTestPending() ) {
@@ -478,7 +478,7 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
     if ( testData.isSubTypeTestPending() ) {
         // Need to create the provider to run tests in derived classes (in the constructor)
         const QScopedPointer<ServiceProvider> provider(
-                ServiceProvider::createProviderForData(data.data(), 0, cache) );
+                createProviderForData(data.data(), 0, cache) );
         data->setParent( 0 ); // Prevent deletion of data when the provider gets deleted
 
         // Read test data again, because it may have been changed in the provider constructor
@@ -1297,6 +1297,28 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
     kDebug() << "Wait time until next download:"
              << ((minFetchWait - secsSinceLastUpdate) / 60) << "min";
     return secsSinceLastUpdate < minFetchWait;
+}
+
+ServiceProvider *PublicTransportEngine::createProvider( const QString &serviceProviderId,
+        QObject *parent, const QSharedPointer<KConfig> &cache )
+{
+    ServiceProviderData *data = ServiceProviderDataReader::read( serviceProviderId );
+    return data ? createProviderForData(data, parent, cache) : 0;
+}
+
+ServiceProvider *PublicTransportEngine::createProviderForData( const ServiceProviderData *data,
+        QObject *parent, const QSharedPointer<KConfig> &cache )
+{
+    switch ( data->type() ) {
+    case ScriptedProvider:
+        return new ServiceProviderScript( data, parent, cache );
+    case GtfsProvider:
+        return new ServiceProviderGtfs( data, parent, cache );
+    case InvalidProvider:
+    default:
+        kWarning() << "Invalid/unknown provider type" << data->type();
+        return 0;
+    }
 }
 
 // This does the magic that allows Plasma to load

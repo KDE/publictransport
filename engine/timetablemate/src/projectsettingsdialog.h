@@ -99,6 +99,7 @@ protected slots:
     void slotChanged( QWidget *changedWidget );
     void languageActivated( const QString &languageCode );
 
+    void providerTypeChanged( int newProviderTypeIndex );
     void authorEdited( const QString &newAuthor );
     void shortAuthorEdited( const QString &shortAuthor );
     void urlEdited( const QString &newUrl );
@@ -124,6 +125,13 @@ private:
     int compareVersions( const QString &version1, const QString &version2 );
     bool testWidget( QWidget *widget );
     void appendMessageWidgetAfter( QWidget *after, const QString &errorMessage );
+    QStringList scriptExtensionsFromWidget() const;
+    void checkScriptExtensionsInWidget( const QStringList &scriptExtensions ) const;
+
+    inline ServiceProviderType providerTypeFromComboBoxIndex( int newProviderTypeIndex ) const
+            { return static_cast<ServiceProviderType>(newProviderTypeIndex + 1); };
+    inline int providerTypeToComboBoxIndex( ServiceProviderType providerType ) const
+            { return static_cast<int>(providerType) - 1; };
 
     Ui::timetablemateview_base *ui_provider;
 

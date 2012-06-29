@@ -32,10 +32,69 @@
 #include <KGlobal>
 #include <KLocale>
 #include <KDebug>
+#include <KStandardDirs>
 
 // Qt includes
 #include <QFile>
 #include <QFileInfo>
+
+ServiceProviderData *ServiceProviderDataReader::read( const QString &providerId,
+                                                      QString *errorMessage )
+{
+    QString filePath;
+    QString country = "international";
+    QString _serviceProviderId = providerId;
+    if ( _serviceProviderId.isEmpty() ) {
+        // No service provider ID given, use the default one for the users country
+        country = KGlobal::locale()->country();
+
+        // Try to find the XML filename of the default accessor for [country]
+        filePath = ServiceProviderGlobal::defaultProviderForLocation( country );
+        if ( filePath.isEmpty() ) {
+            return 0;
+        }
+
+        // Extract service provider ID from filename
+        _serviceProviderId = ServiceProviderGlobal::idFromFileName( filePath );
+        kDebug() << "No service provider ID given, using the default one for country"
+                 << country << "which is" << _serviceProviderId;
+    } else {
+        foreach ( const QString &extension, ServiceProviderGlobal::fileExtensions() ) {
+            filePath = KGlobal::dirs()->findResource( "data",
+                    ServiceProviderGlobal::installationSubDirectory() +
+                    _serviceProviderId + '.' + extension );
+            if ( !filePath.isEmpty() ) {
+                break;
+            }
+        }
+        if ( filePath.isEmpty() ) {
+            kDebug() << "Could not find a service provider plugin XML named" << _serviceProviderId;
+            if ( errorMessage ) {
+                *errorMessage = i18nc("@info/plain", "Could not find a service provider "
+                                      "plugin with the ID %1", _serviceProviderId);
+            }
+            return 0;
+        }
+
+        // Get country code from filename
+        QRegExp rx( "^([^_]+)" );
+        if ( rx.indexIn(_serviceProviderId) != -1 &&
+             KGlobal::locale()->allCountriesList().contains(rx.cap()) )
+        {
+            country = rx.cap();
+        }
+    }
+
+    QFile file( filePath );
+    ServiceProviderDataReader reader;
+    ServiceProviderData *data = reader.read( &file, providerId, filePath, country,
+                                             ServiceProviderDataReader::OnlyReadCorrectFiles );
+    if ( !data && errorMessage ) {
+        *errorMessage = i18nc("@info/plain", "Error in line %1: <message>%2</message>",
+                              reader.lineNumber(), reader.errorString());
+    }
+    return data;
+}
 
 ServiceProviderData *ServiceProviderDataReader::read( QIODevice *device, const QString &fileName,
                                                       ErrorAcceptance errorAcceptance, QObject *parent )

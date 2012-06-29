@@ -1,4 +1,8 @@
 
+# Mark GTFS protocol buffer files from the engine as generated
+set_source_files_properties( ../../gtfs-realtime.pb.h ../../gtfs-realtime.pb.cc
+                             PROPERTIES GENERATED TRUE )
+
 set( timetablemate_SRCS
    main.cpp
    timetablemate.cpp
@@ -27,12 +31,6 @@ set( timetablemate_SRCS
    ../../serviceprovidertestdata.cpp
    ../../serviceproviderglobal.cpp
    ../../serviceproviderscript.cpp
-   ../../serviceprovidergtfs.cpp
-   ../../generaltransitfeed_database.cpp
-   ../../generaltransitfeed_importer.cpp
-   ../../generaltransitfeed_realtime.cpp
-   ../../gtfs-realtime.pb.cc
-   ../../publictransportservice.cpp
    ../../serviceproviderdatareader.cpp
 )
 

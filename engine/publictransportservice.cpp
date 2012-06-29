@@ -34,6 +34,8 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 
+const qreal ImportGtfsToDatabaseJob::PROGRESS_PART_FOR_FEED_DOWNLOAD = 0.1;
+
 ImportGtfsToDatabaseJob::ImportGtfsToDatabaseJob( const QString &destination,
         const QString &operation, const QMap< QString, QVariant > &parameters, QObject *parent )
         : ServiceJob(destination, operation, parameters, parent),
@@ -41,7 +43,7 @@ ImportGtfsToDatabaseJob::ImportGtfsToDatabaseJob( const QString &destination,
 {
     setCapabilities( Suspendable | Killable );
 
-    m_data = ServiceProvider::readProviderData( parameters["serviceProviderId"].toString() );
+    m_data = ServiceProviderDataReader::read( parameters["serviceProviderId"].toString() );
     if ( !m_data ) {
         setError( -1 );
         setErrorText( i18nc("@info/plain", "Error while reading Provider XML.") );

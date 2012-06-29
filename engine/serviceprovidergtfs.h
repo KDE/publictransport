@@ -182,7 +182,7 @@ private:
     };
 
     /** A value between 0.0 and 1.0 indicating the amount of the total progress for downloading. */
-    static const qreal PROGRESS_PART_FOR_FEED_DOWNLOAD = 0.1;
+    static const qreal PROGRESS_PART_FOR_FEED_DOWNLOAD;
 
     /**
      * @brief Converts a GTFS route_type value to a matching VehicleType.

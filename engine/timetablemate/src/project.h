@@ -127,7 +127,7 @@ class Project : public QObject {
     Q_PROPERTY( bool isDebuggerRunning READ isDebuggerRunning NOTIFY debuggerRunningChanged )
     Q_PROPERTY( bool isTestRunning READ isTestRunning NOTIFY testRunningChanged )
     Q_PROPERTY( QString name READ projectName NOTIFY nameChanged )
-    Q_PROPERTY( const ServiceProviderData* data READ data NOTIFY dataChanged )
+    Q_PROPERTY( ServiceProviderData *data READ data NOTIFY dataChanged )
     Q_PROPERTY( QString iconName READ iconName NOTIFY iconNameChanged )
     Q_PROPERTY( QIcon icon READ projectIcon NOTIFY iconChanged )
     Q_PROPERTY( InstallType saveType READ saveType NOTIFY saveTypeChanged )
@@ -581,7 +581,7 @@ public:
     Q_INVOKABLE QString projectName() const;
 
     /** @brief Get data for the service provider plugin project. */
-    Q_INVOKABLE const ServiceProviderData *data();
+    ServiceProviderData *data();
 
     /** @brief Check if @p filePath specifies a local or global installation path. */
     Q_INVOKABLE static InstallType installationTypeFromFilePath( const QString &filePath );

@@ -101,41 +101,8 @@ public:
     /** @brief Destructor. */
     virtual ~ServiceProvider();
 
-    /**
-     * @brief Get the service provider with the given @p serviceProviderId, if any.
-     *
-     * @param serviceProviderId The ID of the service provider to get.
-     *   The ID starts with a country code, followed by an underscore and it's name.
-     *   If it's empty, the default service provider for the users country will
-     *   be used, if there is any.
-     **/
-    static ServiceProvider *createProvider( const QString &serviceProviderId = QString(),
-            QObject *parent = 0, const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
-
     /** @brief Create an invalid provider. */
     static ServiceProvider *createInvalidProvider( QObject *parent = 0 );
-
-    static ServiceProvider *createProviderForData( const ServiceProviderData *data,
-            QObject *parent = 0, const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
-
-    /**
-     * @brief Reads the XML file for the given @p serviceProvider.
-     *
-     * If the provider XML file can be found but has errors, error information gets written to the
-     * cache to prevent reading the file again as long as it does not change.
-     *
-     * @param providerId The ID of the service provider which XML file should be read.
-     *   The ID starts with a country code, followed by an underscore and it's name.
-     *   If it's empty, the default service provider for the users country will
-     *   be used, if there is any.
-     * @param errorMessage A pointer to a QString to fill with an error message if there was an
-     *   error. Can be 0.
-     *
-     * @return A pointer to the read ServiceProviderData object or 0 if there was an error reading
-     *   the data.
-     **/
-    static ServiceProviderData *readProviderData( const QString &providerId,
-                                                  QString *errorMessage = 0 );
 
     /**
      * @brief Whether or not a cached test result is unchanged.
@@ -155,11 +122,6 @@ public:
 
     ServiceProviderTestData runSubTypeTest( const ServiceProviderTestData &oldTestData,
                                             const QSharedPointer< KConfig > cache ) const;
-
-    static QString typeName( ServiceProviderType type );
-
-    /** @brief Get a list of short localized strings describing the supported features. */
-    static QStringList localizeFeatures( const QStringList &features );
 
     /** @brief Get the ID of this service provider. */
     QString id() const;

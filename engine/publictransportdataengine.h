@@ -372,6 +372,25 @@ private:
 
     QString stripDateAndTimeValues( const QString &sourceName );
 
+    /**
+     * @brief Get the service provider with the given @p serviceProviderId, if any.
+     *
+     * @param serviceProviderId The ID of the service provider to get.
+     *   The ID starts with a country code, followed by an underscore and it's name.
+     *   If it's empty, the default service provider for the users country will
+     *   be used, if there is any.
+     **/
+    static ServiceProvider *createProvider( const QString &serviceProviderId = QString(),
+            QObject *parent = 0, const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
+
+    /**
+     * @brief Create a provider for the given @p data.
+     * @param data The data object to create a provider for.
+     * @param parent The parent for the new provider
+     **/
+    static ServiceProvider *createProviderForData( const ServiceProviderData *data,
+            QObject *parent = 0, const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
+
     QHash< QString, ProviderPointer > m_providers; // List of already loaded service providers
     QVariantHash m_dataSources; // List of already used data sources TODO also store original data source name, to be able to update data with different capitalization
     QVariantHash m_erroneousProviders; // List of erroneous service providers as keys

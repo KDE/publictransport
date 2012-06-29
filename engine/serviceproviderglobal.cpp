@@ -26,6 +26,7 @@
 #include <KDebug>
 #include <KMimeType>
 #include <KConfigGroup>
+#include <KLocalizedString>
 
 // Qt includes
 #include <QFile>
@@ -115,6 +116,20 @@ QString ServiceProviderGlobal::typeToString( ServiceProviderType type )
     }
 }
 
+QString ServiceProviderGlobal::typeName( ServiceProviderType type )
+{
+    switch ( type ) {
+    case ScriptedProvider:
+        return i18nc("@info/plain Name of a service provider plugin type", "Scripted");
+    case GtfsProvider:
+        return i18nc("@info/plain Name of a service provider plugin type", "GTFS");
+    case InvalidProvider:
+    default:
+        kWarning() << "Invalid provider type" << type;
+        return i18nc("@info/plain Name of a service provider plugin type", "Invalid");
+    }
+}
+
 QStringList ServiceProviderGlobal::filePatterns()
 {
     const KMimeType::Ptr mimeType =
@@ -166,4 +181,66 @@ bool ServiceProviderGlobal::isSourceFileModified( const QString &providerId,
     const QDateTime modifiedTime = group.readEntry( "modifiedTime", QDateTime() );
     const QString fileName = fileNameFromId( providerId );
     return fileName.isEmpty() ? true : QFileInfo(fileName).lastModified() != modifiedTime;
+}
+
+QStringList ServiceProviderGlobal::localizeFeatures( const QStringList &features )
+{
+    QStringList featuresl10n;
+    if ( features.contains("Arrivals") ) {
+        featuresl10n << i18nc( "Support for getting arrivals for a stop of public "
+                               "transport. This string is used in a feature list, "
+                               "should be short.", "Arrivals" );
+    }
+    if ( features.contains("Autocompletion") ) {
+        featuresl10n << i18nc( "Autocompletion for names of public transport stops",
+                               "Autocompletion" );
+    }
+    if ( features.contains("JourneySearch") ) {
+        featuresl10n << i18nc( "Support for getting journeys from one stop to another. "
+                               "This string is used in a feature list, should be short.",
+                               "Journey search" );
+    }
+    if ( features.contains("Delay") ) {
+        featuresl10n << i18nc( "Support for getting delay information. This string is "
+                               "used in a feature list, should be short.", "Delay" );
+    }
+    if ( features.contains("DelayReason") ) {
+        featuresl10n << i18nc( "Support for getting the reason of a delay. This string "
+                               "is used in a feature list, should be short.",
+                               "Delay reason" );
+    }
+    if ( features.contains("Platform") ) {
+        featuresl10n << i18nc( "Support for getting the information from which platform "
+                               "a public transport vehicle departs / at which it "
+                               "arrives. This string is used in a feature list, "
+                               "should be short.", "Platform" );
+    }
+    if ( features.contains("JourneyNews") ) {
+        featuresl10n << i18nc( "Support for getting the news about a journey with public "
+                               "transport, such as a platform change. This string is "
+                               "used in a feature list, should be short.", "Journey news" );
+    }
+    if ( features.contains("TypeOfVehicle") ) {
+        featuresl10n << i18nc( "Support for getting information about the type of "
+                               "vehicle of a journey with public transport. This string "
+                               "is used in a feature list, should be short.",
+                               "Type of vehicle" );
+    }
+    if ( features.contains("Status") ) {
+        featuresl10n << i18nc( "Support for getting information about the status of a "
+                               "journey with public transport or an aeroplane. This "
+                               "string is used in a feature list, should be short.",
+                               "Status" );
+    }
+    if ( features.contains("Operator") ) {
+        featuresl10n << i18nc( "Support for getting the operator of a journey with public "
+                               "transport or an aeroplane. This string is used in a "
+                               "feature list, should be short.", "Operator" );
+    }
+    if ( features.contains("StopID") ) {
+        featuresl10n << i18nc( "Support for getting the id of a stop of public transport. "
+                               "This string is used in a feature list, should be short.",
+                               "Stop ID" );
+    }
+    return featuresl10n;
 }

@@ -23,6 +23,7 @@
 
 #ifndef GENERALTRANSITFEEDDATABASE_HEADER
 #define GENERALTRANSITFEEDDATABASE_HEADER
+
 #include <qsql.h>
 #include <QSqlDatabase>
 

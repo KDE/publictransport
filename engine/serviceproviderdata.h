@@ -56,6 +56,9 @@ class ServiceProviderData : public QObject {
     // ServiceProviderData instances as returned by eg. ServiceProvider::data().
     // Otherwise QML would give warnings because NOTIFY signals are missing, although the object
     // itself is constant.
+    Q_PROPERTY( ServiceProviderType type READ type CONSTANT )
+    Q_PROPERTY( QString typeString READ typeString CONSTANT )
+    Q_PROPERTY( QString typeName READ typeName CONSTANT )
     Q_PROPERTY( QString name READ name CONSTANT )
     Q_PROPERTY( QString description READ description CONSTANT )
     Q_PROPERTY( QString version READ version CONSTANT )
@@ -75,9 +78,6 @@ class ServiceProviderData : public QObject {
     Q_PROPERTY( bool useSeparateCityValue READ useSeparateCityValue CONSTANT )
     Q_PROPERTY( bool onlyUseCitiesInList READ onlyUseCitiesInList CONSTANT )
     Q_PROPERTY( QString fileName READ fileName CONSTANT )
-    Q_PROPERTY( QString scriptFileName READ scriptFileName CONSTANT )
-    Q_PROPERTY( QStringList scriptExtensions READ scriptExtensions CONSTANT )
-    Q_PROPERTY( QString type READ typeString CONSTANT )
     Q_PROPERTY( QStringList sampleStopNames READ sampleStopNames CONSTANT )
     Q_PROPERTY( QString sampleCity READ sampleCity CONSTANT )
     Q_PROPERTY( QList<ChangelogEntry> changelog READ changelog CONSTANT )
@@ -85,6 +85,16 @@ class ServiceProviderData : public QObject {
     Q_PROPERTY( QString lastChangelogVersion READ lastChangelogVersion CONSTANT )
     Q_PROPERTY( QString lastChangelogDescription READ lastChangelogDescription CONSTANT )
     Q_PROPERTY( QString notes READ notes CONSTANT )
+
+    // For ScriptedProvider
+    Q_PROPERTY( QString scriptFileName READ scriptFileName CONSTANT )
+    Q_PROPERTY( QStringList scriptExtensions READ scriptExtensions CONSTANT )
+
+    // For GtfsProvider
+    Q_PROPERTY( QString feedUrl READ feedUrl CONSTANT )
+    Q_PROPERTY( QString realtimeTripUpdateUrl READ realtimeTripUpdateUrl CONSTANT )
+    Q_PROPERTY( QString realtimeAlertsUrl READ realtimeAlertsUrl CONSTANT )
+    Q_PROPERTY( QString timeZone READ timeZone CONSTANT )
 
 public:
     /**
@@ -147,6 +157,9 @@ public:
 
     /** @brief Convenience function that uses ServiceProviderGlobal::typeToString(). */
     QString typeString() const;
+
+    /** @brief Convenience function that uses ServiceProviderGlobal::typeName(). */
+    QString typeName() const;
 
     /** @brief The version of the service provider plugin. */
     QString version() const { return m_version; };
@@ -231,7 +244,7 @@ public:
     QString feedUrl() const { return m_feedUrl; };
 
     /** @brief An URL where realtime GTFS trip update data gets downloaded (for delays). */
-    QString realtimeTripUpdateUrl() const { return m_tripUpdatedUrl; };
+    QString realtimeTripUpdateUrl() const { return m_tripUpdatesUrl; };
 
     /** @brief An URL where realtime GTFS alerts data gets downloaded (for journey news). */
     QString realtimeAlertsUrl() const { return m_alertsUrl; };
@@ -460,7 +473,7 @@ public:
     void setNotes( const QString &notes ) { m_notes = notes; };
 
     void setFeedUrl( const QString &feedUrl ) { m_feedUrl = feedUrl; };
-    void setRealtimeTripUpdateUrl( const QString &tripUpdatedUrl ) { m_tripUpdatedUrl = tripUpdatedUrl; };
+    void setRealtimeTripUpdateUrl( const QString &tripUpdatedUrl ) { m_tripUpdatesUrl = tripUpdatedUrl; };
     void setRealtimeAlertsUrl( const QString &alertsUrl ) { m_alertsUrl = alertsUrl; };
     void setTimeZone( const QString &timeZone ) { m_timeZone = timeZone; };
 
@@ -500,7 +513,7 @@ protected:
     QByteArray m_charsetForUrlEncoding, m_fallbackCharset;
 
     QString m_feedUrl;
-    QString m_tripUpdatedUrl;
+    QString m_tripUpdatesUrl;
     QString m_alertsUrl;
     QString m_timeZone;
 

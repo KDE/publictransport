@@ -290,7 +290,6 @@ public:
         output.clear();
         consoleText.clear();
         projectSourceBufferModified = false;
-        openedPath.clear();
         filePath.clear();
         serviceProviderID.clear();
         unsavedScriptContents.clear();
@@ -398,7 +397,7 @@ public:
         return name;
     };
 
-    inline const ServiceProviderData *info()
+    inline const ServiceProviderData *data()
     {
         return provider->data();
     };
@@ -538,12 +537,14 @@ public:
         provider = 0;
 
         ServiceProviderDataReader reader;
-        ServiceProviderData *data =
+        ServiceProviderData *readData =
                 reader.read( device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q );
-        if ( data ) {
-            provider = ServiceProvider::createProviderForData( data, q );
-            if ( !provider ) {
-                provider = ServiceProvider::createInvalidProvider( q );
+        if ( readData ) {
+            if ( readData->type() == ScriptedProvider ) {
+                provider = new ServiceProviderScript( readData, q );
+            } else {
+                // Do not create sub class instance for unknown types
+                provider = new ServiceProvider( readData, q );
             }
         } else {
             kDebug() << "Service provider plugin is invalid" << reader.errorString() << fileName;
@@ -556,7 +557,7 @@ public:
             q->emit nameChanged( projectName() );
             q->emit iconNameChanged( iconName() );
             q->emit iconChanged( projectIcon() );
-            q->emit dataChanged( info() );
+            q->emit dataChanged( data() );
             return true;
         } else {
             kDebug() << "Service provider plugin has invalid type" << fileName;
@@ -685,7 +686,6 @@ public:
             KUrl url( filePath );
             const QString oldServiceProviderId = serviceProviderID;
             serviceProviderID = serviceProviderIdFromProjectFileName( url.fileName() );
-            openedPath = url.directory();
 
             // Notify about changes
             q->emit saveLocationChanged( filePath, oldXmlFilePath );
@@ -703,7 +703,7 @@ public:
                 q->emit nameChanged( projectName() );
                 q->emit iconNameChanged( iconName() );
                 q->emit iconChanged( projectIcon() );
-                q->emit dataChanged( info() );
+                q->emit dataChanged( data() );
             }
         }
     };
@@ -716,7 +716,7 @@ public:
         q->emit nameChanged( projectName() );
         q->emit iconNameChanged( iconName() );
         q->emit iconChanged( projectIcon() );
-        q->emit dataChanged( info() );
+        q->emit dataChanged( data() );
     };
 
     void insertScriptTemplate( Project::ScriptTemplateType templateType
@@ -1329,17 +1329,19 @@ public:
     bool saveAs( QWidget *parent )
     {
         parent = parentWidget( parent );
-        QString fileName = KFileDialog::getSaveFileName(
-                openedPath.isEmpty() ? KGlobalSettings::documentPath() : openedPath,
-                "application/x-publictransport-serviceprovider application/xml",
-                parent, i18nc("@title:window", "Save Project") );
-        //  "*.cpp *.cc *.C|C++ Source Files\n*.h *.H|Header files");
-        if ( fileName.isEmpty() ) {
+        KFileDialog saveDialog( filePath.isEmpty() ? KGlobalSettings::documentPath() : filePath,
+                                QString(), parent );
+        saveDialog.setOperationMode( KFileDialog::Saving );
+        saveDialog.setWindowTitle( i18nc("@title:window", "Save Project") );
+        saveDialog.setMimeFilter( QStringList() << "application/x-publictransport-serviceprovider"
+                                                << "application/xml",
+                                  "application/x-publictransport-serviceprovider" );
+        if ( saveDialog.exec() != KFileDialog::Accepted || saveDialog.selectedFile().isEmpty() ) {
             return false; // Cancel clicked
         }
 
         // Got a file name, save the project
-        return save( parent, fileName );
+        return save( parent, saveDialog.selectedFile() );
     };
 
     bool install( QWidget *parent, bool install, Project::InstallType installType )
@@ -1496,7 +1498,6 @@ public:
     // setProviderData() but no ProjectSourceTab is opened
     bool projectSourceBufferModified;
 
-    QString openedPath;
     QString filePath;
     QString serviceProviderID;
 
@@ -3499,15 +3500,16 @@ ServiceProvider *Project::provider() const
     return d->provider;
 }
 
-void Project::setProviderData( const ServiceProviderData *serviceProviderInfo )
+void Project::setProviderData( const ServiceProviderData *providerData )
 {
     Q_D( Project );
 
     // Recreate service provider plugin with new info
     delete d->provider;
-    d->provider = ServiceProvider::createProviderForData( serviceProviderInfo, this );
-    if ( !d->provider ) {
-        d->provider = ServiceProvider::createInvalidProvider( this );
+    if ( providerData->type() == ScriptedProvider ) {
+        d->provider = new ServiceProviderScript( providerData, this );
+    } else {
+        d->provider = new ServiceProvider( providerData, this );
     }
     emit nameChanged( projectName() );
     emit iconNameChanged( iconName() );
@@ -3538,18 +3540,6 @@ void Project::showSettingsDialog( QWidget *parent )
     // Check if a modified project source tab is opened and ask to save it before
     // editing the file in the settings dialog
     parent = d->parentWidget( parent );
-    if ( d->projectSourceTab && d->projectSourceTab->isModified() ) {
-        int result = KMessageBox::warningContinueCancel( parent,
-                i18nc("@info", "The project XML file was modified. Please save it first."),
-                QString(), KStandardGuiItem::save() );
-        if ( result == KMessageBox::Continue ) {
-            // Save clicked, save project XML file
-            d->projectSourceTab->save();
-        } else {
-            // Cancel clicked, do not save and do not open settings dialog
-            return;
-        }
-    }
 
     // Create settings dialog
     QPointer< ProjectSettingsDialog > dialog( new ProjectSettingsDialog(parent) );
@@ -3815,10 +3805,11 @@ QString Project::projectName() const
     return d->projectName();
 }
 
-const ServiceProviderData *Project::data()
+ServiceProviderData *Project::data()
 {
     Q_D( Project );
-    return d->info();
+    // Return as non const, because QML cannot use it otherwise
+    return const_cast< ServiceProviderData* >( d->data() );
 }
 
 Project::InstallType Project::Project::installationTypeFromFilePath( const QString &filePath )
