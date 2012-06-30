@@ -26,6 +26,7 @@
 // Qt includes
 #include <QScriptEngine>
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 QString StopSuggestionRequest::functionName() const
 {
     return ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
@@ -73,3 +74,5 @@ QScriptValue JourneyRequest::toScriptValue( QScriptEngine *engine ) const
     argument.setProperty( QLatin1String("dataType"), dataType );
     return argument;
 }
+
+#endif // BUILD_PROVIDER_TYPE_SCRIPT

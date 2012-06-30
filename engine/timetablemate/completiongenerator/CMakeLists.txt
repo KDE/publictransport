@@ -7,7 +7,9 @@ add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
 include_directories(
    ${CMAKE_SOURCE_DIR}
    ${CMAKE_BINARY_DIR}
-   ${KDE4_INCLUDES} ../../engine )
+   ${KDE4_INCLUDES} ../../engine
+   ${CMAKE_CURRENT_BINARY_DIR}/../../engine # For config.h
+)
 
 set( completiongenerator_SRCS
    main.cpp

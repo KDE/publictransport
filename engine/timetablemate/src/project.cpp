@@ -32,9 +32,11 @@
 #include "tabs/abstracttab.h"
 #include "tabs/dashboardtab.h"
 #include "tabs/projectsourcetab.h"
-#include "tabs/scripttab.h"
 #include "tabs/webtab.h"
 #include "tabs/plasmapreviewtab.h"
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    #include "tabs/scripttab.h"
+#endif
 #include "docks/breakpointdockwidget.h"
 #include "debugger/debugger.h"
 #include "debugger/breakpointmodel.h"
@@ -105,9 +107,12 @@ public:
 
     ProjectPrivate( Project *project ) : state(Project::Uninitialized),
           projectModel(0), projectSourceBufferModified(false),
-          dashboardTab(0), projectSourceTab(0), scriptTab(0), plasmaPreviewTab(0), webTab(0),
-          provider(ServiceProvider::createInvalidProvider(project)),
+          dashboardTab(0), projectSourceTab(0), plasmaPreviewTab(0), webTab(0),
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+          scriptTab(0),
           debugger(new Debugger::Debugger(project)), executionLine(-1),
+#endif
+          provider(ServiceProvider::createInvalidProvider(project)),
           testModel(new TestModel(project)), testState(NoTestRunning), q_ptr(project)
     {
     };
@@ -116,6 +121,7 @@ public:
         return fileName.left( fileName.lastIndexOf('.') );
     };
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     static QString scriptTemplateText( Project::ScriptTemplateType templateType
                                        = Project::DefaultScriptTemplate )
     {
@@ -224,12 +230,14 @@ public:
 
         return templateText;
     };
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
     // Initialize member variables, connect slots
     bool initialize()
     {
-        Q_Q( Project );
         Q_ASSERT( state == Project::Uninitialized );
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        Q_Q( Project );
 
         // Connect to signals of the debugger
         q->connect( debugger, SIGNAL(interrupted()), q, SLOT(debugInterrupted()) );
@@ -239,10 +247,12 @@ public:
         q->connect( debugger, SIGNAL(aborted()), q, SLOT(debugAborted()) );
         q->connect( debugger, SIGNAL(informationMessage(QString)), q, SIGNAL(informationMessage(QString)) );
         q->connect( debugger, SIGNAL(errorMessage(QString)), q, SLOT(emitErrorMessage(QString)) );
+
         q->connect( debugger, SIGNAL(loadScriptResult(ScriptErrorType,QString)),
                     q, SLOT(loadScriptResult(ScriptErrorType,QString)) );
         q->connect( debugger, SIGNAL(requestTimetableDataResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QScriptValue)),
                     q, SLOT(functionCallResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QScriptValue)) );
+
         q->connect( debugger, SIGNAL(output(QString,QScriptContextInfo)),
                     q, SLOT(scriptOutput(QString,QScriptContextInfo)) );
         q->connect( debugger, SIGNAL(scriptErrorReceived(QString,QScriptContextInfo,QString)),
@@ -255,6 +265,7 @@ public:
                     q, SLOT(commandExecutionResult(QString)) );
         q->connect( debugger, SIGNAL(waitingForSignal()), q, SLOT(waitingForSignal()) );
         q->connect( debugger, SIGNAL(wokeUpFromSignal(int)), q, SLOT(wokeUpFromSignal(int)) );
+#endif
 
         state = Project::NoProjectLoaded;
         return true;
@@ -283,19 +294,21 @@ public:
         if ( projectSourceTab ) {
             projectSourceTab->document()->closeUrl( false );
         }
-        if ( scriptTab ) {
-            scriptTab->document()->closeUrl( false );
-        }
         lastError.clear();
         output.clear();
         consoleText.clear();
         projectSourceBufferModified = false;
         filePath.clear();
         serviceProviderID.clear();
-        unsavedScriptContents.clear();
-        executionLine = -1;
         abortTests();
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        unsavedScriptContents.clear();
+        if ( scriptTab ) {
+            scriptTab->document()->closeUrl( false );
+        }
+        executionLine = -1;
         debugger->abortDebugger();
+#endif
         testModel->clear();
         q->emit outputChanged( QString() );
         q->emit consoleTextChanged( QString() );
@@ -317,21 +330,15 @@ public:
 
         // Set read only mode of the kate parts if the files aren't writable
         QFile test( url.path() );
-        if ( test.open(QIODevice::ReadWrite) ) {
-            if ( projectSourceTab ) {
-                projectSourceTab->document()->setReadWrite( true );
-            }
-            if ( scriptTab ) {
-                scriptTab->document()->setReadWrite( true );
-            }
-            test.close();
-        } else {
-            if ( projectSourceTab ) {
-                projectSourceTab->document()->setReadWrite( false );
-            }
-            if ( scriptTab ) {
-                scriptTab->document()->setReadWrite( false );
-            }
+        const bool writable = test.open( QIODevice::ReadWrite );
+        test.close();
+
+        if ( projectSourceTab ) {
+            projectSourceTab->document()->setReadWrite( writable );
+        }
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        if ( scriptTab ) {
+            scriptTab->document()->setReadWrite( writable);
         }
 
         // Load script file referenced by the XML
@@ -339,6 +346,7 @@ public:
             // Could not load, eg. script file not found
             return false;
         }
+#endif
 
         setXmlFilePath( projectSourceFile );
         state = Project::ProjectSuccessfullyLoaded;
@@ -358,7 +366,11 @@ public:
 
     bool isScriptModified() const
     {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         return (scriptTab && scriptTab->isModified()) || !unsavedScriptContents.isEmpty();
+#else
+        return false; // No script support
+#endif
     };
 
     bool isModified() const
@@ -375,7 +387,11 @@ public:
 
     inline bool isDebuggerRunning() const
     {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         return debugger->isRunning();
+#else
+        return false; // No script support, no debugger
+#endif
     };
 
     QString projectName() const
@@ -540,9 +556,12 @@ public:
         ServiceProviderData *readData =
                 reader.read( device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q );
         if ( readData ) {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
             if ( readData->type() == ScriptedProvider ) {
                 provider = new ServiceProviderScript( readData, q );
-            } else {
+            } else
+#endif
+            {
                 // Do not create sub class instance for unknown types
                 provider = new ServiceProvider( readData, q );
             }
@@ -582,6 +601,7 @@ public:
         return writer.write( &file, provider );
     };
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     // Load the script into the script tab,
     // if no script has been created yet the given @p templateType gets inserted
     bool loadScript( Project::ScriptTemplateType templateType = Project::DefaultScriptTemplate )
@@ -637,6 +657,7 @@ public:
             return true;
         }
     };
+#endif
 
     // Set the contents of the service provider plugin XML document to @p text
     // in the project source document tab
@@ -719,6 +740,7 @@ public:
         q->emit dataChanged( data() );
     };
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     void insertScriptTemplate( Project::ScriptTemplateType templateType
                                = Project::DefaultScriptTemplate )
     {
@@ -742,6 +764,7 @@ public:
                     scriptTemplateText(templateType), QMap<QString, QString>() );
         }
     };
+#endif
 
     void errorHappened( Project::Error error, const QString &errorString )
     {
@@ -784,7 +807,9 @@ public:
         case Project::Close:
         case Project::ShowProjectSettings:
         case Project::ShowDashboard:
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case Project::ShowScript:
+#endif
         case Project::ShowProjectSource:
         case Project::ShowPlasmaPreview:
             // Always enabled actions
@@ -802,6 +827,7 @@ public:
             // Only enable "Set as Active Project" action if the project isn't already active
             return !isActiveProject();
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case Project::StepInto:
         case Project::StepOver:
         case Project::StepOut:
@@ -828,6 +854,7 @@ public:
         case Project::RemoveAllBreakpoints:
             // Only enabled if the breakpoint model isn't empty
             return debugger->breakpointModel()->rowCount() > 0;
+#endif
 
         case Project::ClearTestResults:
             // Only enabled if there are test results
@@ -842,6 +869,7 @@ public:
         case Project::RunSpecificTest:
         case Project::RunSpecificTestCase:
         case Project::SpecificTestCaseMenuAction:
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case Project::RunMenuAction:
         case Project::RunGetTimetable:
         case Project::RunGetStopSuggestions:
@@ -850,6 +878,7 @@ public:
         case Project::DebugGetTimetable:
         case Project::DebugGetStopSuggestions:
         case Project::DebugGetJourneys:
+#endif
             // Only enabled if the debugger and the test are both currently not running
             return !isTestRunning() && !isDebuggerRunning();
 
@@ -971,6 +1000,7 @@ public:
         return true;
     };
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     // Call script function @p functionName using @p request in the given @p debugMode
     void callScriptFunction( AbstractRequest *request,
                              Debugger::DebugFlag debugMode = Debugger::InterruptOnExceptions )
@@ -1017,6 +1047,7 @@ public:
             callScriptFunction( &request, debugMode );
         }
     };
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
     // Called before testing starts
     bool beginTesting()
@@ -1027,17 +1058,22 @@ public:
             return true;
         }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         if ( !checkSyntax(q->scriptText()) ) {
             // Do not start the test if the syntax is invalid
             // TODO extra test for the syntax check?
             return false;
         }
+#endif
 
         pendingTests.clear();
         testState = TestsRunning;
-        updateProjectActions( QList<Project::ProjectActionGroup>() << Project::RunActionGroup
-                                                                   << Project::TestActionGroup,
-                              QList<Project::ProjectAction>() << Project::RunToCursor );
+        updateProjectActions( QList<Project::ProjectActionGroup>() << Project::TestActionGroup
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+                                                                   << Project::RunActionGroup,
+                              QList<Project::ProjectAction>() << Project::RunToCursor
+#endif
+                            );
         q->emit informationMessage( i18nc("@info", "Test started") );
         q->emit testStarted();
         q->emit testRunningChanged( true );
@@ -1051,9 +1087,12 @@ public:
         const bool success = !testModel->hasErroneousTests();
         pendingTests.clear();
         testState = NoTestRunning;
-        updateProjectActions( QList<Project::ProjectActionGroup>() << Project::RunActionGroup
-                                                                   << Project::TestActionGroup,
-                              QList<Project::ProjectAction>() << Project::RunToCursor );
+        updateProjectActions( QList<Project::ProjectActionGroup>() << Project::TestActionGroup
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+                                                                   << Project::RunActionGroup,
+                              QList<Project::ProjectAction>() << Project::RunToCursor
+#endif
+                            );
         if ( success ) {
             q->emit informationMessage( i18nc("@info", "Test finished successfully"),
                     KMessageWidget::Positive, 4000,
@@ -1070,6 +1109,7 @@ public:
     void abortTests()
     {
         testState = TestsGetAborted;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         foreach ( ThreadWeaver::Job *testJob, pendingTests ) {
             if ( !debugger->weaver()->dequeue(testJob) ) {
                 testJob->requestAbort();
@@ -1083,11 +1123,13 @@ public:
 //                 deleteLater();
             }
         }
+#endif
         endTesting();
     };
 
     bool testForSampleData()
     {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Q_Q( Project );
         const ServiceProviderData *info = provider->data();
         if ( info->sampleStopNames().isEmpty() ) {
@@ -1107,12 +1149,14 @@ public:
                     q->projectAction(Project::ShowProjectSettings) );
             return false;
         }
+#endif
 
         return true;
     };
 
     bool testForJourneySampleData()
     {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Q_Q( Project );
         const ServiceProviderData *info = provider->data();
         if ( info->sampleStopNames().count() < 2 ) {
@@ -1124,10 +1168,12 @@ public:
                     q->projectAction(Project::ShowProjectSettings) );
             return false;
         }
+#endif
 
         return true;
     };
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     bool startScriptExecutionTest( TestModel::Test test )
     {
         Q_Q( Project );
@@ -1262,6 +1308,7 @@ public:
             }
         }
     };
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
     bool save( QWidget *parent, const QString &xmlFilePath, bool useAsNewSavePath = true )
     {
@@ -1278,6 +1325,7 @@ public:
             return false;
         }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         QString scriptFile = provider->data()->scriptFileName();
         if ( !scriptFile.isEmpty() ) {
             const QString scriptFilePath =
@@ -1296,31 +1344,38 @@ public:
             file.write( q->scriptText().toUtf8() );
             file.close();
         }
+#endif
 
         if ( useAsNewSavePath ) {
             const bool wasModified = isModified();
-            const bool wasScriptModified = isScriptModified();
             const bool wasProjectSourceModified = isProjectSourceModified();
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+            const bool wasScriptModified = isScriptModified();
+            unsavedScriptContents.clear();
+#endif
 
             projectSourceBufferModified = false;
-            unsavedScriptContents.clear();
             updateProjectActions( QList<Project::ProjectAction>() << Project::Save );
             setXmlFilePath( _filePath );
 
             if ( projectSourceTab ) {
                 projectSourceTab->document()->setModified( false );
             }
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
             if ( scriptTab ) {
                 scriptTab->document()->setModified( false );
             }
+#endif
             if ( wasModified ) {
                 q->emit modifiedStateChanged( false );
-                if ( wasScriptModified ) {
-                    q->emit scriptModifiedStateChanged( false );
-                }
                 if ( wasProjectSourceModified ) {
                     q->emit projectSourceModifiedStateChanged( false );
                 }
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+                if ( wasScriptModified ) {
+                    q->emit scriptModifiedStateChanged( false );
+                }
+#endif
             }
         }
         return true;
@@ -1420,10 +1475,14 @@ public:
             args["path"] = saveDir;
             args["operation"] = install ? "install" : "uninstall";
             args["filenameProvider"] = xmlFileName;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
             args["filenameScript"] = provider->data()->scriptFileName();
+#endif
             if ( install ) {
                 args["contentsProvider"] = q->projectSourceText();
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
                 args["contentsScript"] = q->scriptText();
+#endif
             }
             action.setArguments( args );
             KAuth::ActionReply reply = action.execute();
@@ -1503,14 +1562,17 @@ public:
 
     DashboardTab *dashboardTab;
     ProjectSourceTab *projectSourceTab;
-    ScriptTab *scriptTab;
     PlasmaPreviewTab *plasmaPreviewTab;
     WebTab *webTab;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    ScriptTab *scriptTab;
 
-    ServiceProvider *provider;
     QString unsavedScriptContents;
     Debugger::Debugger *debugger;
     int executionLine;
+#endif
+
+    ServiceProvider *provider;
 
     // Get created when needed, multi for actions of the same type with different data
     QMultiHash< Project::ProjectAction, QAction* > projectActions;
@@ -1585,6 +1647,7 @@ void Project::appendOutput( const QString &output )
     emit outputChanged( d->output );
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 void Project::scriptOutput( const QString &message, const QScriptContextInfo &context )
 {
     appendOutput( i18nc("@info", "<emphasis strong='1'>Line %1:</emphasis> <message>%2</message>",
@@ -1599,6 +1662,7 @@ void Project::scriptErrorReceived( const QString &errorMessage,
     appendOutput( i18nc("@info", "<emphasis strong='1'>Error in line %1:</emphasis> <message>%2</message>",
                         context.lineNumber(), errorMessage) );
 }
+#endif
 
 QString Project::consoleText() const
 {
@@ -1677,11 +1741,13 @@ ProjectSourceTab *Project::projectSourceTab() const
     return d->projectSourceTab;
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 ScriptTab *Project::scriptTab() const
 {
     Q_D( const Project );
     return d->scriptTab;
 }
+#endif
 
 PlasmaPreviewTab *Project::plasmaPreviewTab() const
 {
@@ -1695,11 +1761,13 @@ WebTab *Project::webTab() const
     return d->webTab;
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 Debugger::Debugger *Project::debugger() const
 {
     Q_D( const Project );
     return d->debugger;
 }
+#endif
 
 QString Project::filePath() const
 {
@@ -1766,8 +1834,10 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
         return "project_show_dashboard";
     case ShowHomepage:
         return "project_show_homepage";
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ShowScript:
         return "project_show_script";
+#endif
     case ShowProjectSource:
         return "project_show_source";
     case ShowPlasmaPreview:
@@ -1786,6 +1856,8 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
         return "test_specific_testcase_menu";
     case SetAsActiveProject:
         return "project_set_active";
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case StepInto:
         return "debug_step_into";
     case StepOver:
@@ -1822,6 +1894,7 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
         return "debug_stop_suggestions";
     case DebugGetJourneys:
         return "debug_journeys";
+#endif
 
     default:
         kWarning() << "Unknown project action" << actionType;
@@ -1860,14 +1933,17 @@ QList< QAction* > Project::contextMenuActions( QWidget *parent )
             << separator1
             << projectAction(SetAsActiveProject)
             << projectAction(ShowDashboard)
-            << debuggerSubMenuAction( parent )
-            << testSubMenuAction( parent )
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+            << debuggerSubMenuAction(parent)
+#endif
+            << testSubMenuAction(parent)
             << separator2
             << projectAction(ShowProjectSettings)
             << projectAction(Close);
     return actions;
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 QPointer< KActionMenu > Project::debuggerSubMenuAction( QWidget *parent )
 {
     Q_D( Project );
@@ -1888,6 +1964,7 @@ QPointer< KActionMenu > Project::debuggerSubMenuAction( QWidget *parent )
     debuggerMenuAction->addAction( projectAction(StepOut)  );
     return debuggerMenuAction;
 }
+#endif
 
 QPointer< KActionMenu > Project::testSubMenuAction( QWidget *parent )
 {
@@ -1952,8 +2029,12 @@ void Project::slotActiveProjectChanged( Project *project, Project *previousProje
     if ( project == this ) {
         emit activeProjectStateChanged( true );
 
-        d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
-                                 << DebuggerActionGroup << FileActionGroup << OtherActionGroup );
+        d->updateProjectActions( QList<ProjectActionGroup>()
+                << TestActionGroup << FileActionGroup << OtherActionGroup
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+                << RunActionGroup << DebuggerActionGroup
+#endif
+                );
     } else if ( previousProject == this ) {
         emit activeProjectStateChanged( false );
     }
@@ -2028,9 +2109,11 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
     case ShowHomepage:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(showWebTab()) );
         break;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ShowScript:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(showScriptTab()) );
         break;
+#endif
     case ShowProjectSource:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(showProjectSourceTab()) );
         break;
@@ -2071,6 +2154,7 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
             disconnect( this, SIGNAL(activeProjectStateChanged(bool)), action, SLOT(setChecked(bool)) );
         }
         break;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case StepInto:
         d->connectProjectAction( actionType, action, doConnect, d->debugger, SLOT(debugStepInto()),
                                  ProjectPrivate::AutoUpdateEnabledState );
@@ -2158,6 +2242,7 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(debugGetJourneys()),
                                  ProjectPrivate::AutoUpdateEnabledState );
         break;
+#endif
 
     default:
         kWarning() << "Unknown project action" << actionType;
@@ -2222,11 +2307,13 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         action->setToolTip( i18nc("@info:tooltip",
                 "Opens the <emphasis>home page</emphasis> of the service provider in a tab.") );
         break;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ShowScript:
         action = new KAction( KIcon("application-javascript"),
                               i18nc("@action", "Show &Script"), parent );
         action->setToolTip( i18nc("@info:tooltip", "Opens the <emphasis>script</emphasis> in a tab.") );
         break;
+#endif
     case ShowProjectSource:
         action = new KAction( KIcon("application-x-publictransport-serviceprovider"),
                               i18nc("@action", "Show Project &Source"), parent );
@@ -2302,6 +2389,8 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         action->setCheckable( true );
         action->setEnabled( false );
         break;
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case StepInto:
         action = new KAction( KIcon("debug-step-into"), i18nc("@action", "Step &Into"), parent );
         action->setToolTip( i18nc("@info:tooltip",
@@ -2420,6 +2509,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
                                                    "in a debugger") );
         action->setEnabled( false );
         break;
+#endif
 
     default:
         kDebug() << "Unknown project action" << actionType;
@@ -2431,6 +2521,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
     return action;
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 void Project::showScriptLineNumber( int lineNumber )
 {
     Q_D( Project );
@@ -2442,6 +2533,7 @@ void Project::showScriptLineNumber( int lineNumber )
     d->scriptTab->document()->views().first()->setCursorPosition(
             KTextEditor::Cursor(lineNumber - 1, 0) );
 }
+#endif
 
 DashboardTab *Project::showDashboardTab( QWidget *parent )
 {
@@ -2457,6 +2549,7 @@ DashboardTab *Project::showDashboardTab( QWidget *parent )
     return d->dashboardTab;
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 ScriptTab *Project::showScriptTab( QWidget *parent )
 {
     Q_D( Project );
@@ -2470,6 +2563,7 @@ ScriptTab *Project::showScriptTab( QWidget *parent )
     }
     return d->scriptTab;
 }
+#endif
 
 ProjectSourceTab *Project::showProjectSourceTab( QWidget *parent )
 {
@@ -2527,11 +2621,14 @@ Project::ProjectActionGroup Project::actionGroupFromType( Project::ProjectAction
     case ShowProjectSettings:
     case ShowDashboard:
     case ShowHomepage:
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ShowScript:
+#endif
     case ShowProjectSource:
     case ShowPlasmaPreview:
         return UiActionGroup;
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Interrupt:
     case Continue:
     case AbortDebugger:
@@ -2552,6 +2649,7 @@ Project::ProjectActionGroup Project::actionGroupFromType( Project::ProjectAction
     case DebugGetStopSuggestions:
     case DebugGetJourneys:
         return RunActionGroup;
+#endif
 
     case RunAllTests:
     case AbortRunningTests:
@@ -2580,8 +2678,14 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
         break;
     case UiActionGroup:
         actionTypes << ShowProjectSettings << ShowDashboard << ShowHomepage
-                    << ShowScript << ShowProjectSource << ShowPlasmaPreview;
+                    << ShowProjectSource << ShowPlasmaPreview
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+                    << ShowScript
+#endif
+                    ;
         break;
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case DebuggerActionGroup:
         actionTypes << Interrupt << Continue << AbortDebugger << RunToCursor << StepInto << StepOver
                     << StepOut << ToggleBreakpoint << RemoveAllBreakpoints;
@@ -2591,6 +2695,8 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
                     << DebugMenuAction << DebugGetTimetable << DebugGetStopSuggestions
                     << DebugGetJourneys;
         break;
+#endif
+
     case TestActionGroup:
         actionTypes << RunAllTests << AbortRunningTests << ClearTestResults << RunSpecificTest
                     << RunSpecificTestCase << SpecificTestCaseMenuAction;
@@ -2620,6 +2726,7 @@ bool Project::isDebuggerRunning() const
 
 QStringList Project::scriptFunctions() const
 {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( const Project );
     if ( d->scriptTab ) {
         return d->scriptTab->scriptModel()->functionNames();
@@ -2629,6 +2736,9 @@ QStringList Project::scriptFunctions() const
         scriptModel.setNodes( parser.nodes() );
         return scriptModel.functionNames();
     }
+#else
+    return QStringList();
+#endif
 }
 
 bool Project::startTest( TestModel::Test test )
@@ -2659,9 +2769,11 @@ bool Project::startTest( TestModel::Test test )
                                      errorMessage, tooltip, projectAction(ShowProjectSettings) );
     } break;
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case TestModel::ScriptExecutionTestCase:
         success = d->startScriptExecutionTest( test );
         break;
+#endif
 
     default:
         kWarning() << "Unknown test" << test;
@@ -2716,6 +2828,7 @@ void Project::testProject()
 
     startTestCase( TestModel::ServiceProviderDataTestCase ); // This test case runs synchronously
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     // Get a list of all functions that are implemented in the script
     const QStringList functions = scriptFunctions();
     if ( !functions.contains(ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE) ) {
@@ -2736,6 +2849,7 @@ void Project::testProject()
         d->endTesting();
         return;
     }
+#endif
 }
 
 void Project::abortTests()
@@ -2753,6 +2867,7 @@ void Project::clearTestResults()
 
 void Project::testJobStarted( ThreadWeaver::Job *job )
 {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( Project );
     CallScriptFunctionJob *callFunctionJob = qobject_cast< CallScriptFunctionJob* >( job );
     if ( callFunctionJob ) {
@@ -2784,10 +2899,14 @@ void Project::testJobStarted( ThreadWeaver::Job *job )
             d->testModel->markTestAsStarted( test );
         }
     }
+#else
+    Q_UNUSED( job )
+#endif
 }
 
 void Project::testJobDone( ThreadWeaver::Job *job )
 {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( Project );
     CallScriptFunctionJob *callFunctionJob = qobject_cast< CallScriptFunctionJob* >( job );
     if ( callFunctionJob ) {
@@ -2835,10 +2954,12 @@ void Project::testJobDone( ThreadWeaver::Job *job )
             d->endTesting();
         }
     }
+#endif
 
     delete job;
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 void Project::functionCallResult( const QSharedPointer< AbstractRequest > &request,
                                   bool success, const QString &explanation,
                                   const QList< TimetableData >& timetableData,
@@ -2906,6 +3027,7 @@ void Project::debugGetJourneys()
     Q_D( Project );
     d->callGetJourneys( Debugger::InterruptAtStart );
 }
+#endif
 
 DepartureRequest Project::getDepartureRequest( QWidget *parent, bool* cancelled ) const
 {
@@ -3040,6 +3162,7 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
     return info;
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 void Project::toggleBreakpoint( int lineNumber )
 {
     Q_D( Project );
@@ -3198,23 +3321,32 @@ void Project::scriptException( int lineNumber, const QString &errorMessage )
                         lineNumber, errorMessage) );
     showScriptTab();
 }
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
 QString Project::scriptFileName() const
 {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( const Project );
     return d->provider->data()->scriptFileName();
+#else
+    return QString();
+#endif
 }
 
 QIcon Project::scriptIcon() const
 {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( const Project );
     if ( d->scriptTab ) {
         return KIcon( d->scriptTab->document()->mimeType().replace('/', '-') );
-    } else {
+    } else
+#endif
+    {
         return KIcon("application-javascript");
     }
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 QString Project::scriptTemplateText( ScriptTemplateType templateType )
 {
     return ProjectPrivate::scriptTemplateText( templateType );
@@ -3229,6 +3361,7 @@ void Project::scriptFileChanged( const QString &fileName )
 {
     kDebug() << fileName;
 }
+#endif
 
 void Project::slotTabTitleChanged( const QString &title )
 {
@@ -3267,8 +3400,10 @@ AbstractTab *Project::tab( TabType type ) const
         return dashboardTab();
     case Tabs::ProjectSource:
         return projectSourceTab();
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Tabs::Script:
         return scriptTab();
+#endif
     case Tabs::Web:
         return webTab();
     case Tabs::PlasmaPreview:
@@ -3286,8 +3421,10 @@ AbstractTab *Project::showTab( TabType type, QWidget *parent )
         return showDashboardTab( parent );
     case Tabs::ProjectSource:
         return showProjectSourceTab( parent );
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Tabs::Script:
         return showScriptTab( parent );
+#endif
     case Tabs::Web:
         return showWebTab( parent );
     case Tabs::PlasmaPreview:
@@ -3306,8 +3443,10 @@ bool Project::isTabOpened( TabType type ) const
         return d->dashboardTab;
     case Tabs::ProjectSource:
         return d->projectSourceTab;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Tabs::Script:
         return d->scriptTab;
+#endif
     case Tabs::Web:
         return d->webTab;
     case Tabs::PlasmaPreview:
@@ -3326,8 +3465,10 @@ AbstractTab *Project::createTab( TabType type, QWidget *parent )
         return createDashboardTab( parent );
     case Tabs::ProjectSource:
         return createProjectSourceTab( parent );
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Tabs::Script:
         return createScriptTab( parent );
+#endif
     case Tabs::Web:
         return createWebTab( parent );
     case Tabs::PlasmaPreview:
@@ -3451,6 +3592,7 @@ ProjectSourceTab *Project::createProjectSourceTab( QWidget *parent )
     return d->projectSourceTab;
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 ScriptTab *Project::createScriptTab( QWidget *parent )
 {
     Q_D( Project );
@@ -3492,6 +3634,7 @@ ScriptTab *Project::createScriptTab( QWidget *parent )
              this, SIGNAL(scriptModifiedStateChanged(bool)) );
     return d->scriptTab;
 }
+#endif
 
 ServiceProvider *Project::provider() const
 {
@@ -3506,9 +3649,12 @@ void Project::setProviderData( const ServiceProviderData *providerData )
 
     // Recreate service provider plugin with new info
     delete d->provider;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     if ( providerData->type() == ScriptedProvider ) {
         d->provider = new ServiceProviderScript( providerData, this );
-    } else {
+    } else
+#endif
+    {
         d->provider = new ServiceProvider( providerData, this );
     }
     emit nameChanged( projectName() );
@@ -3547,11 +3693,13 @@ void Project::showSettingsDialog( QWidget *parent )
     if ( dialog->exec() == KDialog::Accepted ) {
         setProviderData( dialog->providerData(this) );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         if ( dialog->newScriptTemplateType() != Project::NoScriptTemplate ) {
             // A new script file was set in the dialog
             // Load the chosen template
             setScriptText( Project::scriptTemplateText(dialog->newScriptTemplateType()) );
         }
+#endif
     }
     delete dialog.data();
 }
@@ -3582,12 +3730,14 @@ void Project::projectSourceTabDestroyed()
     d->projectSourceTab = 0;
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 void Project::scriptTabDestroyed()
 {
     Q_D( Project );
     d->scriptTab = 0;
     d->updateProjectActions( QList< ProjectAction >() << ToggleBreakpoint );
 }
+#endif
 
 void Project::plasmaPreviewTabDestroyed()
 {
@@ -3644,6 +3794,7 @@ QString Project::projectSourceText( ProjectDocumentSource source) const
     return QString();
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 QString Project::scriptText() const
 {
     Q_D( const Project );
@@ -3724,6 +3875,7 @@ Project::ScriptTemplateType Project::getScriptTemplateTypeInput( QWidget *parent
         return NoScriptTemplate;
     }
 }
+#endif
 
 bool Project::isProjectSourceModified() const
 {
@@ -3744,11 +3896,16 @@ bool Project::isModified() const
 }
 
 void Project::showTextHint( const KTextEditor::Cursor &position, QString &text ) {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( const Project );
     KTextEditor::View *activeView = d->scriptTab->document()->activeView();
     const QPoint pointInView = activeView->cursorToCoordinate( position );
     const QPoint pointGlobal = activeView->mapToGlobal( pointInView );
     QToolTip::showText( pointGlobal, text );
+#else
+    Q_UNUSED( position )
+    Q_UNUSED( text )
+#endif
 }
 
 bool Project::save( QWidget *parent, const QString &xmlFilePath )

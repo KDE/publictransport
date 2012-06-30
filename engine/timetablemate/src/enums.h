@@ -20,6 +20,10 @@
 #ifndef ENUMS_H
 #define ENUMS_H
 
+// Own includes
+#include "config.h"
+
+// Qt includes
 #include <QObject>
 
 class Tabs : public QObject {
@@ -32,7 +36,9 @@ public:
 
         Dashboard = 1, /**< Dashboard tab. */
         ProjectSource = 2, /**< Project source document tab. */
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Script = 3, /**< Script document tab. */
+#endif
         Web = 4, /**< Web tab. */
         PlasmaPreview = 5 /**< Plasma preview tab. */
     };
@@ -43,8 +49,10 @@ public:
             return QLatin1String("dashboard");
         case Tabs::ProjectSource:
             return QLatin1String("source");
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case Tabs::Script:
             return QLatin1String("script");
+#endif
         case Tabs::Web:
             return QLatin1String("web");
         case Tabs::PlasmaPreview:

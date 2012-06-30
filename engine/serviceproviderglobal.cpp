@@ -92,24 +92,32 @@ ServiceProviderType ServiceProviderGlobal::typeFromString(
         const QString &serviceProviderType )
 {
     QString s = serviceProviderType.toLower();
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     if ( s == QLatin1String("script") ||
          s == QLatin1String("html") ) // DEPRECATED
     {
         return ScriptedProvider;
-    } else if ( s == QLatin1String("gtfs") ) {
-        return GtfsProvider;
-    } else {
-        return InvalidProvider;
     }
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    if ( s == QLatin1String("gtfs") ) {
+        return GtfsProvider;
+    }
+#endif
+    return InvalidProvider;
 }
 
 QString ServiceProviderGlobal::typeToString( ServiceProviderType type )
 {
     switch ( type ) {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptedProvider:
         return "script";
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     case GtfsProvider:
         return "gtfs";
+#endif
     case InvalidProvider:
     default:
         return "invalid";
@@ -119,10 +127,14 @@ QString ServiceProviderGlobal::typeToString( ServiceProviderType type )
 QString ServiceProviderGlobal::typeName( ServiceProviderType type )
 {
     switch ( type ) {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptedProvider:
         return i18nc("@info/plain Name of a service provider plugin type", "Scripted");
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     case GtfsProvider:
         return i18nc("@info/plain Name of a service provider plugin type", "GTFS");
+#endif
     case InvalidProvider:
     default:
         kWarning() << "Invalid provider type" << type;

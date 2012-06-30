@@ -34,9 +34,11 @@
 #include "tabs/abstracttab.h"
 #include "tabs/dashboardtab.h"
 #include "tabs/projectsourcetab.h"
-#include "tabs/scripttab.h"
 #include "tabs/webtab.h"
 #include "tabs/plasmapreviewtab.h"
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    #include "tabs/scripttab.h"
+#endif
 
 // Dock widgets
 #include "docks/docktoolbar.h"
@@ -105,10 +107,13 @@ const QList< Project::ProjectAction > externProjectActions() {
             << Project::Save << Project::SaveAs << Project::Install << Project::InstallGlobally
             << Project::ShowProjectSettings << Project::Close << Project::ShowHomepage
             << Project::RunAllTests << Project::AbortRunningTests << Project::ClearTestResults
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
             << Project::RunMenuAction << Project::DebugMenuAction << Project::StepInto
             << Project::StepOver << Project::StepOut << Project::RunToCursor << Project::Interrupt
             << Project::Continue << Project::AbortDebugger
-            << Project::ToggleBreakpoint << Project::RemoveAllBreakpoints;
+            << Project::ToggleBreakpoint << Project::RemoveAllBreakpoints
+#endif
+            ;
 }
 
 void moveContainer( KXMLGUIClient *client, const QString &tagname, const QString &name,
@@ -156,11 +161,14 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
         ui_preferences(0), m_projectModel(0), m_partManager(0),
         m_tabWidget(new KTabWidget(this)),
         m_leftDockBar(0), m_rightDockBar(0), m_bottomDockBar(0),
+        m_documentationDock(0), m_projectsDock(0), m_testDock(0),
+        m_webInspectorDock(0), m_networkMonitorDock(0),
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         m_backtraceDock(0), m_consoleDock(0), m_outputDock(0), m_breakpointDock(0),
-        m_variablesDock(0), m_documentationDock(0), m_projectsDock(0), m_testDock(0),
-        m_webInspectorDock(0), m_networkMonitorDock(0), m_showDocksAction(0),
-        m_toolbarAction(0), m_statusbarAction(0), m_recentFilesAction(0), m_currentTab(0),
-        m_messageWidgetLayout(new QVBoxLayout())
+        m_variablesDock(0),
+#endif
+        m_showDocksAction(0), m_toolbarAction(0), m_statusbarAction(0), m_recentFilesAction(0),
+        m_currentTab(0), m_messageWidgetLayout(new QVBoxLayout())
 {
     m_partManager = new KParts::PartManager( this );
     m_tabWidget->setDocumentMode( true );
@@ -286,8 +294,12 @@ void TimetableMate::saveProperties( KConfigGroup &config )
         if ( !filePath.isEmpty() ) {
             QStringList openedTabs;
             const QList< TabType > allTabs = QList< TabType >()
-                    << Tabs::Dashboard << Tabs::Script << Tabs::ProjectSource
-                    << Tabs::PlasmaPreview << Tabs::Web;
+                    << Tabs::Dashboard << Tabs::ProjectSource
+                    << Tabs::PlasmaPreview << Tabs::Web
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+                    << Tabs::Script
+#endif
+                    ;
             foreach ( TabType tab, allTabs ) {
                 if ( project->isTabOpened(tab) ) {
                     openedTabs << QString::number(static_cast<int>(tab));
@@ -423,6 +435,15 @@ bool TimetableMate::fixMenus()
     if ( fileMenu ) {
         fileMenu->setVisible( !fileMenu->menu()->isEmpty() );
     }
+
+#ifndef BUILD_PROVIDER_TYPE_SCRIPT
+    // Hide the run menu if the script provider type is disabled
+    // (and the run menu is actually empty)
+    QAction *runMenu = menus["run"];
+    if ( runMenu ) {
+        runMenu->setVisible( !runMenu->menu()->isEmpty() );
+    }
+#endif
 
     // Show the separator after the part menus only when part menus are there
     QAction *separatorPartMenusEnd = menus["separator_part_menus_end"];
@@ -584,20 +605,25 @@ void TimetableMate::setupDockWidgets()
 
     // Create dock widgets
     m_projectsDock = new ProjectsDockWidget( m_projectModel, m_showDocksAction, this );
+    m_testDock = new TestDockWidget( m_projectModel, m_showDocksAction, this );
+    m_documentationDock = new DocumentationDockWidget( m_showDocksAction, this );
+    m_webInspectorDock = new WebInspectorDockWidget( m_showDocksAction, this );
+    m_networkMonitorDock = new NetworkMonitorDockWidget( m_projectModel, m_showDocksAction, this );
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     m_backtraceDock = new BacktraceDockWidget( m_projectModel, m_showDocksAction, this );
     m_breakpointDock = new BreakpointDockWidget( m_projectModel, m_showDocksAction, this );
     m_outputDock = new OutputDockWidget( m_projectModel, m_showDocksAction, this );
     m_consoleDock = new ConsoleDockWidget( m_projectModel, m_showDocksAction, this );
     m_variablesDock = new VariablesDockWidget( m_projectModel, m_showDocksAction, this );
-    m_testDock = new TestDockWidget( m_projectModel, m_showDocksAction, this );
-    m_documentationDock = new DocumentationDockWidget( m_showDocksAction, this );
-    m_webInspectorDock = new WebInspectorDockWidget( m_showDocksAction, this );
-    m_networkMonitorDock = new NetworkMonitorDockWidget( m_projectModel, m_showDocksAction, this );
+#endif
 
     const QList< AbstractDockWidget* > allDockWidgets = QList< AbstractDockWidget* >()
-            << m_projectsDock << m_backtraceDock << m_breakpointDock << m_outputDock
-            << m_consoleDock << m_variablesDock << m_testDock << m_documentationDock
-            << m_webInspectorDock << m_networkMonitorDock;
+            << m_projectsDock << m_testDock << m_documentationDock
+            << m_webInspectorDock << m_networkMonitorDock
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+            << m_backtraceDock << m_breakpointDock << m_outputDock << m_consoleDock << m_variablesDock
+#endif
+            ;
     foreach ( AbstractDockWidget *dockWidget, allDockWidgets ) {
         DockToolButtonAction *toggleAction = new DockToolButtonAction(
                 dockWidget, dockWidget->icon(), dockWidget->windowTitle(), this );
@@ -625,6 +651,7 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
         disconnect( previousProject, SIGNAL(testStarted()), this, SLOT(testStarted()) );
         disconnect( previousProject, SIGNAL(testFinished(bool)), this, SLOT(testFinished(bool)) );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Debugger::Debugger *debugger = previousProject->debugger();
         disconnect( debugger, SIGNAL(aborted()), this, SLOT(debugAborted()) );
         disconnect( debugger, SIGNAL(interrupted()), this, SLOT(debugInterrupted()) );
@@ -635,13 +662,15 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
                     this, SLOT(uncaughtException(int,QString)) );
         disconnect( debugger, SIGNAL(breakpointReached(Breakpoint)),
                     this, SLOT(breakpointReached(Breakpoint)) );
-        if ( m_testDock ) {
-            disconnect( m_testDock, SIGNAL(clickedTestErrorItem(int,QString)),
-                        previousProject, SLOT(showScriptLineNumber(int)) );
-        }
+
         if ( m_backtraceDock ) {
             disconnect( m_backtraceDock, SIGNAL(activeFrameDepthChanged(int)),
                         debugger->variableModel(), SLOT(switchToVariableStack(int)) );
+        }
+#endif
+        if ( m_testDock ) {
+            disconnect( m_testDock, SIGNAL(clickedTestErrorItem(int,QString)),
+                        previousProject, SLOT(showScriptLineNumber(int)) );
         }
     }
 
@@ -657,6 +686,7 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
         connect( project, SIGNAL(testStarted()), this, SLOT(testStarted()) );
         connect( project, SIGNAL(testFinished(bool)), this, SLOT(testFinished(bool)) );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Debugger::Debugger *debugger = project->debugger();
         connect( debugger, SIGNAL(aborted()), this, SLOT(debugAborted()) );
         connect( debugger, SIGNAL(interrupted()), this, SLOT(debugInterrupted()) );
@@ -667,13 +697,14 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
                  this, SLOT(uncaughtException(int,QString)) );
         connect( debugger, SIGNAL(breakpointReached(Breakpoint)),
                  this, SLOT(breakpointReached(Breakpoint)) );
-        if ( m_testDock ) {
-            connect( m_testDock, SIGNAL(clickedTestErrorItem(int,QString)),
-                     project, SLOT(showScriptLineNumber(int)) );
-        }
         if ( m_backtraceDock ) {
             connect( m_backtraceDock, SIGNAL(activeFrameDepthChanged(int)),
                      debugger->variableModel(), SLOT(switchToVariableStack(int)) );
+        }
+#endif
+        if ( m_testDock ) {
+            connect( m_testDock, SIGNAL(clickedTestErrorItem(int,QString)),
+                     project, SLOT(showScriptLineNumber(int)) );
         }
 
         stateChanged( "project_opened" );
@@ -721,6 +752,7 @@ void TimetableMate::updateWindowTitle() {
         caption += " - " + i18nc("@info/plain", "Testing");
     }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     // Add information about the debugger state
     Debugger::Debugger *debugger = project->debugger();
     if ( debugger ) {
@@ -733,6 +765,7 @@ void TimetableMate::updateWindowTitle() {
             caption += " - " + i18nc("@info/plain", "Debugger Running");
         }
     }
+#endif
 
     setCaption( caption, tab ? tab->isModified() : false );
 }
@@ -907,15 +940,17 @@ void TimetableMate::closeTab( AbstractTab *tab )
     case Tabs::ProjectSource:
         projectSourceTabAction( qobject_cast<ProjectSourceTab*>(tab), CloseTab );
         break;
-    case Tabs::Script:
-        scriptTabAction( qobject_cast<ScriptTab*>(tab), CloseTab );
-        break;
     case Tabs::PlasmaPreview:
         plasmaPreviewTabAction( qobject_cast<PlasmaPreviewTab*>(tab), CloseTab );
         break;
     case Tabs::Web:
         webTabAction( qobject_cast<WebTab*>(tab), CloseTab );
         break;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    case Tabs::Script:
+        scriptTabAction( qobject_cast<ScriptTab*>(tab), CloseTab );
+        break;
+#endif
     case Tabs::NoTab:
     default:
         break;
@@ -1067,6 +1102,7 @@ void TimetableMate::currentTabChanged( int index ) {
         plasmaPreviewTabAction( qobject_cast<PlasmaPreviewTab*>(tab), MoveToTab );
     }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     // Adjust if a script tab was left or newly shown
     const bool leftScriptTab = m_currentTab && m_currentTab->isScriptTab();
     const bool movedToScriptTab = tab && tab->isScriptTab();
@@ -1075,6 +1111,7 @@ void TimetableMate::currentTabChanged( int index ) {
     } else if ( movedToScriptTab && !leftScriptTab ) {
         scriptTabAction( qobject_cast<ScriptTab*>(tab), MoveToTab );
     }
+#endif
 
     // Adjust if a web tab was left or newly shown
     const bool leftWebTab = m_currentTab && m_currentTab->isWebTab();
@@ -1119,6 +1156,7 @@ void TimetableMate::projectSourceTabAction( ProjectSourceTab *projectSourceTab,
     }
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 void TimetableMate::scriptTabAction( ScriptTab *scriptTab, TimetableMate::TabAction tabAction )
 {
     if ( tabAction == MoveToTab ) {
@@ -1137,6 +1175,7 @@ void TimetableMate::scriptTabAction( ScriptTab *scriptTab, TimetableMate::TabAct
         m_partManager->removePart( scriptTab->document() );
     }
 }
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
 void TimetableMate::plasmaPreviewTabAction( PlasmaPreviewTab *plasmaPreviewTab,
                                             TimetableMate::TabAction tabAction )
@@ -1192,6 +1231,7 @@ void TimetableMate::setupActions() {
             KIcon("edit-select"), i18nc("@action", "&Active Project"), this );
     actionCollection()->addAction( QLatin1String("project_choose_active"), chooseActiveProject );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     // TODO Move to Project? => Project::ProjectAction
     KAction *scriptNextFunction = ScriptTab::createNextFunctionAction( this );
     actionCollection()->addAction( QLatin1String("script_next_function"), scriptNextFunction );
@@ -1204,6 +1244,7 @@ void TimetableMate::setupActions() {
     scriptPreviousFunction->setVisible( false );
     connect( scriptPreviousFunction, SIGNAL(triggered(bool)),
              this, SLOT(scriptPreviousFunction()) );
+#endif
 
     // Add project actions, they get connected to the currently active project
     // in activeProjectAboutToChange()
@@ -1248,6 +1289,7 @@ void TimetableMate::tabPreviousActionTriggered()
     }
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 void TimetableMate::toggleBreakpoint()
 {
     ScriptTab *scriptTab = qobject_cast< ScriptTab* >( m_currentTab );
@@ -1307,6 +1349,13 @@ void TimetableMate::debugStopped()
     updateWindowTitle();
 }
 
+void TimetableMate::uncaughtException( int lineNumber, const QString &errorMessage )
+{
+    infoMessage( i18nc("@info", "Uncaught exception at %1: <message>%2</message>",
+                       lineNumber, errorMessage), KMessageWidget::Error, -1 );
+}
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
+
 void TimetableMate::testStarted()
 {
     if ( m_testDock ) {
@@ -1319,12 +1368,6 @@ void TimetableMate::testFinished( bool success )
 {
     Q_UNUSED( success );
     updateWindowTitle();
-}
-
-void TimetableMate::uncaughtException( int lineNumber, const QString &errorMessage )
-{
-    infoMessage( i18nc("@info", "Uncaught exception at %1: <message>%2</message>",
-                       lineNumber, errorMessage), KMessageWidget::Error, -1 );
 }
 
 void TimetableMate::fileNew()

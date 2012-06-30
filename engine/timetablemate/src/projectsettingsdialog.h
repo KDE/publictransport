@@ -60,11 +60,13 @@ public:
     virtual ~ProjectSettingsDialog();
 
     const ServiceProviderData *providerData( QObject *parent ) const;
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Project::ScriptTemplateType newScriptTemplateType() const { return m_newScriptTemplateType; };
+    void setScriptFile( const QString &scriptFile );
+#endif
 
     void setProviderData( const ServiceProviderData *info, const QString &fileName = QString() );
-
-    void setScriptFile( const QString &scriptFile );
 
     void setCurrentServiceProviderID( const QString &currentServiceProviderID ) {
         m_currentServiceProviderID = currentServiceProviderID;
@@ -76,10 +78,12 @@ signals:
 
     void fileVersionchanged();
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** A new script file has been created. */
     void scriptAdded( const QString &scriptFile );
     /** The used script file has changed. */
     void scriptFileChanged( const QString &scriptFile );
+#endif
 
     void urlShouldBeOpened( const QString &url );
 
@@ -92,9 +96,11 @@ signals:
 protected slots:
     void settingsChanged();
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     void browseForScriptFile();
     void createScriptFile();
     void detachScriptFile();
+#endif
 
     void slotChanged( QWidget *changedWidget );
     void languageActivated( const QString &languageCode );
@@ -125,22 +131,26 @@ private:
     int compareVersions( const QString &version1, const QString &version2 );
     bool testWidget( QWidget *widget );
     void appendMessageWidgetAfter( QWidget *after, const QString &errorMessage );
+
+    ServiceProviderType providerTypeFromComboBoxIndex( int index ) const;
+    int providerTypeToComboBoxIndex( ServiceProviderType providerType ) const;
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     QStringList scriptExtensionsFromWidget() const;
     void checkScriptExtensionsInWidget( const QStringList &scriptExtensions ) const;
-
-    inline ServiceProviderType providerTypeFromComboBoxIndex( int newProviderTypeIndex ) const
-            { return static_cast<ServiceProviderType>(newProviderTypeIndex + 1); };
-    inline int providerTypeToComboBoxIndex( ServiceProviderType providerType ) const
-            { return static_cast<int>(providerType) - 1; };
+#endif
 
     Ui::timetablemateview_base *ui_provider;
 
     QString m_openedPath;
     QString m_currentServiceProviderID;
     ServiceProviderData *m_providerData;
-    Project::ScriptTemplateType m_newScriptTemplateType;
     bool m_shortAuthorAutoFilled;
     bool m_shortUrlAutoFilled;
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    Project::ScriptTemplateType m_newScriptTemplateType;
+#endif
 
     KEditListBox::CustomEditor m_predefinedCitiesCustomEditor;
     KLineEdit *m_cityName;

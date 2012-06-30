@@ -645,8 +645,12 @@ QVariant TestModel::headerData( int section, Qt::Orientation orientation, int ro
 
 bool TestModel::hasErroneousTests() const
 {
-    return testCaseState( ServiceProviderDataTestCase ) == TestFinishedWithErrors ||
-           testCaseState( ScriptExecutionTestCase ) == TestFinishedWithErrors;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    if ( testCaseState(ScriptExecutionTestCase) == TestFinishedWithErrors ) {
+        return true;
+    }
+#endif
+    return testCaseState( ServiceProviderDataTestCase ) == TestFinishedWithErrors;
 }
 
 TestModel::TestState TestModel::testCaseState( TestModel::TestCase testCase ) const
@@ -681,15 +685,19 @@ QList< TestModel::Test > TestModel::testsOfTestCase( TestModel::TestCase testCas
     QList< TestModel::Test > tests;
     switch ( testCase ) {
     case ServiceProviderDataTestCase:
-        tests << ServiceProviderDataNameTest << ServiceProviderDataVersionTest << ServiceProviderDataFileFormatVersionTest
+        tests << ServiceProviderDataNameTest << ServiceProviderDataVersionTest
+              << ServiceProviderDataFileFormatVersionTest
               << ServiceProviderDataAuthorNameTest << ServiceProviderDataShortAuthorNameTest
-              << ServiceProviderDataEmailTest << ServiceProviderDataUrlTest << ServiceProviderDataShortUrlTest
+              << ServiceProviderDataEmailTest << ServiceProviderDataUrlTest
+              << ServiceProviderDataShortUrlTest
               << ServiceProviderDataScriptFileNameTest << ServiceProviderDataDescriptionTest;
         break;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptExecutionTestCase:
         tests << DepartureTest << ArrivalTest << StopSuggestionTest << JourneyTest
               << UsedTimetableInformationsTest;
         break;
+#endif
     default:
         kDebug() << "Unknown test case" << testCase;
         break;
@@ -713,12 +721,14 @@ TestModel::TestCase TestModel::testCaseOfTest( TestModel::Test test )
     case ServiceProviderDataDescriptionTest:
         return ServiceProviderDataTestCase;
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case DepartureTest:
     case ArrivalTest:
     case StopSuggestionTest:
     case JourneyTest:
     case UsedTimetableInformationsTest:
         return ScriptExecutionTestCase;
+#endif
 
     default:
         kDebug() << "Unknown test" << test;
@@ -731,8 +741,10 @@ QString TestModel::nameForTestCase( TestModel::TestCase testCase )
     switch ( testCase ) {
     case ServiceProviderDataTestCase:
         return i18nc("@info/plain", "Project Settings Test Case" );
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptExecutionTestCase:
         return i18nc("@info/plain", "Script Execution Test Case" );
+#endif
     default:
         kDebug() << "Unknown test case" << testCase;
         return QString();
@@ -763,6 +775,7 @@ QString TestModel::nameForTest( TestModel::Test test )
     case ServiceProviderDataDescriptionTest:
         return i18nc("@info/plain", "Description Test" );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case DepartureTest:
         return i18nc("@info/plain", "Departure Test" );
     case ArrivalTest:
@@ -773,6 +786,7 @@ QString TestModel::nameForTest( TestModel::Test test )
         return i18nc("@info/plain", "Journey Test" );
     case UsedTimetableInformationsTest:
         return i18nc("@info/plain", "usedTimetableInformations() Test" );
+#endif
     default:
         kDebug() << "Unknown test" << test;
         return QString();
@@ -784,8 +798,10 @@ QString TestModel::descriptionForTestCase( TestModel::TestCase testCase )
     switch ( testCase ) {
     case ServiceProviderDataTestCase:
         return i18nc("@info/plain", "Tests project settings for validity" );
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptExecutionTestCase:
         return i18nc("@info/plain", "Runs script functions and tests collected data" );
+#endif
     default:
         kDebug() << "Unknown test case" << testCase;
         return QString();
@@ -816,6 +832,7 @@ QString TestModel::descriptionForTest( TestModel::Test test )
     case ServiceProviderDataDescriptionTest:
         return i18nc("@info/plain", "Tests for a valid description" );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case DepartureTest:
         return i18nc("@info/plain", "Runs the %1() script function and tests collected departure data",
                      ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE );
@@ -832,6 +849,8 @@ QString TestModel::descriptionForTest( TestModel::Test test )
         return i18nc("@info/plain", "Runs the %1() script function and tests the returned list of "
                      "strings, which should name TimetableInformation enumerables",
                      ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS );
+#endif
+
     default:
         kDebug() << "Unknown test" << test;
         return QString();

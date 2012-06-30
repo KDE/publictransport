@@ -21,6 +21,7 @@
 #define PROJECTTABS_HEADER
 
 // Own includes
+#include "config.h"
 #include "enums.h"
 
 // Qt includes
@@ -65,8 +66,13 @@ public:
     /** @brief Whether or not this is a project source tab. */
     inline bool isProjectSourceTab() const { return type() == Tabs::ProjectSource; };
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Whether or not this is a script document tab. */
     inline bool isScriptTab() const { return type() == Tabs::Script; };
+#else
+    // Dummy function
+    inline bool isScriptTab() const { return false; };
+#endif
 
     /** @brief Whether or not this is a web tab. */
     inline bool isWebTab() const { return type() == Tabs::Web; };

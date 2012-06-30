@@ -22,9 +22,11 @@
 
 // Own includes
 #include "project.h"
-#include "tabs/scripttab.h"
 #include "tabs/projectsourcetab.h"
-#include "debugger/debugger.h"
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    #include "tabs/scripttab.h"
+    #include "debugger/debugger.h"
+#endif
 
 // Public Transport engine includes
 #include <engine/serviceprovider.h>
@@ -131,6 +133,7 @@ QString ProjectModelItem::text() const
     switch ( m_type ) {
     case ProjectModelItem::DashboardItem:
         return i18nc("@info/plain", "Dashboard");
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ProjectModelItem::ScriptItem: {
         QString name = m_project->scriptFileName().isEmpty()
                 ? i18nc("@info/plain", "Script File")
@@ -139,6 +142,7 @@ QString ProjectModelItem::text() const
                 m_project->scriptTab() && m_project->scriptTab()->isModified()
                 ? KDialog::ModifiedCaption : KDialog::NoCaptionFlags );
     }
+#endif
     case ProjectModelItem::ProjectSourceItem: {
         QString name = m_project->filePath().isEmpty()
                 ? i18nc("@info/plain", "Project Source XML File (experts)")
@@ -173,8 +177,10 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                 return KIcon("dashboard-show");
             case ProjectModelItem::ProjectSourceItem:
                 return KIcon("application-x-publictransport-serviceprovider");
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
             case ProjectModelItem::ScriptItem:
                 return project->scriptIcon();
+#endif
             case ProjectModelItem::PlasmaPreviewItem:
                 return KIcon("plasma");
             case ProjectModelItem::WebItem:
@@ -189,8 +195,10 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
             case ProjectModelItem::DashboardItem:
                 return i18nc("@info:tooltip", "The dashboard of the project %1.",
                              project->projectName());
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
             case ProjectModelItem::ScriptItem:
                 return i18nc("@info:tooltip", "Create/edit the projects script.");
+#endif
             case ProjectModelItem::ProjectSourceItem:
                 return i18nc("@info:tooltip", "Edit project settings directly in the XML "
                                               "source document. Intended for experts, normally "
@@ -221,6 +229,7 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                 } else {
                     return KGlobalSettings::generalFont();
                 }
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
             case ProjectModelItem::ScriptItem:
                 if ( projectItem->project()->scriptTab() &&
                      projectItem->project()->scriptTab()->isModified() )
@@ -231,6 +240,7 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                 } else {
                     return KGlobalSettings::generalFont();
                 }
+#endif
             case ProjectModelItem::PlasmaPreviewItem:
             case ProjectModelItem::WebItem:
             case ProjectModelItem::DashboardItem:
@@ -280,7 +290,9 @@ Qt::ItemFlags ProjectModel::flags( const QModelIndex &index ) const
         case ProjectModelItem::DashboardItem:
         case ProjectModelItem::ProjectSourceItem:
         case ProjectModelItem::PlasmaPreviewItem:
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case ProjectModelItem::ScriptItem:
+#endif
             return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
         case ProjectModelItem::WebItem:
             if ( project->provider()->data()->url().isEmpty() ) {
@@ -350,7 +362,9 @@ void ProjectModel::appendProject( Project *project )
     const QModelIndex projectIndex = indexFromProjectItem( projectItem );
     beginInsertRows( projectIndex, 0, 4 );
     projectItem->addChild( ProjectModelItem::createDashboardtItem(project) );
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     projectItem->addChild( ProjectModelItem::createScriptItem(project) );
+#endif
     projectItem->addChild( ProjectModelItem::createProjectSourceDocumentItem(project) );
     projectItem->addChild( ProjectModelItem::createWebItem(project) );
     projectItem->addChild( ProjectModelItem::createPlasmaPreviewItem(project) );
@@ -386,8 +400,10 @@ TabType ProjectModelItem::tabTypeFromProjectItemType( ProjectModelItem::Type pro
         return Tabs::Dashboard;
     case ProjectSourceItem:
         return Tabs::ProjectSource;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptItem:
         return Tabs::Script;
+#endif
     case PlasmaPreviewItem:
         return Tabs::PlasmaPreview;
     case WebItem:
@@ -405,8 +421,10 @@ ProjectModelItem::Type ProjectModelItem::projectItemTypeFromTabType( TabType tab
         return DashboardItem;
     case Tabs::ProjectSource:
         return ProjectSourceItem;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Tabs::Script:
         return ScriptItem;
+#endif
     case Tabs::PlasmaPreview:
         return PlasmaPreviewItem;
     case Tabs::Web:

@@ -18,23 +18,23 @@ set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/mo
 set( SHARED_MIME_INFO_MINIMUM_VERSION "0.30" )
 find_package( SharedMimeInfo )
 
-# Find protocol buffers
-find_package( ProtocolBuffers REQUIRED )
+set( BUILD_PROVIDER_TYPE_SCRIPT ON CACHE BOOL "Build with support for scripted providers")
+set( BUILD_PROVIDER_TYPE_GTFS ON CACHE BOOL "Build with support for GTFS providers")
+set( BUILD_GTFS_REALTIME ON CACHE BOOL "Build with GTFS-realtime support for GTFS providers (needs protocol buffers)")
+configure_file( config.h.in config.h )
 
+# Fatal error if no provider types are enabled
+if ( NOT BUILD_PROVIDER_TYPE_SCRIPT AND NOT BUILD_PROVIDER_TYPE_GTFS )
+    message( FATAL_ERROR "   - No provider types enabled, this would make the engine useless!\n"
+                         "Solution: Use at least one of the available provider types\n"
+                         "          BUILD_PROVIDER_TYPE_SCRIPT or BUILD_PROVIDER_TYPE_GTFS." )
+endif ( NOT BUILD_PROVIDER_TYPE_SCRIPT AND NOT BUILD_PROVIDER_TYPE_GTFS )
 
-if ( BUILD_TESTS )
-    add_subdirectory( tests )
-endif ( BUILD_TESTS )
-
+# Add TimetableMate
 if ( INSTALL_TIMETABLEMATE )
-    message( " - TimetableMate" )
+    message( "   - TimetableMate" )
     add_subdirectory( timetablemate )
 endif ( INSTALL_TIMETABLEMATE )
-
-add_subdirectory( serviceProviders )
-
-# Generate gtfs-realtime protocol buffer sources
-WRAP_PROTO( PROTO_SRC gtfs-realtime.proto )
 
 # Source files
 set( publictransport_engine_SRCS
@@ -46,21 +46,53 @@ set( publictransport_engine_SRCS
     serviceproviderdata.cpp
     serviceproviderglobal.cpp
     serviceprovidertestdata.cpp
-    publictransportservice.cpp
     global.cpp
 )
 
 # Add provider types (adding their sources to publictransport_engine_SRCS)
-add_subdirectory( script )
-add_subdirectory( gtfs )
+if ( BUILD_PROVIDER_TYPE_SCRIPT )
+    message( "   - Build script provider type" )
+    add_subdirectory( script )
+endif ( BUILD_PROVIDER_TYPE_SCRIPT )
+
+if ( BUILD_PROVIDER_TYPE_GTFS )
+    message( "   - Build GTFS provider type" )
+    add_subdirectory( gtfs )
+
+    if ( BUILD_GTFS_REALTIME )
+        message( "     - Build GTFS-realtime support" )
+        find_package( ProtocolBuffers REQUIRED )
+
+        # Generate gtfs-realtime protocol buffer sources
+        WRAP_PROTO( PROTO_SRC gtfs-realtime.proto )
+    endif ( BUILD_GTFS_REALTIME )
+endif ( BUILD_PROVIDER_TYPE_GTFS )
+
+# Add unit tests
+if ( BUILD_TESTS )
+    add_subdirectory( tests )
+endif ( BUILD_TESTS )
 
 # Now make sure all files get to the right place
 kde4_add_plugin( plasma_engine_publictransport ${publictransport_engine_SRCS} ${PROTO_SRC} )
 
-target_link_libraries( plasma_engine_publictransport
-    ${KDE4_PLASMA_LIBS} ${KDE4_KIO_LIBS} ${KDE4_THREADWEAVER_LIBS} ${QT_QTSCRIPT_LIBRARY}
-    ${QT_QTXML_LIBRARY} ${QT_QTSQL_LIBRARY}
-    pthread protobuf ) # pthread is needed for protobuf
+# Collect all needed libraries in LIBS
+set( LIBS ${KDE4_PLASMA_LIBS} ${KDE4_KIO_LIBS} ${KDE4_THREADWEAVER_LIBS} )
+
+# Add libraries needed for the script provider type
+if ( BUILD_PROVIDER_TYPE_SCRIPT )
+    set( LIBS ${LIBS} ${QT_QTSCRIPT_LIBRARY} )
+endif ( BUILD_PROVIDER_TYPE_SCRIPT )
+
+# Add libraries needed for the GTFS provider type
+if ( BUILD_PROVIDER_TYPE_GTFS )
+    set( LIBS ${LIBS} ${QT_QTXML_LIBRARY} ${QT_QTSQL_LIBRARY} )
+    if ( BUILD_GTFS_REALTIME )
+        set( LIBS ${LIBS} pthread protobuf ) # pthread is needed for protobuf
+    endif ( BUILD_GTFS_REALTIME )
+endif ( BUILD_PROVIDER_TYPE_GTFS )
+
+target_link_libraries( plasma_engine_publictransport ${LIBS} )
 
 install( TARGETS plasma_engine_publictransport
          DESTINATION ${PLUGIN_INSTALL_DIR} )

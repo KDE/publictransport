@@ -24,6 +24,8 @@
 #ifndef ENUMS_HEADER
 #define ENUMS_HEADER
 
+#include "config.h"
+
 #include <QDebug>
 #include <QDate>
 
@@ -245,20 +247,24 @@ enum ParseDocumentMode {
 
 /** @brief The type of a service provider. */
 enum ServiceProviderType {
-    InvalidProvider, /**< @internal Invalid value. */
+    InvalidProvider = 0, /**< @internal Invalid value. */
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /**
      * Uses a script to request and parse documents. Scripts can make use of
      * several helper objects to download documents (GET or POST), store found departures/
      * journeys/stop suggestions, cache values, parse HTML, notify about errors, etc.
      * QtScript extensions can be used, eg. qt.xml to parse XML documents.
      **/
-    ScriptedProvider,
+    ScriptedProvider = 1,
+#endif
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     /**
      * The accessor uses a DB filled with GTFS data.
      **/
-    GtfsProvider
+    GtfsProvider = 2
+#endif
 };
 
 /**

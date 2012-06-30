@@ -23,9 +23,9 @@
 // Own includes
 #include "../project.h"
 #include "../projectmodel.h"
-#include "../tabs/scripttab.h"
 #include "../debugger/debugger.h"
 #include "../debugger/backtracemodel.h"
+#include "../tabs/scripttab.h"
 
 // KDE includes
 #include <KLocalizedString>

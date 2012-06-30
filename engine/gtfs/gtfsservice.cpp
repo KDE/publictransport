@@ -17,7 +17,8 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "publictransportservice.h"
+// Own includes
+#include "gtfsservice.h"
 #include "serviceprovider.h"
 #include "serviceproviderdata.h"
 #include "serviceproviderglobal.h"
@@ -440,16 +441,17 @@ void ImportGtfsToDatabaseJob::importerFinished(
     emitResult();
 }
 
-PublicTransportService::PublicTransportService( const QString &name, QObject *parent )
+GtfsService::GtfsService( const QString &name, QObject *parent )
         : Service(parent), m_name(name)
 {
     // This associates the service with the "publictransport.operations" file
     setName( "publictransport" );
 }
 
-Plasma::ServiceJob* PublicTransportService::createJob(
+Plasma::ServiceJob* GtfsService::createJob(
         const QString &operation, QMap< QString, QVariant > &parameters )
 {
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     if ( operation == "updateGtfsFeed" ) {
         return new UpdateGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
     } else if ( operation == "importGtfsFeed" ) {
@@ -461,8 +463,8 @@ Plasma::ServiceJob* PublicTransportService::createJob(
         return importJob;
     } else if ( operation == "deleteGtfsDatabase" ) {
         return new DeleteGtfsDatabaseJob( "PublicTransport", operation, parameters, this );
-    } else {
-        kWarning() << "Operation" << operation << "not supported";
-        return 0;
     }
+#endif
+    kWarning() << "Operation" << operation << "not supported";
+    return 0;
 }
