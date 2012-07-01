@@ -449,15 +449,25 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
     ServiceProviderTestData testData = ServiceProviderTestData::read( providerId, cache );
 
     // TODO Needs to be done for each provider sub class here
+    foreach ( ServiceProviderType type, ServiceProviderGlobal::availableProviderTypes() ) {
+        switch ( type ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    const bool subTestResultUnchanged =
-            ServiceProviderScript::isTestResultUnchanged( providerId, cache );
-    if ( !subTestResultUnchanged ) {
-        kDebug() << "Script changed" << providerId;
-        testData.setSubTypeTestStatus( ServiceProviderTestData::Pending );
-        testData.write( providerId, cache );
-    }
+        case ScriptedProvider:
+            if ( !ServiceProviderScript::isTestResultUnchanged(providerId, cache) ) {
+                kDebug() << "Script changed" << providerId;
+                testData.setSubTypeTestStatus( ServiceProviderTestData::Pending );
+                testData.write( providerId, cache );
+            }
+            break;
 #endif
+        case GtfsProvider:
+            break;
+        case InvalidProvider:
+        default:
+            kWarning() << "Provider type unknown" << type;
+            break;
+        }
+    }
 
     if ( testData.status() == ServiceProviderTestData::Failed ) {
         // Tests are marked as failed in the cache
@@ -481,6 +491,15 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
         }
 
         providerData->clear();
+        *errorMessage = _errorMessage;
+        m_erroneousProviders.insert( providerId, _errorMessage );
+        updateErroneousServiceProviderSource();
+        return false;
+    } else if ( !ServiceProviderGlobal::isProviderTypeAvailable(data->type()) ) {
+        providerData->clear();
+        _errorMessage = i18nc("@info/plain", "Support for provider type %1 is not available",
+                              ServiceProviderGlobal::typeName(data->type(),
+                                    ServiceProviderGlobal::ProviderTypeNameWithoutUnsupportedHint));
         *errorMessage = _errorMessage;
         m_erroneousProviders.insert( providerId, _errorMessage );
         updateErroneousServiceProviderSource();
@@ -516,7 +535,7 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
     }
 
     m_erroneousProviders.remove( providerId );
-    const QString name = sourceTypeKeyword( ErroneousServiceProvidersSource );
+    const QLatin1String name = sourceTypeKeyword( ErroneousServiceProvidersSource );
     removeData( name, providerId );
 
     *providerData = serviceProviderData( *data );
@@ -1332,6 +1351,12 @@ ServiceProvider *PublicTransportEngine::createProvider( const QString &servicePr
 ServiceProvider *PublicTransportEngine::createProviderForData( const ServiceProviderData *data,
         QObject *parent, const QSharedPointer<KConfig> &cache )
 {
+    if ( !ServiceProviderGlobal::isProviderTypeAvailable(data->type()) ) {
+        kWarning() << "Cannot create provider of type" << data->typeName() << "because the engine "
+                      "has been built without support for that provider type";
+        return 0;
+    }
+
     switch ( data->type() ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptedProvider:

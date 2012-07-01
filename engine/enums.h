@@ -245,11 +245,15 @@ enum ParseDocumentMode {
     ParseForStopIdThenDepartures /**< Parsing for a stop ID, to be used to get departures/arrivals. */
 };
 
-/** @brief The type of a service provider. */
+/**
+ * @brief The type of a service provider.
+ * @note The engine may be built without support for some of these types, but at least one type
+ *   is available. Check available types using ServiceProviderGlobal::availableProviderTypes()
+ *   and ServiceProviderGlobal::isProviderTypeAvailable().
+ **/
 enum ServiceProviderType {
     InvalidProvider = 0, /**< @internal Invalid value. */
 
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /**
      * Uses a script to request and parse documents. Scripts can make use of
      * several helper objects to download documents (GET or POST), store found departures/
@@ -257,14 +261,11 @@ enum ServiceProviderType {
      * QtScript extensions can be used, eg. qt.xml to parse XML documents.
      **/
     ScriptedProvider = 1,
-#endif
 
-#ifdef BUILD_PROVIDER_TYPE_GTFS
     /**
      * The accessor uses a DB filled with GTFS data.
      **/
     GtfsProvider = 2
-#endif
 };
 
 /**

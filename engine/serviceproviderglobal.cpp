@@ -32,6 +32,41 @@
 #include <QFile>
 #include <QFileInfo>
 
+QList< ServiceProviderType > ServiceProviderGlobal::availableProviderTypes()
+{
+    QList< ServiceProviderType > types;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    types << ScriptedProvider;
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    types << GtfsProvider;
+#endif
+    return types;
+}
+
+bool ServiceProviderGlobal::isProviderTypeAvailable( ServiceProviderType type )
+{
+    switch ( type ) {
+    case ScriptedProvider:
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        return true;
+#else
+        return false;
+#endif
+
+    case GtfsProvider:
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        return true;
+#else
+        return false;
+#endif
+
+    case InvalidProvider:
+    default:
+        return false;
+    }
+}
+
 QString ServiceProviderGlobal::defaultProviderForLocation( const QString &location,
                                                            const QStringList &dirs )
 {
@@ -42,14 +77,14 @@ QString ServiceProviderGlobal::defaultProviderForLocation( const QString &locati
     foreach( const QString &dir, _dirs ) {
         foreach ( const QString &extension, fileExtensions() ) {
             if ( QFile::exists(dir + filePath + '.' + extension) ) {
-                filePath = dir + filePath;
+                filePath = dir + filePath + '.' + extension;
                 break;
             }
         }
     }
 
     // Get the real filename the "xx_default.pts/xml"-symlink links to
-    filePath = KGlobal::dirs()->realFilePath( filePath );
+    filePath = QFileInfo( filePath ).canonicalFilePath();
     if ( filePath.isEmpty() ) {
         kDebug() << "Couldn't find the default service provider for location" << location;
     }
@@ -92,54 +127,53 @@ ServiceProviderType ServiceProviderGlobal::typeFromString(
         const QString &serviceProviderType )
 {
     QString s = serviceProviderType.toLower();
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     if ( s == QLatin1String("script") ||
          s == QLatin1String("html") ) // DEPRECATED
     {
         return ScriptedProvider;
-    }
-#endif
-#ifdef BUILD_PROVIDER_TYPE_GTFS
-    if ( s == QLatin1String("gtfs") ) {
+    } else if ( s == QLatin1String("gtfs") ) {
         return GtfsProvider;
+    } else {
+        return InvalidProvider;
     }
-#endif
-    return InvalidProvider;
 }
 
 QString ServiceProviderGlobal::typeToString( ServiceProviderType type )
 {
     switch ( type ) {
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptedProvider:
         return "script";
-#endif
-#ifdef BUILD_PROVIDER_TYPE_GTFS
     case GtfsProvider:
         return "gtfs";
-#endif
     case InvalidProvider:
     default:
         return "invalid";
     }
 }
 
-QString ServiceProviderGlobal::typeName( ServiceProviderType type )
+QString ServiceProviderGlobal::typeName( ServiceProviderType type, ProviderTypeNameOptions options )
 {
+    QString name;
     switch ( type ) {
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptedProvider:
-        return i18nc("@info/plain Name of a service provider plugin type", "Scripted");
-#endif
-#ifdef BUILD_PROVIDER_TYPE_GTFS
+        name = i18nc("@info/plain Name of a service provider plugin type", "Scripted");
+        break;
     case GtfsProvider:
-        return i18nc("@info/plain Name of a service provider plugin type", "GTFS");
-#endif
+        name = i18nc("@info/plain Name of a service provider plugin type", "GTFS");
+        break;
     case InvalidProvider:
     default:
         kWarning() << "Invalid provider type" << type;
-        return i18nc("@info/plain Name of a service provider plugin type", "Invalid");
+        return i18nc("@info/plain Name of the invalid service provider plugin type", "Invalid");
     }
+
+    // Append "(unsupported)" if the engine gets build without support for the provider type
+    if ( options == AppendHintForUnsupportedProviderTypes && !isProviderTypeAvailable(type) ) {
+        name += ' ' + i18nc("@info/plain Gets appended to service provider plugin type names, "
+                            "if the engine gets build without support for that type",
+                            "(unsupported)");
+    }
+    return name;
 }
 
 QStringList ServiceProviderGlobal::filePatterns()

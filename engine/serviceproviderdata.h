@@ -520,7 +520,7 @@ protected:
     // Keys are versions, where the change entries occurred (values)
     QList<ChangelogEntry> m_changelog;
 
-    // Type of the service provider (currently only scripted, GTFS is available in separate GIT branch)
+    // Type of the service provider
     ServiceProviderType m_serviceProviderType;
     VehicleType m_defaultVehicleType;
     int m_minFetchWait;

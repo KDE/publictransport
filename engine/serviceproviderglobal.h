@@ -32,6 +32,27 @@ class KConfigGroup;
 /** @brief Provides global data/functions for service providers. */
 class ServiceProviderGlobal {
 public:
+    enum ProviderTypeNameOptions {
+        ProviderTypeNameWithoutUnsupportedHint,
+        AppendHintForUnsupportedProviderTypes
+    };
+
+    /**
+     * @brief Get a list of available service provider types.
+     * The engine can be built without support for some provider types.
+     * @note InvalidProvider is never contained in the list.
+     * @see isProviderTypeAvailable()
+     **/
+    static QList< ServiceProviderType > availableProviderTypes();
+
+    /**
+     * @brief Whether or not the given provider @p type is available.
+     * The engine can be built without support for some provider types.
+     * @note If @p type is InvalidProvider this always returns false.
+     * @see availableProviderTypes()
+     **/
+    static bool isProviderTypeAvailable( ServiceProviderType type );
+
     /** @brief Get the ServiceProviderType enumerable for the given string. */
     static ServiceProviderType typeFromString( const QString &serviceProviderType );
 
@@ -39,7 +60,8 @@ public:
     static QString typeToString( ServiceProviderType type );
 
     /** @brief Get the name for the given @p type, translated, to be displayed to users. */
-    static QString typeName( ServiceProviderType type );
+    static QString typeName( ServiceProviderType type,
+                             ProviderTypeNameOptions options = AppendHintForUnsupportedProviderTypes );
 
     /** @brief Get a list of short localized strings describing the supported features. */
     static QStringList localizeFeatures( const QStringList &features );

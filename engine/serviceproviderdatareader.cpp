@@ -189,12 +189,13 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
         serviceProviderTypeString = attributes().value( QLatin1String("type") ).toString();
         serviceProviderType = ServiceProviderGlobal::typeFromString( serviceProviderTypeString );
         if ( serviceProviderType == InvalidProvider && errorAcceptance == OnlyReadCorrectFiles ) {
-            raiseError( QString("The service provider type %1 is invalid. Currently there is only "
-                                "one value allowed: Script. You can use qt.xml to read XML.")
-                        .arg(attributes().value("type").toString()) );
+            raiseError( QString("The service provider type %1 is invalid. "
+                                "Currently there are two values allowed: Script or GTFS.")
+                        .arg(serviceProviderTypeString) );
             return 0;
         }
     } else {
+        // No provider type in the XML file, use a default one
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         serviceProviderType = ScriptedProvider;
         serviceProviderTypeString = ServiceProviderGlobal::typeToString( serviceProviderType );
@@ -203,10 +204,12 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
         serviceProviderType = GtfsProvider;
         serviceProviderTypeString = ServiceProviderGlobal::typeToString( serviceProviderType );
     #else
-        kFatal() << "Internal error: No known default provider type, "
+        kFatal() << "Internal error: No known provider type is supported, "
                     "tried ScriptedProvider and GtfsProvider";
     #endif
 #endif
+        kWarning() << "No provider type in the provider plugin file, using default type"
+                   << ServiceProviderGlobal::typeName(serviceProviderType);
     }
 
     ServiceProviderData *serviceProviderData =
