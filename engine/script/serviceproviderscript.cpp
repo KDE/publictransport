@@ -182,7 +182,7 @@ QStringList ServiceProviderScript::readScriptFeatures( const QSharedPointer<KCon
 {
     // Check if the script file was modified since the cache was last updated
     KConfigGroup group = cache->group( m_data->id() );
-    if ( group.hasGroup("script") && isTestResultUnchanged(cache) ) {
+    if ( group.hasGroup("script") && isTestResultUnchanged(cache) && group.hasKey("features") ) {
         // Return feature list stored in the cache
         return group.readEntry("features", QStringList());
     }
