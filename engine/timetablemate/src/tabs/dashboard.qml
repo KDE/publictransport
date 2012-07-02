@@ -321,12 +321,12 @@ Flickable { id: flickable
                 timeZone.visible = isGtfsProvider;
             }
 
-            Component.onCompleted: updateLayoutToProviderType(project.data.typeString)
+            Component.onCompleted: projectInfo.updateLayoutToProviderType(project.data.typeString)
 
             // Show / hide type specific settings (ScriptedProvider, GtfsProvider, ...)
             Connections {
                 target: project
-                onDataChanged: updateLayoutToProviderType(project.data.typeString)
+                onDataChanged: projectInfo.updateLayoutToProviderType(project.data.typeString)
             }
 
             // Show the description for the project
