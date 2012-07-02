@@ -1,10 +1,12 @@
 
 Changelog of libpublictransporthelper
 
-0.10 - Final
+0.11 - Beta 1
 - StopListWidget called Plasma::DataEngineManager::unloadEngine(), but it's child StopWidget's already call unloadEngine() (and loadEngine()), this fixes departures not showing up after first configuration when using the StopListWidget
 - If no route stops are available use target for "Via" and "Next Stop" filters
+- Rename all occurances of "accessor" with "service provider" or "provider", eg. ServiceProviderDataDialog instead of AccessorInfoDialog
 
+0.10 - Final (no changes)
 0.10 - RC 2
 - Fix a crash with the GraphicalTimetableLine applet
 

@@ -1,26 +1,29 @@
 
 Changelog of plasma-engine-publictransport
 
-0.10 - Final
-- Allow accessor type "Script" in XML files (type "HTML" renamed to "Script")
+0.11 - Beta 1
+- Use ThreadWeaver in the engine
+- Use QtScript instead of Kross, more possibilities, eg. more powerful scripts
+- No more <rawUrls>-tags are needed in accessor xml files, instead the URLs get generated in the script itself, which now also starts the request for the generated URL
+- New/enhanced API for accessor scripts. Eg. the script function "getTimetable" (with some arguments, eg. stop name, date/time, ...) now gets called instead of "parseTimetable" with the contents of the downloaded documents. The "network" script object can now be used to request URLs, download them synchronously or asynchronously. There is now also a "storage" script object that can be used to store some script values. Adding departures to the result set is easier and can now be done with JS objects, eg. "result.addData({ TypeOfVehicle: 'tram', Target: 'Test' })". The "timetableData" object is no longer available/needed.
+- Add higher level matching functions to scripts, eg. 'findHtmlTags("<td>Hello</td>", "td")[0].contents' gives "Hello"
+- More information in script function helper.error(). It now prints out the current function in the script from where helper.error() was called and it's line number. This information now also gets written to the log file. Should make debugging scripts easier, no need to search the script for a specific error message.
+- Drop the XML accessor type, which was only used by de_rmv. It is now implemented as scripted accessor which uses the "qt.xml" extension, the parsing code looks almost the same, using the same classes.
+- Remove much deprecated stuff from TimetableAccessorInfo/TimetableAccessor, eg. raw URLs are no longer handled in C++ or the XML files, only in the scripts. This cleans the code up quite a bit and requires a bit less memory (for each loaded accessor).
+- New mime type "application/x-publictransport-serviceprovider" (matching "*.pts", with new icon) for XML files used by the engine
+- Find provider plugin files with *.pts and *.xml pattern
+- Call script functions with only one argument: an object, containing all values as properties.
 - Generate "Locations" data source based on available accessors
 - Fix POST requests (fixes stop suggestions for cz_idnes and sk_atlas)
 - Automatically remove city names from stop names (from scripts), which may be prepended or appended to most stop names. If more than 70% or at least three of the stop names in a route begin/end with the same word, it is assumed that the word is the city name and gets removed from all stop names beginnings/ends.
 - ch_sbb: Fix journey feature for changed HTML layout
 - de_fahrplaner: Fix for HTML layout with delays/cancelled departures, parse delays, cancelled info as journey news
 - de_vvs: Dropped, it never had stop suggestions
+- Rename all occurances of "accessor" with "service provider" or "provider", eg. ServiceProvider instead of TimetableAccessor
+- Also rename paths: "serviceProviders/" instead of "accessorInfos/" to store provider plugins
+- Rename "defaultAccessor" to "defaultProvider" in data returned by the engine
 
-- Use QtScript instead of Kross, more possibilities, eg. more powerful scripts
-- No more <rawUrls>-tags are needed in accessor xml files, instead the URLs get generated in the script itself, which now also starts the request for the generated URL
-- New/enhanced API for accessor scripts. Eg. the script function "getTimetable" (with some arguments, eg. stop name, date/time, ...) now gets called instead of "parseTimetable" with the contents of the downloaded documents. The "network" script object can now be used to request URLs, download them synchronously or asynchronously. There is now also a "storage" script object that can be used to store some script values. Adding departures to the result set is easier and can now be done with JS objects, eg. "result.addData({ TypeOfVehicle: 'tram', Target: 'Test' })". The "timetableData" object is no longer available/needed.
-- Add higher level matching functions to scripts, eg. 'findHtmlTags("<td>Hello</td>", "td")[0].contents' gives "Hello". The functions accept an options object as third argument. Other new functions are findFirstHtmlTag, findNamedHtmlTags and findTableHeaderPositions (useful to find the positions of eg. the time and target column in a table in the departures website).
-- More information in script function helper.error(). It now prints out the current function in the script from where helper.error() was called and it's line number. This information now also gets written to the log file. Should make debugging scripts easier, no need to search the script for a specific error message.
-
-- Drop the XML accessor type, which was only used by de_rmv. It is now implemented as scripted accessor which uses the "qt.xml" extension, the parsing code looks almost the same, using the same classes.
-- Remove much deprecated stuff from TimetableAccessorInfo/TimetableAccessor, eg. raw URLs are no longer handled in C++ or the XML files, only in the scripts. This cleans the code up quite a bit and requires a bit less memory (for each loaded accessor).
-
-- Call script functions with only one argument: an object, containing all values as properties.
-
+0.10 - final (unchanged)
 0.10 - RC1
 - de_rmv: Fix stop suggestions for changed HTML layout
 - de_rmv: Fix results to get shown not only with a stop ID
