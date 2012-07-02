@@ -1,6 +1,10 @@
 
 Changelog of timetablemate
 
+0.3.1
+- Add GTFS support
+- Automatically adapts to CMake options for building script/GTFS provider type support or not. Without script support, less docks/actions get shown
+
 0.3 - Beta 1
 - New GUI, more KDevelop like, with dock widgets at the left, right and bottom
 - New Icon, integrating the publictransport-stop-icon into the kdevelop-icon

@@ -1,6 +1,13 @@
 
 Changelog of plasma-engine-publictransport
 
+0.12 - Alpha 1
+- New provider type GTFS
+- GTFS feeds get imported into a SQLite database
+- New service for the engine, can be used to download/import/update/remove GTFS feeds
+- Make each provider type optional (Scripted, GTFS)
+- Add optional GTFS-realtime support (requiring protocol buffers)
+
 0.11 - Beta 1
 - Use ThreadWeaver in the engine
 - Use QtScript instead of Kross, more possibilities, eg. more powerful scripts
@@ -22,6 +29,8 @@ Changelog of plasma-engine-publictransport
 - Rename all occurances of "accessor" with "service provider" or "provider", eg. ServiceProvider instead of TimetableAccessor
 - Also rename paths: "serviceProviders/" instead of "accessorInfos/" to store provider plugins
 - Rename "defaultAccessor" to "defaultProvider" in data returned by the engine
+- Use cache to prevent creating providers, propagate error messages
+- Use QSharedPointer for ServiceProviders, delete automatically
 
 0.10 - final (unchanged)
 0.10 - RC1
