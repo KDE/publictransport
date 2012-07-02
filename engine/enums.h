@@ -279,6 +279,7 @@ enum ServiceProviderType {
  * @endcode
  **/
 enum VehicleType {
+    Invalid = -1, /**< Invalid vehicle type. */
     Unknown = 0, /**< The type of the vehicle is unknown. */
 
     Tram = 1, /**< @image html hi16-app-vehicle_type_tram.png A tram / streetcar. */

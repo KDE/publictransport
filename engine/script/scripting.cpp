@@ -438,6 +438,7 @@ QString Network::getSynchronous( const QString &url, int timeout )
     m_lastDownloadAborted = false;
     m_mutex->unlockInline();
 
+    emit synchronousRequestStarted( url );
     const QTime start = QTime::currentTime();
 
     // Use an event loop to wait for execution of the request,
@@ -459,6 +460,7 @@ QString Network::getSynchronous( const QString &url, int timeout )
         kDebug() << "Cancelled, destroyed or timeout while downloading" << url;
         reply->abort();
         reply->deleteLater();
+        emit synchronousRequestFinished( url, QString(), true );
         return QString();
     }
 
@@ -470,10 +472,13 @@ QString Network::getSynchronous( const QString &url, int timeout )
     reply->deleteLater();
     if ( data.isEmpty() ) {
         kDebug() << "Error downloading" << url << reply->errorString();
+        emit synchronousRequestFinished( url, QString(), true );
         return QString();
     } else {
         QMutexLocker locker( m_mutex );
-        return Global::decodeHtml( data, m_fallbackCharset );
+        const QString html = Global::decodeHtml( data, m_fallbackCharset );
+        emit synchronousRequestFinished( url, html );
+        return html;
     }
 }
 
@@ -825,7 +830,7 @@ void ResultObject::addData( const QVariantMap& map )
                                       m_timetableData.count(), map );
             continue;
         } else if ( info == TypeOfVehicle &&
-                    Global::vehicleTypeFromString(value.toString()) == Unknown )
+                    Global::vehicleTypeFromString(value.toString()) == Invalid )
         {
             kDebug() << "Invalid type of vehicle value" << value;
             const QString message = i18nc("@info/plain",
@@ -835,7 +840,7 @@ void ResultObject::addData( const QVariantMap& map )
         } else if ( info == TypesOfVehicleInJourney || info == RouteTypesOfVehicles ) {
             const QVariantList types = value.toList();
             foreach ( const QVariant &type, types ) {
-                if ( Global::vehicleTypeFromString(type.toString()) == Unknown ) {
+                if ( Global::vehicleTypeFromString(type.toString()) == Invalid ) {
                     kDebug() << "Invalid type of vehicle value in"
                              << Global::timetableInformationToString(info) << value;
                     const QString message = i18nc("@info/plain",

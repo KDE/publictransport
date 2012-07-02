@@ -634,6 +634,7 @@ Q_SIGNALS:
      * This signal is @em not emitted if the network gets accessed synchronously.
      * @param request The request that has been started.
      * @ingroup scripting
+     * @see synchronousRequestStarted()
      **/
     void requestStarted( NetworkRequest *request );
 
@@ -644,8 +645,32 @@ Q_SIGNALS:
      * @param request The request that has finished.
      * @param data Received data decoded to a string.
      * @ingroup scripting
+     * @see synchronousRequestFinished()
      **/
     void requestFinished( NetworkRequest *request, const QString &data = QString() );
+
+    /**
+     * @brief Emitted when a synchronous request has been started.
+     *
+     * This signal is @em not emitted if the network gets accessed asynchronously.
+     * @param request The request that has been started.
+     * @ingroup scripting
+     * @see requestStarted()
+     **/
+    void synchronousRequestStarted( const QString &url );
+
+    /**
+     * @brief Emitted when an synchronous request has finished.
+     *
+     * This signal is @em not emitted if the network gets accessed asynchronously.
+     * @param request The request that has finished.
+     * @param data Received data decoded to a string.
+     * @param cancelled Whether or not the request has been cancelled, eg. because of a timeout.
+     * @ingroup scripting
+     * @see requestFinished()
+     **/
+    void synchronousRequestFinished( const QString &url, const QString &data = QString(),
+                                     bool cancelled = false );
 
     /**
      * @brief Emitted when all requests are finished.

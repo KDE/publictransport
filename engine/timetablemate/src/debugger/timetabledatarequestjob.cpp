@@ -268,6 +268,8 @@ void CallScriptFunctionJob::debuggerRun()
     Network *scriptNetwork = new Network( m_data.fallbackCharset() );
     connect( scriptNetwork, SIGNAL(requestFinished(NetworkRequest*)),
              this, SLOT(requestFinished(NetworkRequest*)) );
+    connect( scriptNetwork, SIGNAL(synchronousRequestFinished(QString,QString,bool)),
+             this, SLOT(synchronousRequestFinished(QString,QString,bool)) );
     engine->globalObject().setProperty( "network", engine->newQObject(scriptNetwork) );
 
     // Get the helper object and connect to the errorReceived() signal to collect
@@ -438,6 +440,22 @@ void CallScriptFunctionJob::requestFinished( NetworkRequest *request )
             i18nc("@info/plain", "Download finished: <link>%1</link>", request->url()),
             TimetableDataRequestMessage::Information, -1, TimetableDataRequestMessage::OpenLink,
             request->url() );
+}
+
+void CallScriptFunctionJob::synchronousRequestFinished( const QString &url, const QString &data,
+                                                        bool cancelled )
+{
+    if ( cancelled ) {
+        m_additionalMessages << TimetableDataRequestMessage(
+                i18nc("@info/plain", "Download cancelled: <link>%1</link>", url),
+                TimetableDataRequestMessage::Warning, -1, TimetableDataRequestMessage::OpenLink,
+                url );
+    } else {
+        m_additionalMessages << TimetableDataRequestMessage(
+                i18nc("@info/plain", "Download finished: <link>%1</link>", url),
+                TimetableDataRequestMessage::Information, -1, TimetableDataRequestMessage::OpenLink,
+                url );
+    }
 }
 
 bool TimetableDataRequestJob::testResults()
@@ -753,6 +771,9 @@ bool TimetableDataRequestJob::testJourneyData( const JourneyRequest *request )
     if ( m_returnValue.isValid() ) {
         globalInfos = m_returnValue.toVariant().toStringList();
     }
+
+    m_explanation = i18ncp("@info/plain", "Got %1 journey",
+                                          "Got %1 journeys", m_timetableData.count());
 
     // Get result set
     int countInvalid = 0;

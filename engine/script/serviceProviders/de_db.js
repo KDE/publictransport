@@ -90,6 +90,7 @@ function getStopSuggestions( values  ) {
 }
 
 function typeOfVehicleFromString( string ) {
+    string = string.toLowerCase();
     if ( string == "sbahn" ) {
         return "interurbantrain";
     } else if ( string == "ubahn" ) {
@@ -98,8 +99,10 @@ function typeOfVehicleFromString( string ) {
         return "highspeedtrain";
     } else if ( string == "ic" || string == "ec" ) { // Eurocity
         return "intercitytrain";
-    } else if ( string == "re" ) {
+    } else if ( string == "re" || string == "me" ) { // Metronom
         return "regionalexpresstrain";
+    } else if ( string == "mer" ) { // Metronom regional
+        return "regionaltrain";
     } else if ( string == "ir" ) {
         return "interregionaltrain";
     } else {
@@ -294,10 +297,11 @@ function parseTimetable( html ) {
 
 function parseJourneys( html ) {
     // Find block of journeys
-    var journeyBlockContents = helper.extractBlock( html, '<table class="result" cellspacing="0">',
-                '<div id="hafasContentEnd">' );
-    if ( journeyBlockContents.length < 10 ) {
-        helper.error("Did not find the result table", html);
+    var journeyBlock = helper.findFirstHtmlTag( html, "table",
+            {attributes: {"class": "result"}} );
+    if ( !journeyBlock.found ) {
+        helper.error("Result table not found", html);
+        return;
     }
 
     // Initialize regular expressions (compile them only once)
@@ -310,9 +314,9 @@ function parseJourneys( html ) {
 
     // Go through all journey blocks (each block consists of two table rows (<tr> elements)
     var journeyRow1, journeyRow2 = { endPosition: -1 };
-    while ( (journeyRow1 = helper.findFirstHtmlTag(journeyBlockContents, "tr",
+    while ( (journeyRow1 = helper.findFirstHtmlTag(journeyBlock.contents, "tr",
                 {attributes: {"class": "firstrow"}, position: journeyRow2.endPosition + 1})).found &&
-            (journeyRow2 = helper.findFirstHtmlTag(journeyBlockContents, "tr",
+            (journeyRow2 = helper.findFirstHtmlTag(journeyBlock.contents, "tr",
                 {attributes: {"class": "last"}, position: journeyRow1.endPosition + 1})).found )
     {
         // Find columns, ie. <td> tags in the current journey rows
@@ -438,7 +442,7 @@ function parseJourneys( html ) {
         }
 
         // Parse details if available
-        var str = journeyBlockContents.substr( journeyRow2.endPosition );
+        var str = journeyBlock.contents.substr( journeyRow2.endPosition );
         var details = journeyDetailsRegExp.exec( str );
         // Make sure that the details block belongs to the just parsed journey
         var beginOfNextJourney = str.search( nextJourneyBeginRegExp );

@@ -103,10 +103,7 @@ VariablesDockWidget::VariablesDockWidget( ProjectModel *projectModel, KActionMen
 
 void VariablesDockWidget::contextMenu( const QPoint &pos )
 {
-    const QModelIndex selIndex = m_variablesWidget->indexAt( pos );
-    kDebug() << selIndex << selIndex.parent();
-    const QModelIndex index = m_variableModel->index( selIndex.row(), selIndex.column(),
-                                                      selIndex.parent() );
+    const QModelIndex index = m_proxyModel->mapToSource( m_variablesWidget->indexAt(pos) );
     if ( !index.isValid() ) {
         return;
     }
