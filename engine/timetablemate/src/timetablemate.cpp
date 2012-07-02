@@ -305,7 +305,9 @@ void TimetableMate::saveProperties( KConfigGroup &config )
                     openedTabs << QString::number(static_cast<int>(tab));
                 }
             }
-            QString projectString = QString("%1 ::%2").arg( filePath ).arg( openedTabs.join(",") );
+            QString projectString = QString("%1 ::%2%3")
+                    .arg( filePath ).arg( openedTabs.join(",") )
+                    .arg( project->isActiveProject() ? " ::active" : QString() );
             openedProjects << projectString;
         }
     }
@@ -324,17 +326,27 @@ void TimetableMate::readProperties( const KConfigGroup &config )
         const int pos = lastOpenedProject.indexOf( QLatin1String(" ::") );
         QString xmlFilePath;
         QList< TabType > openedTabs;
+        bool isActive = false;
         if ( pos == -1 ) {
             xmlFilePath = lastOpenedProject;
         } else {
             xmlFilePath = lastOpenedProject.left( pos );
-            const QStringList openedTabStrings = lastOpenedProject.mid( pos + 3 ).split(',');
+            QString openedTabsCode = lastOpenedProject.mid( pos + 3 );
+            if ( openedTabsCode.endsWith(QLatin1String(" ::active")) ) {
+                isActive = true;
+                openedTabsCode.chop( 9 ); // Cut " ::active"
+            }
+
+            const QStringList openedTabStrings = openedTabsCode.split(',');
             foreach ( const QString &openedTabString, openedTabStrings ) {
                 openedTabs << static_cast< TabType >( openedTabString.toInt() );
             }
         }
         Project *project = openProject( xmlFilePath );
         if ( project ) {
+            if ( isActive ) {
+                project->setAsActiveProject();
+            }
             foreach ( TabType tab, openedTabs ) {
                 project->showTab( tab );
             }
