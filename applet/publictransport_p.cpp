@@ -1082,10 +1082,10 @@ void PublicTransportPrivate::departureDataStateChanged()
     QString noItemsText;
     bool busy = false;
 
-    if ( isStateActive("journeyDataWaiting") ) {
+    if ( isStateActive("departureDataWaiting") ) {
         noItemsText = i18nc("@info/plain", "Waiting for depatures...");
         busy = modelJourneys->isEmpty();
-    } else if ( isStateActive("journeyDataInvalid") ) {
+    } else if ( isStateActive("departureDataInvalid") ) {
         noItemsText = settings.departureArrivalListType == ArrivalList
                 ? i18nc("@info/plain", "No arrivals due to an error.")
                 : i18nc("@info/plain", "No departures due to an error.");
