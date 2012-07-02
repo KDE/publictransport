@@ -20,7 +20,7 @@
 #include "GeneralTransitTest.h"
 
 #include <QtTest/QTest>
-#include "gtfs/generaltransitfeed_importer.h"
+#include "gtfs/gtfsimporter.h"
 
 void GeneralTransitTest::init()
 {

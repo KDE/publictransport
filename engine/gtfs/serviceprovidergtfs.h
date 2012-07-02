@@ -25,9 +25,9 @@
 #define SERVICEPROVIDERGTFS_HEADER
 
 #include "serviceprovider.h"
-#include "generaltransitfeed_importer.h"
+#include "gtfsimporter.h"
 #ifdef BUILD_GTFS_REALTIME
-    #include "generaltransitfeed_realtime.h"
+    #include "gtfsrealtime.h"
 #endif
 
 class GtfsService;

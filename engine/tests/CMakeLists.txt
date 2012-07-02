@@ -51,8 +51,8 @@ target_link_libraries( ScriptApiTest ${QT_QTTEST_LIBRARY} ${KDE4_PLASMA_LIBS}
         ${QT_QTNETWORK_LIBRARY} ${QT_QTSCRIPT_LIBRARY} )
 
 set( GeneralTransitTest_SRCS GeneralTransitTest.cpp
-    ../gtfs/generaltransitfeed_importer.cpp
-    ../gtfs/generaltransitfeed_database.cpp
+    ../gtfs/gtfsimporter.cpp
+    ../gtfs/gtfsdatabase.cpp
 )
 qt4_automoc( ${GeneralTransitTest_SRCS} )
 add_executable( GeneralTransitTest ${GeneralTransitTest_SRCS} )

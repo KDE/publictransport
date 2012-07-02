@@ -25,7 +25,7 @@
 #define GTFSSERVICE_HEADER
 
 // Own includes
-#include "generaltransitfeed_importer.h"
+#include "gtfsimporter.h"
 
 // Plasma includes
 #include <Plasma/Service>

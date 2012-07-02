@@ -24,7 +24,7 @@
 #ifndef GENERALTRANSITFEEDIMPORTER_HEADER
 #define GENERALTRANSITFEEDIMPORTER_HEADER
 
-#include "generaltransitfeed_database.h" // For GeneralTransitFeedDatabase::FieldType
+#include "gtfsdatabase.h" // For GeneralTransitFeedDatabase::FieldType
 
 #include <QThread>
 #include <QString>

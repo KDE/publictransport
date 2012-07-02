@@ -17,8 +17,8 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "generaltransitfeed_importer.h"
-#include "generaltransitfeed_database.h"
+#include "gtfsimporter.h"
+#include "gtfsdatabase.h"
 
 #include <KZip>
 #include <KStandardDirs>
@@ -624,4 +624,4 @@ bool GeneralTransitFeedImporter::readFields( const QString& line, QVariantList *
     return true;
 }
 
-#include "generaltransitfeed_importer.moc"
+#include "gtfsimporter.moc"

@@ -25,7 +25,7 @@
 #include "serviceproviderglobal.h"
 #include "departureinfo.h"
 #include "gtfsservice.h"
-#include "generaltransitfeed_realtime.h"
+#include "gtfsrealtime.h"
 #include "request.h"
 
 // KDE includes

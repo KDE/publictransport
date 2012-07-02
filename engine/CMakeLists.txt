@@ -72,15 +72,15 @@ endif ( BUILD_PROVIDER_TYPE_SCRIPT )
 
 if ( BUILD_PROVIDER_TYPE_GTFS )
     message( "   - Build GTFS provider type" )
-    add_subdirectory( gtfs )
 
     if ( BUILD_GTFS_REALTIME )
-        message( "     - Build GTFS-realtime support" )
+        # Find protocol buffers and generate gtfs-realtime protocol buffer sources
         find_package( ProtocolBuffers REQUIRED )
-
-        # Generate gtfs-realtime protocol buffer sources
         WRAP_PROTO( PROTO_SRC gtfs-realtime.proto )
+        list ( APPEND publictransport_engine_SRCS ${PROTO_SRC} )
     endif ( BUILD_GTFS_REALTIME )
+
+    add_subdirectory( gtfs )
 endif ( BUILD_PROVIDER_TYPE_GTFS )
 
 # Add unit tests
@@ -89,7 +89,7 @@ if ( BUILD_TESTS )
 endif ( BUILD_TESTS )
 
 # Now make sure all files get to the right place
-kde4_add_plugin( plasma_engine_publictransport ${publictransport_engine_SRCS} ${PROTO_SRC} )
+kde4_add_plugin( plasma_engine_publictransport ${publictransport_engine_SRCS} )
 
 # Collect all needed libraries in LIBS
 set( LIBS ${KDE4_PLASMA_LIBS} ${KDE4_KIO_LIBS} ${KDE4_THREADWEAVER_LIBS} )
