@@ -1271,7 +1271,7 @@ public:
                     break;
                 case TestModel::StopSuggestionTest:
                     request = new StopSuggestionRequest( "TEST_STOP_SUGGESTIONS",
-                            info->sampleStopNames().first(), testItemCount, info->sampleCity() );
+                            info->sampleStopNames().first().left(4), testItemCount, info->sampleCity() );
                     break;
                 case TestModel::JourneyTest:
                     request = new JourneyRequest( "TEST_JOURNEYS",
