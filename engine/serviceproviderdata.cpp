@@ -56,6 +56,8 @@ ServiceProviderData::ServiceProviderData( const ServiceProviderType& type,
     m_onlyUseCitiesInList = false;
     m_defaultVehicleType = Unknown;
     m_minFetchWait = 0;
+
+    qRegisterMetaType< ServiceProviderType >( "ServiceProviderType" );
 }
 
 ServiceProviderData::ServiceProviderData( const ServiceProviderType &type,
