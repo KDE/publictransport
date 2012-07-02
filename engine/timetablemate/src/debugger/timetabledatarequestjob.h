@@ -90,6 +90,8 @@ protected slots:
                               int index, const QVariantMap& map );
 
     void requestFinished( NetworkRequest *request );
+    void synchronousRequestFinished( const QString &url, const QString &data = QString(),
+                                     bool cancelled = false );
 
 protected:
     /**
