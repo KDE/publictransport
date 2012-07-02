@@ -11,6 +11,9 @@ include_directories(
    ${KDE4_INCLUDES}
    ${CMAKE_CURRENT_SOURCE_DIR} )
 
+# Include cmake_dependent_option command
+include( CMakeDependentOption )
+
 # Add custom CMake modules
 set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules)
 
@@ -18,10 +21,13 @@ set( CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/mo
 set( SHARED_MIME_INFO_MINIMUM_VERSION "0.30" )
 find_package( SharedMimeInfo )
 
-set( BUILD_PROVIDER_TYPE_SCRIPT ON CACHE BOOL "Build with support for scripted providers")
-set( BUILD_PROVIDER_TYPE_GTFS ON CACHE BOOL "Build with support for GTFS providers")
-set( BUILD_GTFS_REALTIME ON CACHE BOOL "Build with GTFS-realtime support for GTFS providers (needs protocol buffers)")
-configure_file( config.h.in config.h )
+# Create some variables to control the build,
+# each provider type can be disabled, ie. not build, but at least one needs to be enabled
+option( BUILD_PROVIDER_TYPE_SCRIPT "Build with support for scripted providers" ON )
+option( BUILD_PROVIDER_TYPE_GTFS "Build with support for GTFS providers" ON )
+cmake_dependent_option( BUILD_GTFS_REALTIME
+    "Build with GTFS-realtime support for GTFS providers (needs protocol buffers)" ON
+    "BUILD_PROVIDER_TYPE_GTFS" OFF )
 
 # Fatal error if no provider types are enabled
 if ( NOT BUILD_PROVIDER_TYPE_SCRIPT AND NOT BUILD_PROVIDER_TYPE_GTFS )
@@ -29,6 +35,15 @@ if ( NOT BUILD_PROVIDER_TYPE_SCRIPT AND NOT BUILD_PROVIDER_TYPE_GTFS )
                          "Solution: Use at least one of the available provider types\n"
                          "          BUILD_PROVIDER_TYPE_SCRIPT or BUILD_PROVIDER_TYPE_GTFS." )
 endif ( NOT BUILD_PROVIDER_TYPE_SCRIPT AND NOT BUILD_PROVIDER_TYPE_GTFS )
+
+# Create config.h from config.h.in, ie. create #define's for each enabled variable from above
+configure_file( config.h.in config.h )
+
+# Add option to build TimetableMate or not
+option( INSTALL_TIMETABLEMATE "A tool/little IDE to add support for new service providers. Offers code completion for scripts and helps when checking the correct behaviour of the script" OFF )
+
+# Add a variable for the service provider plugin installation directory
+set( SERVICE_PROVIDER_DIR ${DATA_INSTALL_DIR}/plasma_engine_publictransport/serviceProviders )
 
 # Add TimetableMate
 if ( INSTALL_TIMETABLEMATE )
@@ -39,14 +54,14 @@ endif ( INSTALL_TIMETABLEMATE )
 # Source files
 set( publictransport_engine_SRCS
     publictransportdataengine.cpp
+    global.cpp
     departureinfo.cpp
-    serviceproviderdatareader.cpp
     request.cpp
     serviceprovider.cpp
     serviceproviderdata.cpp
+    serviceproviderdatareader.cpp
     serviceproviderglobal.cpp
     serviceprovidertestdata.cpp
-    global.cpp
 )
 
 # Add provider types (adding their sources to publictransport_engine_SRCS)
@@ -92,11 +107,12 @@ if ( BUILD_PROVIDER_TYPE_GTFS )
     endif ( BUILD_GTFS_REALTIME )
 endif ( BUILD_PROVIDER_TYPE_GTFS )
 
+# Link all collected libraries
 target_link_libraries( plasma_engine_publictransport ${LIBS} )
 
+# Install engine and it's .desktop-file
 install( TARGETS plasma_engine_publictransport
          DESTINATION ${PLUGIN_INSTALL_DIR} )
-
 install( FILES plasma-engine-publictransport.desktop
          DESTINATION ${SERVICES_INSTALL_DIR} )
 
@@ -106,6 +122,3 @@ install( FILES plasma-engine-publictransport.desktop
 # In TimetableMate they are also used as project files, without additional data
 install( FILES serviceproviderplugin.xml DESTINATION ${XDG_MIME_INSTALL_DIR} )
 update_xdg_mimetypes( ${XDG_MIME_INSTALL_DIR} )
-
-install( FILES publictransport.operations
-         DESTINATION ${DATA_INSTALL_DIR}/plasma/services )

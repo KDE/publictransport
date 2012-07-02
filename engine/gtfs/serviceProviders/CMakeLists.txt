@@ -2,13 +2,10 @@
 find_package( KDE4 REQUIRED )
 add_definitions( ${KDE4_DEFINITIONS} )
 
-set( SERVICE_PROVIDER_DIR ${DATA_INSTALL_DIR}/plasma_engine_publictransport/serviceProviders )
-
+# Install all GTFS provider plugin files in the current source directory
 file( GLOB files "${CMAKE_CURRENT_SOURCE_DIR}/*.pts"
-                 "${CMAKE_CURRENT_SOURCE_DIR}/*.xml"
-                 "${CMAKE_CURRENT_SOURCE_DIR}/*.js" )
-install( FILES ${files}
-    DESTINATION ${SERVICE_PROVIDER_DIR} )
+                 "${CMAKE_CURRENT_SOURCE_DIR}/*.xml" )
+install( FILES ${files} DESTINATION ${SERVICE_PROVIDER_DIR} )
 
 # Create symlinks to default service providers (one per country)
 if( UNIX )
