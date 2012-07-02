@@ -194,8 +194,10 @@ QIcon AbstractTab::icon() const
             return KIcon("dashboard-show");
         case Tabs::ProjectSource:
             return KIcon("application-x-publictransport-serviceprovider");
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case Tabs::Script:
             return KIcon("application-javascript");
+#endif
         case Tabs::Web:
             return KIcon("applications-internet");
         case Tabs::PlasmaPreview:
@@ -218,6 +220,7 @@ QString AbstractTab::title() const
         return !xmlFileName.isEmpty() ? QFileInfo(xmlFileName).fileName()
                 : i18nc("@title:tab", "Project Source %1", m_project->serviceProviderId());
     }
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Tabs::Script: {
         const QString scriptFileName = m_project->provider()->data()->scriptFileName() ;
         QString title = !scriptFileName.isEmpty() ? QFileInfo(scriptFileName).fileName()
@@ -237,6 +240,7 @@ QString AbstractTab::title() const
         }
         return title;
     }
+#endif
     case Tabs::Web:
         return i18nc("@title:tab", "Web %1", m_project->serviceProviderId());
     case Tabs::PlasmaPreview:

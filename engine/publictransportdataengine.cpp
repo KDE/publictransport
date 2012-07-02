@@ -25,11 +25,17 @@
 #include "serviceproviderdata.h"
 #include "serviceprovidertestdata.h"
 #include "serviceproviderglobal.h"
-#include "serviceproviderscript.h"
-#include "serviceprovidergtfs.h"
-#include "publictransportservice.h"
 #include "global.h"
 #include "request.h"
+#include "config.h"
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    #include "script/serviceproviderscript.h"
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    #include "gtfs/serviceprovidergtfs.h"
+    #include "gtfs/gtfsservice.h"
+#endif
 
 // KDE/Plasma includes
 #include <Plasma/DataContainer>
@@ -46,9 +52,13 @@ const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
 
 Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
 {
-    PublicTransportService *service = new PublicTransportService( name, this );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    GtfsService *service = new GtfsService( name, this );
     service->setDestination( name );
     return service;
+#else
+    return 0;
+#endif
 }
 
 PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantList& args )
@@ -133,15 +143,20 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
     dataServiceProvider.insert( "id", data.id() );
     dataServiceProvider.insert( "fileName", data.fileName() );
     dataServiceProvider.insert( "type", ServiceProviderGlobal::typeName(data.type()) );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     if ( data.type() == GtfsProvider ) {
         dataServiceProvider.insert( "feedUrl", data.feedUrl() );
 
         const QString databasePath = GeneralTransitFeedDatabase::databasePath( data.id() );
         dataServiceProvider.insert( "gtfsDatabasePath", databasePath );
         dataServiceProvider.insert( "gtfsDatabaseSize", QFileInfo(databasePath).size() );
-    } else {
+    }
+#endif
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    if ( data.type() == ScriptedProvider ) {
         dataServiceProvider.insert( "scriptFileName", data.scriptFileName() );
     }
+#endif
     dataServiceProvider.insert( "name", data.name() );
     dataServiceProvider.insert( "url", data.url() );
     dataServiceProvider.insert( "shortUrl", data.shortUrl() );
@@ -434,12 +449,24 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
     ServiceProviderTestData testData = ServiceProviderTestData::read( providerId, cache );
 
     // TODO Needs to be done for each provider sub class here
-    const bool subTestResultUnchanged =
-            ServiceProviderScript::isTestResultUnchanged( providerId, cache );
-    if ( !subTestResultUnchanged ) {
-        kDebug() << "Script changed" << providerId;
-        testData.setSubTypeTestStatus( ServiceProviderTestData::Pending );
-        testData.write( providerId, cache );
+    foreach ( ServiceProviderType type, ServiceProviderGlobal::availableProviderTypes() ) {
+        switch ( type ) {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        case ScriptedProvider:
+            if ( !ServiceProviderScript::isTestResultUnchanged(providerId, cache) ) {
+                kDebug() << "Script changed" << providerId;
+                testData.setSubTypeTestStatus( ServiceProviderTestData::Pending );
+                testData.write( providerId, cache );
+            }
+            break;
+#endif
+        case GtfsProvider:
+            break;
+        case InvalidProvider:
+        default:
+            kWarning() << "Provider type unknown" << type;
+            break;
+        }
     }
 
     if ( testData.status() == ServiceProviderTestData::Failed ) {
@@ -464,6 +491,15 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
         }
 
         providerData->clear();
+        *errorMessage = _errorMessage;
+        m_erroneousProviders.insert( providerId, _errorMessage );
+        updateErroneousServiceProviderSource();
+        return false;
+    } else if ( !ServiceProviderGlobal::isProviderTypeAvailable(data->type()) ) {
+        providerData->clear();
+        _errorMessage = i18nc("@info/plain", "Support for provider type %1 is not available",
+                              ServiceProviderGlobal::typeName(data->type(),
+                                    ServiceProviderGlobal::ProviderTypeNameWithoutUnsupportedHint));
         *errorMessage = _errorMessage;
         m_erroneousProviders.insert( providerId, _errorMessage );
         updateErroneousServiceProviderSource();
@@ -499,7 +535,7 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
     }
 
     m_erroneousProviders.remove( providerId );
-    const QString name = sourceTypeKeyword( ErroneousServiceProvidersSource );
+    const QLatin1String name = sourceTypeKeyword( ErroneousServiceProvidersSource );
     removeData( name, providerId );
 
     *providerData = serviceProviderData( *data );
@@ -785,8 +821,11 @@ void PublicTransportEngine::reloadChangedProviders()
     foreach( const QString &cachedSource, cachedSources ) {
         const QString providerId = providerIdFromSourceName( cachedSource );
         if ( !providerId.isEmpty() &&
-             (ServiceProviderGlobal::isSourceFileModified(providerId, cache) ||
-              !ServiceProviderScript::isTestResultUnchanged(providerId, cache)) )
+             (ServiceProviderGlobal::isSourceFileModified(providerId, cache)
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+             || !ServiceProviderScript::isTestResultUnchanged(providerId, cache)
+#endif
+            ) )
         {
             // Remove data source for the current provider
             // and remove the provider object (deletes it)
@@ -1274,6 +1313,7 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
     // If delays are available set maximum fetch wait
     const int secsSinceLastUpdate = dataSource["updated"].toDateTime().secsTo(
                                     QDateTime::currentDateTime() );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     if ( provider->type() == GtfsProvider ) {
         // Update GTFS accessors once a week
         // TODO: Check for an updated GTFS feed every X seconds, eg. once an hour
@@ -1286,7 +1326,9 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
         return gtfsAccessor->isRealtimeDataAvailable()
                 ? secsSinceLastUpdate < 60 // Update maximally once a minute if realtime data is available
                 : secsSinceLastUpdate < 60 * 60 * 24; // Update GTFS feed once a day without realtime data
-    } else if ( provider->features().contains("Delay") && dataSource["delayInfoAvailable"].toBool() ) {
+    } else
+#endif
+    if ( provider->features().contains("Delay") && dataSource["delayInfoAvailable"].toBool() ) {
         minFetchWait = qBound((int)MIN_UPDATE_TIMEOUT, minForSufficientChanges,
                               (int)MAX_UPDATE_TIMEOUT_DELAY );
     } else {
@@ -1309,11 +1351,21 @@ ServiceProvider *PublicTransportEngine::createProvider( const QString &servicePr
 ServiceProvider *PublicTransportEngine::createProviderForData( const ServiceProviderData *data,
         QObject *parent, const QSharedPointer<KConfig> &cache )
 {
+    if ( !ServiceProviderGlobal::isProviderTypeAvailable(data->type()) ) {
+        kWarning() << "Cannot create provider of type" << data->typeName() << "because the engine "
+                      "has been built without support for that provider type";
+        return 0;
+    }
+
     switch ( data->type() ) {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptedProvider:
         return new ServiceProviderScript( data, parent, cache );
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     case GtfsProvider:
         return new ServiceProviderGtfs( data, parent, cache );
+#endif
     case InvalidProvider:
     default:
         kWarning() << "Invalid/unknown provider type" << data->type();

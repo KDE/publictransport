@@ -24,8 +24,8 @@
 #include "serviceproviderdata.h"
 #include "serviceproviderglobal.h"
 #include "departureinfo.h"
-#include "publictransportservice.h"
-#include "generaltransitfeed_realtime.h"
+#include "gtfsservice.h"
+#include "gtfsrealtime.h"
 #include "request.h"
 
 // KDE includes
@@ -55,7 +55,10 @@ const qreal ServiceProviderGtfs::PROGRESS_PART_FOR_FEED_DOWNLOAD = 0.1;
 
 ServiceProviderGtfs::ServiceProviderGtfs(
         const ServiceProviderData *data, QObject *parent, const QSharedPointer<KConfig> &cache )
-        : ServiceProvider(data, parent, cache), m_tripUpdates(0), m_alerts(0), m_service(0)
+        : ServiceProvider(data, parent, cache), m_service(0)
+#ifdef BUILD_GTFS_REALTIME
+          , m_tripUpdates(0), m_alerts(0)
+#endif
 {
     m_state = Initializing;
 
@@ -77,7 +80,9 @@ ServiceProviderGtfs::ServiceProviderGtfs(
         if ( fi.exists() && fi.size() > 10000 ) {
             // Load agency information from database and request GTFS-realtime data
             loadAgencyInformation();
+#ifdef BUILD_GTFS_REALTIME
             updateRealtimeData();
+#endif
             m_state = Ready;
         } else {
             // Provider cache says the import has been finished, but the database file does not
@@ -103,8 +108,10 @@ ServiceProviderGtfs::~ServiceProviderGtfs()
     }
     m_waitingRequests.clear();
 
+#ifdef BUILD_GTFS_REALTIME
     delete m_tripUpdates;
     delete m_alerts;
+#endif
 }
 
 bool ServiceProviderGtfs::isTestResultUnchanged( const QString &providerId,
@@ -219,7 +226,7 @@ void ServiceProviderGtfs::updateGtfsData()
     }
 
     m_progress = 0.0;
-    m_service = new PublicTransportService( QString(), this );
+    m_service = new GtfsService( QString(), this );
     KConfigGroup op = m_service->operationDescription("updateGtfsFeed");
     op.writeEntry( "serviceProviderId", m_data->id() );
     Plasma::ServiceJob *job = m_service->startOperationCall( op );
@@ -286,6 +293,7 @@ void ServiceProviderGtfs::importFinished( KJob *job )
     m_service = 0;
 }
 
+#ifdef BUILD_GTFS_REALTIME
 bool ServiceProviderGtfs::isRealtimeDataAvailable() const
 {
     return !m_data->realtimeTripUpdateUrl().isEmpty() || !m_data->realtimeAlertsUrl().isEmpty();
@@ -366,6 +374,7 @@ void ServiceProviderGtfs::realtimeAlertsReceived( KJob *job )
         m_state = Ready;
     }
 }
+#endif // BUILD_GTFS_REALTIME
 
 void ServiceProviderGtfs::loadAgencyInformation()
 {
@@ -427,12 +436,14 @@ QStringList ServiceProviderGtfs::features() const
     QStringList list;
     list << "Autocompletion" << "TypeOfVehicle" << "Operator" << "StopID" << "RouteStops"
          << "RouteTimes" << "Arrivals";
+#ifdef BUILD_GTFS_REALTIME
     if ( !m_data->realtimeAlertsUrl().isEmpty() ) {
         list << "JourneyNews";
     }
     if ( !m_data->realtimeTripUpdateUrl().isEmpty() ) {
         list << "Delay";
     }
+#endif
     return list;
 }
 
@@ -518,7 +529,9 @@ bool ServiceProviderGtfs::checkState( const AbstractRequest *request )
             if ( importFinished && fi.exists() && fi.size() > 30000 ) {
                 // Load agency information from database and request GTFS-realtime data
                 loadAgencyInformation();
+#ifdef BUILD_GTFS_REALTIME
                 updateRealtimeData();
+#endif
                 m_state = Ready;
                 return true;
             } else {
@@ -765,6 +778,7 @@ void ServiceProviderGtfs::requestDepartures( const DepartureRequest &request )
 //                 query.value(fareMinPriceColumn).toDouble(), symbol ) + " - " +
 //                 KGlobal::locale()->formatMoney( query.value(fareMaxPriceColumn).toDouble(), symbol );
 
+#ifdef BUILD_GTFS_REALTIME
         if ( m_alerts ) {
             QStringList journeyNews;
             QString journeyNewsLink;
@@ -807,6 +821,7 @@ void ServiceProviderGtfs::requestDepartures( const DepartureRequest &request )
                 }
             }
         }
+#endif
 
         // Create new departure information object and add it to the departure list.
         // Do not use any corrections in the DepartureInfo constructor, because all values
@@ -911,7 +926,9 @@ bool ServiceProviderGtfs::checkForDiskIoErrorInDatabase( const QSqlError &error,
 //             statFeed();
         } else {
             loadAgencyInformation();
+#ifdef BUILD_GTFS_REALTIME
             updateRealtimeData();
+#endif
         }
         return true;
     } else {

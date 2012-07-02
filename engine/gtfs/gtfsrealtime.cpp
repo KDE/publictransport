@@ -17,7 +17,7 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "generaltransitfeed_realtime.h"
+#include "gtfsrealtime.h"
 
 #include "gtfs-realtime.pb.h"
 #include <KDebug>
@@ -31,7 +31,7 @@ QList< GtfsRealtimeTripUpdate >* GtfsRealtimeTripUpdate::fromProtocolBuffer( con
     if ( !feedMessage.ParsePartialFromArray(data.constData(), data.size()) ) {
         kDebug() << "Wrong protocol buffer format" << data.constData();
         return tripUpdates;
-    } 
+    }
     if ( feedMessage.has_header() && feedMessage.header().gtfs_realtime_version() != "1"
                                   && feedMessage.header().gtfs_realtime_version() != "1.0" )
     {

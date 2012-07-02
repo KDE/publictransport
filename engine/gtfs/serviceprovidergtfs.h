@@ -25,10 +25,12 @@
 #define SERVICEPROVIDERGTFS_HEADER
 
 #include "serviceprovider.h"
-#include "generaltransitfeed_importer.h"
-#include "generaltransitfeed_realtime.h"
+#include "gtfsimporter.h"
+#ifdef BUILD_GTFS_REALTIME
+    #include "gtfsrealtime.h"
+#endif
 
-class PublicTransportService;
+class GtfsService;
 class QNetworkReply;
 class KTimeZone;
 
@@ -109,13 +111,18 @@ public:
     /** @brief Gets a list of features that this provider supports. */
     virtual QStringList features() const;
 
+#ifdef BUILD_GTFS_REALTIME
     /** @brief Returns true, if there is a GTFS-realtime source available. */
     bool isRealtimeDataAvailable() const;
+#else
+    bool isRealtimeDataAvailable() const { return false; }; // Dummy function
+#endif
 
     /** @brief Gets the size in bytes of the database containing the GTFS data. */
     qint64 databaseSize() const;
 
 protected slots:
+#ifdef BUILD_GTFS_REALTIME
     /**
      * @brief GTFS-realtime TripUpdates data received.
      *
@@ -129,6 +136,7 @@ protected slots:
      * Alerts contain journey information for specific departures/arrivals.
      **/
     void realtimeAlertsReceived( KJob *job );
+#endif // BUILD_GTFS_REALTIME
 
     void importFinished( KJob *job );
     void importProgress( KJob *job, ulong percent );
@@ -154,8 +162,10 @@ protected:
     /** @brief Updates the GTFS feed data using @ref PublicTransportService. */
     void updateGtfsData();
 
+#ifdef BUILD_GTFS_REALTIME
     /** @brief Updates the GTFS-realtime data, ie. delays and journey news. */
     void updateRealtimeData();
+#endif
 
     /**
      * @brief Returns true if the GTFS feed has been initially imported.
@@ -200,10 +210,12 @@ private:
 
     State m_state; // Current state
     AgencyInformations m_agencyCache; // Cache contents of the "agency" DB table, usally small, eg. only one agency
+    GtfsService *m_service;
+#ifdef BUILD_GTFS_REALTIME
     GtfsRealtimeTripUpdates *m_tripUpdates;
     GtfsRealtimeAlerts *m_alerts;
+#endif
     QHash< QString, AbstractRequest* > m_waitingRequests; // Sources waiting for import to finish
-    PublicTransportService *m_service;
     qreal m_progress;
 };
 

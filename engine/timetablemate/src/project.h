@@ -165,6 +165,7 @@ public:
         WebError /**< There was an error with the web widget. */
     };
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Types of script templates. */
     enum ScriptTemplateType {
         NoScriptTemplate = 0,
@@ -174,6 +175,7 @@ public:
 
         DefaultScriptTemplate = ScriptQtScriptTemplate /**< Default script template type. */
     };
+#endif
 
     /**
      * @brief Types of project actions.
@@ -195,10 +197,13 @@ public:
         ShowProjectSettings, /**< Show a settings dialog for the project. */
         ShowDashboard, /**< Show the dashboard tab. */
         ShowHomepage, /**< Show the web tab. */
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         ShowScript, /**< Show the script tab. */
+#endif
         ShowProjectSource, /**< Show the project source XML document tab. */
         ShowPlasmaPreview, /**< Show the plasma preview tab. */
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         // DebuggerActionGroup
         Interrupt, /**< Interrupt the debugger. */
         Continue, /**< Continue the debugger. */
@@ -224,6 +229,7 @@ public:
         DebugGetStopSuggestions, /**< Run the getStopSuggestions() script function, interrupt
                 * at start. */
         DebugGetJourneys, /**< Run the getJourneys() script function, interrupt at start. */
+#endif
 
         // TestActionGroup
         RunAllTests, /**< Test the project, eg. syntax errors in the script. */
@@ -250,8 +256,10 @@ public:
 
         FileActionGroup,
         UiActionGroup,
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         DebuggerActionGroup,
         RunActionGroup,
+#endif
         TestActionGroup,
         OtherActionGroup
     };
@@ -374,8 +382,10 @@ public:
     /** @brief Get a KActionMenu which contains the actions from contextMenuActions(). */
     Q_INVOKABLE QPointer< KActionMenu > projectSubMenuAction( QWidget *parent = 0 );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Get a KActionMenu which contains actions related to the debugger. */
     Q_INVOKABLE QPointer< KActionMenu > debuggerSubMenuAction( QWidget *parent = 0 );
+#endif
 
     /** @brief Get a KActionMenu which contains actions related to tests. */
     Q_INVOKABLE QPointer< KActionMenu > testSubMenuAction( QWidget *parent = 0 );
@@ -457,8 +467,10 @@ public:
     /** @brief Get data stored for @p projectAction. */
     ProjectActionData projectActionData( QAction *projectAction );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Uses KInputDialog to let the user choose a script template type. */
     ScriptTemplateType getScriptTemplateTypeInput( QWidget *parent = 0 ) const;
+#endif
 
     /** @brief Get a pointer to the tab of the given @p type. */
     AbstractTab *tab( TabType type ) const;
@@ -486,12 +498,14 @@ public:
      **/
     ProjectSourceTab *projectSourceTab() const;
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /**
      * @brief Get a pointer to the script document tab, if it was created.
      * @see createScriptTab
      * @see showScriptTab
      **/
     ScriptTab *scriptTab() const;
+#endif
 
     /**
      * @brief Get a pointer to the plasma preview tab, if it was created.
@@ -519,11 +533,13 @@ public:
      **/
     ProjectSourceTab *createProjectSourceTab( QWidget *parent = 0 );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /**
      * @brief Create a script document tab or return an already created one.
      * @see scriptTab
      **/
     ScriptTab *createScriptTab( QWidget *parent = 0 );
+#endif
 
     /**
      * @brief Create a plasma preview tab or return an already created one.
@@ -544,8 +560,10 @@ public:
      **/
     ServiceProvider *provider() const;
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Get the debugger used by this project. */
     Debugger::Debugger *debugger() const;
+#endif
 
     /** @brief Set service provider data values used for this project to @p providerData. */
     void setProviderData( const ServiceProviderData *providerData );
@@ -565,11 +583,13 @@ public:
     /** @brief Get the contents of the service provider plugin XML document. */
     Q_INVOKABLE QString projectSourceText( ProjectDocumentSource source = ReadProjectDocumentFromTabIfOpened ) const;
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Get the contents of the script document. */
     Q_INVOKABLE QString scriptText() const;
 
     /** @brief Set the contents of the script document to @p text. */
     Q_INVOKABLE void setScriptText( const QString &text );
+#endif
 
     /** @brief Get an icon for the project. */
     Q_INVOKABLE QIcon projectIcon() const;
@@ -594,9 +614,11 @@ public:
      **/
     Q_INVOKABLE static QString savePathInfoStringFromFilePath( const QString &filePath );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Get the script template text for @p templateType. */
     Q_INVOKABLE static QString scriptTemplateText(
             ScriptTemplateType templateType = DefaultScriptTemplate );
+#endif
 
     /**
      * @brief Check if the current save location gets used by the Public Transport engine.
@@ -767,6 +789,10 @@ public slots:
     /** @brief Start all tests in @p testCase. */
     bool startTestCase( TestModel::TestCase testCase );
 
+    /** @brief Show the project settings dialog. */
+    void showSettingsDialog( QWidget *parent = 0 );
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Open the script tab if not done already and sets the cursor position to @p lineNumber. */
     void showScriptLineNumber( int lineNumber );
 
@@ -798,14 +824,12 @@ public slots:
     /** @brief Run the getJourneys() script function and interrupt at the first executed line. */
     void debugGetJourneys();
 
-    /** @brief Show the project settings dialog. */
-    void showSettingsDialog( QWidget *parent = 0 );
+    /** @brief Show the script tab. */
+    ScriptTab *showScriptTab( QWidget *parent = 0 );
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
     /** @brief Show the project dashboard tab. */
     DashboardTab *showDashboardTab( QWidget *parent = 0 );
-
-    /** @brief Show the script tab. */
-    ScriptTab *showScriptTab( QWidget *parent = 0 );
 
     /** @brief Show the project source tab. */
     ProjectSourceTab *showProjectSourceTab( QWidget *parent = 0 );
@@ -849,12 +873,17 @@ protected slots:
     void slotOtherTabsCloseRequest();
     void slotModifiedStateChanged();
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     void loadScriptResult( ScriptErrorType lastScriptError,
                            const QString &lastScriptErrorString );
     void functionCallResult( const QSharedPointer< AbstractRequest > &request,
                              bool success, const QString &explanation,
                              const QList< TimetableData > &timetableData,
                              const QScriptValue &returnValue );
+    void scriptOutput( const QString &message, const QScriptContextInfo &context );
+    void scriptErrorReceived( const QString &errorMessage, const QScriptContextInfo &context,
+                              const QString &failedParseText );
+#endif
 
     /**
      * @brief The active project has changed from @p previousProject to @p project.
@@ -885,28 +914,29 @@ protected slots:
 
     void projectSourceDocumentChanged( KTextEditor::Document *projectSourceDocument );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     void scriptAdded( const QString &fileName );
     void scriptFileChanged( const QString &fileName );
-
-    void dashboardTabDestroyed();
-    void projectSourceTabDestroyed();
-    void scriptTabDestroyed();
-    void plasmaPreviewTabDestroyed();
-    void webTabDestroyed();
 
     void debugInterrupted();
     void debugContinued();
     void debugStarted();
     void debugStopped( const ScriptRunData &scriptRunData );
     void debugAborted();
-    void scriptOutput( const QString &message, const QScriptContextInfo &context );
-    void scriptErrorReceived( const QString &errorMessage, const QScriptContextInfo &context,
-                              const QString &failedParseText );
     void waitingForSignal();
     void wokeUpFromSignal( int time );
 
     /** @brief An uncaught exception occured in the script at @p lineNumber. */
     void scriptException( int lineNumber, const QString &errorMessage );
+
+    void scriptTabDestroyed();
+#endif
+
+    void dashboardTabDestroyed();
+    void projectSourceTabDestroyed();
+    void plasmaPreviewTabDestroyed();
+    void webTabDestroyed();
+
 
     void commandExecutionResult( const QString &returnValue, bool error = false );
     void evaluationResult( const EvaluationResult &result );

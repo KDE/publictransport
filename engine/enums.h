@@ -24,6 +24,8 @@
 #ifndef ENUMS_HEADER
 #define ENUMS_HEADER
 
+#include "config.h"
+
 #include <QDebug>
 #include <QDate>
 
@@ -243,9 +245,14 @@ enum ParseDocumentMode {
     ParseForStopIdThenDepartures /**< Parsing for a stop ID, to be used to get departures/arrivals. */
 };
 
-/** @brief The type of a service provider. */
+/**
+ * @brief The type of a service provider.
+ * @note The engine may be built without support for some of these types, but at least one type
+ *   is available. Check available types using ServiceProviderGlobal::availableProviderTypes()
+ *   and ServiceProviderGlobal::isProviderTypeAvailable().
+ **/
 enum ServiceProviderType {
-    InvalidProvider, /**< @internal Invalid value. */
+    InvalidProvider = 0, /**< @internal Invalid value. */
 
     /**
      * Uses a script to request and parse documents. Scripts can make use of
@@ -253,12 +260,12 @@ enum ServiceProviderType {
      * journeys/stop suggestions, cache values, parse HTML, notify about errors, etc.
      * QtScript extensions can be used, eg. qt.xml to parse XML documents.
      **/
-    ScriptedProvider,
+    ScriptedProvider = 1,
 
     /**
      * The accessor uses a DB filled with GTFS data.
      **/
-    GtfsProvider
+    GtfsProvider = 2
 };
 
 /**

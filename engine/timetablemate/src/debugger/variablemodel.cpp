@@ -25,7 +25,7 @@
 #include "debugger.h"
 
 // Public Transport engine includes
-#include <engine/serviceproviderscript.h>
+#include <engine/script/serviceproviderscript.h>
 #include <engine/global.h>
 
 // KDE includes

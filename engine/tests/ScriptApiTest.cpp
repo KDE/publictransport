@@ -18,7 +18,7 @@
  */
 
 #include "ScriptApiTest.h"
-#include "scripting.h"
+#include "script/scripting.h"
 
 #include <QtTest/QTest>
 #include <QSignalSpy>

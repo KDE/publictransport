@@ -61,12 +61,16 @@
 
 ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
         : KDialog(parent), ui_provider(new Ui::timetablemateview_base()), m_providerData(0),
-          m_newScriptTemplateType(Project::NoScriptTemplate),
           m_shortAuthorAutoFilled(false), m_shortUrlAutoFilled(false),
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+          m_newScriptTemplateType(Project::NoScriptTemplate),
+#endif
           m_cityName(0), m_cityReplacement(0), m_changelog(0),
           m_actions(new KActionCollection(this)), m_mapper(0)
 {
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     KGlobal::locale()->insertCatalog( "timezones4" );
+#endif
 
     QWidget *widget = new QWidget( this );
     widget->setAutoFillBackground( false );
@@ -76,6 +80,15 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     setButtons( KDialog::Ok | KDialog::Cancel | KDialog::User1 );
     setButtonIcon( KDialog::User1, KIcon("dialog-ok-apply") );
     setButtonText( KDialog::User1, i18nc("@info/plain", "Check") );
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    ui_provider->type->addItem( ServiceProviderGlobal::typeName(ScriptedProvider),
+                                static_cast<int>(ScriptedProvider) );
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    ui_provider->type->addItem( ServiceProviderGlobal::typeName(GtfsProvider),
+                                static_cast<int>(GtfsProvider)  );
+#endif
 
     QToolBar *notesToolBar = new QToolBar( "notesToolBar", ui_provider->tabNotes );
     QToolBar *notesToolBar2 = new QToolBar( "notesToolBar2", ui_provider->tabNotes );
@@ -106,6 +119,7 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
 
     settingsChanged();
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     // Initialize script file buttons
     ui_provider->btnBrowseForScriptFile->setIcon( KIcon("document-open") );
     ui_provider->btnCreateScriptFile->setIcon( KIcon("document-new") );
@@ -117,6 +131,7 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
              this, SLOT(createScriptFile()) );
     connect( ui_provider->btnDetachScriptFile, SIGNAL(clicked(bool)),
              this, SLOT(detachScriptFile()) );
+#endif
 
     // Initialize the language button
     ui_provider->currentLanguage->loadAllLanguages();
@@ -254,12 +269,22 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     // Connect all change signals of the widgets to the changed() signal
     m_mapper = new QSignalMapper( this );
     connect( ui_provider->type, SIGNAL(currentIndexChanged(int)), m_mapper, SLOT(map()) );
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     connect( ui_provider->scriptFile, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->scriptExtensions, SIGNAL(itemChanged(QListWidgetItem*)), m_mapper, SLOT(map()) );
+    m_mapper->setMapping( ui_provider->scriptFile, ui_provider->scriptFile );
+    m_mapper->setMapping( ui_provider->scriptExtensions, ui_provider->scriptExtensions );
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     connect( ui_provider->gtfsFeed, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->gtfsTripUpdates, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->gtfsAlerts, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->timeZone, SIGNAL(itemSelectionChanged()), m_mapper, SLOT(map()) );
+    m_mapper->setMapping( ui_provider->gtfsFeed, ui_provider->gtfsFeed );
+    m_mapper->setMapping( ui_provider->gtfsTripUpdates, ui_provider->gtfsTripUpdates );
+    m_mapper->setMapping( ui_provider->gtfsAlerts, ui_provider->gtfsAlerts );
+    m_mapper->setMapping( ui_provider->timeZone, ui_provider->timeZone );
+#endif
     connect( ui_provider->name, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->description, SIGNAL(textChanged()), m_mapper, SLOT(map()) );
     connect( ui_provider->version, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
@@ -281,12 +306,6 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     connect( m_changelog, SIGNAL(changed()), m_mapper, SLOT(map()) );
     // TODO Map changes in the changelog, ie. changing the version or message text
     m_mapper->setMapping( ui_provider->type, ui_provider->type );
-    m_mapper->setMapping( ui_provider->scriptFile, ui_provider->scriptFile );
-    m_mapper->setMapping( ui_provider->scriptExtensions, ui_provider->scriptExtensions );
-    m_mapper->setMapping( ui_provider->gtfsFeed, ui_provider->gtfsFeed );
-    m_mapper->setMapping( ui_provider->gtfsTripUpdates, ui_provider->gtfsTripUpdates );
-    m_mapper->setMapping( ui_provider->gtfsAlerts, ui_provider->gtfsAlerts );
-    m_mapper->setMapping( ui_provider->timeZone, ui_provider->timeZone );
     m_mapper->setMapping( ui_provider->name, ui_provider->name );
     m_mapper->setMapping( ui_provider->description, ui_provider->description );
     m_mapper->setMapping( ui_provider->version, ui_provider->version );
@@ -314,13 +333,16 @@ ProjectSettingsDialog::~ProjectSettingsDialog()
 
 void ProjectSettingsDialog::slotChanged( QWidget *changedWidget )
 {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     if( changedWidget == ui_provider->scriptFile ) {
         // Script file changed
         const QString fileName = ui_provider->scriptFile->text();
         ui_provider->btnCreateScriptFile->setVisible( fileName.isEmpty() );
         ui_provider->btnDetachScriptFile->setVisible( !fileName.isEmpty() );
         emit scriptFileChanged( fileName );
-    } else if( changedWidget == ui_provider->url ) {
+    } else
+#endif
+    if( changedWidget == ui_provider->url ) {
         // Home page URL changed
         ui_provider->btnUrlOpen->setDisabled( ui_provider->url->text().isEmpty() );
     } else if( changedWidget == ui_provider->shortAuthor ) {
@@ -575,10 +597,13 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     m_providerData->setSampleStops( ui_provider->sampleStopNames->items() );
     m_providerData->setNotes( ui_provider->notes->textOrHtml() );
     switch ( providerType ) {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptedProvider:
         m_providerData->setScriptFile( ui_provider->scriptFile->text(),
                                        scriptExtensionsFromWidget() );
         break;
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     case GtfsProvider:
         m_providerData->setFeedUrl( ui_provider->gtfsFeed->text() );
         m_providerData->setRealtimeTripUpdateUrl( ui_provider->gtfsTripUpdates->text() );
@@ -586,11 +611,13 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
         m_providerData->setTimeZone( ui_provider->timeZone->selection().isEmpty()
                                      ? QString() : ui_provider->timeZone->selection().first() );
         break;
+#endif
     default:
         break;
     }
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 QStringList ProjectSettingsDialog::scriptExtensionsFromWidget() const
 {
     QStringList scriptExtensions;
@@ -610,13 +637,22 @@ void ProjectSettingsDialog::checkScriptExtensionsInWidget( const QStringList &sc
         item->setCheckState( scriptExtensions.contains(item->text()) ? Qt::Checked : Qt::Unchecked );
     }
 }
+#endif
 
 void ProjectSettingsDialog::providerTypeChanged( int newProviderTypeIndex )
 {
     // Show settings widgets specific to the chosen provider type
     const ServiceProviderType providerType = providerTypeFromComboBoxIndex( newProviderTypeIndex );
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     ui_provider->scriptSettingsWidget->setVisible( providerType == ScriptedProvider );
+#else
+    ui_provider->scriptSettingsWidget->hide();
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     ui_provider->gtfsSettingsWidget->setVisible( providerType == GtfsProvider );
+#else
+    ui_provider->gtfsSettingsWidget->hide();
+#endif
 }
 
 void ProjectSettingsDialog::changelogEntryWidgetAdded( ChangelogEntryWidget *entryWidget )
@@ -727,6 +763,7 @@ void ProjectSettingsDialog::openUrlClicked()
     emit urlShouldBeOpened( ui_provider->url->text() );
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 void ProjectSettingsDialog::createScriptFile()
 {
     if( m_openedPath.isEmpty() ) {
@@ -834,6 +871,7 @@ void ProjectSettingsDialog::setScriptFile( const QString &scriptFile )
 {
     ui_provider->scriptFile->setText( scriptFile );
 }
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
 const ServiceProviderData *ProjectSettingsDialog::providerData( QObject *parent ) const
 {
@@ -853,12 +891,16 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *info,
     m_providerData = info->clone( info->parent() );
     m_openedPath = fileName;
     ui_provider->type->setCurrentIndex( providerTypeToComboBoxIndex(info->type()) );
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     ui_provider->scriptFile->setText( info->scriptFileName() );
     checkScriptExtensionsInWidget( info->scriptExtensions() );
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     ui_provider->gtfsFeed->setText( info->feedUrl() );
     ui_provider->gtfsTripUpdates->setText( info->realtimeTripUpdateUrl() );
     ui_provider->gtfsAlerts->setText( info->realtimeAlertsUrl() );
     ui_provider->timeZone->setSelected( info->timeZone(), true );
+#endif
 
     ui_provider->savePath->setText( fileName );
     ui_provider->currentLanguage->setCurrentItem( "en" );
@@ -900,12 +942,29 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *info,
     // Enable changed signals from widgets again and emit changed signals once
     m_mapper->blockSignals( false );
     emit changed();
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     emit scriptFileChanged( fileName );
+#endif
 }
 
 void ProjectSettingsDialog::settingsChanged()
 {
     emit signalChangeStatusbar( i18n("Settings changed") );
+}
+
+int ProjectSettingsDialog::providerTypeToComboBoxIndex( ServiceProviderType providerType ) const
+{
+    for ( int index = 0; index < ui_provider->type->count(); ++index ) {
+        if ( providerTypeFromComboBoxIndex(index) == providerType ) {
+            return index;
+        }
+    }
+    return -1;
+}
+
+ServiceProviderType ProjectSettingsDialog::providerTypeFromComboBoxIndex( int index ) const
+{
+    return static_cast< ServiceProviderType >( ui_provider->type->itemData(index).toInt() );
 }
 
 #include "projectsettingsdialog.moc"

@@ -302,28 +302,31 @@ Flickable { id: flickable
                 return pos == -1 ? filePath : filePath.substring(pos + 1);
             }
 
+            function updateLayoutToProviderType( type ) {
+                var isScriptProvider = type == "script";
+                var isGtfsProvider = type == "gtfs";
+
+                lblScriptFileName.visible = isScriptProvider;
+                scriptFileName.visible = isScriptProvider;
+                lblScriptExtensions.visible = isScriptProvider;
+                scriptExtensions.visible = isScriptProvider;
+
+                lblFeedUrl.visible = isGtfsProvider;
+                feedUrl.visible = isGtfsProvider;
+                lblTripUpdatesUrl.visible = isGtfsProvider;
+                tripUpdatesUrl.visible = isGtfsProvider;
+                lblAlertsUrl.visible = isGtfsProvider;
+                alertsUrl.visible = isGtfsProvider;
+                lblTimeZone.visible = isGtfsProvider;
+                timeZone.visible = isGtfsProvider;
+            }
+
+            Component.onCompleted: updateLayoutToProviderType(project.data.typeString)
+
             // Show / hide type specific settings (ScriptedProvider, GtfsProvider, ...)
             Connections {
                 target: project
-                onDataChanged: {
-                    var isScriptProvider = project.data.typeString == "script";
-                    var isGtfsProvider = project.data.typeString == "gtfs";
-                    var isInvalidProvider = !isScriptProvider && !isGtfsProvider;
-
-                    lblScriptFileName.visible = isScriptProvider;
-                    scriptFileName.visible = isScriptProvider;
-                    lblScriptExtensions.visible = isScriptProvider;
-                    scriptExtensions.visible = isScriptProvider;
-
-                    lblFeedUrl.visible = isGtfsProvider;
-                    feedUrl.visible = isGtfsProvider;
-                    lblTripUpdatesUrl.visible = isGtfsProvider;
-                    tripUpdatesUrl.visible = isGtfsProvider;
-                    lblAlertsUrl.visible = isGtfsProvider;
-                    alertsUrl.visible = isGtfsProvider;
-                    lblTimeZone.visible = isGtfsProvider;
-                    timeZone.visible = isGtfsProvider;
-                }
+                onDataChanged: updateLayoutToProviderType(project.data.typeString)
             }
 
             // Show the description for the project
@@ -397,7 +400,8 @@ Flickable { id: flickable
 
             Text { id: lblType; text: i18nc("@label", "Type:");
                 width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
-            Text { id: type;
+            Text { id: type
+                color: project.data.typeString == "invalid" ? "red" : "black"
                 text: project.data.typeName
                 width: parent.fieldWidth; elide: Text.ElideMiddle }
 

@@ -21,10 +21,11 @@
 #include "serviceproviderdatareader.h"
 
 // Own includes
+#include "config.h"
 #include "serviceprovider.h"
 #include "serviceproviderdata.h"
 #include "serviceproviderglobal.h"
-#include "serviceproviderscript.h"
+#include "script/serviceproviderscript.h"
 #include "global.h"
 
 // KDE includes
@@ -180,18 +181,35 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
     const QString lang = KGlobal::locale()->country();
     QString langRead, url, shortUrl;
     QHash<QString, QString> names, descriptions;
-    ServiceProviderType serviceProviderType = ScriptedProvider;
+    ServiceProviderType serviceProviderType;
+    QString serviceProviderTypeString;
     const QString fileVersion = attributes().value("fileVersion").toString();
 
     if ( attributes().hasAttribute(QLatin1String("type")) ) {
-        serviceProviderType = ServiceProviderGlobal::typeFromString(
-                attributes().value(QLatin1String("type")).toString() );
+        serviceProviderTypeString = attributes().value( QLatin1String("type") ).toString();
+        serviceProviderType = ServiceProviderGlobal::typeFromString( serviceProviderTypeString );
         if ( serviceProviderType == InvalidProvider && errorAcceptance == OnlyReadCorrectFiles ) {
-            raiseError( QString("The service provider type %1 is invalid. Currently there is only "
-                                "one value allowed: Script. You can use qt.xml to read XML.")
-                        .arg(attributes().value("type").toString()) );
+            raiseError( QString("The service provider type %1 is invalid. "
+                                "Currently there are two values allowed: Script or GTFS.")
+                        .arg(serviceProviderTypeString) );
             return 0;
         }
+    } else {
+        // No provider type in the XML file, use a default one
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        serviceProviderType = ScriptedProvider;
+        serviceProviderTypeString = ServiceProviderGlobal::typeToString( serviceProviderType );
+#else
+    #ifdef BUILD_PROVIDER_TYPE_GTFS
+        serviceProviderType = GtfsProvider;
+        serviceProviderTypeString = ServiceProviderGlobal::typeToString( serviceProviderType );
+    #else
+        kFatal() << "Internal error: No known provider type is supported, "
+                    "tried ScriptedProvider and GtfsProvider";
+    #endif
+#endif
+        kWarning() << "No provider type in the provider plugin file, using default type"
+                   << ServiceProviderGlobal::typeName(serviceProviderType);
     }
 
     ServiceProviderData *serviceProviderData =
@@ -245,6 +263,11 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
                 serviceProviderData->setCharsetForUrlEncoding( readElementText().toAscii() );
             } else if ( name().compare(QLatin1String("fallbackCharset"), Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setFallbackCharset( readElementText().toAscii() ); // TODO Implement as attributes in the url tags?
+            } else if ( name().compare(QLatin1String("changelog"), Qt::CaseInsensitive) == 0 ) {
+                serviceProviderData->setChangelog( readChangelog() );
+            } else if ( name().compare(QLatin1String("credit"), Qt::CaseInsensitive) == 0 ) {
+                serviceProviderData->setCredit( readElementText() );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
             } else if ( name().compare("feedUrl", Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setFeedUrl( readElementText() );
             } else if ( name().compare("realtimeTripUpdateUrl", Qt::CaseInsensitive) == 0 ) {
@@ -253,10 +276,8 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
                 serviceProviderData->setRealtimeAlertsUrl( readElementText() );
             } else if ( name().compare("timeZone", Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setTimeZone( readElementText() );
-            } else if ( name().compare(QLatin1String("changelog"), Qt::CaseInsensitive) == 0 ) {
-                serviceProviderData->setChangelog( readChangelog() );
-            } else if ( name().compare(QLatin1String("credit"), Qt::CaseInsensitive) == 0 ) {
-                serviceProviderData->setCredit( readElementText() );
+#endif
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
             } else if ( serviceProviderType == ScriptedProvider &&
                         name().compare(QLatin1String("script"), Qt::CaseInsensitive) == 0 )
             {
@@ -271,6 +292,7 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
                     return 0; // TODO
                 }
                 serviceProviderData->setScriptFile( scriptFile, extensions );
+#endif
             } else if ( name().compare(QLatin1String("samples"), Qt::CaseInsensitive) == 0 ) {
                 QStringList stops;
                 QString city;

@@ -229,7 +229,7 @@ protected:
      * The returned service can be used to start operations on the timetable data source.
      * For example it has an operation to import GTFS feeds into a local database or to update
      * or delete that database.
-     *
+     * @return A pointer to the created Plasma::Service or 0 if no service is available for @p name.
      * @see PublicTransportService
      **/
     virtual Plasma::Service* serviceForSource( const QString &name );

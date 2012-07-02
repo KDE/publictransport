@@ -21,6 +21,7 @@
 #define TIMETABLEMATE_H
 
 // PublicTransport engine includes
+#include "config.h"
 #include <engine/enums.h> // For TimetableData
 
 // KDE includes
@@ -33,26 +34,30 @@
 class Project;
 class ProjectModel;
 
+class FixedToolBar;
+class DockToolBar;
+
 class AbstractTab;
 class DashboardTab;
 class ProjectSourceTab;
 class PlasmaPreviewTab;
 class WebTab;
-class ScriptTab;
 
-class FixedToolBar;
-class DockToolBar;
-
-class BacktraceDockWidget;
-class BreakpointDockWidget;
-class OutputDockWidget;
-class VariablesDockWidget;
-class ConsoleDockWidget;
 class DocumentationDockWidget;
 class ProjectsDockWidget;
 class TestDockWidget;
 class WebInspectorDockWidget;
 class NetworkMonitorDockWidget;
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    class ScriptTab;
+
+    class BacktraceDockWidget;
+    class BreakpointDockWidget;
+    class OutputDockWidget;
+    class VariablesDockWidget;
+    class ConsoleDockWidget;
+#endif
 
 class ServiceProviderData;
 struct StopSuggestionRequest;
@@ -62,12 +67,17 @@ struct DepartureRequest;
 namespace Ui {
     class preferences;
 }
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 namespace Scripting {
     class ResultObject;
 };
 namespace Debugger {
     class Breakpoint;
 }
+using namespace Scripting;
+using namespace Debugger; // Needed for slots to match signals, eg. using Breakpoint instead of Debugger::Breakpoint
+#endif
 
 namespace KParts {
     class PartManager;
@@ -82,9 +92,6 @@ class KMessageWidget;
 class QModelIndex;
 class QVBoxLayout;
 class QScriptValue;
-
-using namespace Scripting;
-using namespace Debugger; // Needed for slots to match signals, eg. using Breakpoint instead of Debugger::Breakpoint
 
 /**
  * @brief Main window for TimetableMate.
@@ -206,14 +213,15 @@ protected slots:
     void tabContextMenu( QWidget *widget, const QPoint &pos );
     void activePartChanged( KParts::Part *part );
 
-    void scriptPreviousFunction();
-    void scriptNextFunction();
-
     /** @brief A test has started in the currently active project. */
     void testStarted();
 
     /** @brief A test has finished in the currently active project. */
     void testFinished( bool success );
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    void scriptPreviousFunction();
+    void scriptNextFunction();
 
     /** @brief Script execution started in the currently active project. */
     void debugStarted();
@@ -238,6 +246,7 @@ protected slots:
 
     /** @brief Toggle breakpoint at the current line in the script tab of the current project, if any. */
     void toggleBreakpoint();
+#endif
 
     void removeTopMessageWidget();
     void tabNextActionTriggered();
@@ -291,9 +300,11 @@ private:
 
     void dashboardTabAction( DashboardTab *dashboardTab, TabAction tabAction );
     void projectSourceTabAction( ProjectSourceTab *projectSourceTab, TabAction tabAction );
-    void scriptTabAction( ScriptTab *scriptTab, TabAction tabAction );
     void plasmaPreviewTabAction( PlasmaPreviewTab *plasmaPreviewTab, TabAction tabAction );
     void webTabAction( WebTab *webTab, TabAction tabAction );
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    void scriptTabAction( ScriptTab *scriptTab, TabAction tabAction );
+#endif
 
     bool hasHomePageURL( const ServiceProviderData *info );
 
@@ -309,16 +320,18 @@ private:
     DockToolBar *m_bottomDockBar;
 
     // Dock widgets
-    BacktraceDockWidget *m_backtraceDock;
-    ConsoleDockWidget *m_consoleDock;
-    OutputDockWidget *m_outputDock;
-    BreakpointDockWidget *m_breakpointDock;
-    VariablesDockWidget *m_variablesDock;
     DocumentationDockWidget *m_documentationDock;
     ProjectsDockWidget *m_projectsDock;
     TestDockWidget *m_testDock;
     WebInspectorDockWidget *m_webInspectorDock;
     NetworkMonitorDockWidget *m_networkMonitorDock;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    BacktraceDockWidget *m_backtraceDock;
+    ConsoleDockWidget *m_consoleDock;
+    OutputDockWidget *m_outputDock;
+    BreakpointDockWidget *m_breakpointDock;
+    VariablesDockWidget *m_variablesDock;
+#endif
 
     // Pointers to specific actions
     KActionMenu *m_showDocksAction;

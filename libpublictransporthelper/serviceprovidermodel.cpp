@@ -223,10 +223,11 @@ void ServiceProviderModel::syncWithDataEngine( Plasma::DataEngine* publicTranspo
 
     Plasma::DataEngine::Data serviceProviderData = publicTransportEngine->query( "ServiceProviders" );
     for ( Plasma::DataEngine::Data::const_iterator it = serviceProviderData.constBegin();
-                it != serviceProviderData.constEnd(); ++it ) {
-        // it.key() contains the service provider name
+          it != serviceProviderData.constEnd(); ++it )
+    {
         QVariantHash serviceProviderData = it.value().toHash();
-        d->items << new ServiceProviderItem( it.key(), serviceProviderData );
+        d->items << new ServiceProviderItem( serviceProviderData["name"].toString(),
+                                             serviceProviderData );
 
         // Request favicons
         if ( favIconEngine ) {

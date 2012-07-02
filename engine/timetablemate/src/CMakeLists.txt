@@ -22,19 +22,25 @@ set( timetablemate_SRCS
 
    # Use files directly from the data engine
    ../../global.cpp
-   ../../scripting.cpp
-   ../../script_thread.cpp
    ../../departureinfo.cpp
    ../../request.cpp
    ../../serviceprovider.cpp
    ../../serviceproviderdata.cpp
    ../../serviceprovidertestdata.cpp
    ../../serviceproviderglobal.cpp
-   ../../serviceproviderscript.cpp
    ../../serviceproviderdatareader.cpp
 )
 
-add_subdirectory( debugger )
+if ( BUILD_PROVIDER_TYPE_SCRIPT )
+    set ( timetablemate_SRCS ${timetablemate_SRCS}
+        ../../script/serviceproviderscript.cpp
+        ../../script/scripting.cpp
+        ../../script/script_thread.cpp
+    )
+
+    add_subdirectory( debugger )
+endif ( BUILD_PROVIDER_TYPE_SCRIPT )
+
 add_subdirectory( docks )
 add_subdirectory( tabs )
 
@@ -44,19 +50,30 @@ kde4_add_executable( timetablemate ${timetablemate_SRCS} )
 
 add_dependencies( timetablemate publictransporthelper )
 
-target_link_libraries( timetablemate ${KDE4_KDEUI_LIBS}
+# Collect all needed libraries in LIBS
+set( LIBS ${KDE4_KDEUI_LIBS}
     ${KDE4_KPARTS_LIBS} # For the different main view tabs
     ${KDE4_KTEXTEDITOR_LIBS} # For the text editor main view tabs (for XML and script files)
     ${KDE4_KDEWEBKIT_LIBS} # For the web main view tab
     ${KDE4_PLASMA_LIBS} # For the Plasma preview main view tab
     ${KDE4_THREADWEAVER_LIBS} # For the debugger and for includes from the engine
     kdeclarative # For KDeclarative, no ${KDE4_KDECLARATIVE_LIBS} available..
-    ${QT_QTDECLARATIVE_LIBRARY} # For the dashboard main view tab
-    ${QT_QTSCRIPT_LIBRARY} # For scripted providers
-    ${QT_QTSQL_LIBRARY} # For GTFS providers
-    pthread protobuf # pthread is needed for protobuf
+    ${QT_QTDECLARATIVE_LIBRARY} # For the dashboard main view tabs
     publictransporthelper
 )
+
+if ( BUILD_PROVIDER_TYPE_SCRIPT )
+    set( LIBS ${LIBS} ${QT_QTSCRIPT_LIBRARY} )
+endif ( BUILD_PROVIDER_TYPE_SCRIPT )
+
+if ( BUILD_PROVIDER_TYPE_GTFS )
+    set( LIBS ${LIBS} ${QT_QTXML_LIBRARY} ${QT_QTSQL_LIBRARY} )
+    if ( BUILD_GTFS_REALTIME )
+        set( LIBS ${LIBS} pthread protobuf ) # pthread is needed for protobuf
+    endif ( BUILD_GTFS_REALTIME )
+endif ( BUILD_PROVIDER_TYPE_GTFS )
+
+target_link_libraries( timetablemate ${LIBS} )
 
 install( TARGETS timetablemate ${INSTALL_TARGETS_DEFAULT_ARGS} )
 
@@ -78,7 +95,7 @@ add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongener
             --verbose
             --out_completion ${CMAKE_CURRENT_BINARY_DIR}
             --out_doc ${CMAKE_CURRENT_SOURCE_DIR}/../doc
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../scripting.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scripting.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../enums.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../publictransportdataengine.h
             ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator )

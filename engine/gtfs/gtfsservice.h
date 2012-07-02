@@ -21,12 +21,11 @@
 * @brief This file contains the public transport data engine.
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#ifndef PUBLICTRANSPORTSERVICE_HEADER
-#define PUBLICTRANSPORTSERVICE_HEADER
+#ifndef GTFSSERVICE_HEADER
+#define GTFSSERVICE_HEADER
 
 // Own includes
-// #include "enums.h"
-#include "generaltransitfeed_importer.h"
+#include "gtfsimporter.h"
 
 // Plasma includes
 #include <Plasma/Service>
@@ -186,11 +185,11 @@ private:
  * in bytes. The database sizes should be shown to the user, because they may be quite big, eg.
  * ~300MB.
  **/
-class PublicTransportService : public Plasma::Service {
+class GtfsService : public Plasma::Service {
     Q_OBJECT
 
 public:
-    explicit PublicTransportService( const QString &name, QObject *parent = 0 );
+    explicit GtfsService( const QString &name, QObject *parent = 0 );
 
 protected:
     /**

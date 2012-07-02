@@ -166,7 +166,7 @@ QString ServiceProviderData::typeString() const
     return ServiceProviderGlobal::typeToString( m_serviceProviderType );
 }
 
-QString ServiceProviderData::typeName() const
+QString ServiceProviderData::typeName( ) const
 {
     return ServiceProviderGlobal::typeName( m_serviceProviderType );
 }

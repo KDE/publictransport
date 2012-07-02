@@ -33,7 +33,7 @@
 // Public Transport engine includes
 #include <engine/serviceprovider.h>
 #include <engine/serviceproviderdata.h>
-#include <engine/serviceproviderscript.h>
+#include <engine/script/serviceproviderscript.h>
 
 // KDE includes
 #include <KLocalizedString>

@@ -90,10 +90,13 @@ struct AbstractRequest {
     virtual ~AbstractRequest() {};
 
     virtual AbstractRequest *clone() const = 0;
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const = 0;
 
     /** @brief Get the name of the script function that is associated with this request. */
     virtual QString functionName() const = 0;
+#endif
 };
 
 struct StopSuggestionRequest : public AbstractRequest {
@@ -108,10 +111,13 @@ struct StopSuggestionRequest : public AbstractRequest {
     {
         return new StopSuggestionRequest( sourceName, stop, maxCount, city, parseMode );
     };
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
 
     /** @brief Get the name of the script function that is associated with this request. */
     virtual QString functionName() const;
+#endif
 };
 
 struct DepartureRequest : public AbstractRequest {
@@ -130,10 +136,12 @@ struct DepartureRequest : public AbstractRequest {
                                      dataType, parseMode );
     };
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
 
     /** @brief Get the name of the script function that is associated with this request. */
     virtual QString functionName() const;
+#endif
 };
 
 struct ArrivalRequest : public DepartureRequest {
@@ -192,10 +200,12 @@ struct JourneyRequest : public AbstractRequest {
                                    city, dataType, parseMode );
     };
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
 
     /** @brief Get the name of the script function that is associated with this request. */
     virtual QString functionName() const;
+#endif
 };
 
 #endif // Multiple inclusion guard

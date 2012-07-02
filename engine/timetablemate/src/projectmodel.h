@@ -20,8 +20,12 @@
 #ifndef PROJECTMODEL_H
 #define PROJECTMODEL_H
 
-#include <QAbstractItemModel>
+// Own includes
+#include "config.h"
 #include "enums.h"
+
+// Qt includes
+#include <QAbstractItemModel>
 
 class Project;
 class ProjectModel;
@@ -38,7 +42,9 @@ public:
         DashboardItem, /**< A child of the project item, shows the dashboard of the project. */
         ProjectSourceItem, /**< A child of the project item, represents the project source XML
           document, ie the service provider plugin XML document. */
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         ScriptItem, /**< A child of the project item, represents the script document. */
+#endif
         WebItem, /**< A child of the project item, represents the web view. */
         PlasmaPreviewItem /**< A child of the project item, represents the plasma preview. */
     };
@@ -56,7 +62,11 @@ public:
 
     inline bool isProjectItem() const { return m_type == ProjectItem; };
     inline bool isProjectSourceItem() const { return m_type == ProjectSourceItem; };
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     inline bool isScriptItem() const { return m_type == ScriptItem; };
+#else
+    inline bool isScriptItem() const { return false; };
+#endif
     inline bool isPlasmaPreviewItem() const { return m_type == PlasmaPreviewItem; };
     inline bool isWebItem() const { return m_type == WebItem; };
 
@@ -67,8 +77,10 @@ protected:
             return new ProjectModelItem( project, DashboardItem ); };
     static ProjectModelItem *createProjectSourceDocumentItem( Project *project ) {
             return new ProjectModelItem( project, ProjectSourceItem ); };
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     static ProjectModelItem *createScriptItem( Project *project ) {
             return new ProjectModelItem( project, ScriptItem ); };
+#endif
     static ProjectModelItem *createPlasmaPreviewItem( Project *project ) {
             return new ProjectModelItem( project, PlasmaPreviewItem ); };
     static ProjectModelItem *createWebItem( Project *project ) {

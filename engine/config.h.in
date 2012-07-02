@@ -1,0 +1,3 @@
+#cmakedefine BUILD_PROVIDER_TYPE_SCRIPT
+#cmakedefine BUILD_PROVIDER_TYPE_GTFS
+#cmakedefine BUILD_GTFS_REALTIME

@@ -20,6 +20,8 @@
 #ifndef TESTMODEL_H
 #define TESTMODEL_H
 
+#include "config.h"
+
 // KDE includes
 #include <KWidgetItemDelegate>
 
@@ -91,7 +93,9 @@ public:
      **/
     enum TestCase {
         ServiceProviderDataTestCase = 0,
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         ScriptExecutionTestCase,
+#endif
 
         TestCaseCount, /**< @internal */
         InvalidTestCase
@@ -113,6 +117,7 @@ public:
         ServiceProviderDataScriptFileNameTest,
         ServiceProviderDataDescriptionTest,
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         DepartureTest, /**< Tests for an implemented getTimetable() function and for valid
                 * departure results. */
         ArrivalTest, /**< Tests for an implemented getTimetable() function and for valid
@@ -123,6 +128,7 @@ public:
                 * journey results. */
         UsedTimetableInformationsTest, /**< Tests for an implemented usedTimetableInformations()
                 * function and for valid results (a list of strings naming TimetableInformation). */
+#endif
 
         TestCount, /**< @internal */
         InvalidTest // Should be the last enumerable

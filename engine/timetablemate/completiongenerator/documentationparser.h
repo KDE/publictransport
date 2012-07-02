@@ -25,7 +25,7 @@
 #include "parser_structures.h"
 
 // PublicTransport engine includes
-#include <engine/scripting.h>
+#include <engine/script/scripting.h>
 
 // Qt includes
 #include <QFile>

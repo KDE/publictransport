@@ -337,7 +337,7 @@
          </property>
          <property name="whatsThis">
           <string comment="@info:whatsthis">&lt;title&gt;Provider Plugin Type&lt;/title&gt;
-&lt;para&gt;Currently &lt;emphasize&gt;Script&lt;/emphasize&gt; and &lt;emphasize&gt;GTFS&lt;/emphasize&gt; (since version 0.12) types are available.&lt;/para&gt;
+&lt;para&gt;Currently &lt;emphasize&gt;Scripted&lt;/emphasize&gt; and &lt;emphasize&gt;GTFS&lt;/emphasize&gt; (since version 0.12) types are available. Your version of TimetableMate may be compiled without support for one of these types.&lt;/para&gt;
 &lt;para&gt;The Script type can be used for a variety of providers publishing their timetable data in web sites. Helper functions are provided to easily parse HTML sites for timetable data in the script (QtScript, ie. JavaScript, by using the Kross script extension Python and Ruby are also available). The script extension &quot;qt.xml&quot; helps parsing XML data sources.&lt;/para&gt;
 &lt;para&gt;If a GTFS feed is available a provider plugin can be created much easier, ie. without writing a script. Only the url to the GTFS feed is needed. GTFS-realtime TripUpdates and Alerts urls can also be specified.&lt;/para&gt;</string>
          </property>
@@ -347,16 +347,6 @@
          <property name="autoCompletion">
           <bool>false</bool>
          </property>
-         <item>
-          <property name="text">
-           <string>Script</string>
-          </property>
-         </item>
-         <item>
-          <property name="text">
-           <string>GTFS</string>
-          </property>
-         </item>
         </widget>
        </item>
        <item row="1" column="0" colspan="2">

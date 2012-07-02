@@ -19,10 +19,15 @@
 
 // Header
 #include "projectsdockwidget.h"
+
+// Own includes
+#include "config.h"
 #include "../projectmodel.h"
 #include "../tabs/projectsourcetab.h"
-#include "../tabs/scripttab.h"
 #include "../project.h"
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    #include "../tabs/scripttab.h"
+#endif
 
 // KDE includes
 #include <KLocalizedString>
@@ -119,9 +124,11 @@ void ProjectsDockWidget::projectItemDoubleClicked( const QModelIndex &index )
         case ProjectModelItem::ProjectSourceItem:
             project->showProjectSourceTab( this );
             break;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case ProjectModelItem::ScriptItem:
             project->showScriptTab( this );
             break;
+#endif
         case ProjectModelItem::PlasmaPreviewItem:
             project->showPlasmaPreviewTab( this );
             break;
@@ -154,7 +161,11 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
         QAction *closeTabAction = 0;
         QAction *documentSaveAction = 0;
         ProjectSourceTab *projectSourceTab = projectItem->project()->projectSourceTab();
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         ScriptTab *scriptTab = projectItem->project()->scriptTab();
+#else
+        AbstractTab *scriptTab = 0; // Dummy for less #ifdefs
+#endif
 
         // Add a tab/document title
         AbstractTab *tab = projectItem->project()->tab( tabType );

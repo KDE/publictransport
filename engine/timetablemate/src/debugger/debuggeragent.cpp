@@ -26,8 +26,8 @@
 #include "variablemodel.h"
 
 // PublicTransport engine includes
-#include <engine/scripting.h>
-#include <engine/serviceproviderscript.h>
+#include <engine/script/scripting.h>
+#include <engine/script/serviceproviderscript.h>
 #include <engine/global.h>
 
 // KDE includes
