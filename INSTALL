@@ -35,7 +35,7 @@ Note: Add "-D" before the option name to the command line, like above.
     INSTALL_APPLET_FLIGHTS (default: OFF)
             A simple applet that shows flight departures. It uses a single service provider,
             that's also available for the other applets/runner.
-    INSTALL_APPLET_GRAPHICALTIMETABLELINE (default: ON)
+    INSTALL_APPLET_GRAPHICALTIMETABLELINE (default: OFF)
             Shows a street with vehicles moving on it, representing the timetable.
     INSTALL_RUNNER (default: ON)
             Can be used to quickly get departures/arrivals or journeys.
@@ -47,6 +47,13 @@ Note: Add "-D" before the option name to the command line, like above.
             Vehicle type icons and other icons used by PublicTransport components.
     INSTALL_ALL (default: OFF)
             Install everything (except for unit tests). This overrides other options.
+    BUILD_PROVIDER_TYPE_SCRIPT (default: ON)
+            Enable support scripted provider plugins. Needs QtScript.
+    BUILD_PROVIDER_TYPE_GTFS (default: ON)
+            Enalbe support GTFS provider plugins. Needs QtSql.
+    BUILD_GTFS_REALTIME (default: ON)
+            Enable support for GTFS-realtime (if support for GTFS provider plugins is also enbaled).
+            For GTFS-realtime, Protocol Buffers are needed (protoc, protobuf).
     BUILD_TESTS (default: OFF)
             Turn this option on to build unit tests.
 
