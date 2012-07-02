@@ -64,7 +64,7 @@ VehicleType Global::vehicleTypeFromString( QString sVehicleType )
     } else if ( sLower == QLatin1String("plane") ) {
         return Plane;
     } else {
-        return Unknown;
+        return Invalid;
     }
 }
 

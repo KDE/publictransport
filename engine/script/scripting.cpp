@@ -830,7 +830,7 @@ void ResultObject::addData( const QVariantMap& map )
                                       m_timetableData.count(), map );
             continue;
         } else if ( info == TypeOfVehicle &&
-                    Global::vehicleTypeFromString(value.toString()) == Unknown )
+                    Global::vehicleTypeFromString(value.toString()) == Invalid )
         {
             kDebug() << "Invalid type of vehicle value" << value;
             const QString message = i18nc("@info/plain",
@@ -840,7 +840,7 @@ void ResultObject::addData( const QVariantMap& map )
         } else if ( info == TypesOfVehicleInJourney || info == RouteTypesOfVehicles ) {
             const QVariantList types = value.toList();
             foreach ( const QVariant &type, types ) {
-                if ( Global::vehicleTypeFromString(type.toString()) == Unknown ) {
+                if ( Global::vehicleTypeFromString(type.toString()) == Invalid ) {
                     kDebug() << "Invalid type of vehicle value in"
                              << Global::timetableInformationToString(info) << value;
                     const QString message = i18nc("@info/plain",
