@@ -1463,7 +1463,7 @@ void JourneyModel::updateItemAlarm( JourneyItem* journeyItem )
         // Remove target constraints from the alarm filter (because the target is unknown)
         Filter alarmFilter = alarm.filter;
         for ( int i = 0; i < alarmFilter.count(); ++i ) {
-            if ( alarmFilter[i].type == Timetable::FilterByTarget ) {
+            if ( alarmFilter[i].type == PublicTransport::FilterByTarget ) {
                 alarmFilter.removeAt( i );
                 break;
             }

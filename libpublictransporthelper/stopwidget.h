@@ -37,7 +37,7 @@ namespace Plasma {
 }
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 class StopListWidgetPrivate;
 class StopWidgetPrivate;

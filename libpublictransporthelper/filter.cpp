@@ -23,7 +23,7 @@
 #include <KDebug>
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 bool FilterSettings::filterOut( const DepartureInfo& departureInfo ) const
 {

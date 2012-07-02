@@ -39,7 +39,7 @@
 #include "global.h"
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 Q_DECLARE_FLAGS( LineServices, LineService )
 
@@ -453,7 +453,7 @@ inline QDebug& operator<<( QDebug debug, const JourneyInfo& journeyInfo )
 
 } // namespace Timetable
 
-Q_DECLARE_METATYPE( Timetable::DepartureInfo )
-Q_DECLARE_METATYPE( Timetable::JourneyInfo )
+Q_DECLARE_METATYPE( PublicTransport::DepartureInfo )
+Q_DECLARE_METATYPE( PublicTransport::JourneyInfo )
 
 #endif // DEPARTUREINFO_HEADER

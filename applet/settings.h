@@ -35,7 +35,7 @@
 // Qt includes
 #include <QFont>
 
-using namespace Timetable;
+using namespace PublicTransport;
 
 /** @brief Different types of alarms. */
 enum AlarmType {

@@ -30,7 +30,7 @@
 #include <KDebug>
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 /**
  * @brief A single constraint.
@@ -272,9 +272,9 @@ inline QDebug& operator<<(QDebug debug, const FilterSettingsList& filters)
 
 } // namespace Timetable
 
-Q_DECLARE_METATYPE( Timetable::Constraint )
-Q_DECLARE_METATYPE( Timetable::Filter )
-Q_DECLARE_METATYPE( Timetable::FilterSettings )
-Q_DECLARE_METATYPE( Timetable::FilterSettingsList )
+Q_DECLARE_METATYPE( PublicTransport::Constraint )
+Q_DECLARE_METATYPE( PublicTransport::Filter )
+Q_DECLARE_METATYPE( PublicTransport::FilterSettings )
+Q_DECLARE_METATYPE( PublicTransport::FilterSettingsList )
 
 #endif // Multiple inclusion guard

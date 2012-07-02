@@ -26,7 +26,7 @@
 #include "../stopsettings.h"
 #include "../filter.h"
 
-using namespace Timetable;
+using namespace PublicTransport;
 
 class PublicTransportHelperTest : public QObject
 {

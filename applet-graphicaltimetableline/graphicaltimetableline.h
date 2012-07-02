@@ -41,11 +41,11 @@ namespace Plasma {
     class ToolButton;
     class Label;
 }
-namespace Timetable {
+namespace PublicTransport {
     class StopWidget;
     class VehicleTypeModel;
 }
-using namespace Timetable;
+using namespace PublicTransport;
 
 /**
  * @brief Data for one departure/arrival.

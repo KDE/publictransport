@@ -876,7 +876,7 @@ void GraphicalTimetableLine::paintVehicle( QPainter* painter, VehicleType vehicl
     // only if activated in the settings and a supported vehicle type
     // (currently only local public transport)
     bool drawTransportLine = m_drawTransportLine && !transportLine.isEmpty()
-            && Timetable::Global::generalVehicleType(vehicle) == LocalPublicTransport;
+            && PublicTransport::Global::generalVehicleType(vehicle) == LocalPublicTransport;
 
     QString vehicleKey;
     switch ( vehicle ) {

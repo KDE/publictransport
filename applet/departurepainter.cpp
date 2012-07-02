@@ -102,7 +102,7 @@ void DeparturePainter::paintVehicle( QPainter* painter, VehicleType vehicle,
 {
     const bool drawTransportLine = iconDrawFlags.testFlag(DrawTransportLine)
             && !transportLine.isEmpty()
-            && Timetable::Global::generalVehicleType(vehicle) == LocalPublicTransport;
+            && PublicTransport::Global::generalVehicleType(vehicle) == LocalPublicTransport;
     if ( !drawTransportLine ) {
         // Remove possibly set flag, if the transport line cannot be drawn
         iconDrawFlags &= ~DrawTransportLine;

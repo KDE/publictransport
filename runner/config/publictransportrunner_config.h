@@ -33,7 +33,7 @@
 namespace Plasma {
     class DataEngineManager;
 }
-namespace Timetable {
+namespace PublicTransport {
     class LocationModel;
     class ServiceProviderModel;
 }
@@ -73,12 +73,12 @@ private:
 
     Ui::publicTransportRunnerConfig m_ui;
     Plasma::DataEngineManager *m_manager; // For loading data engines
-    Timetable::StopSettings m_stopSettings;
+    PublicTransport::StopSettings m_stopSettings;
 
     Plasma::DataEngine *m_publicTransportEngine;
     Plasma::DataEngine *m_favIconEngine;
-    Timetable::LocationModel *m_modelLocations;
-    Timetable::ServiceProviderModel *m_modelServiceProviders;
+    PublicTransport::LocationModel *m_modelLocations;
+    PublicTransport::ServiceProviderModel *m_modelServiceProviders;
 };
 
 #endif

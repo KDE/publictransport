@@ -28,7 +28,7 @@
 #include <KColorUtils>
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList &vehicleTypesVariant,
                           const QDateTime &departure, const QDateTime &arrival,

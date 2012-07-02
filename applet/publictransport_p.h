@@ -53,12 +53,6 @@
 #include <QGraphicsLinearLayout>
 #include <QLabel>
 
-class PublicTransport;
-class DeparturePainter;
-class DepartureProcessor;
-class JourneyModel;
-class PopupIcon;
-class DepartureModel;
 class OverlayWidget;
 class JourneySearchSuggestionWidget;
 class JourneyTimetableWidget;
@@ -99,10 +93,10 @@ private:
     const char *m_property;
 };
 
-/** @brief Private class for the PublicTransport applet class. */
-class PublicTransportPrivate {
+/** @brief Private class for the PublicTransportApplet class. */
+class PublicTransportAppletPrivate {
 public:
-    PublicTransportPrivate( PublicTransport *q );
+    PublicTransportAppletPrivate( PublicTransportApplet *q );
 
 public: // Event handlers
     /** @brief Update GUI and logic to new @p _settings, changes are indicated using @p changed. */
@@ -229,7 +223,7 @@ public: // Other functions
 public: // Inline functions, mostly used only once (therefore inline) or very short and used rarely
     /** @brief Create, initialize and connect objects. */
     inline void init() {
-        Q_Q( PublicTransport );
+        Q_Q( PublicTransportApplet );
 
         // Read settings
         settings = SettingsIO::readSettings( q->config(), q->globalConfig() );
@@ -287,7 +281,7 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
 
     /** @brief Create, initialize and connect the departure/journey models. */
     inline void setupModels() {
-        Q_Q( PublicTransport );
+        Q_Q( PublicTransportApplet );
 
         StopSettings stop = settings.currentStop();
         model = new DepartureModel( q );
@@ -314,7 +308,7 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
 
     /** @brief Create, initialize and connect the state machine and it's states. */
     inline void setupStateMachine() {
-        Q_Q( PublicTransport );
+        Q_Q( PublicTransportApplet );
 
         // Create the state machine
         stateMachine = new QStateMachine( q );
@@ -545,7 +539,7 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
 
     /** @brief Create, initialize and connect widgets used for the applet. */
     inline void setupWidgets() {
-        Q_Q( PublicTransport );
+        Q_Q( PublicTransportApplet );
 
         Q_ASSERT_X( !graphicsWidget, "PublicTransportPrivate::setupWidgets",
                     "This function should only be called once and the main graphics widget "
@@ -624,7 +618,7 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
 
     /** @brief Requests information about the service provider with the given @p id. */
     inline QVariantHash serviceProviderData( const QString &id ) const{
-        Q_Q( const PublicTransport );
+        Q_Q( const PublicTransportApplet );
         return q->dataEngine( "publictransport" )->query( QString("ServiceProvider %1").arg(id) );
     };
 
@@ -685,8 +679,8 @@ protected:
     qreal longitude, latitude; // Coordinates from openstreetmap for a given stop
 
 private:
-    PublicTransport *q_ptr;
-    Q_DECLARE_PUBLIC( PublicTransport )
+    PublicTransportApplet *q_ptr;
+    Q_DECLARE_PUBLIC( PublicTransportApplet )
 };
 
 #endif // Multiple inclusion guard

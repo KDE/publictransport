@@ -45,7 +45,7 @@ class DynamicLabeledLineEditList;
 class HtmlDelegate;
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 class StopSettings;
 class StopSettingsDialogPrivate;

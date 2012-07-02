@@ -20,7 +20,7 @@
 #include "stopfinder.h"
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 class StopSuggesterPrivate
 {
