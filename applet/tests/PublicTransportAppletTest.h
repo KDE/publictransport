@@ -38,11 +38,11 @@ namespace Plasma {
     class Containment;
     class Corona;
 };
-namespace Timetable {
+namespace PublicTransport {
     class StopListWidget;
     class FilterListWidget;
 };
-using namespace Timetable;
+using namespace PublicTransport;
 
 class PublicTransportAppletTest : public QObject
 {

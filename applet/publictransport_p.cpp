@@ -58,7 +58,7 @@ void ToPropertyTransition::setTargetStateProperty( const QObject *propertyObject
     m_property = property;
 }
 
-PublicTransportPrivate::PublicTransportPrivate( PublicTransport *q )
+PublicTransportAppletPrivate::PublicTransportAppletPrivate( PublicTransportApplet *q )
         : graphicsWidget(0), mainGraphicsWidget(0),
         oldItem(0), titleWidget(0), labelInfo(0), timetable(0), journeyTimetable(0),
         labelJourneysNotSupported(0), listStopSuggestions(0), overlay(0), model(0),
@@ -78,10 +78,10 @@ bool ToPropertyTransition::eventTest( QEvent* event )
     return true;
 }
 
-void PublicTransportPrivate::onSettingsChanged( const Settings &_settings,
+void PublicTransportAppletPrivate::onSettingsChanged( const Settings &_settings,
                                                 SettingsIO::ChangedFlags changed )
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
 
     if ( !changed.testFlag(SettingsIO::IsChanged) ) {
         kDebug() << "No changes made in the settings";
@@ -261,9 +261,9 @@ void PublicTransportPrivate::onSettingsChanged( const Settings &_settings,
     }
 }
 
-void PublicTransportPrivate::onDepartureArrivalListTypeChanged()
+void PublicTransportAppletPrivate::onDepartureArrivalListTypeChanged()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
 
     model->setDepartureArrivalListType( settings.departureArrivalListType() );
     timetable->updateItemLayouts();
@@ -283,7 +283,7 @@ void PublicTransportPrivate::onDepartureArrivalListTypeChanged()
         : i18nc( "@action", "Back to &Arrival List" ) );
 }
 
-void PublicTransportPrivate::onCurrentStopSettingsChanged()
+void PublicTransportAppletPrivate::onCurrentStopSettingsChanged()
 {
     model->setHomeStop( settings.currentStop().stop(0).name );
     model->setCurrentStopIndex( settings.currentStopIndex() );
@@ -294,9 +294,9 @@ void PublicTransportPrivate::onCurrentStopSettingsChanged()
     }
 }
 
-void PublicTransportPrivate::onServiceProviderSettingsChanged()
+void PublicTransportAppletPrivate::onServiceProviderSettingsChanged()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
 
     if ( settings.checkConfig() ) {
         // Configuration is valid
@@ -329,9 +329,9 @@ void PublicTransportPrivate::onServiceProviderSettingsChanged()
     }
 }
 
-void PublicTransportPrivate::onResized()
+void PublicTransportAppletPrivate::onResized()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
 
     // Get the size of the applet/popup (not the size of the popup icon if iconified)
     QSizeF size = graphicsWidget->size();
@@ -464,7 +464,7 @@ void PublicTransportPrivate::onResized()
     updateInfoText();
 }
 
-void PublicTransportPrivate::onOldItemAnimationFinished()
+void PublicTransportAppletPrivate::onOldItemAnimationFinished()
 {
     if ( oldItem && oldItem->scene() ) {
         oldItem->scene()->removeItem( oldItem );
@@ -473,15 +473,15 @@ void PublicTransportPrivate::onOldItemAnimationFinished()
     oldItem = 0;
 }
 
-void PublicTransportPrivate::updateInfoText()
+void PublicTransportAppletPrivate::updateInfoText()
 {
     labelInfo->setToolTip( courtesyToolTip() );
     labelInfo->setText( infoText() );
 }
 
-void PublicTransportPrivate::applyTheme()
+void PublicTransportAppletPrivate::applyTheme()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
     // Get theme colors
     QColor textColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
 
@@ -513,9 +513,9 @@ void PublicTransportPrivate::applyTheme()
     timetable->updateItemLayouts();
 }
 
-void PublicTransportPrivate::createTooltip()
+void PublicTransportAppletPrivate::createTooltip()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
 
     if ( q->formFactor() != Plasma::Horizontal && q->formFactor() != Plasma::Vertical ) {
         // Create the tooltip only when in a panel
@@ -598,7 +598,7 @@ void PublicTransportPrivate::createTooltip()
     Plasma::ToolTipManager::self()->setContent( q, data );
 }
 
-QString PublicTransportPrivate::stripDateAndTimeValues( const QString &sourceName ) const
+QString PublicTransportAppletPrivate::stripDateAndTimeValues( const QString &sourceName ) const
 {
     QString ret = sourceName;
     QRegExp rx( "(time=[^\\|]*|datetime=[^\\|]*)", Qt::CaseInsensitive );
@@ -607,7 +607,7 @@ QString PublicTransportPrivate::stripDateAndTimeValues( const QString &sourceNam
     return ret;
 }
 
-void PublicTransportPrivate::fillModel( const QList<DepartureInfo> &departures )
+void PublicTransportAppletPrivate::fillModel( const QList<DepartureInfo> &departures )
 {
     bool modelFilled = model->rowCount() >= settings.maximalNumberOfDepartures();
     foreach( const DepartureInfo & departureInfo, departures ) {
@@ -634,7 +634,7 @@ void PublicTransportPrivate::fillModel( const QList<DepartureInfo> &departures )
     model->sort( ColumnDeparture );
 }
 
-void PublicTransportPrivate::fillModelJourney( const QList<JourneyInfo> &journeys )
+void PublicTransportAppletPrivate::fillModelJourney( const QList<JourneyInfo> &journeys )
 {
     foreach( const JourneyInfo & journeyInfo, journeys ) {
         int row = modelJourneys->indexFromInfo( journeyInfo ).row();
@@ -653,9 +653,9 @@ void PublicTransportPrivate::fillModelJourney( const QList<JourneyInfo> &journey
     modelJourneys->sort( ColumnDeparture );
 }
 
-void PublicTransportPrivate::updateFilterMenu()
+void PublicTransportAppletPrivate::updateFilterMenu()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
 
     KActionMenu *actionFilter = qobject_cast< KActionMenu * >( q->action( "filterConfiguration" ) );
     KMenu *menu = actionFilter->menu();
@@ -727,9 +727,9 @@ void PublicTransportPrivate::updateFilterMenu()
     }
 }
 
-void PublicTransportPrivate::updateJourneyMenu()
+void PublicTransportAppletPrivate::updateJourneyMenu()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
 
     KActionMenu *journeysAction = qobject_cast<KActionMenu *>( q->action( "journeys" ) );
     KMenu *menu = journeysAction->menu();
@@ -791,7 +791,7 @@ void PublicTransportPrivate::updateJourneyMenu()
     menu->addAction( q->action( "configureJourneys" ) );
 }
 
-QList<DepartureInfo> PublicTransportPrivate::mergedDepartureList( bool includeFiltered,
+QList<DepartureInfo> PublicTransportAppletPrivate::mergedDepartureList( bool includeFiltered,
                                                                   int max ) const
 {
     QList< DepartureInfo > ret;
@@ -812,9 +812,9 @@ QList<DepartureInfo> PublicTransportPrivate::mergedDepartureList( bool includeFi
     return max == -1 ? ret.mid( 0, settings.maximalNumberOfDepartures() ) : ret.mid( 0, max );
 }
 
-void PublicTransportPrivate::reconnectSource()
+void PublicTransportAppletPrivate::reconnectSource()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
     disconnectSources();
 
     // Get a list of stops (or stop IDs if available) which results are currently shown
@@ -872,9 +872,9 @@ void PublicTransportPrivate::reconnectSource()
     }
 }
 
-void PublicTransportPrivate::disconnectSources()
+void PublicTransportAppletPrivate::disconnectSources()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
     if ( !currentSources.isEmpty() ) {
         foreach( const QString & currentSource, currentSources ) {
             kDebug() << "Disconnect data source" << currentSource;
@@ -884,26 +884,26 @@ void PublicTransportPrivate::disconnectSources()
     }
 }
 
-void PublicTransportPrivate::disconnectJourneySource()
+void PublicTransportAppletPrivate::disconnectJourneySource()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
     if ( !currentJourneySource.isEmpty() ) {
         kDebug() << "Disconnect journey data source" << currentJourneySource;
         q->dataEngine( "publictransport" )->disconnectSource( currentJourneySource, q );
     }
 }
 
-bool PublicTransportPrivate::isStateActive( const QString &stateName ) const
+bool PublicTransportAppletPrivate::isStateActive( const QString &stateName ) const
 {
     return states.contains( stateName )
            && stateMachine->configuration().contains( states[stateName] );
 }
 
-void PublicTransportPrivate::reconnectJourneySource( const QString &targetStopName,
+void PublicTransportAppletPrivate::reconnectJourneySource( const QString &targetStopName,
         const QDateTime &dateTime, bool stopIsTarget, bool timeIsDeparture,
         bool requestStopSuggestions )
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
 
     disconnectJourneySource();
 
@@ -955,9 +955,9 @@ void PublicTransportPrivate::reconnectJourneySource( const QString &targetStopNa
     q->dataEngine( "publictransport" )->connectSource( currentJourneySource, q );
 }
 
-void PublicTransportPrivate::updateColorGroupSettings()
+void PublicTransportAppletPrivate::updateColorGroupSettings()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
     if ( settings.colorize() ) {
         // Generate color groups from existing departure data
         settings.adjustColorGroupSettingsCount();
@@ -992,7 +992,7 @@ void PublicTransportPrivate::updateColorGroupSettings()
     }
 }
 
-void PublicTransportPrivate::updateDepartureListIcon()
+void PublicTransportAppletPrivate::updateDepartureListIcon()
 {
     if ( isStateActive( "intermediateDepartureView" ) ) {
         titleWidget->setIcon( GoBackIcon );
@@ -1002,7 +1002,7 @@ void PublicTransportPrivate::updateDepartureListIcon()
     }
 }
 
-QString PublicTransportPrivate::courtesyToolTip() const
+QString PublicTransportAppletPrivate::courtesyToolTip() const
 {
     // Get courtesy information for the current service provider from the data engine
     QVariantHash data = currentServiceProviderData();
@@ -1020,7 +1020,7 @@ QString PublicTransportPrivate::courtesyToolTip() const
     }
 }
 
-QString PublicTransportPrivate::infoText()
+QString PublicTransportAppletPrivate::infoText()
 {
     // Get information about the current service provider from the data engine
     const QVariantHash data = currentServiceProviderData();
@@ -1062,9 +1062,9 @@ QString PublicTransportPrivate::infoText()
     }
 }
 
-Plasma::Animation *PublicTransportPrivate::fadeOutOldAppearance()
+Plasma::Animation *PublicTransportAppletPrivate::fadeOutOldAppearance()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
 
     if ( q->isVisible() && stateMachine ) {
         // Draw old appearance to pixmap
@@ -1093,9 +1093,9 @@ Plasma::Animation *PublicTransportPrivate::fadeOutOldAppearance()
     }
 }
 
-KSelectAction *PublicTransportPrivate::createSwitchStopAction( QObject *parent, bool destroyOverlayOnTrigger ) const
+KSelectAction *PublicTransportAppletPrivate::createSwitchStopAction( QObject *parent, bool destroyOverlayOnTrigger ) const
 {
-    Q_Q( const PublicTransport );
+    Q_Q( const PublicTransportApplet );
 
     KSelectAction *switchStopAction = new KSelectAction(
         KIcon( "public-transport-stop" ), i18nc( "@action", "Switch Current Stop" ), parent );
@@ -1130,9 +1130,9 @@ KSelectAction *PublicTransportPrivate::createSwitchStopAction( QObject *parent, 
     return switchStopAction;
 }
 
-void PublicTransportPrivate::onDepartureDataStateChanged()
+void PublicTransportAppletPrivate::onDepartureDataStateChanged()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
     QString noItemsText;
     bool busy = false;
 
@@ -1165,9 +1165,9 @@ void PublicTransportPrivate::onDepartureDataStateChanged()
     q->setBusy( busy );
 }
 
-void PublicTransportPrivate::onJourneyDataStateChanged()
+void PublicTransportAppletPrivate::onJourneyDataStateChanged()
 {
-    Q_Q( PublicTransport );
+    Q_Q( PublicTransportApplet );
     if ( isStateActive("journeyView") ) {
         MainIconDisplay icon;
         QString noItemsText;

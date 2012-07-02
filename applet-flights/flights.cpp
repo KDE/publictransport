@@ -41,7 +41,7 @@
 #include <QGraphicsLinearLayout>
 #include <qmath.h>
 
-using namespace Timetable;
+using namespace PublicTransport;
 
 Flights::Flights(QObject *parent, const QVariantList &args)
     : Plasma::PopupApplet(parent, args), m_stopLineEdit(0), m_flightDepartureList(0), m_header(0),
@@ -53,7 +53,7 @@ Flights::Flights(QObject *parent, const QVariantList &args)
     setContentsMargins( 10, 10, 10, 10 );
     setAspectRatioMode( Plasma::IgnoreAspectRatio );
     resize( 300, 200 );
-    setPopupIcon( Timetable::Global::vehicleTypeToIcon(Plane) );
+    setPopupIcon( PublicTransport::Global::vehicleTypeToIcon(Plane) );
 }
 
 Flights::~Flights()

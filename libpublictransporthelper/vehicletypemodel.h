@@ -36,7 +36,7 @@ class VehicleTypeModelPrivate;
 class QStringList;
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 /**
  * @brief A model containing vehicle types.

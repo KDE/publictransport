@@ -35,7 +35,7 @@
 #include <QDebug>
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 /** @class Global
  * @brief Contains global static methods. */

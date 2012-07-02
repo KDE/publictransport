@@ -20,7 +20,7 @@
 #include "vehicletypemodel.h"
 #include "global.h"
 
-using namespace Timetable;
+using namespace PublicTransport;
 
 struct VehicleTypeItem {
     VehicleType vehicleType;

@@ -27,7 +27,7 @@
 #include <KToolInvocation>
 #include <QTimer>
 
-using namespace Timetable;
+using namespace PublicTransport;
 
 PublicTransportRunner::PublicTransportRunner( QObject *parent, const QVariantList& args )
         : Plasma::AbstractRunner( parent, args ), m_helper( new PublicTransportRunnerHelper( this ) )

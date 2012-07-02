@@ -30,7 +30,7 @@
 #include <qnamespace.h>
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 /** @brief The type of services for a public transport line. */
 enum LineService {

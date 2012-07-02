@@ -37,7 +37,7 @@
 #include <QToolButton>
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 FilterWidget::FilterWidget( QWidget* parent,
                             AbstractDynamicWidgetContainer::SeparatorOptions seperatorOptions )
@@ -636,7 +636,7 @@ Filter FilterWidget::filter() const
     return f;
 }
 
-FilterWidget* FilterWidget::create( const Timetable::Filter& filter, QWidget* parent )
+FilterWidget* FilterWidget::create( const PublicTransport::Filter& filter, QWidget* parent )
 {
     FilterWidget *filterWidget = new FilterWidget( QList<FilterType>()
             << FilterByVehicleType << FilterByTarget << FilterByVia << FilterByNextStop
@@ -652,7 +652,7 @@ void FilterListWidget::addFilter()
     addFilter( filter );
 }
 
-FilterListWidget* FilterListWidget::create( const Timetable::FilterList& filterList, QWidget* parent )
+FilterListWidget* FilterListWidget::create( const PublicTransport::FilterList& filterList, QWidget* parent )
 {
     FilterListWidget *filterListWidget = new FilterListWidget( parent );
     foreach( Filter filter, filterList ) {

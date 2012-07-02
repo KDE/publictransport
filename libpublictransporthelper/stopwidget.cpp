@@ -40,7 +40,7 @@
 #include <QToolButton>
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 class StopWidgetPrivate
 {

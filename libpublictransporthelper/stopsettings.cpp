@@ -36,7 +36,7 @@
 #include <QRadioButton>
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 Stop::Stop()
 {

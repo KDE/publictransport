@@ -215,7 +215,7 @@ void ColorGroupSettingsList::enableColorGroup( const QColor &color, bool enable 
     }
 }
 
-bool ColorGroupSettingsList::filterOut( const Timetable::DepartureInfo &departureInfo ) const {
+bool ColorGroupSettingsList::filterOut( const PublicTransport::DepartureInfo &departureInfo ) const {
     foreach ( const ColorGroupSettings &colorSettings, *this ) {
         if ( colorSettings.filterOut && colorSettings.matches(departureInfo) ) {
             return true;

@@ -35,7 +35,7 @@
 #include "settings.h"
 
 class KConfigDialog;
-namespace Timetable {
+namespace PublicTransport {
     class LocationModel;
     class ServiceProviderModel;
     class StopListWidget;

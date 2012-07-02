@@ -36,7 +36,7 @@
 #include <QTimer>
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 /// Private class of StopLineEdit
 class StopLineEditPrivate

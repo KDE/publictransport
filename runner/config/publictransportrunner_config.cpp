@@ -39,7 +39,7 @@
 
 K_EXPORT_RUNNER_CONFIG( publictransport, PublicTransportRunnerConfig )
 
-using namespace Timetable;
+using namespace PublicTransport;
 
 PublicTransportRunnerConfig::PublicTransportRunnerConfig( QWidget* parent, const QVariantList& args )
         : KCModule( ConfigFactory::componentData(), parent, args )/*,

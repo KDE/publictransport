@@ -69,7 +69,7 @@
 #endif
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 // Private dialog to show a list of stops near the users current position
 class NearStopsDialog : public KDialog

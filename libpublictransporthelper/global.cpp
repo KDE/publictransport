@@ -35,7 +35,7 @@
 static const KCatalogLoader loader("libpublictransporthelper");
 #endif
 
-namespace Timetable {
+namespace PublicTransport {
 
 GeneralVehicleType Global::generalVehicleType( VehicleType vehicleType )
 {

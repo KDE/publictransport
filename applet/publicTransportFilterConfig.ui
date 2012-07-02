@@ -184,7 +184,7 @@
            <x>0</x>
            <y>0</y>
            <width>448</width>
-           <height>231</height>
+           <height>227</height>
           </rect>
          </property>
          <layout class="QFormLayout" name="formLayout">
@@ -195,7 +195,7 @@
            <number>0</number>
           </property>
           <item row="0" column="0" colspan="2">
-           <widget class="Timetable::FilterListWidget" name="filters" native="true"/>
+           <widget class="PublicTransport::FilterListWidget" name="filters" native="true"/>
           </item>
          </layout>
         </widget>
@@ -218,7 +218,7 @@
    <header location="global">checkcombobox.h</header>
   </customwidget>
   <customwidget>
-   <class>Timetable::FilterListWidget</class>
+   <class>PublicTransport::FilterListWidget</class>
    <extends>QWidget</extends>
    <header location="global">filterwidget.h</header>
    <container>1</container>

@@ -42,7 +42,7 @@ class QHash;
 class QWidget;
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 class StopSettingsPrivate;
 
@@ -539,9 +539,9 @@ QDebug &operator <<(QDebug debug, StopSetting setting);
 
 } // namespace Timetable
 
-Q_DECLARE_METATYPE( Timetable::Stop )
-Q_DECLARE_METATYPE( Timetable::StopList )
-Q_DECLARE_METATYPE( Timetable::StopSettings )
-Q_DECLARE_METATYPE( Timetable::StopSettingsList )
+Q_DECLARE_METATYPE( PublicTransport::Stop )
+Q_DECLARE_METATYPE( PublicTransport::StopList )
+Q_DECLARE_METATYPE( PublicTransport::StopSettings )
+Q_DECLARE_METATYPE( PublicTransport::StopSettingsList )
 
 #endif // Multiple inclusion guard

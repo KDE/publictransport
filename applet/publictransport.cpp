@@ -53,8 +53,8 @@
 #include <QGraphicsSceneEvent>
 #include <qmath.h>
 
-PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
-        : Plasma::PopupApplet( parent, args ), d_ptr(new PublicTransportPrivate(this))
+PublicTransportApplet::PublicTransportApplet( QObject *parent, const QVariantList &args )
+        : Plasma::PopupApplet( parent, args ), d_ptr(new PublicTransportAppletPrivate(this))
 {
     setBackgroundHints( StandardBackground );
     setAspectRatioMode( Plasma::IgnoreAspectRatio );
@@ -62,7 +62,7 @@ PublicTransport::PublicTransport( QObject *parent, const QVariantList &args )
     setPreferredSize( 400, 300 );
 }
 
-PublicTransport::~PublicTransport()
+PublicTransportApplet::~PublicTransportApplet()
 {
     if ( hasFailedToLaunch() ) {
         // Do some cleanup here
@@ -72,9 +72,9 @@ PublicTransport::~PublicTransport()
     delete d_ptr;
 }
 
-void PublicTransport::init()
+void PublicTransportApplet::init()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     // Create, initialize and connect objects
     d->init();
@@ -109,13 +109,13 @@ void PublicTransport::init()
     d->onServiceProviderSettingsChanged();
 }
 
-void PublicTransport::themeChanged()
+void PublicTransportApplet::themeChanged()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     d->applyTheme();
 }
 
-bool PublicTransport::checkNetworkStatus()
+bool PublicTransportApplet::checkNetworkStatus()
 {
     QString status = queryNetworkStatus();
     if ( status == QLatin1String("unavailable") ) {
@@ -133,7 +133,7 @@ bool PublicTransport::checkNetworkStatus()
     }
 }
 
-QString PublicTransport::queryNetworkStatus()
+QString PublicTransportApplet::queryNetworkStatus()
 {
     const QStringList interfaces = dataEngine( "network" )->sources();
     if ( interfaces.isEmpty() ) {
@@ -160,9 +160,9 @@ QString PublicTransport::queryNetworkStatus()
     return status;
 }
 
-void PublicTransport::setSettings( const QString& serviceProviderID, const QString& stopName )
+void PublicTransportApplet::setSettings( const QString& serviceProviderID, const QString& stopName )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     // Set stop settings in a copy of the current settings.
     // Then write the new settings.
@@ -176,10 +176,10 @@ void PublicTransport::setSettings( const QString& serviceProviderID, const QStri
     setSettings( settings );
 }
 
-void PublicTransport::setSettings( const StopSettingsList& stops,
+void PublicTransportApplet::setSettings( const StopSettingsList& stops,
                                    const FilterSettingsList& filters )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     // Set settings in a copy of the current settings.
     // Then write the new settings.
@@ -189,9 +189,9 @@ void PublicTransport::setSettings( const StopSettingsList& stops,
     setSettings( settings );
 }
 
-void PublicTransport::noItemsTextClicked()
+void PublicTransportApplet::noItemsTextClicked()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     // Update the timetable if an error message inside the tree view has been clicked
     if ( !d->isStateActive("networkActivated") ) {
@@ -199,9 +199,9 @@ void PublicTransport::noItemsTextClicked()
     }
 }
 
-void PublicTransport::setupActions()
+void PublicTransportApplet::setupActions()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     KAction *actionUpdate = new KAction( KIcon("view-refresh"),
                                          i18nc("@action:inmenu", "&Update timetable"), this );
@@ -313,9 +313,9 @@ void PublicTransport::setupActions()
     addAction( "showColumnTarget", actionShowColumnTarget );
 }
 
-QList< QAction* > PublicTransport::contextualActions()
+QList< QAction* > PublicTransportApplet::contextualActions()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     QAction *switchDepArr = d->settings.departureArrivalListType() == DepartureList
             ? action( "showArrivals" ) : action( "showDepartures" );
@@ -368,9 +368,9 @@ QList< QAction* > PublicTransport::contextualActions()
     return actions;
 }
 
-void PublicTransport::updateDataSource()
+void PublicTransportApplet::updateDataSource()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     if ( d->isStateActive("journeyView") ) {
         d->reconnectJourneySource();
     } else {
@@ -378,12 +378,12 @@ void PublicTransport::updateDataSource()
     }
 }
 
-void PublicTransport::departuresFiltered( const QString& sourceName,
+void PublicTransportApplet::departuresFiltered( const QString& sourceName,
         const QList< DepartureInfo > &departures,
         const QList< DepartureInfo > &newlyFiltered,
         const QList< DepartureInfo > &newlyNotFiltered )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     if ( d->departureInfos.contains(sourceName) ) {
         d->departureInfos[ sourceName ] = departures;
@@ -421,19 +421,19 @@ void PublicTransport::departuresFiltered( const QString& sourceName,
     d->updateColorGroupSettings();
 }
 
-void PublicTransport::beginJourneyProcessing( const QString &/*sourceName*/ )
+void PublicTransportApplet::beginJourneyProcessing( const QString &/*sourceName*/ )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     // Clear old journey list
     d->journeyInfos.clear();
 }
 
-void PublicTransport::journeysProcessed( const QString &/*sourceName*/,
+void PublicTransportApplet::journeysProcessed( const QString &/*sourceName*/,
         const QList< JourneyInfo > &journeys, const QUrl &requestUrl,
         const QDateTime &/*lastUpdate*/ )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     // Set associated app url
     d->urlJourneys = requestUrl;
@@ -447,20 +447,20 @@ void PublicTransport::journeysProcessed( const QString &/*sourceName*/,
     d->fillModelJourney( journeys );
 }
 
-void PublicTransport::beginDepartureProcessing( const QString& sourceName )
+void PublicTransportApplet::beginDepartureProcessing( const QString& sourceName )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     // Clear old departure / arrival list
     QString strippedSourceName = d->stripDateAndTimeValues( sourceName );
     d->departureInfos[ strippedSourceName ].clear();
 }
 
-void PublicTransport::departuresProcessed( const QString& sourceName,
+void PublicTransportApplet::departuresProcessed( const QString& sourceName,
         const QList< DepartureInfo > &departures, const QUrl &requestUrl,
         const QDateTime &lastUpdate, int departuresToGo )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     // Set associated app url
     d->urlDeparturesArrivals = requestUrl;
@@ -495,10 +495,10 @@ void PublicTransport::departuresProcessed( const QString& sourceName,
     }
 }
 
-void PublicTransport::handleDataError( const QString& /*sourceName*/,
+void PublicTransportApplet::handleDataError( const QString& /*sourceName*/,
                                        const Plasma::DataEngine::Data& data )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     if ( data["parseMode"].toString() == QLatin1String("journeys") ) {
         emit invalidJourneyDataReceived();
@@ -546,10 +546,10 @@ void PublicTransport::handleDataError( const QString& /*sourceName*/,
     }
 }
 
-void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
+void PublicTransportApplet::processStopSuggestions( const QString &/*sourceName*/,
                                               const Plasma::DataEngine::Data &data )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     bool journeyData = data["parseMode"].toString() == QLatin1String("journeys");
     if ( journeyData || data["parseMode"].toString() == QLatin1String("stopSuggestions") ) {
@@ -565,10 +565,10 @@ void PublicTransport::processStopSuggestions( const QString &/*sourceName*/,
     }
 }
 
-void PublicTransport::processOsmData( const QString& sourceName,
+void PublicTransportApplet::processOsmData( const QString& sourceName,
                                       const Plasma::DataEngine::Data& data )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     qreal longitude = -1.0, latitude = -1.0;
     QString name;
@@ -634,10 +634,10 @@ void PublicTransport::processOsmData( const QString& sourceName,
     }
 }
 
-void PublicTransport::dataUpdated( const QString& sourceName,
+void PublicTransportApplet::dataUpdated( const QString& sourceName,
                                    const Plasma::DataEngine::Data& data )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     if ( sourceName.startsWith(QLatin1String("getCoords"), Qt::CaseInsensitive) ) {
         processOsmData( sourceName, data );
@@ -672,21 +672,21 @@ void PublicTransport::dataUpdated( const QString& sourceName,
     }
 }
 
-void PublicTransport::geometryChanged()
+void PublicTransportApplet::geometryChanged()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     d->onResized();
 }
 
-void PublicTransport::popupEvent( bool show )
+void PublicTransportApplet::popupEvent( bool show )
 {
     action("backToDepartures")->trigger();
     Plasma::PopupApplet::popupEvent( show );
 }
 
-void PublicTransport::wheelEvent( QGraphicsSceneWheelEvent* event )
+void PublicTransportApplet::wheelEvent( QGraphicsSceneWheelEvent* event )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     QGraphicsItem::wheelEvent( event );
 
@@ -703,30 +703,30 @@ void PublicTransport::wheelEvent( QGraphicsSceneWheelEvent* event )
     }
 }
 
-void PublicTransport::departuresAboutToBeRemoved( const QList<ItemBase*>& departures )
+void PublicTransportApplet::departuresAboutToBeRemoved( const QList<ItemBase*>& departures )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     d->popupIcon->departuresAboutToBeRemoved( departures );
     updatePopupIcon();
     d->createTooltip();
 }
 
-void PublicTransport::departuresLeft( const QList< DepartureInfo > &departures )
+void PublicTransportApplet::departuresLeft( const QList< DepartureInfo > &departures )
 {
     Q_UNUSED( departures );
 }
 
-void PublicTransport::titleToggleAnimationFinished()
+void PublicTransportApplet::titleToggleAnimationFinished()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     delete d->titleToggleAnimation;
     d->titleToggleAnimation = 0;
 }
 
-void PublicTransport::updatePopupIcon()
+void PublicTransportApplet::updatePopupIcon()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     if ( isIconified() ) {
         int iconSize = qMin( 128, int(size().width()) );
@@ -734,20 +734,20 @@ void PublicTransport::updatePopupIcon()
     }
 }
 
-void PublicTransport::updateTooltip()
+void PublicTransportApplet::updateTooltip()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     d->createTooltip();
 }
 
 // TODO
-// void PublicTransport::resized()
+// void PublicTransportApplet::resized()
 // {
-//     Q_D( PublicTransport );
+//     Q_D( PublicTransportApplet );
 //     d->onResized();
 // }
 
-void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
+void PublicTransportApplet::resizeEvent( QGraphicsSceneResizeEvent *event )
 {
     Plasma::Applet::resizeEvent( event );
 
@@ -755,18 +755,18 @@ void PublicTransport::resizeEvent( QGraphicsSceneResizeEvent *event )
     updatePopupIcon();
 }
 
-// void PublicTransport::configChanged()
+// void PublicTransportApplet::configChanged()
 // {
-//     Q_D( PublicTransport );
+//     Q_D( PublicTransportApplet );
 //
 //     disconnect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
 //     d->onUnknownSettingsChanged();
 //     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
 // }
 
-void PublicTransport::destroyOverlay()
+void PublicTransportApplet::destroyOverlay()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     if ( d->overlay ) {
         d->overlay->destroy();
@@ -774,9 +774,9 @@ void PublicTransport::destroyOverlay()
     }
 }
 
-void PublicTransport::showActionButtons()
+void PublicTransportApplet::showActionButtons()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     // Create an overlay widget with gets placed over the applet
     // and then filled with buttons
@@ -849,9 +849,9 @@ void PublicTransport::showActionButtons()
     GlobalApplet::fadeAnimation( d->overlay, 1 )->start( QAbstractAnimation::DeleteWhenStopped );
 }
 
-void PublicTransport::setCurrentStopIndex( QAction* stopAction )
+void PublicTransportApplet::setCurrentStopIndex( QAction* stopAction )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     bool ok;
     int stopIndex = stopAction->data().toInt( &ok );
@@ -867,9 +867,9 @@ void PublicTransport::setCurrentStopIndex( QAction* stopAction )
     setSettings( settings );
 }
 
-void PublicTransport::showDepartures()
+void PublicTransportApplet::showDepartures()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     // Change departure arrival list type in a copy of the settings.
     // Then write the new settings.
@@ -878,9 +878,9 @@ void PublicTransport::showDepartures()
     setSettings( settings );
 }
 
-void PublicTransport::showArrivals()
+void PublicTransportApplet::showArrivals()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     // Change departure arrival list type in a copy of the settings.
     // Then write the new settings.
@@ -889,9 +889,9 @@ void PublicTransport::showArrivals()
     setSettings( settings );
 }
 
-void PublicTransport::switchFilterConfiguration( QAction* action )
+void PublicTransportApplet::switchFilterConfiguration( QAction* action )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     const QString filterConfig = KGlobal::locale()->removeAcceleratorMarker( action->text() );
 
@@ -914,9 +914,9 @@ void PublicTransport::switchFilterConfiguration( QAction* action )
     setSettings( settings );
 }
 
-void PublicTransport::switchFilterByGroupColor( QAction* action )
+void PublicTransportApplet::switchFilterByGroupColor( QAction* action )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     const QColor color = action->data().value<QColor>();
     const bool enable = action->isChecked();
@@ -930,13 +930,13 @@ void PublicTransport::switchFilterByGroupColor( QAction* action )
     setSettings( settings );
 }
 
-void PublicTransport::enableFilterConfiguration( const QString& filterConfiguration, bool enable )
+void PublicTransportApplet::enableFilterConfiguration( const QString& filterConfiguration, bool enable )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     const QString filterConfig = filterConfiguration;
     Q_ASSERT_X( d->settings.filters().hasName(filterConfig),
-                "PublicTransport::switchFilterConfiguration",
+                "PublicTransportApplet::switchFilterConfiguration",
                 QString("Filter '%1' not found!").arg(filterConfig).toLatin1().data() );
 
     // Change filter configuration of the current stop in a copy of the settings.
@@ -954,9 +954,9 @@ void PublicTransport::enableFilterConfiguration( const QString& filterConfigurat
     setSettings( settings );
 }
 
-void PublicTransport::showDepartureList()
+void PublicTransportApplet::showDepartureList()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     d->fadeOutOldAppearance();
     d->titleWidget->setTitleType( ShowDepartureArrivalListTitle,
@@ -973,9 +973,9 @@ void PublicTransport::showDepartureList()
     setAssociatedApplicationUrlForDepartures();
 }
 
-void PublicTransport::showIntermediateDepartureList()
+void PublicTransportApplet::showIntermediateDepartureList()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     d->fadeOutOldAppearance();
     d->titleWidget->setTitleType( ShowIntermediateDepartureListTitle,
@@ -992,9 +992,9 @@ void PublicTransport::showIntermediateDepartureList()
     setAssociatedApplicationUrlForDepartures();
 }
 
-void PublicTransport::showJourneyList()
+void PublicTransportApplet::showJourneyList()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     d->fadeOutOldAppearance();
     d->titleWidget->setTitleType( ShowJourneyListTitle,
@@ -1031,9 +1031,9 @@ void PublicTransport::showJourneyList()
     showPopup();
 }
 
-void PublicTransport::showJourneySearch()
+void PublicTransportApplet::showJourneySearch()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     d->fadeOutOldAppearance();
     d->titleWidget->setTitleType( ShowSearchJourneyLineEdit,
@@ -1061,15 +1061,15 @@ void PublicTransport::showJourneySearch()
     showPopup();
 }
 
-void PublicTransport::exitJourneySearch()
+void PublicTransportApplet::exitJourneySearch()
 {
     // Show journey search action again
     action("searchJourneys")->setVisible( true );
 }
 
-void PublicTransport::showJourneysUnsupportedView()
+void PublicTransportApplet::showJourneysUnsupportedView()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     d->fadeOutOldAppearance();
     d->titleWidget->setTitleType( ShowSearchJourneyLineEditDisabled,
@@ -1093,9 +1093,9 @@ void PublicTransport::showJourneysUnsupportedView()
     showPopup( 3000 );
 }
 
-void PublicTransport::journeySearchInputFinished( const QString &text )
+void PublicTransportApplet::journeySearchInputFinished( const QString &text )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     d->clearJourneys();
 
@@ -1119,22 +1119,22 @@ void PublicTransport::journeySearchInputFinished( const QString &text )
     emit journeySearchFinished();
 }
 
-void PublicTransport::journeySearchLineChanged( const QString& stopName,
+void PublicTransportApplet::journeySearchLineChanged( const QString& stopName,
         const QDateTime& departure, bool stopIsTarget, bool timeIsDeparture )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     d->reconnectJourneySource( stopName, departure, stopIsTarget, timeIsDeparture, true );
 }
 
-QGraphicsWidget* PublicTransport::graphicsWidget()
+QGraphicsWidget* PublicTransportApplet::graphicsWidget()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     return d->graphicsWidget;
 }
 
-bool PublicTransport::sceneEventFilter( QGraphicsItem* watched, QEvent* event )
+bool PublicTransportApplet::sceneEventFilter( QGraphicsItem* watched, QEvent* event )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     if ( watched == d->labelInfo && event->type() == QEvent::GraphicsSceneMousePress ) {
         return true; // To make links clickable, otherwise Plasma takes all clicks to move the applet
@@ -1143,9 +1143,9 @@ bool PublicTransport::sceneEventFilter( QGraphicsItem* watched, QEvent* event )
     return Plasma::Applet::sceneEventFilter( watched, event );
 }
 
-bool PublicTransport::eventFilter( QObject *watched, QEvent *event )
+bool PublicTransportApplet::eventFilter( QObject *watched, QEvent *event )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     Plasma::LineEdit *journeySearch =
             d->titleWidget->castedWidget<Plasma::LineEdit>( TitleWidget::WidgetJourneySearchLine );
@@ -1211,9 +1211,9 @@ bool PublicTransport::eventFilter( QObject *watched, QEvent *event )
     return Plasma::PopupApplet::eventFilter( watched, event );
 }
 
-void PublicTransport::createConfigurationInterface( KConfigDialog* parent )
+void PublicTransportApplet::createConfigurationInterface( KConfigDialog* parent )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     // Go back from intermediate departure list (which may be requested by a
     // context menu action) before showing the configuration dialog,
@@ -1233,18 +1233,18 @@ void PublicTransport::createConfigurationInterface( KConfigDialog* parent )
              settingsUiManager, SLOT(removeAlarms(AlarmSettingsList,QList<int>)) );
 }
 
-void PublicTransport::setSettings( const Settings& settings )
+void PublicTransportApplet::setSettings( const Settings& settings )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     SettingsIO::ChangedFlags changed =
             SettingsIO::writeSettings( settings, d->settings, config(), globalConfig() );
     d->onSettingsChanged( settings, changed );
 }
 
-void PublicTransport::showMainWidget( QGraphicsWidget* mainWidget )
+void PublicTransportApplet::showMainWidget( QGraphicsWidget* mainWidget )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     // Setup new main layout
     QGraphicsLinearLayout *layoutMainNew = new QGraphicsLinearLayout(
@@ -1261,30 +1261,30 @@ void PublicTransport::showMainWidget( QGraphicsWidget* mainWidget )
     layoutMainNew->setAlignment( d->labelInfo, Qt::AlignRight | Qt::AlignVCenter );
 }
 
-void PublicTransport::oldItemAnimationFinished()
+void PublicTransportApplet::oldItemAnimationFinished()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     d->onOldItemAnimationFinished();
 }
 
-void PublicTransport::processJourneyRequest( const QString& stop, bool stopIsTarget )
+void PublicTransportApplet::processJourneyRequest( const QString& stop, bool stopIsTarget )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     d->clearJourneys();
     d->reconnectJourneySource( stop, QDateTime(), stopIsTarget, true );
 }
 
-void PublicTransport::journeySearchListUpdated( const QList<JourneySearchItem> &newJourneySearches )
+void PublicTransportApplet::journeySearchListUpdated( const QList<JourneySearchItem> &newJourneySearches )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
     Settings settings = d->settings;
     settings.setCurrentJourneySearches( newJourneySearches );
     setSettings( settings );
 }
 
-void PublicTransport::journeyActionTriggered( QAction *_action )
+void PublicTransportApplet::journeyActionTriggered( QAction *_action )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     // The configure action has no data, only quick journey search items get the
     // journey search string as data
@@ -1303,27 +1303,27 @@ void PublicTransport::journeyActionTriggered( QAction *_action )
     }
 }
 
-void PublicTransport::departureDataStateChanged()
+void PublicTransportApplet::departureDataStateChanged()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     d->onDepartureDataStateChanged();
 }
 
-void PublicTransport::journeyDataStateChanged()
+void PublicTransportApplet::journeyDataStateChanged()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     d->onJourneyDataStateChanged();
 }
 
-void PublicTransport::disconnectJourneySource()
+void PublicTransportApplet::disconnectJourneySource()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     d->disconnectJourneySource();
 }
 
-void PublicTransport::removeIntermediateStopSettings()
+void PublicTransportApplet::removeIntermediateStopSettings()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     // Remove intermediate stop settings
     Settings settings = d->settings;
@@ -1337,9 +1337,9 @@ void PublicTransport::removeIntermediateStopSettings()
     setSettings( settings );
 }
 
-void PublicTransport::hideColumnTarget()
+void PublicTransportApplet::hideColumnTarget()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     // Change hide column target setting in a copy of the settings.
     // Then write the new settings.
@@ -1348,9 +1348,9 @@ void PublicTransport::hideColumnTarget()
     setSettings( settings );
 }
 
-void PublicTransport::showColumnTarget()
+void PublicTransportApplet::showColumnTarget()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     // Change hide column target setting in a copy of the settings.
     // Then write the new settings.
@@ -1359,9 +1359,9 @@ void PublicTransport::showColumnTarget()
     setSettings( settings );
 }
 
-void PublicTransport::toggleExpanded()
+void PublicTransportApplet::toggleExpanded()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
     if ( d->journeyTimetable && d->isStateActive("journeyView") ) {
         d->journeyTimetable->item( d->clickedItemIndex.row() )->toggleExpanded();
     } else {
@@ -1369,9 +1369,9 @@ void PublicTransport::toggleExpanded()
     }
 }
 
-QAction* PublicTransport::updatedAction( const QString& actionName )
+QAction* PublicTransportApplet::updatedAction( const QString& actionName )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     QAction *a = action( actionName );
     if ( !a ) {
@@ -1395,10 +1395,10 @@ QAction* PublicTransport::updatedAction( const QString& actionName )
     return a;
 }
 
-void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem* item, const QPointF& pos )
+void PublicTransportApplet::departureContextMenuRequested( PublicTransportGraphicsItem* item, const QPointF& pos )
 {
     Q_UNUSED( pos );
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     // Save the index of the clicked item
     d->clickedItemIndex = item->index();
@@ -1540,10 +1540,10 @@ void PublicTransport::departureContextMenuRequested( PublicTransportGraphicsItem
     qDeleteAll( objectsToBeDeleted );
 }
 
-void PublicTransport::requestStopAction( StopAction::Type stopAction,
+void PublicTransportApplet::requestStopAction( StopAction::Type stopAction,
                                          const QString& stopName, const QString &stopNameShortened )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     // Create and enable new filter
     Settings settings = d->settings;
@@ -1626,9 +1626,9 @@ void PublicTransport::requestStopAction( StopAction::Type stopAction,
     }
 }
 
-void PublicTransport::errorMarble( QProcess::ProcessError processError )
+void PublicTransportApplet::errorMarble( QProcess::ProcessError processError )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     if ( processError == QProcess::FailedToStart ) {
         int result = KMessageBox::questionYesNo( 0, i18nc("@info", "The map application "
@@ -1648,9 +1648,9 @@ void PublicTransport::errorMarble( QProcess::ProcessError processError )
     d->marble = 0;
 }
 
-void PublicTransport::marbleHasStarted()
+void PublicTransportApplet::marbleHasStarted()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
     kDebug() << "Marble has started" << d->marble->pid();
 
     // Wait for output from marble
@@ -1663,17 +1663,17 @@ void PublicTransport::marbleHasStarted()
     QTimer::singleShot( 250, this, SLOT(showStopInMarble()) );
 }
 
-void PublicTransport::marbleFinished( int /*exitCode*/ )
+void PublicTransportApplet::marbleFinished( int /*exitCode*/ )
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     kDebug() << "Marble finished";
     d->marble = 0;
 }
 
-void PublicTransport::showStopInMarble( qreal lon, qreal lat )
+void PublicTransportApplet::showStopInMarble( qreal lon, qreal lat )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     if ( !d->marble ) {
         kDebug() << "No marble process?";
@@ -1724,13 +1724,13 @@ void PublicTransport::showStopInMarble( qreal lon, qreal lat )
     }
 }
 
-void PublicTransport::removeAlarmForDeparture( int row )
+void PublicTransportApplet::removeAlarmForDeparture( int row )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     DepartureItem *item = static_cast<DepartureItem*>( d->model->item(row) );
     Q_ASSERT_X( item->alarmStates().testFlag(AlarmIsAutoGenerated),
-                "PublicTransport::removeAlarmForDeparture",
+                "PublicTransportApplet::removeAlarmForDeparture",
                 "Only auto generated alarms can be removed automatically" );
 
     // Find a matching autogenerated alarm
@@ -1760,18 +1760,18 @@ void PublicTransport::removeAlarmForDeparture( int row )
     }
 }
 
-void PublicTransport::removeAlarmForDeparture()
+void PublicTransportApplet::removeAlarmForDeparture()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
     removeAlarmForDeparture( d->clickedItemIndex.row() );
 }
 
-void PublicTransport::processAlarmCreationRequest( const QDateTime& departure,
+void PublicTransportApplet::processAlarmCreationRequest( const QDateTime& departure,
         const QString& lineString, VehicleType vehicleType, const QString& target,
         QGraphicsWidget *item )
 {
     Q_UNUSED( item );
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     // Autogenerate an alarm that only matches the given departure
     AlarmSettings alarm;
@@ -1803,12 +1803,12 @@ void PublicTransport::processAlarmCreationRequest( const QDateTime& departure,
     alarmCreated();
 }
 
-void PublicTransport::processAlarmDeletionRequest( const QDateTime& departure,
+void PublicTransportApplet::processAlarmDeletionRequest( const QDateTime& departure,
         const QString& lineString, VehicleType vehicleType, const QString& target,
         QGraphicsWidget* item)
 {
     Q_UNUSED( item );
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     // Autogenerate an alarm that only matches the given departure
     AlarmSettings alarm;
@@ -1834,10 +1834,10 @@ void PublicTransport::processAlarmDeletionRequest( const QDateTime& departure,
     updatePopupIcon();
 }
 
-void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex,
+void PublicTransportApplet::createAlarmSettingsForDeparture( const QPersistentModelIndex &modelIndex,
                                                        bool onlyForCurrentWeekday )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     if ( !modelIndex.isValid() ) {
         kDebug() << "!modelIndex.isValid()";
@@ -1882,23 +1882,23 @@ void PublicTransport::createAlarmSettingsForDeparture( const QPersistentModelInd
     item->setDepartureInfo( info );
 }
 
-void PublicTransport::createAlarmForDeparture()
+void PublicTransportApplet::createAlarmForDeparture()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
     createAlarmSettingsForDeparture( d->clickedItemIndex );
     alarmCreated();
 }
 
-void PublicTransport::createAlarmForDepartureCurrentWeekDay()
+void PublicTransportApplet::createAlarmForDepartureCurrentWeekDay()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
     createAlarmSettingsForDeparture( d->clickedItemIndex, true );
     alarmCreated();
 }
 
-void PublicTransport::alarmCreated()
+void PublicTransportApplet::alarmCreated()
 {
-    Q_D( PublicTransport );
+    Q_D( PublicTransportApplet );
 
     updatePopupIcon(); // TEST needed or already done in writeSettings?
 
@@ -1906,7 +1906,7 @@ void PublicTransport::alarmCreated()
     d->popupIcon->animateToAlarm();
 }
 
-void PublicTransport::alarmFired( DepartureItem* item, const AlarmSettings &alarm )
+void PublicTransportApplet::alarmFired( DepartureItem* item, const AlarmSettings &alarm )
 {
     const DepartureInfo *departureInfo = item->departureInfo();
     QString sLine = departureInfo->lineString();
@@ -1976,10 +1976,10 @@ void PublicTransport::alarmFired( DepartureItem* item, const AlarmSettings &alar
                           KNotification::Persistent );
 }
 
-void PublicTransport::removeAlarms( const AlarmSettingsList &newAlarmSettings,
+void PublicTransportApplet::removeAlarms( const AlarmSettingsList &newAlarmSettings,
                                     const QList<int> &/*removedAlarms*/ )
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     // Change alarm settings in a copy of the settings. Then write the new settings.
     Settings settings = d->settings;
@@ -1996,9 +1996,9 @@ void GraphicsPixmapWidget::paint( QPainter* painter,
     painter->drawPixmap( option->rect, m_pixmap );
 }
 
-QVariant PublicTransport::supportedJourneySearchState() const
+QVariant PublicTransportApplet::supportedJourneySearchState() const
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     QObject *object = qobject_cast<QObject*>(
             d->currentServiceProviderFeatures.contains("JourneySearch")
@@ -2006,9 +2006,9 @@ QVariant PublicTransport::supportedJourneySearchState() const
     return qVariantFromValue( object );
 }
 
-void PublicTransport::configureJourneySearches()
+void PublicTransportApplet::configureJourneySearches()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
 
     // First let the settings object be updated, then update the menu based on the new settings
     QPointer<KDialog> dialog = new KDialog;
@@ -2051,21 +2051,21 @@ void PublicTransport::configureJourneySearches()
     }
 }
 
-void PublicTransport::setAssociatedApplicationUrlForJourneys()
+void PublicTransportApplet::setAssociatedApplicationUrlForJourneys()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
     setAssociatedApplicationUrls (KUrl::List() << d->urlJourneys);
 }
 
-void PublicTransport::setAssociatedApplicationUrlForDepartures()
+void PublicTransportApplet::setAssociatedApplicationUrlForDepartures()
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
     setAssociatedApplicationUrls (KUrl::List() << d->urlDeparturesArrivals);
 }
 
-int PublicTransport::departureCount() const
+int PublicTransportApplet::departureCount() const
 {
-    Q_D( const PublicTransport );
+    Q_D( const PublicTransportApplet );
     return d->departureInfos.count();
 }
 

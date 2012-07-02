@@ -31,7 +31,7 @@
 #include <KColorScheme>
 #include <KColorUtils>
 
-using namespace Timetable;
+using namespace PublicTransport;
 
 PublicTransportDelegate::PublicTransportDelegate( QObject *parent )
         : HtmlDelegate( DrawShadows | DontDrawBackground, parent )

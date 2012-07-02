@@ -34,7 +34,7 @@
 class QStringList;
 
 /** @brief Namespace for the publictransport helper library. */
-namespace Timetable {
+namespace PublicTransport {
 
 class ServiceProviderItemPrivate;
 class ServiceProviderModelPrivate;

@@ -38,7 +38,7 @@ class QPainter;
 class QSize;
 class QRectF;
 
-using namespace Timetable;
+using namespace PublicTransport;
 
 /**
  * @brief Draws icons for departures and associated stuff.

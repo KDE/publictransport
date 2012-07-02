@@ -28,7 +28,7 @@
 namespace Plasma {
     class Label;
 };
-namespace Timetable {
+namespace PublicTransport {
     class StopLineEdit;
 };
 class FlightDepartureList;
@@ -55,7 +55,7 @@ public slots:
     void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data &data );
 
 private:
-    Timetable::StopLineEdit *m_stopLineEdit;
+    PublicTransport::StopLineEdit *m_stopLineEdit;
     FlightDepartureList *m_flightDepartureList;
     QString m_airport;
     Plasma::Label *m_header;

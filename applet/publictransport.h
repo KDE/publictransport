@@ -33,11 +33,11 @@
 #include "stopaction.h" // For StopAction::Type
 #include "settings.h" // Member variable
 
-namespace Timetable {
+namespace PublicTransport {
     class JourneyInfo;
 }
 
-class PublicTransportPrivate;
+class PublicTransportAppletPrivate;
 class ItemBase;
 class PublicTransportGraphicsItem;
 class DepartureItem;
@@ -78,7 +78,7 @@ private:
  * @ref TitleWidget is used as title of the applet. The departures/arrivals/journeys are shown
  * in @ref TimetableWidget / @ref JourneyTimetableWidget.
  **/
-class PublicTransport : public Plasma::PopupApplet {
+class PublicTransportApplet : public Plasma::PopupApplet {
     Q_OBJECT
 
     /** @brief The number of currently shown departures/arrivals. */
@@ -93,10 +93,10 @@ class PublicTransport : public Plasma::PopupApplet {
 
 public:
     /** @brief Basic create. */
-    PublicTransport( QObject *parent, const QVariantList &args );
+    PublicTransportApplet( QObject *parent, const QVariantList &args );
 
     /** @brief Destructor. */
-    ~PublicTransport();
+    ~PublicTransportApplet();
 
     /**
      * @brief Maximum number of recent journey searches.
@@ -619,13 +619,13 @@ protected:
     bool checkNetworkStatus();
 
 private:
-    PublicTransportPrivate* const d_ptr;
-    Q_DECLARE_PRIVATE( PublicTransport )
+    PublicTransportAppletPrivate* const d_ptr;
+    Q_DECLARE_PRIVATE( PublicTransportApplet )
 };
 
 #ifndef NO_EXPORT_PLASMA_APPLET // Needed for publictransport_p.h to include publictransport.h
 // This is the command that links the applet to the .desktop file
-K_EXPORT_PLASMA_APPLET( publictransport, PublicTransport )
+K_EXPORT_PLASMA_APPLET( publictransport, PublicTransportApplet )
 #endif
 
 
