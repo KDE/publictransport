@@ -1,5 +1,5 @@
 /** Service provider RMV (Rhein-Main), germany.
-  * © 2011, Friedrich Pülz */
+  * © 2012, Friedrich Pülz */
 
 function usedTimetableInformations() {
     return [ 'StopID', 'Delay', 'Platform', 'JourneyNews', 'Operator', 'RouteStops', 'RouteTimes' ];
@@ -150,8 +150,9 @@ function parseTimetable( xml ) {
 
         // <MainStop><BasicStop><Dep> tag contains some tags with more information
         // about the departing stop
-        var stop = node.firstChildElement("MainStop")
-                       .firstChildElement("BasicStop").firstChildElement("Dep");
+        var basicStop = node.firstChildElement("MainStop").firstChildElement("BasicStop");
+	var stop = basicStop.firstChildElement("Dep").isNull()
+	       ? basicStop.firstChildElement("Arr") : basicStop.firstChildElement("Dep");
 
         // <Time> tag contains the departure time
         var time = helper.matchTime( stop.firstChildElement("Time").text(), "hh:mm" );
@@ -227,9 +228,9 @@ function parseTimetable( xml ) {
                     }
                     departure.JourneyNews += info;
                 }
-            } else {
-                print( "Unhandled attribute type " + attribute.attributeNode("type").nodeValue() +
-                       " with text (tags stripped) " + attribute.text() );
+//             } else {
+//                 print( "Unhandled attribute type " + attribute.attributeNode("type").nodeValue() +
+//                        " with text (tags stripped) " + attribute.text() );
             }
 
             // Go to the next journey attribute
