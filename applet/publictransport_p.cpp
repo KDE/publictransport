@@ -315,6 +315,15 @@ void PublicTransportAppletPrivate::onServiceProviderSettingsChanged()
         q->action( "journeys" )->setEnabled( journeysSupported );
         titleWidget->setJourneysSupported( journeysSupported );
 
+        // Check if arrivals are currently shown but not supported by the new provider
+        if ( !currentServiceProviderFeatures.contains("arrivals", Qt::CaseInsensitive) &&
+             settings.departureArrivalListType() == ArrivalList )
+        {
+            Settings newSettings = settings;
+            newSettings.setDepartureArrivalListType( DepartureList );
+            q->setSettings( newSettings );
+        }
+
         // Reconnect with new settings
         reconnectSource();
         if ( !currentJourneySource.isEmpty() ) {
