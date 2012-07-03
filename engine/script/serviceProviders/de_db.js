@@ -17,12 +17,7 @@ function usedTimetableInformations() {
             'RouteTypesOfVehicles', 'RouteTransportLines' ];
 }
 
-var requestDateTime;
 function getTimetable( values ) {
-    // Store request date and time to know it in parseTimetable
-    requestDateTime = values.dateTime;
-    print( "write requestDateTime: " + requestDateTime );
-
     var url = "http://reiseauskunft.bahn.de/bin/bhftafel.exe/dn?rt=1" +
             "&input=" + values.stop + "!" +
             "&boardType=" + (values.dataType == "arrivals" ? "arr" : "dep") +
@@ -101,7 +96,7 @@ function typeOfVehicleFromString( string ) {
         return "intercitytrain";
     } else if ( string == "re" || string == "me" ) { // Metronom
         return "regionalexpresstrain";
-    } else if ( string == "mer" ) { // Metronom regional
+    } else if ( string == "rb" || string == "mer" ) { // Metronom regional
         return "regionaltrain";
     } else if ( string == "ir" ) {
         return "interregionaltrain";
@@ -111,17 +106,12 @@ function typeOfVehicleFromString( string ) {
 }
 
 function parseTimetable( html ) {
-    print( "read in parseTimetable -> requestDateTime: " + requestDateTime );
     var returnValue = new Array;
     if ( html.indexOf('<p class="red">F&#252;r diese Haltestelle sind keine aktuellen Informationen verf&#252;gbar.</p>') != -1
         || html.indexOf('<p>Aktuelle Informationen zu Ihrer Reise sind nur 120 Minuten im Voraus m&#246;glich.</p>') != -1 )
     {
         returnValue.push( 'no delays' ); // No delay information available
     }
-
-    // Dates are set from today, not the requested date. They need to be adjusted by X days,
-    // where X is the difference in days between today and the requested date.
-    returnValue.push( 'dates need adjustment' );
 
     // Find block of departures
     var departureBlock = helper.findFirstHtmlTag( html, "table",
@@ -132,6 +122,7 @@ function parseTimetable( html ) {
     }
 
     // Initialize regular expressions (compile them only once)
+    var dateTimeRegExp = /<a href="[^\"]*&amp;date=(\d{2}\.\d{2}\.\d{2})[^\"]*&amp;time=(\d{2}:\d{2})[^\"]*"\s*>/i;
     var typeOfVehicleRegExp = /<img src="[^"]*?\/img\/([^_]*?)_/i;
     var targetRegExp = /<span class="bold">[^<]*?<a[^>]*?>([\s\S]*?)<\/a>/i;
     var routeBlocksRegExp = /\r?\n\s*(-|<img[^>]*?>)\s*\r?\n/gi;
@@ -142,24 +133,19 @@ function parseTimetable( html ) {
     var delayOnTimeRegExp = /<span style="[^"]*?">p&#252;nktlich<\/span>/i;
     var trainCanceledRegExp = /<span class="[^"]*?">Zug f&#228;llt aus<\/span>/i;
 
-    // Store values to get the correct date of departures
-    var now = new Date();
-    var dateTime = now;
-    var lastHour = 0;
-
     // Go through all departure blocks
     var departureRow = { position: -1 };
     while ( (departureRow = helper.findFirstHtmlTag(departureBlock.contents, "tr",
                             {position: departureRow.position + 1})).found )
     {
-	// If there is at least one attribute, this row is not a departure/arrival row,
-	// it is a row showing other controls/information, eg. a link to go to earlier/later results.
-	var hasAttributes = false;
-	for ( a in departureRow.attributes ) {
-	    hasAttributes = true;
-	    break;
-	}
-	if ( hasAttributes ) { continue; }
+        // If there is at least one attribute, this row is not a departure/arrival row,
+        // it is a row showing other controls/information, eg. a link to go to earlier/later results.
+        var hasAttributes = false;
+        for ( a in departureRow.attributes ) {
+            hasAttributes = true;
+            break;
+        }
+        if ( hasAttributes ) { continue; }
 
         // Find columns, ie. <td> tags in the current departure row
         var columns = helper.findNamedHtmlTags( departureRow.contents, "td",
@@ -181,31 +167,16 @@ function parseTimetable( html ) {
         // Initialize result variables with defaults
         var departure = { RouteStops: new Array, RouteTimes: new Array, RouteExactStops: 0 };
 
-        // Parse time column
-        var time = QTime.fromString( columns["time"].contents, "hh:mm" );
-        if ( !time.isValid() ) {
-            helper.error("Unexpected string in time column", columns["time"].contents);
+        // Parse date and time from the train URL in the "train" column
+        var train = columns["train"].contents;
+        dateTimeValues = dateTimeRegExp.exec( train );
+        if ( !dateTimeValues ) {
+	      helper.error("Unexpected string in train column", columns["train"].contents);
             continue;
         }
-        // Update time of the dateTime object
-        dateTime.setHours( time.hour(), time.minute(), 0 );
-
-        // TODO
-        // If 0 o'clock is passed between the last departure time and the current one, increase the date by one day.
-//      print( "Time: " + time[0] + ":" + time[1] + ", !result.hasData(): " + !result.hasData() + ", now: " + now.getHours() );
-        if ( dateTime.getHours() < lastHour - 3 ||
-            (!result.hasData() && dateTime.getHours() < now.getHours() - 3) )
-        {
-            print( "Add one day to departure date: " + dateTime.toDateString() );
-            dateTime = helper.addDaysToDate( dateTime, 1 );
-//             dateTime = new QDateTime( dateTime ).addDays( 1 );
-            print( "+1 => " + dateTime.toDateString()
-                + ", because of A: " + (dateTime.getHours() < (lastHour - 3 + 24) % 24)
-                + ", B: " + (!result.hasData() && dateTime.getHours() < now.getHours() - 3)
-                + ", time is: " + dateTime.toTimeString());
-        }
-        lastHour = dateTime.getHours();
-        departure.DepartureDateTime = dateTime;
+        departure.DepartureDateTime = helper.matchDate( dateTimeValues[1], "dd.MM.yy" );
+        var time = helper.matchTime( dateTimeValues[2], "hh:mm" );
+        departure.DepartureDateTime.setHours( time.hour, time.minute, 0 );
 
         // Parse type of vehicle column
         if ( !(typeOfVehicle = typeOfVehicleRegExp.exec(columns["train"].contents)) ) {

@@ -414,13 +414,17 @@ public:
     QString countryCode() const { return value(StopCountryCode).toString(); };
 };
 
+typedef DepartureInfo ArrivalInfo;
 typedef QSharedPointer< PublicTransportInfo > PublicTransportInfoPtr;
 typedef QSharedPointer< DepartureInfo > DepartureInfoPtr;
+typedef QSharedPointer< ArrivalInfo > ArrivalInfoPtr;
 typedef QSharedPointer< JourneyInfo > JourneyInfoPtr;
 typedef QSharedPointer< StopInfo > StopInfoPtr;
 typedef QList< PublicTransportInfoPtr > PublicTransportInfoList;
 typedef QList< DepartureInfoPtr > DepartureInfoList;
+typedef QList< ArrivalInfoPtr > ArrivalInfoList;
 typedef QList< JourneyInfoPtr > JourneyInfoList;
 typedef QList< StopInfoPtr > StopInfoList;
+
 
 #endif // DEPARTUREINFO_HEADER

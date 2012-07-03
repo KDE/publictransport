@@ -227,7 +227,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 
     if ( settings.currentStopIndex() != oldSettings.currentStopIndex() ) {
         cg.writeEntry( "currentStopIndex", settings.currentStopIndex() );
-        changed |= IsChanged | ChangedCurrentStop;
+        changed |= IsChanged | ChangedCurrentStop | ChangedCurrentStopSettings;
     }
 
     // Write stop settings

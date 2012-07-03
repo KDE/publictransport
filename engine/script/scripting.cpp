@@ -1101,6 +1101,7 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
     QRegExp htmlTagRegExp( noContent
             ? QString("<%1((?:\\s+%2)*)(?:\\s*/)?>").arg(tagName).arg(attributePattern)
             : QString("<%1((?:\\s+%2)*)>").arg(tagName).arg(attributePattern),
+                           // TODO TEST does this need a "\\s*" before the ">"?
 //             : QString("<%1((?:\\s+%2)*)>%3</%1\\s*>").arg(tagName).arg(attributePattern)
 //                     .arg(contentsRegExpPattern),
             Qt::CaseInsensitive );

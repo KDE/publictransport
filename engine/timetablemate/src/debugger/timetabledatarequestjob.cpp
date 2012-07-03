@@ -447,7 +447,7 @@ void CallScriptFunctionJob::synchronousRequestFinished( const QString &url, cons
 {
     if ( cancelled ) {
         m_additionalMessages << TimetableDataRequestMessage(
-                i18nc("@info/plain", "Download cancelled: <link>%1</link>", url),
+                i18nc("@info/plain", "Download cancelled/failed: <link>%1</link>", url),
                 TimetableDataRequestMessage::Warning, -1, TimetableDataRequestMessage::OpenLink,
                 url );
     } else {

@@ -156,6 +156,22 @@ void RouteGraphicsItem::arrangeStopItems()
             if ( i < info->routeTimes().count() && info->routeTimes()[i].isValid() ) {
                 time = info->routeTimes()[i];
                 minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60.0 );
+
+                // Fix number of minutes if the date changes between route stops
+                // NOTE This only works if the route extends over less than three days
+                if ( info->isArrival() ) {
+                    // Number of minutes should always be negative for arrivals
+                    // (time from home stop back in time to stop X)
+                    while ( minsFromFirstRouteStop > 0 ) {
+                        minsFromFirstRouteStop -= 24 * 60;
+                    }
+                } else {
+                    // Number of minutes should always be positive for departures
+                    // (time from home stop to stop X)
+                    while ( minsFromFirstRouteStop < 0 ) {
+                        minsFromFirstRouteStop += 24 * 60;
+                    }
+                }
             }
 
             qreal baseSize;

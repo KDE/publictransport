@@ -152,6 +152,11 @@ struct ArrivalRequest : public DepartureRequest {
                     const QString &dataType = "arrivals",
                     ParseDocumentMode parseMode = ParseForDeparturesArrivals )
         : DepartureRequest(sourceName, stop, dateTime, maxCount, city, dataType, parseMode) {};
+
+    virtual AbstractRequest *clone() const
+    {
+        return new ArrivalRequest( sourceName, stop, dateTime, maxCount, city, dataType, parseMode );
+    };
 };
 
 /**

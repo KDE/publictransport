@@ -305,7 +305,9 @@ void TimetableMate::saveProperties( KConfigGroup &config )
                     openedTabs << QString::number(static_cast<int>(tab));
                 }
             }
-            QString projectString = QString("%1 ::%2").arg( filePath ).arg( openedTabs.join(",") );
+            QString projectString = QString("%1 ::%2%3")
+                    .arg( filePath ).arg( openedTabs.join(",") )
+                    .arg( project->isActiveProject() ? " ::active" : QString() );
             openedProjects << projectString;
         }
     }
@@ -324,17 +326,27 @@ void TimetableMate::readProperties( const KConfigGroup &config )
         const int pos = lastOpenedProject.indexOf( QLatin1String(" ::") );
         QString xmlFilePath;
         QList< TabType > openedTabs;
+        bool isActive = false;
         if ( pos == -1 ) {
             xmlFilePath = lastOpenedProject;
         } else {
             xmlFilePath = lastOpenedProject.left( pos );
-            const QStringList openedTabStrings = lastOpenedProject.mid( pos + 3 ).split(',');
+            QString openedTabsCode = lastOpenedProject.mid( pos + 3 );
+            if ( openedTabsCode.endsWith(QLatin1String(" ::active")) ) {
+                isActive = true;
+                openedTabsCode.chop( 9 ); // Cut " ::active"
+            }
+
+            const QStringList openedTabStrings = openedTabsCode.split(',');
             foreach ( const QString &openedTabString, openedTabStrings ) {
                 openedTabs << static_cast< TabType >( openedTabString.toInt() );
             }
         }
         Project *project = openProject( xmlFilePath );
         if ( project ) {
+            if ( isActive ) {
+                project->setAsActiveProject();
+            }
             foreach ( TabType tab, openedTabs ) {
                 project->showTab( tab );
             }
@@ -816,7 +828,7 @@ bool TimetableMate::closeProject( Project *project )
     if ( closeAllTabs(project) ) {
         if ( project->isModified() ) {
             const QString message = i18nc("@info", "The project '%1' was modified. "
-                                          "Do you want to save it now?");
+                                          "Do you want to save it now?", project->projectName());
             const int result = KMessageBox::warningYesNoCancel( this, message, QString(),
                     KStandardGuiItem::save(), KStandardGuiItem::close() );
             if ( result == KMessageBox::Yes ) {
@@ -1632,13 +1644,15 @@ Project *TimetableMate::openProject( const QString &filePath )
 }
 
 void TimetableMate::fileOpen() {
-    QString fileName = KFileDialog::getOpenFileName( KUrl("kfiledialog:///serviceprovider"),
+    const QStringList fileNames = KFileDialog::getOpenFileNames( KUrl("kfiledialog:///serviceprovider"),
             "application/x-publictransport-serviceprovider application/xml",
             this, i18nc("@title:window", "Open Service Provider Plugin") );
-    if ( fileName.isNull() )
+    if ( fileNames.isEmpty() )
         return; // Cancel clicked
 
-    open( KUrl(fileName) );
+    foreach ( const QString &fileName, fileNames ) {
+        open( KUrl(fileName) );
+    }
 }
 
 void TimetableMate::fileOpenInstalled() {
@@ -1670,15 +1684,17 @@ void TimetableMate::fileOpenInstalled() {
     }
 
     bool ok;
-    QString selectedPrettyName = KInputDialog::getItem(
+    QStringList selectedPrettyNames = KInputDialog::getItemList(
             i18nc("@title:window", "Open Installed Service Provider Plugin"),
             i18nc("@info", "Installed service provider plugin"),
-            pluginFiles, 0, false, &ok, this );
+            pluginFiles, QStringList(), true, &ok, this );
     if ( ok ) {
-        QString selectedFilePath = map[ selectedPrettyName ];
-        Project *project = openProject( selectedFilePath );
-        if ( project ) {
-            project->showDashboardTab( this );
+        foreach ( const QString &selectedPrettyName, selectedPrettyNames ) {
+            QString selectedFilePath = map[ selectedPrettyName ];
+            Project *project = openProject( selectedFilePath );
+            if ( project ) {
+                project->showDashboardTab( this );
+            }
         }
     }
 }

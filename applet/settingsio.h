@@ -62,7 +62,8 @@ public:
                 * have been changed, that require timetable data to be requested from the data
                 * engine again. If this flag is set, the current timetable data may not represent
                 * correct results any longer for the changed stop settings.
-                * Stop settings that do not require a new timetable data request are unaffected. */
+                * Stop settings that do not require a new timetable data request are unaffected.
+                * This flag is always set if ChangedCurrentStop is set. */
         ChangedCurrentJourneySearchLists
                                 = 0x000020, /**< The list of favorite and/or recent journey
                                             * searches has been changed for the current stop.

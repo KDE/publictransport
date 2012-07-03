@@ -141,13 +141,10 @@ protected slots:
                           const QString &url, const GlobalTimetableInfo &globalInfo,
                           const DepartureRequest &request, bool couldNeedForcedUpdate = false );
 
-    inline void arrivalsReady( const QList<TimetableData> &data,
-                               ResultObject::Features features, ResultObject::Hints hints,
-                               const QString &url, const GlobalTimetableInfo &globalInfo,
-                               const DepartureRequest &request, bool couldNeedForcedUpdate = false )
-    {
-        departuresReady( data, features, hints, url, globalInfo, request, couldNeedForcedUpdate );
-    };
+    void arrivalsReady( const QList<TimetableData> &data,
+                        ResultObject::Features features, ResultObject::Hints hints,
+                        const QString &url, const GlobalTimetableInfo &globalInfo,
+                        const ArrivalRequest &request, bool couldNeedForcedUpdate = false );
 
     void journeysReady( const QList<TimetableData> &data, ResultObject::Features features,
                         ResultObject::Hints hints, const QString &url,

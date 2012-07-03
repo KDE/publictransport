@@ -142,19 +142,25 @@ protected slots:
     void importProgress( KJob *job, ulong percent );
 
 protected:
+    inline void requestDeparturesOrArrivals( const DepartureRequest *request );
+
     /**
-     * @brief Requests a list of departures/arrivals from the GTFS database.
-     *
-     * @param requestInfo Information about the departure/arrival request.
+     * @brief Requests a list of departures from the GTFS database.
+     * @param request Information about the departure request.
      **/
-    virtual void requestDepartures( const DepartureRequest &requestInfo );
+    virtual void requestDepartures( const DepartureRequest &request );
+
+    /**
+     * @brief Requests a list of arrivals from the GTFS database.
+     * @param request Information about the arrival request.
+     **/
+    virtual void requestArrivals ( const ArrivalRequest &request );
 
     /**
      * @brief Requests a list of stop suggestions from the GTFS database.
-     *
-     * @param requestInfo Information about the stop suggestion request.
+     * @param request Information about the stop suggestion request.
      **/
-    virtual void requestStopSuggestions( const StopSuggestionRequest &requestInfo );
+    virtual void requestStopSuggestions( const StopSuggestionRequest &request );
 
     /** @brief Run script provider specific tests. */
     virtual bool runTests( QString *errorMessage = 0 ) const;
@@ -176,8 +182,8 @@ protected:
      **/
     bool isGtfsFeedImportFinished();
 
-    bool checkState( const AbstractRequest *requestInfo );
-    bool checkForDiskIoErrorInDatabase( const QSqlError &error, const AbstractRequest *requestInfo );
+    bool checkState( const AbstractRequest *request );
+    bool checkForDiskIoErrorInDatabase( const QSqlError &error, const AbstractRequest *request );
 
 private:
     enum State {

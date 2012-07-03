@@ -133,19 +133,19 @@ signals:
                           const DepartureRequest &request, bool couldNeedForcedUpdate = false );
 
     /** @brief Signals ready TimetableData items. */
-    void arrivalsReady( const QList<TimetableData> &departures,
+    void arrivalsReady( const QList<TimetableData> &arrivals,
                         ResultObject::Features features, ResultObject::Hints hints,
                         const QString &url, const GlobalTimetableInfo &globalInfo,
                         const ArrivalRequest &request, bool couldNeedForcedUpdate = false );
 
     /** @brief Signals ready TimetableData items. */
-    void journeysReady( const QList<TimetableData> &departures,
+    void journeysReady( const QList<TimetableData> &journeys,
                         ResultObject::Features features, ResultObject::Hints hints,
                         const QString &url, const GlobalTimetableInfo &globalInfo,
                         const JourneyRequest &request, bool couldNeedForcedUpdate = false );
 
     /** @brief Signals ready TimetableData items. */
-    void stopSuggestionsReady( const QList<TimetableData> &departures,
+    void stopSuggestionsReady( const QList<TimetableData> &stops,
                                ResultObject::Features features, ResultObject::Hints hints,
                                const QString &url, const GlobalTimetableInfo &globalInfo,
                                const StopSuggestionRequest &info,
@@ -194,6 +194,23 @@ public:
 
 private:
     const DepartureJobPrivate *d;
+};
+
+class ArrivalJobPrivate;
+class ArrivalJob : public ScriptJob {
+    Q_OBJECT
+
+public:
+    explicit ArrivalJob( QScriptProgram* script, const ServiceProviderData* info,
+                         Storage* scriptStorage, const ArrivalRequest& request,
+                         QObject* parent = 0);
+
+    virtual ~ArrivalJob();
+
+    virtual const AbstractRequest* request() const;
+
+private:
+    const ArrivalJobPrivate *d;
 };
 
 class JourneyJobPrivate;

@@ -126,6 +126,7 @@ void ConsoleDockWidget::activeProjectAboutToChange( Project *project, Project *p
 
     if ( project ) {
         m_consoleWidget->document()->setHtml( project->consoleText() );
+        m_consoleWidget->ensureCursorVisible();
         connect( project->debugger(), SIGNAL(evaluationResult(EvaluationResult)),
                  this, SLOT(evaluationResult(EvaluationResult)) );
         connect( project->debugger(), SIGNAL(commandExecutionResult(QString)),

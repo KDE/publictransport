@@ -273,9 +273,14 @@ void ServiceProviderGtfs::importFinished( KJob *job )
               it != m_waitingRequests.constEnd(); ++it )
         {
             if ( (*it)->parseMode == ParseForDeparturesArrivals ) {
-                DepartureRequest *request = static_cast<DepartureRequest*>( *it );
-                Q_ASSERT( request );
-                requestDepartures( *request );
+                ArrivalRequest *arrivalRequest = static_cast<ArrivalRequest*>( *it );
+                if ( arrivalRequest ) {
+                    requestArrivals( *arrivalRequest );
+                } else {
+                    DepartureRequest *request = static_cast<DepartureRequest*>( *it );
+                    Q_ASSERT( request );
+                    requestDepartures( *request );
+                }
             } else if ( (*it)->parseMode == ParseForStopSuggestions ) {
                 StopSuggestionRequest *request = static_cast<StopSuggestionRequest*>( *it );
                 Q_ASSERT( request );
@@ -574,7 +579,17 @@ bool ServiceProviderGtfs::checkState( const AbstractRequest *request )
 
 void ServiceProviderGtfs::requestDepartures( const DepartureRequest &request )
 {
-    if ( !checkState(&request) ) {
+    requestDeparturesOrArrivals( &request );
+}
+
+void ServiceProviderGtfs::requestArrivals( const ArrivalRequest &request )
+{
+    requestDeparturesOrArrivals( &request );
+}
+
+void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *request )
+{
+    if ( !checkState(request) ) {
         return;
     }
 
@@ -587,14 +602,14 @@ void ServiceProviderGtfs::requestDepartures( const DepartureRequest &request )
     // location_type 1 is for stations.
     // It's fast, because 'stop_name' is part of a compound index in the database.
     uint stopId;
-    QString stopValue = request.stop;
+    QString stopValue = request->stop;
     stopValue.replace( '\'', "\'\'" );
     if ( !query.exec("SELECT stops.stop_id FROM stops "
                      "WHERE stop_name='" + stopValue + "' "
                      "AND (location_type IS NULL OR location_type=0)") )
     {
         // Check of the error is a "disk I/O error", ie. the database file may have been deleted
-        checkForDiskIoErrorInDatabase( query.lastError(), &request );
+        checkForDiskIoErrorInDatabase( query.lastError(), request );
 
         kDebug() << query.lastError();
         kDebug() << query.executedQuery();
@@ -606,14 +621,14 @@ void ServiceProviderGtfs::requestDepartures( const DepartureRequest &request )
         stopId = query.value( query.record().indexOf("stop_id") ).toUInt();
     } else {
         bool ok;
-        stopId = request.stop.toUInt( &ok );
+        stopId = request->stop.toUInt( &ok );
         if ( !ok ) {
             kDebug() << "No stop with the given name or id found (needs the exact name):"
-                     << request.stop;
+                     << request->stop;
             emit errorParsing( this, ErrorParsingFailed /*TODO*/,
                     "No stop with the given name or id found (needs the exact name): "
-                    + request.stop,
-                    QUrl(), &request );
+                    + request->stop,
+                    QUrl(), request );
             return;
         }
     }
@@ -639,7 +654,7 @@ void ServiceProviderGtfs::requestDepartures( const DepartureRequest &request )
     // TODO: Create a new (temporary) table for each connected departure/arrival source and use
     //       that (much smaller) table here for performance reasons
     const QString routeSeparator = "||";
-    const QTime time = request.dateTime.time();
+    const QTime time = request->dateTime.time();
     const QString queryString = QString(
             "SELECT times.departure_time, times.arrival_time, times.stop_headsign, "
                    "routes.route_type, routes.route_short_name, routes.route_long_name, "
@@ -675,8 +690,8 @@ void ServiceProviderGtfs::requestDepartures( const DepartureRequest &request )
             "LIMIT %3" )
             .arg( stopId )
             .arg( time.hour() * 60 * 60 + time.minute() * 60 + time.second() )
-            .arg( request.maxCount )
-            .arg( request.dataType == "arrivals" ? '<' : '>' ) // For arrivals route_stops/route_times need stops before the home stop
+            .arg( request->maxCount )
+            .arg( request->dataType == "arrivals" ? '<' : '>' ) // For arrivals route_stops/route_times need stops before the home stop
             .arg( routeSeparator );
     if ( !query.prepare(queryString) || !query.exec() ) {
         kDebug() << "Error while querying for departures:" << query.lastError();
@@ -718,8 +733,8 @@ void ServiceProviderGtfs::requestDepartures( const DepartureRequest &request )
     // Create a list of DepartureInfo objects from the query result
     DepartureInfoList departures;
     while ( query.next() ) {
-        QDate arrivalDate = request.dateTime.date();
-        QDate departureDate = request.dateTime.date();
+        QDate arrivalDate = request->dateTime.date();
+        QDate departureDate = request->dateTime.date();
 
         // Load agency information from cache
         const QVariant agencyIdValue = query.value( agencyIdColumn );
@@ -745,7 +760,7 @@ void ServiceProviderGtfs::requestDepartures( const DepartureRequest &request )
         }
 
         TimetableData data;
-        data[ DepartureDateTime ] = request.dataType == "arrivals" ? arrivalTime : departureTime;
+        data[ DepartureDateTime ] = request->dataType == "arrivals" ? arrivalTime : departureTime;
         data[ TypeOfVehicle ] = vehicleTypeFromGtfsRouteType( query.value(routeTypeColumn).toInt() );
         data[ Operator ] = agency ? agency->name : QString();
 
@@ -831,7 +846,12 @@ void ServiceProviderGtfs::requestDepartures( const DepartureRequest &request )
 
     // TODO Do not use a list of pointers here, maybe use data sharing for PublicTransportInfo/StopInfo?
     // The objects in departures are deleted in a connected slot in the data engine...
-    emit departureListReceived( this, QUrl(), departures, GlobalTimetableInfo(), request );
+    const ArrivalRequest *arrivalRequest = dynamic_cast< const ArrivalRequest* >( request );
+    if ( arrivalRequest ) {
+        emit arrivalListReceived( this, QUrl(), departures, GlobalTimetableInfo(), *arrivalRequest );
+    } else {
+        emit departureListReceived( this, QUrl(), departures, GlobalTimetableInfo(), *request );
+    }
 }
 
 void ServiceProviderGtfs::requestStopSuggestions( const StopSuggestionRequest &request )

@@ -167,7 +167,6 @@ public:
      *
      * When the arrival list is completely received @ref departureListReceived gets emitted.
      * The default implementation does nothing.
-     * @todo TODO use arrivalListReceived()
      * @param request Information about the arrival request.
      **/
     virtual void requestArrivals( const ArrivalRequest &request );
@@ -249,17 +248,30 @@ protected:
 
 signals:
     /**
-     * @brief Emitted when a new departure or arrival list has been received and parsed.
+     * @brief Emitted when a new departure list has been received and parsed.
      *
-     * @param provider The provider that was used to download and parse the departures/arrivals.
+     * @param provider The provider that was used to download and parse the departures.
      * @param requestUrl The url used to request the information.
-     * @param journeys A list of departures / arrivals that were received.
-     * @param request Information about the request for the just received departure/arrival list.
+     * @param departures A list of departures that were received.
+     * @param request Information about the request for the just received departure list.
      * @see ServiceProvider::useSeperateCityValue()
      **/
     void departureListReceived( ServiceProvider *provider, const QUrl &requestUrl,
-            const DepartureInfoList &journeys, const GlobalTimetableInfo &globalInfo,
+            const DepartureInfoList &departures, const GlobalTimetableInfo &globalInfo,
             const DepartureRequest &request );
+
+    /**
+     * @brief Emitted when a new arrival list has been received and parsed.
+     *
+     * @param provider The provider that was used to download and parse the arrivals.
+     * @param requestUrl The url used to request the information.
+     * @param arrivals A list of arrivals that were received.
+     * @param request Information about the request for the just received arrival list.
+     * @see ServiceProvider::useSeperateCityValue()
+     **/
+    void arrivalListReceived( ServiceProvider *provider, const QUrl &requestUrl,
+            const ArrivalInfoList &arrivals, const GlobalTimetableInfo &globalInfo,
+            const ArrivalRequest &request );
 
     /**
      * @brief Emitted when a new journey list has been received and parsed.
