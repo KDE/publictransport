@@ -1644,13 +1644,15 @@ Project *TimetableMate::openProject( const QString &filePath )
 }
 
 void TimetableMate::fileOpen() {
-    QString fileName = KFileDialog::getOpenFileName( KUrl("kfiledialog:///serviceprovider"),
+    const QStringList fileNames = KFileDialog::getOpenFileNames( KUrl("kfiledialog:///serviceprovider"),
             "application/x-publictransport-serviceprovider application/xml",
             this, i18nc("@title:window", "Open Service Provider Plugin") );
-    if ( fileName.isNull() )
+    if ( fileNames.isEmpty() )
         return; // Cancel clicked
 
-    open( KUrl(fileName) );
+    foreach ( const QString &fileName, fileNames ) {
+        open( KUrl(fileName) );
+    }
 }
 
 void TimetableMate::fileOpenInstalled() {
@@ -1682,15 +1684,17 @@ void TimetableMate::fileOpenInstalled() {
     }
 
     bool ok;
-    QString selectedPrettyName = KInputDialog::getItem(
+    QStringList selectedPrettyNames = KInputDialog::getItemList(
             i18nc("@title:window", "Open Installed Service Provider Plugin"),
             i18nc("@info", "Installed service provider plugin"),
-            pluginFiles, 0, false, &ok, this );
+            pluginFiles, QStringList(), true, &ok, this );
     if ( ok ) {
-        QString selectedFilePath = map[ selectedPrettyName ];
-        Project *project = openProject( selectedFilePath );
-        if ( project ) {
-            project->showDashboardTab( this );
+        foreach ( const QString &selectedPrettyName, selectedPrettyNames ) {
+            QString selectedFilePath = map[ selectedPrettyName ];
+            Project *project = openProject( selectedFilePath );
+            if ( project ) {
+                project->showDashboardTab( this );
+            }
         }
     }
 }
