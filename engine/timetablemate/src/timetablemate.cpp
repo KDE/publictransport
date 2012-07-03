@@ -828,7 +828,7 @@ bool TimetableMate::closeProject( Project *project )
     if ( closeAllTabs(project) ) {
         if ( project->isModified() ) {
             const QString message = i18nc("@info", "The project '%1' was modified. "
-                                          "Do you want to save it now?");
+                                          "Do you want to save it now?", project->projectName());
             const int result = KMessageBox::warningYesNoCancel( this, message, QString(),
                     KStandardGuiItem::save(), KStandardGuiItem::close() );
             if ( result == KMessageBox::Yes ) {
