@@ -2218,9 +2218,22 @@ RouteStopFlags DepartureItem::routeStopFlags( int routeStopIndex, int *minsFromF
     {
         const QTime time = m_departureInfo.routeTimes()[routeStopIndex];
         _minsFromFirstRouteStop = qCeil( m_departureInfo.departure().time().secsTo(time) / 60.0 );
-//         while ( _minsFromFirstRouteStop < 0 ) {
-//             _minsFromFirstRouteStop += 60 * 24;
-//         }
+
+        // Fix number of minutes if the date changes between route stops
+        // NOTE This only works if the route extends over less than three days
+        if ( m_departureInfo.isArrival() ) {
+            // Number of minutes should always be negative for arrivals
+            // (time from home stop back in time to stop X)
+            while ( _minsFromFirstRouteStop > 0 ) {
+                _minsFromFirstRouteStop -= 24 * 60;
+            }
+        } else {
+            // Number of minutes should always be positive for departures
+            // (time from home stop to stop X)
+            while ( _minsFromFirstRouteStop < 0 ) {
+                _minsFromFirstRouteStop += 24 * 60;
+            }
+        }
     }
     if ( m_model->info().homeStop == stopName || _minsFromFirstRouteStop == 0 ) {
         routeStopFlags |= RouteStopIsHomeStop;
