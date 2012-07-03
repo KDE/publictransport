@@ -860,6 +860,7 @@ public:
      *
      * @param str The string containing the date to be parsed, eg. "2010-12-01".
      * @param format The format of the time string in @p str. Default is "YY-MM-dd".
+     * @return The matched date.
      * @see formatDate
      **/
     Q_INVOKABLE static QDate matchDate( const QString &str, const QString &format = "yyyy-MM-dd" );

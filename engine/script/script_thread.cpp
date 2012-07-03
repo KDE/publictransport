@@ -220,7 +220,6 @@ void ScriptJob::run()
         // completed with an empty resultset
         if ( m_published == 0 || m_scriptResult->count() > m_published ) {
             const bool couldNeedForcedUpdate = m_published > 0;
-//             emitReady(
             switch ( request()->parseMode ) {
             case ParseForDeparturesArrivals: {
                 const ArrivalRequest *arrivalRequest =
@@ -228,13 +227,11 @@ void ScriptJob::run()
                 qDebug() << receivers( SIGNAL(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,ArrivalRequest,bool)) );
                 qDebug() << receivers( SIGNAL(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)) );
                 if ( arrivalRequest ) {
-                    kDebug() << "arrivals ready";
                     emit arrivalsReady( m_scriptResult->data().mid(m_published),
                             m_scriptResult->features(), m_scriptResult->hints(),
                             m_scriptNetwork->lastUrl(), globalInfo,
                             *arrivalRequest, couldNeedForcedUpdate );
                 } else {
-                    kDebug() << "departures ready";
                     emit departuresReady( m_scriptResult->data().mid(m_published),
                             m_scriptResult->features(), m_scriptResult->hints(),
                             m_scriptNetwork->lastUrl(), globalInfo,
