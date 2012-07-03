@@ -300,23 +300,49 @@ void ServiceProviderScript::departuresReady( const QList<TimetableData> &data,
 {
 //     TODO use hints
     if ( data.isEmpty() ) {
-        kDebug() << "The script didn't find anything" << request.sourceName;
+        kDebug() << "The script didn't find any departures" << request.sourceName;
         emit errorParsing( this, ErrorParsingFailed,
-                           i18n("Error while parsing the stop suggestions document."),
-                           url, &request );
+                           i18n("Error while parsing the departure document."), url, &request );
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
         PublicTransportInfoList newResults;
         ResultObject::dataList( data, &newResults, request.parseMode,
                                 m_data->defaultVehicleType(), &globalInfo, features, hints );
-        PublicTransportInfoList results =
-                (m_publishedData[request.sourceName] << newResults);
+        PublicTransportInfoList results = (m_publishedData[request.sourceName] << newResults);
         DepartureInfoList departures;
         foreach( const PublicTransportInfoPtr &info, results ) {
             departures << info.dynamicCast<DepartureInfo>();
         }
 
         emit departureListReceived( this, url, departures, globalInfo, request );
+        if ( couldNeedForcedUpdate ) {
+            emit forceUpdate();
+        }
+    }
+}
+
+void ServiceProviderScript::arrivalsReady( const QList< TimetableData > &data,
+        ResultObject::Features features, ResultObject::Hints hints, const QString &url,
+        const GlobalTimetableInfo &globalInfo, const ArrivalRequest &request,
+        bool couldNeedForcedUpdate )
+{
+//     TODO use hints
+    if ( data.isEmpty() ) {
+        kDebug() << "The script didn't find any arrivals" << request.sourceName;
+        emit errorParsing( this, ErrorParsingFailed,
+                           i18n("Error while parsing the arrival document."), url, &request );
+    } else {
+        // Create PublicTransportInfo objects for new data and combine with already published data
+        PublicTransportInfoList newResults;
+        ResultObject::dataList( data, &newResults, request.parseMode,
+                                m_data->defaultVehicleType(), &globalInfo, features, hints );
+        PublicTransportInfoList results = (m_publishedData[request.sourceName] << newResults);
+        ArrivalInfoList arrivals;
+        foreach( const PublicTransportInfoPtr &info, results ) {
+            arrivals << info.dynamicCast<ArrivalInfo>();
+        }
+
+        emit arrivalListReceived( this, url, arrivals, globalInfo, request );
         if ( couldNeedForcedUpdate ) {
             emit forceUpdate();
         }
@@ -331,10 +357,9 @@ void ServiceProviderScript::journeysReady( const QList<TimetableData> &data,
     Q_UNUSED( couldNeedForcedUpdate );
 //     TODO use hints
     if ( data.isEmpty() ) {
-        kDebug() << "The script didn't find anything" << request.sourceName;
+        kDebug() << "The script didn't find any journeys" << request.sourceName;
         emit errorParsing( this, ErrorParsingFailed,
-                           i18n("Error while parsing the stop suggestions document."),
-                           url, &request );
+                           i18n("Error while parsing the journey document."), url, &request );
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
         PublicTransportInfoList newResults;
@@ -452,12 +477,12 @@ void ServiceProviderScript::requestArrivals( const ArrivalRequest &request )
         return;
     }
 
-    DepartureJob *job = new DepartureJob( m_script, m_data, m_scriptStorage, request, this );
+    ArrivalJob *job = new ArrivalJob( m_script, m_data, m_scriptStorage, request, this );
     connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)),
-             this, SLOT(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)) );
+    connect( job, SIGNAL(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,ArrivalRequest,bool)),
+             this, SLOT(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,ArrivalRequest,bool)) );
     ThreadWeaver::Weaver::instance()->enqueue( job );
     return;
 }

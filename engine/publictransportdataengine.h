@@ -34,6 +34,7 @@
 struct AbstractRequest;
 struct StopSuggestionRequest;
 struct DepartureRequest;
+struct ArrivalRequest;
 struct JourneyRequest;
 
 class ServiceProvider;
@@ -243,13 +244,12 @@ public slots:
     void forceUpdate();
 
     /**
-     * @brief A list of departures / arrivals was received.
+     * @brief A list of departures was received.
      *
-     * @param provider The provider that was used to download and parse the
-     *   departures/arrivals.
+     * @param provider The provider that was used to download and parse the departures.
      * @param requestUrl The url used to request the information.
-     * @param departures A list of departures/arrivals that were received.
-     * @param globalInfo Global information that affects all departures/arrivals.
+     * @param departures A list of departures that were received.
+     * @param globalInfo Global information that affects all departures.
      * @param request Information about the request for the here received @p departures.
      *
      * @see ServiceProvider::useSeparateCityValue()
@@ -258,6 +258,23 @@ public slots:
             const QUrl &requestUrl, const DepartureInfoList &departures,
             const GlobalTimetableInfo &globalInfo,
             const DepartureRequest &request,
+            bool deleteDepartureInfos = true );
+
+    /**
+     * @brief A list of arrivals was received.
+     *
+     * @param provider The provider that was used to download and parse the arrivals.
+     * @param requestUrl The url used to request the information.
+     * @param arrivals A list of arrivals that were received.
+     * @param globalInfo Global information that affects all arrivals.
+     * @param request Information about the request for the here received @p arrivals.
+     *
+     * @see ServiceProvider::useSeparateCityValue()
+     **/
+    void arrivalListReceived( ServiceProvider *provider,
+            const QUrl &requestUrl, const ArrivalInfoList &arrivals,
+            const GlobalTimetableInfo &globalInfo,
+            const ArrivalRequest &request,
             bool deleteDepartureInfos = true );
 
     /**

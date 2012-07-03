@@ -96,6 +96,14 @@ QStringList PublicTransportEngine::sources() const
 
 bool PublicTransportEngine::isProviderUsed( const QString &serviceProviderId )
 {
+    for ( QStringList::ConstIterator it = m_runningSources.constBegin();
+          it != m_runningSources.constEnd(); ++it )
+    {
+        if ( it->contains(serviceProviderId) ) {
+            return true;
+        }
+    }
+
     for ( QVariantHash::ConstIterator it = m_dataSources.constBegin();
           it != m_dataSources.constEnd(); ++it )
     {
@@ -317,6 +325,8 @@ PublicTransportEngine::ProviderPointer PublicTransportEngine::providerFromId(
 
         connect( provider, SIGNAL(departureListReceived(ServiceProvider*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)),
                  this, SLOT(departureListReceived(ServiceProvider*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)) );
+        connect( provider, SIGNAL(arrivalListReceived(ServiceProvider*,QUrl,ArrivalInfoList,GlobalTimetableInfo,ArrivalRequest)),
+                 this, SLOT(arrivalListReceived(ServiceProvider*,QUrl,ArrivalInfoList,GlobalTimetableInfo,ArrivalRequest)) );
         connect( provider, SIGNAL(journeyListReceived(ServiceProvider*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequest)),
                  this, SLOT(journeyListReceived(ServiceProvider*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequest)) );
         connect( provider, SIGNAL(stopListReceived(ServiceProvider*,QUrl,StopInfoList,StopSuggestionRequest)),
@@ -721,7 +731,7 @@ bool PublicTransportEngine::updateTimetableDataSource( const QString &name )
         m_runningSources << nonAmbiguousName;
 
         if ( parseDocumentMode == ParseForDeparturesArrivals ) {
-            if ( dataType == "arrivals" ) {
+            if ( dataType == QLatin1String("arrivals") ) {
                 provider->requestArrivals( ArrivalRequest(name, stop, dateTime, maxCount,
                                            city, dataType, parseDocumentMode) );
             } else {
@@ -929,7 +939,7 @@ void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
         bool deleteDepartureInfos )
 {
     const QString sourceName = request.sourceName;
-    kDebug() << departures.count() << "departures / arrivals received" << sourceName;
+    kDebug() << departures.count() << "departures received" << sourceName;
 
     int i = 0;
     const QString nonAmbiguousName = sourceName.toLower();
@@ -937,10 +947,6 @@ void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
     m_runningSources.removeOne( nonAmbiguousName );
     QVariantHash dataSource;
     foreach( const DepartureInfoPtr &departureInfo, departures ) {
-//     if ( !departureInfo->isValid() ) {
-//         kDebug() << "Departure isn't valid" << departureInfo->line();
-//         continue;
-//     }
         QVariantHash data;
         data.insert( "line", departureInfo->line() );
         data.insert( "target", departureInfo->target() );
@@ -993,12 +999,11 @@ void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
         ++i;
     }
     int departureCount = departures.count();
-    QDateTime first, last;
+    QDateTime last;
     if ( departureCount > 0 ) {
-        first = departures.first()->departure();
         last = departures.last()->departure();
     } else {
-        first = last = QDateTime::currentDateTime();
+        last = QDateTime::currentDateTime();
     }
     if ( deleteDepartureInfos ) {
         kDebug() << "Delete" << departures.count() << "departures";
@@ -1046,6 +1051,13 @@ void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
     m_dataSources.insert( sourceName.toLower(), dataSource );
 }
 
+void PublicTransportEngine::arrivalListReceived( ServiceProvider *provider, const QUrl &requestUrl,
+        const ArrivalInfoList &arrivals, const GlobalTimetableInfo &globalInfo,
+        const ArrivalRequest &request, bool deleteDepartureInfos )
+{
+    departureListReceived( provider, requestUrl, arrivals, globalInfo, request,
+                           deleteDepartureInfos );
+}
 
 void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
         const QUrl &requestUrl, const JourneyInfoList &journeys,

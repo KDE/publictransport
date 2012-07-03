@@ -51,6 +51,7 @@ ScriptJob::ScriptJob( QScriptProgram *script, const ServiceProviderData* data,
 {
     ++thread_count; kDebug() << "Thread count:" << thread_count;
     qRegisterMetaType<DepartureRequest>( "DepartureRequest" );
+    qRegisterMetaType<ArrivalRequest>( "ArrivalRequest" );
     qRegisterMetaType<JourneyRequest>( "JourneyRequest" );
     qRegisterMetaType<StopSuggestionRequest>( "StopSuggestionRequest" );
 }
@@ -222,18 +223,22 @@ void ScriptJob::run()
 //             emitReady(
             switch ( request()->parseMode ) {
             case ParseForDeparturesArrivals: {
-                const DepartureRequest *departureRequest =
-                        dynamic_cast< const DepartureRequest* >( request() );
-                if ( departureRequest ) {
-                    emit departuresReady( m_scriptResult->data().mid(m_published),
-                            m_scriptResult->features(), m_scriptResult->hints(),
-                            m_scriptNetwork->lastUrl(), globalInfo,
-                            *departureRequest, couldNeedForcedUpdate );
-                } else {
+                const ArrivalRequest *arrivalRequest =
+                        dynamic_cast< const ArrivalRequest* >( request() );
+                qDebug() << receivers( SIGNAL(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,ArrivalRequest,bool)) );
+                qDebug() << receivers( SIGNAL(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)) );
+                if ( arrivalRequest ) {
+                    kDebug() << "arrivals ready";
                     emit arrivalsReady( m_scriptResult->data().mid(m_published),
                             m_scriptResult->features(), m_scriptResult->hints(),
                             m_scriptNetwork->lastUrl(), globalInfo,
-                            *dynamic_cast<const ArrivalRequest*>(request()),
+                            *arrivalRequest, couldNeedForcedUpdate );
+                } else {
+                    kDebug() << "departures ready";
+                    emit departuresReady( m_scriptResult->data().mid(m_published),
+                            m_scriptResult->features(), m_scriptResult->hints(),
+                            m_scriptNetwork->lastUrl(), globalInfo,
+                            *dynamic_cast<const DepartureRequest*>(request()),
                             couldNeedForcedUpdate );
                 }
                 break;
@@ -415,19 +420,18 @@ void ScriptJob::publish()
 //                         couldNeedForcedUpdate );
         switch ( request()->parseMode ) {
         case ParseForDeparturesArrivals: {
-            const DepartureRequest *departureRequest =
-                    dynamic_cast< const DepartureRequest* >( request() );
-            if ( departureRequest ) {
+            const ArrivalRequest *arrivalRequest =
+                    dynamic_cast< const ArrivalRequest* >( request() );
+            if ( arrivalRequest ) {
+                emit arrivalsReady( m_scriptResult->data().mid(m_published),
+                        m_scriptResult->features(), m_scriptResult->hints(),
+                        m_scriptNetwork->lastUrl(), globalInfo, *arrivalRequest,
+                        couldNeedForcedUpdate );
+            } else {
                 emit departuresReady( m_scriptResult->data().mid(m_published),
                         m_scriptResult->features(), m_scriptResult->hints(),
                         m_scriptNetwork->lastUrl(), globalInfo,
-                        *departureRequest, couldNeedForcedUpdate );
-            } else {
-                emit arrivalsReady( m_scriptResult->data().mid(m_published),
-                        m_scriptResult->features(), m_scriptResult->hints(),
-                        m_scriptNetwork->lastUrl(), globalInfo,
-                        *dynamic_cast<const ArrivalRequest*>(request()),
-                        couldNeedForcedUpdate );
+                        *dynamic_cast<const DepartureRequest*>(request()), couldNeedForcedUpdate );
             }
             break;
         }
@@ -473,6 +477,29 @@ DepartureJob::~DepartureJob()
 
 
 const AbstractRequest *DepartureJob::request() const
+{
+    return &d->request;
+}
+
+class ArrivalJobPrivate {
+public:
+    ArrivalJobPrivate( const ArrivalRequest &request ) : request(request) {};
+    ArrivalRequest request;
+};
+
+ArrivalJob::ArrivalJob( QScriptProgram* script, const ServiceProviderData* info,
+        Storage* scriptStorage, const ArrivalRequest& request, QObject* parent )
+        : ScriptJob(script, info, scriptStorage, parent), d(new ArrivalJobPrivate(request))
+{
+}
+
+ArrivalJob::~ArrivalJob()
+{
+    delete d;
+}
+
+
+const AbstractRequest *ArrivalJob::request() const
 {
     return &d->request;
 }

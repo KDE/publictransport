@@ -112,6 +112,13 @@ void PublicTransportAppletPrivate::onSettingsChanged( const Settings &_settings,
 //         journeyTimetable->setMaxLineCount( settings.linesPerRow ); // TEST
         model->setLinesPerRow( settings.linesPerRow() );
     }
+    // Apply show departures/arrivals setting
+    if ( changed.testFlag(SettingsIO::ChangedDepartureArrivalListType) ) {
+        model->setDepartureArrivalListType( settings.departureArrivalListType() );
+
+        // Update text in the departure/arrival view that gets shown when the model is empty
+        onDepartureDataStateChanged();
+    }
 
     // If stop settings have changed the whole model gets cleared and refilled.
     // Therefore the other change flags can be in 'else' parts
@@ -190,14 +197,6 @@ void PublicTransportAppletPrivate::onSettingsChanged( const Settings &_settings,
         departureProcessor->setAlarms( settings.alarms() );
     }
 
-    // Apply show departures/arrivals setting
-    if ( changed.testFlag(SettingsIO::ChangedDepartureArrivalListType) ) {
-        model->setDepartureArrivalListType( settings.departureArrivalListType() );
-
-        // Update text in the departure/arrival view that gets shown when the model is empty
-        onDepartureDataStateChanged();
-    }
-
     // Apply font / size factor
     if ( changed.testFlag(SettingsIO::ChangedFont) ||
          changed.testFlag(SettingsIO::ChangedSizeFactor) )
@@ -239,6 +238,7 @@ void PublicTransportAppletPrivate::onSettingsChanged( const Settings &_settings,
          changed.testFlag(SettingsIO::ChangedFont) ||
          changed.testFlag(SettingsIO::ChangedSizeFactor) )
     {
+        qDebug() << "UPDATE TITLE WIDGET";
         titleWidget->settingsChanged();
     }
 
