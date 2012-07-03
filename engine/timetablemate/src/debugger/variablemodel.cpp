@@ -32,6 +32,8 @@
 #include <KDebug>
 #include <KLocalizedString>
 #include <KColorScheme>
+#include <KGlobalSettings>
+#include <KStringHandler>
 
 // Qt includes
 #include <QScriptValueIterator>
@@ -619,7 +621,13 @@ bool variableItemLessThan( VariableItem *item1, VariableItem *item2 ) {
     } else if ( item1->type() != item2->type() ) {
         return item1->type() < item2->type();
     } else {
-        return QString::localeAwareCompare( item1->name(), item2->name() ) < 0; // Sort by name
+        // Sort by variable name
+        if ( KGlobalSettings::naturalSorting() ) {
+            return KStringHandler::naturalCompare( item1->name(), item2->name(),
+                                                   Qt::CaseInsensitive ) < 0;
+        } else {
+            return QString::localeAwareCompare( item1->name(), item2->name() ) < 0;
+        }
     }
 }
 
