@@ -481,7 +481,7 @@ contain departures/arrivals (@ref usage_departures_sec), journeys (@ref usage_jo
 stop suggestions (@ref usage_stopList_sec).<br />
 <br />
 The following enumeration can be used in your applet if you don't want to use
-libpublictransporthelper which exports this enumaration as @ref Timetable::VehicleType.
+libpublictransporthelper which exports this enumaration as @ref PublicTransport::VehicleType.
 Don't change the numbers, as they need to match the ones in the data engine, which uses a similar
 enumeration.
 @code

@@ -187,7 +187,7 @@ inline uint qHash( const QStringList &key )
  **/
 class Settings {
 public:
-    /** @brief Named user settings for use in Timetable::StopSettings. */
+    /** @brief Named user settings for use in PublicTransport::StopSettings. */
     enum ExtendedStopSetting {
         JourneySearchSetting = UserSetting /**< A list of journey searches,
                                               * QList\<JourneySearchItem\> */
