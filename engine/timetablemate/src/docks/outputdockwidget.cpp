@@ -93,4 +93,5 @@ void OutputDockWidget::activeProjectAboutToChange( Project *project, Project *pr
 void OutputDockWidget::setOutput( const QString &html )
 {
     m_outputWidget->document()->setHtml( html );
+    m_outputWidget->ensureCursorVisible();
 }
