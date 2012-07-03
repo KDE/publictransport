@@ -1327,7 +1327,7 @@ public:
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         QString scriptFile = provider->data()->scriptFileName();
-        if ( !scriptFile.isEmpty() ) {
+        if ( !scriptFile.isEmpty() && isScriptModified() ) {
             const QString scriptFilePath =
                     QFileInfo(_filePath).absolutePath() + '/' + QFileInfo(scriptFile).fileName();
             QFile file( scriptFilePath );
@@ -3078,7 +3078,7 @@ DepartureRequest Project::getDepartureRequest( QWidget *parent, bool* cancelled 
 }
 
 StopSuggestionRequest Project::getStopSuggestionRequest( QWidget *parent,
-                                                                 bool* cancelled ) const
+                                                         bool* cancelled ) const
 {
     Q_D( const Project );
     parent = d->parentWidget( parent );
