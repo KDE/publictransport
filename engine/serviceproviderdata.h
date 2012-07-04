@@ -126,6 +126,7 @@ public:
             return new ServiceProviderData(*this, parent); };
 
     ServiceProviderData &operator =( const ServiceProviderData &info );
+    bool operator ==( const ServiceProviderData &info ) const;
 
     /**
      * @brief Compare version strings in @p version1 and @p version2.

@@ -142,6 +142,46 @@ ServiceProviderData &ServiceProviderData::operator=( const ServiceProviderData &
     return *this;
 }
 
+bool ServiceProviderData::operator ==( const ServiceProviderData &info ) const
+{
+    return m_serviceProviderType == info.m_serviceProviderType &&
+           m_id == info.m_id &&
+           m_name == info.m_name &&
+           m_description == info.m_description &&
+           m_version == info.m_version &&
+           m_fileFormatVersion == info.m_fileFormatVersion &&
+           m_useSeparateCityValue == info.m_useSeparateCityValue &&
+           m_onlyUseCitiesInList == info.m_onlyUseCitiesInList &&
+           m_url == info.m_url &&
+           m_shortUrl == info.m_shortUrl &&
+           m_minFetchWait == info.m_minFetchWait &&
+           m_author == info.m_author &&
+           m_shortAuthor == info.m_shortAuthor &&
+           m_email == info.m_email &&
+           m_defaultVehicleType == info.m_defaultVehicleType &&
+           m_changelog == info.m_changelog &&
+           m_country == info.m_country &&
+           m_cities == info.m_cities &&
+           m_credit == info.m_credit &&
+           m_hashCityNameToValue == info.m_hashCityNameToValue &&
+           m_fileName == info.m_fileName &&
+           m_charsetForUrlEncoding == info.m_charsetForUrlEncoding &&
+           m_fallbackCharset == info.m_fallbackCharset &&
+           m_sampleStopNames == info.m_sampleStopNames &&
+           m_sampleCity == info.m_sampleCity &&
+           m_notes == info.m_notes &&
+
+           // For ScriptedProvider
+           m_scriptFileName == info.m_scriptFileName &&
+           m_scriptExtensions == info.m_scriptExtensions &&
+
+           // For GtfsProvider
+           m_feedUrl == info.m_feedUrl &&
+           m_tripUpdatesUrl == info.m_tripUpdatesUrl &&
+           m_alertsUrl == info.m_alertsUrl &&
+           m_timeZone == info.m_timeZone;
+}
+
 void ServiceProviderData::finish()
 {
     // Generate a short URL if none is given

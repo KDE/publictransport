@@ -309,8 +309,10 @@ void Debugger::loadScript( const QString &program, const ServiceProviderData *in
         kDebug() << "Script already gets loaded, please wait...";
         return;
     }
-    if ( m_script && m_script->sourceCode() == program ) {
-        kDebug() << "Script code unchanged";
+    if ( m_script && m_script->sourceCode() == program &&
+         (!m_info || m_info == info) )
+    {
+        kDebug() << "Script code and provider data unchanged";
         return;
     }
 
