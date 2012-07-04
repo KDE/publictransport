@@ -565,7 +565,10 @@ public:
     Debugger::Debugger *debugger() const;
 #endif
 
-    /** @brief Set service provider data values used for this project to @p providerData. */
+    /**
+     * @brief Set service provider data values used for this project to @p providerData.
+     * @note Comments read from the XML source file will not be cleared.
+     **/
     void setProviderData( const ServiceProviderData *providerData );
 
     /** @brief Get the path of the project source XML file. */

@@ -35,7 +35,8 @@
 #include <QFile>
 #include <QFileInfo>
 
-bool ServiceProviderDataWriter::write( QIODevice *device, const ServiceProvider *provider )
+bool ServiceProviderDataWriter::write( QIODevice *device, const ServiceProvider *provider,
+                                       const QString &comments )
 {
     Q_ASSERT( device );
 
@@ -194,11 +195,14 @@ bool ServiceProviderDataWriter::write( QIODevice *device, const ServiceProvider 
             writeTextElement( "city", data->sampleCity() );
         }
         writeEndElement(); // samples
-    } else {
-        kDebug() << "NO SAMPLES TO WRITE";
     }
 
     writeEndElement(); // serviceProvider
+
+    if ( !comments.isEmpty() ) {
+        writeComment( comments );
+    }
     writeEndDocument();
+
     return true;
 }

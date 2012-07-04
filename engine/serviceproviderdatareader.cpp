@@ -40,7 +40,7 @@
 #include <QFileInfo>
 
 ServiceProviderData *ServiceProviderDataReader::read( const QString &providerId,
-                                                      QString *errorMessage )
+                                                      QString *errorMessage, QString *comments )
 {
     QString filePath;
     QString country = "international";
@@ -89,7 +89,8 @@ ServiceProviderData *ServiceProviderDataReader::read( const QString &providerId,
     QFile file( filePath );
     ServiceProviderDataReader reader;
     ServiceProviderData *data = reader.read( &file, providerId, filePath, country,
-                                             ServiceProviderDataReader::OnlyReadCorrectFiles );
+                                             ServiceProviderDataReader::OnlyReadCorrectFiles,
+                                             0, comments );
     if ( !data && errorMessage ) {
         *errorMessage = i18nc("@info/plain", "Error in line %1: <message>%2</message>",
                               reader.lineNumber(), reader.errorString());
@@ -98,7 +99,7 @@ ServiceProviderData *ServiceProviderDataReader::read( const QString &providerId,
 }
 
 ServiceProviderData *ServiceProviderDataReader::read( QIODevice *device, const QString &fileName,
-                                                      ErrorAcceptance errorAcceptance, QObject *parent )
+        ErrorAcceptance errorAcceptance, QObject *parent, QString *comments )
 {
     const QString serviceProvider = ServiceProviderGlobal::idFromFileName( fileName );
 
@@ -113,12 +114,12 @@ ServiceProviderData *ServiceProviderDataReader::read( QIODevice *device, const Q
         country = "international";
     }
 
-    return read( device, serviceProvider, fileName, country, errorAcceptance, parent );
+    return read( device, serviceProvider, fileName, country, errorAcceptance, parent, comments );
 }
 
 ServiceProviderData* ServiceProviderDataReader::read( QIODevice* device,
         const QString &serviceProvider, const QString &fileName, const QString &country,
-        ErrorAcceptance errorAcceptance, QObject *parent )
+        ErrorAcceptance errorAcceptance, QObject *parent, QString *comments )
 {
     Q_ASSERT( device );
 
@@ -133,7 +134,11 @@ ServiceProviderData* ServiceProviderDataReader::read( QIODevice* device,
     while ( !atEnd() ) {
         readNext();
 
-        if ( isStartElement() ) {
+        if ( isComment() ) {
+            if ( comments ) {
+                addComments( comments, text() );
+            }
+        } else if ( isStartElement() ) {
             if ( name().compare("serviceProvider", Qt::CaseInsensitive) != 0 ) {
                 raiseError( QString("Wrong root element, should be <serviceProvider>, is <%1>.")
                             .arg(name().toString()) );
@@ -141,8 +146,19 @@ ServiceProviderData* ServiceProviderDataReader::read( QIODevice* device,
                 raiseError( "The file is not a public transport service provider plugin "
                             "version 1.0 file." );
             } else {
-                data = readProviderData( serviceProvider, fileName, country, errorAcceptance, parent );
+                data = readProviderData( serviceProvider, fileName, country, errorAcceptance,
+                                         parent, comments );
                 break;
+            }
+        }
+    }
+
+    if ( comments ) {
+        while ( !atEnd() ) {
+            readNext();
+
+            if ( isComment() ) {
+                addComments( comments, text() );
             }
         }
     }
@@ -157,26 +173,66 @@ ServiceProviderData* ServiceProviderDataReader::read( QIODevice* device,
     return error() == NoError && data ? data : 0;
 }
 
-void ServiceProviderDataReader::readUnknownElement()
+void ServiceProviderDataReader::readUnknownElement( QString *comments )
 {
     Q_ASSERT( isStartElement() );
+    if ( comments ) {
+        addComments( comments, readStartElementString(), false );
+    }
 
     while ( !atEnd() ) {
-        readNext();
-
-        if ( isEndElement() ) {
+        TokenType type = readNext();
+        switch ( type ) {
+        case EndElement:
+            if ( comments ) {
+                addComments( comments, QString("</%1>").arg(name().toString()), false );
+            }
+            return;
+        case Comment:
+        case Characters:
+        case EntityReference:
+            if ( comments ) {
+                addComments( comments, text(), false );
+            }
             break;
-        }
-
-        if ( isStartElement() ) {
-            readUnknownElement();
+        case StartElement:
+            readUnknownElement( comments );
+            break;
+        default:
+            break;
         }
     }
 }
 
+QString ServiceProviderDataReader::readStartElementString() const
+{
+    QString elementString( '<' );
+    elementString.append( name() );
+    const QXmlStreamAttributes attr = attributes();
+    for ( QXmlStreamAttributes::ConstIterator it = attr.constBegin();
+          it != attr.constEnd(); ++it )
+    {
+        elementString.append( "=\"" ).append( it->value() ).append( '\"' );
+    }
+    elementString.append( '>' );
+    return elementString;
+}
+
+void ServiceProviderDataReader::addComments( QString *comments, const QString &newComments,
+                                             bool newLine )
+{
+    if ( newComments.isEmpty() ) {
+        return;
+    }
+    if ( newLine && !comments->isEmpty() ) {
+        comments->append( '\n' );
+    }
+    comments->append( newComments );
+}
+
 ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString &serviceProviderId,
         const QString &fileName, const QString &country, ErrorAcceptance errorAcceptance,
-        QObject *parent )
+        QObject *parent, QString *comments )
 {
     const QString lang = KGlobal::locale()->country();
     QString langRead, url, shortUrl;
@@ -229,7 +285,11 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
             break;
         }
 
-        if ( isStartElement() ) {
+        if ( isComment() ) {
+            if ( comments ) {
+                addComments( comments, text() );
+            }
+        } else if ( isStartElement() ) {
             if ( name().compare(QLatin1String("name"), Qt::CaseInsensitive) == 0 ) {
                 const QString nameRead = readLocalizedTextElement( &langRead );
                 names[ langRead ] = nameRead;
@@ -302,7 +362,7 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
             } else if ( name().compare(QLatin1String("notes"), Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setNotes( readElementText() );
             } else {
-                readUnknownElement();
+                readUnknownElement( comments );
             }
         }
     }
@@ -340,7 +400,8 @@ bool ServiceProviderDataReader::readBooleanElement()
     }
 }
 
-void ServiceProviderDataReader::readAuthor( QString *fullname, QString *shortName, QString *email )
+void ServiceProviderDataReader::readAuthor( QString *fullname, QString *shortName, QString *email,
+                                            QString *comments )
 {
     while ( !atEnd() ) {
         readNext();
@@ -349,7 +410,11 @@ void ServiceProviderDataReader::readAuthor( QString *fullname, QString *shortNam
             break;
         }
 
-        if ( isStartElement() ) {
+        if ( isComment() ) {
+            if ( comments ) {
+                addComments( comments, text() );
+            }
+        } else if ( isStartElement() ) {
             if ( name().compare(QLatin1String("fullName"), Qt::CaseInsensitive) == 0 ) {
                 *fullname = readElementText().trimmed();
             } else if ( name().compare(QLatin1String("short"), Qt::CaseInsensitive) == 0 ) {
@@ -364,7 +429,8 @@ void ServiceProviderDataReader::readAuthor( QString *fullname, QString *shortNam
 }
 
 void ServiceProviderDataReader::readCities( QStringList *cities,
-                                        QHash< QString, QString > *cityNameReplacements )
+                                            QHash< QString, QString > *cityNameReplacements,
+                                            QString *comments )
 {
     while ( !atEnd() ) {
         readNext();
@@ -373,7 +439,11 @@ void ServiceProviderDataReader::readCities( QStringList *cities,
             break;
         }
 
-        if ( isStartElement() ) {
+        if ( isComment() ) {
+            if ( comments ) {
+                addComments( comments, text() );
+            }
+        } else if ( isStartElement() ) {
             if ( name().compare(QLatin1String("city"), Qt::CaseInsensitive ) == 0 ) {
                 if ( attributes().hasAttribute(QLatin1String("replaceWith")) ) {
                     QString replacement = attributes().value(QLatin1String("replaceWith")).toString().toLower();
@@ -391,7 +461,7 @@ void ServiceProviderDataReader::readCities( QStringList *cities,
     }
 }
 
-void ServiceProviderDataReader::readSamples( QStringList *stops, QString *city )
+void ServiceProviderDataReader::readSamples( QStringList *stops, QString *city, QString *comments )
 {
     while ( !atEnd() ) {
         readNext();
@@ -400,7 +470,11 @@ void ServiceProviderDataReader::readSamples( QStringList *stops, QString *city )
             break;
         }
 
-        if ( isStartElement() ) {
+        if ( isComment() ) {
+            if ( comments ) {
+                addComments( comments, text() );
+            }
+        } else if ( isStartElement() ) {
             if ( name().compare(QLatin1String("stop"), Qt::CaseInsensitive ) == 0 ) {
                 stops->append( readElementText() );
             } else if ( name().compare(QLatin1String("city"), Qt::CaseInsensitive ) == 0 ) {
@@ -412,7 +486,7 @@ void ServiceProviderDataReader::readSamples( QStringList *stops, QString *city )
     }
 }
 
-QList<ChangelogEntry> ServiceProviderDataReader::readChangelog()
+QList<ChangelogEntry> ServiceProviderDataReader::readChangelog( QString *comments )
 {
     QList<ChangelogEntry> changelog;
     while ( !atEnd() ) {
@@ -421,7 +495,11 @@ QList<ChangelogEntry> ServiceProviderDataReader::readChangelog()
             break;
         }
 
-        if ( isStartElement() ) {
+        if ( isComment() ) {
+            if ( comments ) {
+                addComments( comments, text() );
+            }
+        } else if ( isStartElement() ) {
             if ( name().compare("entry", Qt::CaseInsensitive) == 0 ) {
                 ChangelogEntry currentEntry;
                 if ( attributes().hasAttribute(QLatin1String("version")) ) {

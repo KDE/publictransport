@@ -34,7 +34,8 @@ class ServiceProviderDataWriter : public QXmlStreamWriter
 public:
     ServiceProviderDataWriter() : QXmlStreamWriter() {};
 
-    bool write( QIODevice *device, const ServiceProvider *provider );
+    bool write( QIODevice *device, const ServiceProvider *provider,
+                const QString &comments = QString() );
 };
 
 #endif // Multiple inclusion guard

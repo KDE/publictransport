@@ -551,10 +551,11 @@ public:
         // Recreate service provider from the contents of device
         delete provider;
         provider = 0;
+        xmlComments.clear();
 
         ServiceProviderDataReader reader;
-        ServiceProviderData *readData =
-                reader.read( device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q );
+        ServiceProviderData *readData = reader.read(
+                device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q, &xmlComments );
         if ( readData ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
             if ( readData->type() == ScriptedProvider ) {
@@ -598,7 +599,7 @@ public:
 
         ServiceProviderDataWriter writer;
         QFile file( fileName );
-        return writer.write( &file, provider );
+        return writer.write( &file, provider, xmlComments );
     };
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -734,6 +735,7 @@ public:
         Q_Q( Project );
         delete provider;
         provider = ServiceProvider::createInvalidProvider( q );
+        xmlComments.clear();
         q->emit nameChanged( projectName() );
         q->emit iconNameChanged( iconName() );
         q->emit iconChanged( projectIcon() );
@@ -1283,6 +1285,7 @@ public:
                     kWarning() << "Invalid test" << test;
                     return false;
                 }
+                testName = request->sourceName;
 
                 // Create job
                 job = debugger->createTimetableDataRequestJob( request, InterruptOnExceptions );
@@ -1573,6 +1576,7 @@ public:
 #endif
 
     ServiceProvider *provider;
+    QString xmlComments;
 
     // Get created when needed, multi for actions of the same type with different data
     QMultiHash< Project::ProjectAction, QAction* > projectActions;
@@ -3773,7 +3777,7 @@ QString Project::projectSourceText( ProjectDocumentSource source) const
         // No project source tab opened, read XML text from file to buffer
         ServiceProviderDataWriter writer;
         QBuffer buffer;
-        if( writer.write(&buffer, d->provider) ) {
+        if( writer.write(&buffer, d->provider, d->xmlComments) ) {
             return QString::fromUtf8( buffer.data() );
         }
     } else if ( source == ReadProjectDocumentFromFile ) {

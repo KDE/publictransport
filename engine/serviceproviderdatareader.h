@@ -44,6 +44,11 @@ struct ChangelogEntry {
     QString engineVersion; /**< The version of the PublicTransport engine where this
             * change was integrated. */
     QString description; /**< A description of the change. */
+
+    bool operator ==( const ChangelogEntry &other ) {
+        return author == other.author && version == other.version &&
+               engineVersion == other.engineVersion && description == other.description;
+    };
 };
 Q_DECLARE_METATYPE(ChangelogEntry);
 Q_DECLARE_METATYPE(QList<ChangelogEntry>);
@@ -84,7 +89,8 @@ public:
      * @return A pointer to the read ServiceProviderData object or 0 if there was an error reading
      *   the data.
      **/
-    static ServiceProviderData *read( const QString &providerId, QString *errorMessage = 0 );
+    static ServiceProviderData *read( const QString &providerId, QString *errorMessage = 0,
+                                      QString *comments = 0 );
 
     /**
      * @brief Reads service provider data from @p device.
@@ -99,23 +105,29 @@ public:
     ServiceProviderData* read( QIODevice *device, const QString &serviceProvider,
                                const QString &fileName, const QString &country,
                                ErrorAcceptance errorAcceptance = OnlyReadCorrectFiles,
-                               QObject *parent = 0 );
+                               QObject *parent = 0, QString *comments = 0 );
 
     ServiceProviderData* read( QIODevice *device, const QString &fileName,
                                ErrorAcceptance errorAcceptance = OnlyReadCorrectFiles,
-                               QObject *parent = 0 );
+                               QObject *parent = 0, QString *comments = 0 );
 
 private:
-    void readUnknownElement();
+    void readUnknownElement( QString *comments = 0 );
     ServiceProviderData *readProviderData( const QString &serviceProvider,
-                                           const QString &fileName, const QString &country,
-                                           ErrorAcceptance errorAcceptance, QObject *parent );
+            const QString &fileName, const QString &country, ErrorAcceptance errorAcceptance,
+            QObject *parent, QString *comments = 0 );
     QString readLocalizedTextElement( QString *lang );
     bool readBooleanElement();
-    void readAuthor( QString *fullname, QString *shortName, QString *email );
-    void readCities( QStringList *cities, QHash<QString, QString> *cityNameReplacements );
-    void readSamples( QStringList *stops, QString *city );
-    QList<ChangelogEntry> readChangelog();
+    void readAuthor( QString *fullname, QString *shortName, QString *email, QString *comments = 0 );
+    void readCities( QStringList *cities, QHash<QString, QString> *cityNameReplacements,
+                     QString *comments = 0 );
+    void readSamples( QStringList *stops, QString *city, QString *comments = 0 );
+    QList<ChangelogEntry> readChangelog( QString *comments = 0 );
+    QString readStartElementString() const;
+    void addComments( QString *comments, const QString &newComments, bool newLine = true );
+    inline void addComments( QString *comments, const QStringRef &newComments, bool newLine = true ) {
+        addComments( comments, newComments.toString(), newLine );
+    };
 };
 
 #endif // Multiple inclusion guard
