@@ -457,9 +457,16 @@ CodeNode::Ptr JavaScriptParser::parseStatement()
         }
     }
 
-    m_lastToken = lastTokenList.last();
-    setErrorState( i18nc("@info/plain", "Unexpected end of file."),
-                   lastTokenList.last()->line, lastTokenList.last()->posEnd );
+    if ( !lastTokenList.isEmpty() ) {
+        m_lastToken = lastTokenList.last();
+        setErrorState( i18nc("@info/plain", "Unexpected end of file."),
+                       lastTokenList.last()->line, lastTokenList.last()->posEnd );
+    } else if ( m_lastToken ) {
+        setErrorState( i18nc("@info/plain", "Unexpected end of file."),
+                       m_lastToken->line, m_lastToken->posEnd );
+    } else {
+        setErrorState( i18nc("@info/plain", "Unexpected end of file."), -1, -1 );
+    }
     return CodeNode::Ptr( 0 );
 }
 
