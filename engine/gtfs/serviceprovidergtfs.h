@@ -24,6 +24,7 @@
 #ifndef SERVICEPROVIDERGTFS_HEADER
 #define SERVICEPROVIDERGTFS_HEADER
 
+#include "config.h"
 #include "serviceprovider.h"
 #include "gtfsimporter.h"
 #ifdef BUILD_GTFS_REALTIME

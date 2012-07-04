@@ -20,6 +20,9 @@
 // Header
 #include "serviceproviderglobal.h"
 
+// Own includes
+#include "config.h"
+
 // KDE includes
 #include <KGlobal>
 #include <KStandardDirs>

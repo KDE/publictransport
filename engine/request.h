@@ -25,6 +25,7 @@
 #define REQUEST_HEADER
 
 // Own includes
+#include "config.h"
 #include "enums.h"
 
 // Qt includes
@@ -33,13 +34,11 @@
 /**
  * @brief Stores information about a request to the publictransport data engine.
  *
- * All values other than @p sourceName are derived (parsed) from it or represent the current state
- * of the request.
+ * All values other than @p sourceName can be derived (parsed) from it.
  **/
 struct AbstractRequest {
     /**
      * @brief The requesting source name.
-     *
      * Other values in AbstractRequest are derived from this string.
      **/
     QString sourceName;
@@ -54,8 +53,8 @@ struct AbstractRequest {
     int maxCount;
 
     /**
-     * @brief The city to get stop suggestions for (only needed if
-     *   @ref ServiceProvider::useSeparateCityValue returns true).
+     * @brief The city to get stop suggestions for.
+     * This is only needed if @ref ServiceProvider::useSeparateCityValue returns @c true.
      **/
     QString city;
 

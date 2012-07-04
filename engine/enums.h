@@ -24,8 +24,6 @@
 #ifndef ENUMS_HEADER
 #define ENUMS_HEADER
 
-#include "config.h"
-
 #include <QDebug>
 #include <QDate>
 
@@ -264,7 +262,7 @@ enum ServiceProviderType {
     ScriptedProvider = 1,
 
     /**
-     * The accessor uses a DB filled with GTFS data.
+     * The accessor uses a database filled with GTFS data.
      **/
     GtfsProvider = 2
 };
