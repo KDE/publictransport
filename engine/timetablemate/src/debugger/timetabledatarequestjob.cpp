@@ -75,10 +75,12 @@ TimetableDataRequestJob::TimetableDataRequestJob( DebuggerAgent *debugger,
 //           m_request(request->clone()), m_debugMode(debugMode)
 {
     switch ( request->parseMode ) {
-    case ParseForDeparturesArrivals:
+    case ParseForDepartures:
+    case ParseForArrivals:
         m_functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
         break;
-    case ParseForJourneys:
+    case ParseForJourneysByDepartureTime:
+    case ParseForJourneysByArrivalTime:
         m_functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS;
         break;
     case ParseForStopSuggestions:
@@ -510,7 +512,7 @@ TimetableDataRequestMessage CallScriptFunctionJob::message( MessageType messageT
 bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request )
 {
     if ( m_timetableData.isEmpty() ) {
-        if ( request->dataType == QLatin1String("arrivals") ) {
+        if ( request->parseMode == ParseForArrivals ) {
             m_explanation = i18nc("@info/plain", "No arrivals found");
         } else {
             m_explanation = i18nc("@info/plain", "No departures found");
@@ -666,7 +668,7 @@ bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request
     }
 
     // Show results
-    if ( request->dataType == QLatin1String("arrivals") ) {
+    if ( request->parseMode == ParseForArrivals ) {
         m_explanation = i18ncp("@info/plain", "Got %1 arrival",
                                               "Got %1 arrivals", m_timetableData.count());
     } else {
@@ -675,7 +677,7 @@ bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request
     }
 
     if ( countInvalid > 0 ) {
-        if ( request->dataType == QLatin1String("arrivals") ) {
+        if ( request->parseMode == ParseForArrivals ) {
             m_explanation += ", " +
                     i18ncp("@info/plain", "<warning>%1 arrival is invalid</warning>",
                            "<warning>%1 arrivals are invalid</warning>",

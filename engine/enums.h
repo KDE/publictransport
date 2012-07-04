@@ -239,10 +239,11 @@ typedef QHash<TimetableInformation, QVariant> TimetableData;
 /** @brief Different modes for parsing documents. */
 enum ParseDocumentMode {
     ParseInvalid = 0, /**< Invalid value, only used to mark as invalid. */
-    ParseForDeparturesArrivals = 1, /**< Parsing for departures or arrivals. */
-    ParseForJourneys, /**< Parsing for journeys. */
-    ParseForStopSuggestions, /**< Parsing for stop suggestions. */
-    ParseForStopIdThenDepartures /**< Parsing for a stop ID, to be used to get departures/arrivals. */
+    ParseForDepartures, /**< Parsing for departures. */
+    ParseForArrivals, /**< Parsing for arrivals. */
+    ParseForJourneysByDepartureTime, /**< Parsing for journeys departing at a given time. */
+    ParseForJourneysByArrivalTime, /**< Parsing for journeys arriving at a given time. */
+    ParseForStopSuggestions /**< Parsing for stop suggestions. */
 };
 
 /**
@@ -364,14 +365,16 @@ enum LineService {
 inline QDebug &operator <<( QDebug debug, ParseDocumentMode parseDocumentMode )
 {
     switch ( parseDocumentMode ) {
-    case ParseForDeparturesArrivals:
-        return debug << "ParseForDeparturesArrivals";
-    case ParseForJourneys:
-        return debug << "ParseForJourneys";
+    case ParseForDepartures:
+        return debug << "ParseForDepartures";
+    case ParseForArrivals:
+        return debug << "ParseForArrivals";
+    case ParseForJourneysByDepartureTime:
+        return debug << "ParseForJourneysByDepartureTime";
+    case ParseForJourneysByArrivalTime:
+        return debug << "ParseForJourneysByArrivalTime";
     case ParseForStopSuggestions:
         return debug << "ParseForStopSuggestions";
-    case ParseForStopIdThenDepartures:
-        return debug << "ParseForStopIdThenDepartures";
 
     default:
         return debug << "ParseDocumentMode unknown" << static_cast<int>(parseDocumentMode);

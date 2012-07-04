@@ -26,6 +26,30 @@
 // Qt includes
 #include <QScriptEngine>
 
+QString AbstractRequest::parseModeName() const
+{
+    return parseModeName( parseMode );
+}
+
+QString AbstractRequest::parseModeName( ParseDocumentMode parseMode )
+{
+    switch ( parseMode ) {
+    case ParseForDepartures:
+        return "departures";
+    case ParseForArrivals:
+        return "arrivals";
+    case ParseForJourneysByDepartureTime:
+    case ParseForJourneysByArrivalTime:
+        return "journeys";
+    case ParseForStopSuggestions:
+        return "stopSuggestions";
+    case ParseInvalid:
+        return "invalid";
+    default:
+        return "unknown";
+    }
+}
+
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
 QString StopSuggestionRequest::functionName() const
 {
@@ -33,7 +57,7 @@ QString StopSuggestionRequest::functionName() const
 }
 
 QString DepartureRequest::functionName() const
-{
+{ // Same name for ArrivalRequest
     return ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
 }
 
@@ -44,35 +68,41 @@ QString JourneyRequest::functionName() const
 
 QScriptValue StopSuggestionRequest::toScriptValue( QScriptEngine *engine ) const
 {
-    QScriptValue argument = engine->newObject();
-    argument.setProperty( QLatin1String("stop"), stop );
-    argument.setProperty( QLatin1String("city"), city );
-    argument.setProperty( QLatin1String("maxCount"), maxCount );
-    return argument;
+    QScriptValue value = engine->newObject();
+    value.setProperty( QLatin1String("stop"), stop );
+    value.setProperty( QLatin1String("city"), city );
+    value.setProperty( QLatin1String("maxCount"), maxCount );
+    return value;
 }
 
 QScriptValue DepartureRequest::toScriptValue( QScriptEngine *engine ) const
 {
-    QScriptValue argument = engine->newObject();
-    argument.setProperty( QLatin1String("stop"), stop );
-    argument.setProperty( QLatin1String("city"), city );
-    argument.setProperty( QLatin1String("maxCount"), maxCount );
-    argument.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
-    argument.setProperty( QLatin1String("dataType"), dataType );
-    return argument;
+    QScriptValue value = engine->newObject();
+    value.setProperty( QLatin1String("stop"), stop );
+    value.setProperty( QLatin1String("city"), city );
+    value.setProperty( QLatin1String("maxCount"), maxCount );
+    value.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
+    value.setProperty( QLatin1String("dataType"), parseModeName() );
+    return value;
+}
+
+QScriptValue ArrivalRequest::toScriptValue( QScriptEngine *engine ) const
+{
+    QScriptValue value = DepartureRequest::toScriptValue( engine );
+    value.setProperty( QLatin1String("dataType"), parseModeName() );
+    return value;
 }
 
 QScriptValue JourneyRequest::toScriptValue( QScriptEngine *engine ) const
 {
-    QScriptValue argument = engine->newObject();
-    argument.setProperty( QLatin1String("stop"), stop );
-    argument.setProperty( QLatin1String("city"), city );
-    argument.setProperty( QLatin1String("maxCount"), maxCount );
-    argument.setProperty( QLatin1String("originStop"), stop ); // Already in argument as "stop"
-    argument.setProperty( QLatin1String("targetStop"), targetStop );
-    argument.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
-    argument.setProperty( QLatin1String("dataType"), dataType );
-    return argument;
+    QScriptValue value = engine->newObject();
+    value.setProperty( QLatin1String("stop"), stop );
+    value.setProperty( QLatin1String("city"), city );
+    value.setProperty( QLatin1String("maxCount"), maxCount );
+    value.setProperty( QLatin1String("originStop"), stop ); // Already in argument as "stop"
+    value.setProperty( QLatin1String("targetStop"), targetStop );
+    value.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
+    return value;
 }
 
 #endif // BUILD_PROVIDER_TYPE_SCRIPT

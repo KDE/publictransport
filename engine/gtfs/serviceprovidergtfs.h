@@ -142,7 +142,7 @@ protected slots:
     void importProgress( KJob *job, ulong percent );
 
 protected:
-    inline void requestDeparturesOrArrivals( const DepartureRequest *request );
+    void requestDeparturesOrArrivals( const DepartureRequest *request );
 
     /**
      * @brief Requests a list of departures from the GTFS database.
@@ -154,7 +154,7 @@ protected:
      * @brief Requests a list of arrivals from the GTFS database.
      * @param request Information about the arrival request.
      **/
-    virtual void requestArrivals ( const ArrivalRequest &request );
+    virtual void requestArrivals( const ArrivalRequest &request );
 
     /**
      * @brief Requests a list of stop suggestions from the GTFS database.

@@ -133,10 +133,12 @@ void ScriptJob::run()
     QScriptValueList arguments = QScriptValueList() << request()->toScriptValue( m_engine );
     kDebug() << "Stop" << request()->toScriptValue( m_engine ).property("stop").toString();
     switch ( request()->parseMode ) {
-    case ParseForDeparturesArrivals:
+    case ParseForDepartures:
+    case ParseForArrivals:
         functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
         break;
-    case ParseForJourneys: {
+    case ParseForJourneysByDepartureTime:
+    case ParseForJourneysByArrivalTime: {
         functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS;
         break;
     } case ParseForStopSuggestions:
@@ -221,26 +223,23 @@ void ScriptJob::run()
         if ( m_published == 0 || m_scriptResult->count() > m_published ) {
             const bool couldNeedForcedUpdate = m_published > 0;
             switch ( request()->parseMode ) {
-            case ParseForDeparturesArrivals: {
-                const ArrivalRequest *arrivalRequest =
-                        dynamic_cast< const ArrivalRequest* >( request() );
-                qDebug() << receivers( SIGNAL(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,ArrivalRequest,bool)) );
-                qDebug() << receivers( SIGNAL(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)) );
-                if ( arrivalRequest ) {
-                    emit arrivalsReady( m_scriptResult->data().mid(m_published),
-                            m_scriptResult->features(), m_scriptResult->hints(),
-                            m_scriptNetwork->lastUrl(), globalInfo,
-                            *arrivalRequest, couldNeedForcedUpdate );
-                } else {
-                    emit departuresReady( m_scriptResult->data().mid(m_published),
-                            m_scriptResult->features(), m_scriptResult->hints(),
-                            m_scriptNetwork->lastUrl(), globalInfo,
-                            *dynamic_cast<const DepartureRequest*>(request()),
-                            couldNeedForcedUpdate );
-                }
+            case ParseForDepartures:
+                emit departuresReady( m_scriptResult->data().mid(m_published),
+                        m_scriptResult->features(), m_scriptResult->hints(),
+                        m_scriptNetwork->lastUrl(), globalInfo,
+                        *dynamic_cast<const DepartureRequest*>(request()),
+                        couldNeedForcedUpdate );
+                break;
+            case ParseForArrivals: {
+                emit arrivalsReady( m_scriptResult->data().mid(m_published),
+                        m_scriptResult->features(), m_scriptResult->hints(),
+                        m_scriptNetwork->lastUrl(), globalInfo,
+                        *dynamic_cast< const ArrivalRequest* >(request()),
+                        couldNeedForcedUpdate );
                 break;
             }
-            case ParseForJourneys:
+            case ParseForJourneysByDepartureTime:
+            case ParseForJourneysByArrivalTime:
                 emit journeysReady( m_scriptResult->data().mid(m_published),
                         m_scriptResult->features(), m_scriptResult->hints(),
                         m_scriptNetwork->lastUrl(), globalInfo,
@@ -416,23 +415,20 @@ void ScriptJob::publish()
 //                         m_scriptNetwork->lastUrl(), globalInfo, request(),
 //                         couldNeedForcedUpdate );
         switch ( request()->parseMode ) {
-        case ParseForDeparturesArrivals: {
-            const ArrivalRequest *arrivalRequest =
-                    dynamic_cast< const ArrivalRequest* >( request() );
-            if ( arrivalRequest ) {
-                emit arrivalsReady( m_scriptResult->data().mid(m_published),
-                        m_scriptResult->features(), m_scriptResult->hints(),
-                        m_scriptNetwork->lastUrl(), globalInfo, *arrivalRequest,
-                        couldNeedForcedUpdate );
-            } else {
-                emit departuresReady( m_scriptResult->data().mid(m_published),
-                        m_scriptResult->features(), m_scriptResult->hints(),
-                        m_scriptNetwork->lastUrl(), globalInfo,
-                        *dynamic_cast<const DepartureRequest*>(request()), couldNeedForcedUpdate );
-            }
+        case ParseForDepartures:
+            emit departuresReady( m_scriptResult->data().mid(m_published),
+                    m_scriptResult->features(), m_scriptResult->hints(),
+                    m_scriptNetwork->lastUrl(), globalInfo,
+                    *dynamic_cast<const DepartureRequest*>(request()), couldNeedForcedUpdate );
             break;
-        }
-        case ParseForJourneys:
+        case ParseForArrivals:
+            emit arrivalsReady( m_scriptResult->data().mid(m_published),
+                    m_scriptResult->features(), m_scriptResult->hints(),
+                    m_scriptNetwork->lastUrl(), globalInfo,
+                    *dynamic_cast<const ArrivalRequest*>(request()), couldNeedForcedUpdate );
+            break;
+        case ParseForJourneysByDepartureTime:
+        case ParseForJourneysByArrivalTime:
             emit journeysReady( m_scriptResult->data().mid(m_published),
                     m_scriptResult->features(), m_scriptResult->hints(),
                     m_scriptNetwork->lastUrl(), globalInfo,

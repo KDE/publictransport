@@ -665,7 +665,9 @@ void PublicTransportApplet::dataUpdated( const QString& sourceName,
         } else {
             kDebug() << "Received journey data, but journey list is hidden.";
         }
-    } else if ( data["parseMode"].toString() == QLatin1String("departures") ) {
+    } else if ( data["parseMode"].toString() == QLatin1String("departures") ||
+                data["parseMode"].toString() == QLatin1String("arrivals") )
+    {
         // List of departures / arrivals received
         emit validDepartureDataReceived();
         d->departureProcessor->processDepartures( sourceName, data );

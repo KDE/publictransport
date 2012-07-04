@@ -617,9 +617,11 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
 
         // Create info object for the timetable data
         PublicTransportInfoPtr info;
-        if ( parseMode == ParseForJourneys ) {
+        if ( parseMode == ParseForJourneysByDepartureTime ||
+             parseMode == ParseForJourneysByArrivalTime )
+        {
             info = QSharedPointer<JourneyInfo>( new JourneyInfo(timetableData) );
-        } else if ( parseMode == ParseForDeparturesArrivals ) {
+        } else if ( parseMode == ParseForDepartures || parseMode == ParseForArrivals ) {
             info = QSharedPointer<DepartureInfo>( new DepartureInfo(timetableData) );
         } else if ( parseMode == ParseForStopSuggestions ) {
             info = QSharedPointer<StopInfo>( new StopInfo(timetableData) );

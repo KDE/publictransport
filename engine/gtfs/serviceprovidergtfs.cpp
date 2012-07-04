@@ -272,15 +272,14 @@ void ServiceProviderGtfs::importFinished( KJob *job )
         for ( QHash<QString,AbstractRequest*>::ConstIterator it = m_waitingRequests.constBegin();
               it != m_waitingRequests.constEnd(); ++it )
         {
-            if ( (*it)->parseMode == ParseForDeparturesArrivals ) {
-                ArrivalRequest *arrivalRequest = static_cast<ArrivalRequest*>( *it );
-                if ( arrivalRequest ) {
-                    requestArrivals( *arrivalRequest );
-                } else {
-                    DepartureRequest *request = static_cast<DepartureRequest*>( *it );
-                    Q_ASSERT( request );
-                    requestDepartures( *request );
-                }
+            if ( (*it)->parseMode == ParseForDepartures ) {
+                DepartureRequest *request = static_cast<DepartureRequest*>( *it );
+                Q_ASSERT( request );
+                requestDepartures( *request );
+            } else if ( (*it)->parseMode == ParseForArrivals ) {
+                ArrivalRequest *request = static_cast<ArrivalRequest*>( *it );
+                Q_ASSERT( request );
+                requestArrivals( *request );
             } else if ( (*it)->parseMode == ParseForStopSuggestions ) {
                 StopSuggestionRequest *request = static_cast<StopSuggestionRequest*>( *it );
                 Q_ASSERT( request );
@@ -691,7 +690,7 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
             .arg( stopId )
             .arg( time.hour() * 60 * 60 + time.minute() * 60 + time.second() )
             .arg( request->maxCount )
-            .arg( request->dataType == "arrivals" ? '<' : '>' ) // For arrivals route_stops/route_times need stops before the home stop
+            .arg( request->parseMode == ParseForArrivals ? '<' : '>' ) // For arrivals route_stops/route_times need stops before the home stop
             .arg( routeSeparator );
     if ( !query.prepare(queryString) || !query.exec() ) {
         kDebug() << "Error while querying for departures:" << query.lastError();
@@ -760,7 +759,7 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
         }
 
         TimetableData data;
-        data[ DepartureDateTime ] = request->dataType == "arrivals" ? arrivalTime : departureTime;
+        data[ DepartureDateTime ] = request->parseMode == ParseForArrivals ? arrivalTime : departureTime;
         data[ TypeOfVehicle ] = vehicleTypeFromGtfsRouteType( query.value(routeTypeColumn).toInt() );
         data[ Operator ] = agency ? agency->name : QString();
 

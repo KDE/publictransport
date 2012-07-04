@@ -53,9 +53,6 @@ struct AbstractRequest {
     /** @brief The maximum number of result items, eg. departures or stop suggestions. */
     int maxCount;
 
-    /** @brief Like parseMode, but distinguishes between "arrivals" and "departures". */
-    QString dataType;
-
     /**
      * @brief The city to get stop suggestions for (only needed if
      *   @ref ServiceProvider::useSeparateCityValue returns true).
@@ -65,25 +62,28 @@ struct AbstractRequest {
     /** @brief Describes what should be retrieved with the request, eg. departures or a a stop ID. */
     ParseDocumentMode parseMode;
 
-    AbstractRequest()
+    QString parseModeName() const;
+
+    static QString parseModeName( ParseDocumentMode parseMode );
+
+    AbstractRequest( ParseDocumentMode parseMode = ParseInvalid )
     {
-        this->parseMode = ParseInvalid;
+        this->parseMode = parseMode;
         this->maxCount = -1;
         this->parseMode = ParseForStopSuggestions;
     };
 
     AbstractRequest( const QString &sourceName, const QString &stop, const QDateTime &dateTime,
-            int maxCount, const QString &city = QString(), const QString &dataType = "departures",
+            int maxCount, const QString &city = QString(),
             ParseDocumentMode parseMode = ParseForStopSuggestions )
             : sourceName(sourceName), dateTime(dateTime), stop(stop), maxCount(maxCount),
-              dataType(dataType), city(city), parseMode(parseMode)
+              city(city), parseMode(parseMode)
     {
     };
 
     AbstractRequest( const AbstractRequest &info )
             : sourceName(info.sourceName), dateTime(info.dateTime), stop(info.stop),
-              maxCount(info.maxCount), dataType(info.dataType), city(info.city),
-              parseMode(info.parseMode)
+              maxCount(info.maxCount), city(info.city), parseMode(info.parseMode)
     {
     };
 
@@ -100,11 +100,12 @@ struct AbstractRequest {
 };
 
 struct StopSuggestionRequest : public AbstractRequest {
-    StopSuggestionRequest() : AbstractRequest() { parseMode = ParseForStopSuggestions; };
+    StopSuggestionRequest()
+        : AbstractRequest(ParseForStopSuggestions) {};
     StopSuggestionRequest( const QString &sourceName, const QString &stop,
                            int maxCount, const QString &city = QString(),
                            ParseDocumentMode parseMode = ParseForStopSuggestions )
-        : AbstractRequest(sourceName, stop, QDateTime(), maxCount, city, "departures", parseMode) {};
+        : AbstractRequest(sourceName, stop, QDateTime(), maxCount, city, parseMode) {};
     StopSuggestionRequest( const StopSuggestionRequest &info ) : AbstractRequest(info) {};
 
     virtual AbstractRequest *clone() const
@@ -121,19 +122,18 @@ struct StopSuggestionRequest : public AbstractRequest {
 };
 
 struct DepartureRequest : public AbstractRequest {
-    DepartureRequest() : AbstractRequest() { parseMode = ParseForDeparturesArrivals; };
+    DepartureRequest( ParseDocumentMode parseMode = ParseForDepartures )
+        : AbstractRequest(parseMode) {};
     DepartureRequest( const QString &sourceName, const QString &stop,
                       const QDateTime &dateTime, int maxCount,
                       const QString &city = QString(),
-                      const QString &dataType = "departures",
-                      ParseDocumentMode parseMode = ParseForDeparturesArrivals )
-        : AbstractRequest(sourceName, stop, dateTime, maxCount, city, dataType, parseMode) {};
+                      ParseDocumentMode parseMode = ParseForDepartures )
+        : AbstractRequest(sourceName, stop, dateTime, maxCount, city, parseMode) {};
     DepartureRequest( const DepartureRequest &info ) : AbstractRequest(info) {};
 
     virtual AbstractRequest *clone() const
     {
-        return new DepartureRequest( sourceName, stop, dateTime, maxCount, city,
-                                     dataType, parseMode );
+        return new DepartureRequest( sourceName, stop, dateTime, maxCount, city, parseMode );
     };
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -145,18 +145,22 @@ struct DepartureRequest : public AbstractRequest {
 };
 
 struct ArrivalRequest : public DepartureRequest {
-    ArrivalRequest() : DepartureRequest() {};
+    ArrivalRequest( ParseDocumentMode parseMode = ParseForArrivals )
+        : DepartureRequest(parseMode) {};
     ArrivalRequest( const QString &sourceName, const QString &stop,
                     const QDateTime &dateTime, int maxCount,
                     const QString &city = QString(),
-                    const QString &dataType = "arrivals",
-                    ParseDocumentMode parseMode = ParseForDeparturesArrivals )
-        : DepartureRequest(sourceName, stop, dateTime, maxCount, city, dataType, parseMode) {};
+                    ParseDocumentMode parseMode = ParseForArrivals )
+        : DepartureRequest(sourceName, stop, dateTime, maxCount, city, parseMode) {};
 
     virtual AbstractRequest *clone() const
     {
-        return new ArrivalRequest( sourceName, stop, dateTime, maxCount, city, dataType, parseMode );
+        return new ArrivalRequest( sourceName, stop, dateTime, maxCount, city, parseMode );
     };
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
+#endif
 };
 
 /**
@@ -176,18 +180,16 @@ struct JourneyRequest : public AbstractRequest {
     /** @brief Current number of round trips used to fulfil the journey request. */
     int roundTrips;
 
-    JourneyRequest() : AbstractRequest()
+    JourneyRequest() : AbstractRequest(ParseForJourneysByDepartureTime)
     {
         this->roundTrips = 0;
-        this->parseMode = ParseForJourneys;
     };
 
     JourneyRequest( const QString &sourceName, const QString &startStop,
             const QString &targetStop, const QDateTime &dateTime, int maxCount,
             const QString &urlToUse, const QString &city = QString(),
-            const QString &dataType = "journeys",
-            ParseDocumentMode parseMode = ParseForJourneys )
-        : AbstractRequest(sourceName, startStop, dateTime, maxCount, city, dataType, parseMode),
+            ParseDocumentMode parseMode = ParseForJourneysByDepartureTime )
+        : AbstractRequest(sourceName, startStop, dateTime, maxCount, city, parseMode),
           targetStop(targetStop), urlToUse(urlToUse), roundTrips(0)
     {
     };
@@ -202,7 +204,7 @@ struct JourneyRequest : public AbstractRequest {
     virtual JourneyRequest *clone() const
     {
         return new JourneyRequest( sourceName, stop, targetStop, dateTime, maxCount, urlToUse,
-                                   city, dataType, parseMode );
+                                   city, parseMode );
     };
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT

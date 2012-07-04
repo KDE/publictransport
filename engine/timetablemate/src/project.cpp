@@ -3067,7 +3067,8 @@ DepartureRequest Project::getDepartureRequest( QWidget *parent, bool* cancelled 
         request.city = city ? city->text() : QString();
         request.stop = stop->text();
         request.dateTime = dateTime->dateTime();
-        request.dataType = dataType->itemData( dataType->currentIndex() ).toString();
+        request.parseMode = dataType->itemData( dataType->currentIndex() ).toString()
+                == QLatin1String("arrivals") ? ParseForArrivals : ParseForDepartures;
     }
     if ( cancelled ) {
         *cancelled = result != KDialog::Accepted;
@@ -3152,7 +3153,9 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
         info.stop = originStop->text();
         info.targetStop = targetStop->text();
         info.dateTime = dateTime->dateTime();
-        info.dataType = dataType->itemData( dataType->currentIndex() ).toString();
+        info.parseMode = dataType->itemData( dataType->currentIndex() ).toString()
+                == QLatin1String("arr") ? ParseForJourneysByArrivalTime
+                                        : ParseForJourneysByDepartureTime;
     }
     if ( cancelled ) {
         *cancelled = result != KDialog::Accepted;
