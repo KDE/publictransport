@@ -44,6 +44,11 @@ endif ( BUILD_PROVIDER_TYPE_SCRIPT )
 add_subdirectory( docks )
 add_subdirectory( tabs )
 
+# Add unit tests
+if ( BUILD_TESTS )
+    add_subdirectory( tests )
+endif ( BUILD_TESTS )
+
 kde4_add_ui_files( timetablemate_SRCS timetablemateview_base.ui preferences.ui )
 kde4_add_kcfg_files( timetablemate_SRCS settings.kcfgc )
 kde4_add_executable( timetablemate ${timetablemate_SRCS} )

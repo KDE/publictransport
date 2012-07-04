@@ -228,7 +228,7 @@ public:
     virtual NodeType type() const { return Statement; };
     virtual QString toString( bool shortString = false ) const {
         Q_UNUSED( shortString );
-        return "Statement: " + m_text;
+        return m_text;
     };
 };
 
@@ -295,6 +295,7 @@ public:
 
     virtual NodeType type() const { return Block; };
     virtual QString toString( bool shortString = false ) const;
+    virtual QString content() const;
 };
 
 /** @brief An argument of a function definition. */
@@ -330,6 +331,7 @@ public:
     virtual QList< CodeNode::Ptr > children() const;
     virtual QList< ArgumentNode::Ptr > arguments() const { return m_arguments; };
     virtual BlockNode::Ptr definition() const { return m_definition; };
+    inline QString name() const { return text(); };
 
 private:
     QList< ArgumentNode::Ptr > m_arguments;
@@ -370,10 +372,6 @@ public:
     /** @returns the column of the error, if any.
      * @see hasError */
     int errorColumn() const { return m_errorColumn; };
-
-    /** @returns the cursor of the error, if any.
-     * @see hasError */
-    KTextEditor::Cursor errorCursor() const;
 
 private:
     struct Token {

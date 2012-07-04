@@ -21,7 +21,6 @@
 #include "javascriptcompletiongeneric.h"
 
 #include <QHash>
-#include <KTextEditor/Cursor>
 #include <KLocalizedString>
 
 CodeNode::CodeNode( const QString& text, int line, int colStart, int colEnd ) : m_parent( 0 )
@@ -196,7 +195,7 @@ CodeNode::Ptr JavaScriptParser::parseBracketed()
         return CodeNode::Ptr( 0 );
     }
     Token *beginToken = currentToken();
-    m_lastToken = beginToken;
+//     m_lastToken = beginToken;
     // '{' is matched by parseBlock
     if ( !beginToken->isChar('(') && !beginToken->isChar('[') ) {
         return CodeNode::Ptr( 0 );
@@ -262,7 +261,7 @@ CodeNode::Ptr JavaScriptParser::parseString()
         return CodeNode::Ptr( 0 );
     }
     Token *beginToken = currentToken();
-    m_lastToken = beginToken;
+//     m_lastToken = beginToken;
     if ( !beginToken->isChar('\"') && !beginToken->isChar('\'') ) {
         if ( !beginToken->isChar('/') ) {
             return CodeNode::Ptr( 0 ); // Not a reg exp and not a string
@@ -475,10 +474,10 @@ CodeNode::Ptr JavaScriptParser::parseFunction()
     if ( atEnd() ) {
         return CodeNode::Ptr( 0 );
     }
-    m_lastToken = currentToken();
-    if ( atEnd() ) {
-        return CodeNode::Ptr( 0 );
-    }
+//     m_lastToken = currentToken();
+//     if ( atEnd() ) {
+//         return CodeNode::Ptr( 0 );
+//     }
 
     Token *firstToken = currentToken();
     if ( firstToken->text != "function" || !tryMoveToNextToken() ) {
@@ -683,11 +682,6 @@ QList< CodeNode::Ptr > JavaScriptParser::parse()
     return nodes;
 }
 
-KTextEditor::Cursor JavaScriptParser::errorCursor() const
-{
-    return KTextEditor::Cursor( m_errorLine - 1, m_errorColumn );
-}
-
 void JavaScriptParser::setErrorState( const QString& errorMessage, int errorLine,
                       int errorColumn, int affectedLine )
 {
@@ -840,6 +834,15 @@ QString BlockNode::toString( bool shortString ) const
         s += child->toString(shortString) + '\n';
     }
     return s + '}';
+}
+
+QString BlockNode::content() const
+{
+    QString s;
+    foreach ( const CodeNode::Ptr &child, m_children ) {
+        s += child->toString() + '\n';
+    }
+    return s.trimmed();
 }
 
 QString FunctionNode::id() const
