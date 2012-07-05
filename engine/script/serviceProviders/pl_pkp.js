@@ -20,13 +20,32 @@ function getTimetable( values ) {
 }
 
 function getStopSuggestions( values  ) {
-    var url = "http://www.imhd.zoznam.sk/" + values.city +
-	"/index.php?w=212b36213433213aef2f302523ea&lang=en" +
-	"&hladaj=" + values.stop;
+    var url = "http://rozklad.sitkol.pl/bin/stboard.exe/en" +
+	"?input=" + values.stop + "?&start=Show";
+    var html = network.getSynchronous( url );
 
-    var request = network.createRequest( url );
-    request.finished.connect( parseStopSuggestions );
-    network.get( request );
+    if ( !network.lastDownloadAborted ) {
+        // Find all stop suggestions
+	var stopRangeRegExp = /<select class="error" name="input"[^>]*>([\s\S]*?)<\/select>/i;
+	var range = stopRangeRegExp.exec( html );
+	if ( range == null ) {
+	    helper.error( "Stop range not found", html );
+	    return false;
+	}
+	range = range[1];
+
+	// Initialize regular expressions (compile them only once)
+	var stopRegExp = /<option value="[^"]+#([0-9]+)">([^<]*)<\/option>/ig;
+
+	// Go through all stop options
+	while ( (stop = stopRegExp.exec(range)) ) {
+	    result.addData( {StopID: stop[1], StopName: stop[2]} );
+	}
+
+	return result.hasData();
+    } else {
+	return false;
+    }
 }
 
 // This function parses a given HTML document for departure/arrival data.
@@ -227,33 +246,4 @@ function typeOfVehicleFromString( string ) {
     } else {
         return string;
     }
-}
-
-// This function parses a given HTML document for stop suggestions.
-function parseStopSuggestions( html ) {
-    // Find block of stops
-    var stopRangeRegExp = /<select class="error" name="input"[^>]*>([\s\S]*?)<\/select>/i;
-    var range = stopRangeRegExp.exec( html );
-    if ( range == null ) {
-	    helper.error( "Stop range not found", html );
-	    return false;
-    }
-    range = range[1];
-
-    // Initialize regular expressions (compile them only once)
-    var stopRegExp = /<option value="[^"]+#([0-9]+)">([^<]*)<\/option>/ig;
-
-    // Go through all stop options
-    while ( (stop = stopRegExp.exec(range)) ) {
-	    var stopID = stop[1];
-	    var stopName = stop[2];
-
-	    // Add stop
-	    timetableData.clear();
-	    timetableData.set( 'StopName', stopName );
-	    timetableData.set( 'StopID', stopID );
-	    result.addData( timetableData );
-    }
-
-    return result.hasData();
 }
