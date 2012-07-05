@@ -133,6 +133,8 @@ function parseTimetable( html ) {
     var delayOnTimeRegExp = /<span style="[^"]*?">p&#252;nktlich<\/span>/i;
     var trainCanceledRegExp = /<span class="[^"]*?">Zug f&#228;llt aus<\/span>/i;
 
+    var lastDeparture = false;
+
     // Go through all departure blocks
     var departureRow = { position: -1 };
     while ( (departureRow = helper.findFirstHtmlTag(departureBlock.contents, "tr",
@@ -254,16 +256,52 @@ function parseTimetable( html ) {
         }
 
         // Add departure
-        print( "Add Data: " + departure.Target + " " + departure.DepartureDateTime );
-        result.addData( departure );
+        print( "Add Data: " + departure.TransportLine + ": " + departure.Target + " " + departure.DepartureDateTime );
+//         result.addData( departure );
+	if ( lastDeparture != false &&
+	     !compareDepartures(lastDeparture, departure) )
+	{
+	    result.addData( lastDeparture );
+	}
+	lastDeparture = departure;
 
 //         if ( result.count % 10 == 0 ) {
 //             result.publish( result );
 //         }
     }
 
+    if ( lastDeparture != false ) {
+      result.addData( lastDeparture );
+    }
+
     print( "Finished script execution" );
     return returnValue;
+}
+
+// Returns true, if departure1 and departure2 are equal, except for a longer route stop list
+// in departure2, but the route stop list of departure2 must begin with the route stop list
+// of departure1
+function compareDepartures( departure1, departure2 ) {
+    if ( departure1.DepartureDateTime.getTime() == departure2.DepartureDateTime.getTime() &&
+         departure1.TypeOfVehicle == departure2.TypeOfVehicle &&
+         departure1.TransportLine == departure2.TransportLine &&
+         departure1.Platform == departure2.Platform &&
+         departure1.RouteStops.length < departure2.RouteStops.length )
+    {
+        for ( var i = 0; i < departure1.RouteStops.length; ++i ) {
+            if ( departure1.RouteStops[i] != departure2.RouteStops[i] ||
+                 (departure1.RouteTimes.length > i && departure2.RouteTimes.length > i &&
+                  departure1.RouteTimes[i] != departure2.RouteTimes[i]) )
+            {
+                return false;
+            }
+        }
+        print( "Equal departures found" );
+        return true;
+    }
+
+
+    return false;
 }
 
 function parseJourneys( html ) {
