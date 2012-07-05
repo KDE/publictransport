@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<serviceProvider fileVersion="1.0" version="1.3" type="Script">
+<serviceProvider fileVersion="1.0" version="1.4" type="script">
     <name lang="en">Polskie Koleje Państwowe</name>
     <description lang="en">This service provider has static data. That means, that displayed departures may actually not be valid for today. Please view the journey news, to see if a departure is valid for today (e.g. 'Mo-Fr').</description>
     <author>
@@ -11,9 +11,10 @@
     <shortUrl>rozklad-pkp.pl</shortUrl>
     <script>pl_pkp.js</script>
     <changelog>
-        <entry since="1.0">Initial version.</entry>
-        <entry since="1.2" releasedWith="0.10">Ported to a script.</entry>
-        <entry since="1.3" releasedWith="0.10">Updated to new website layout, add delay parsing.</entry>
+        <entry author="fpuelz" version="1.4">Update to new script API</entry>
+        <entry author="fpuelz" version="1.3" engineVersion="0.10">Updated to new website layout, add delay parsing.</entry>
+        <entry author="fpuelz" version="1.2" engineVersion="0.10">Ported to a script.</entry>
+        <entry author="fpuelz" version="1.0">Initial version.</entry>
     </changelog>
     <samples>
         <stop>Warszawa Centralna</stop>

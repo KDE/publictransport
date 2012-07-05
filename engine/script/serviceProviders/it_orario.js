@@ -8,11 +8,43 @@ function usedTimetableInformations() {
 	     'RouteTransportLines'*/ ];
 }
 
+function getTimetable( values ) {
+    var url = "http://www.orariotrasporti.regione.liguria.it/JourneyPlanner/bin/stboard.exe/en" +
+	    "?input=" + values.stop + "!" +
+	    "&time=" + helper.formatDateTime(values.dateTime, "hh:mm") +
+	    "&boardType=" + (values.dataType == "arrivals" ? "arr" : "dep") +
+	    "&date=" + helper.formatDateTime(values.dateTime, "dd.MM.yy") +
+	    "&disableEquivs=no" +
+	    "&maxJourneys=" + values.maxCount +
+	    "&start=yes&productsFilter=111111111";
+
+    var request = network.createRequest( url );
+    request.finished.connect( parseTimetable );
+    network.get( request );
+}
+
+function typeOfVehicleFromString( string ) {
+    string = string.toLowerCase();
+    if ( string == "ice" ) {
+        return "highspeedtrain";
+    } else if ( string == "ic" || string == "eu" ) { // Eurostar
+        return "intercitytrain";
+    } else if ( string == "re" ) {
+        return "regionalexpresstrain";
+    } else if ( string == "rb" ) {
+        return "regionaltrain";
+    } else if ( string == "ir" ) {
+        return "interregionaltrain";
+    } else {
+        return string;
+    }
+}
+
 function parseTimetable( html ) {
     var returnValue = new Array;
-	// Dates are set from today, not the requested date. They need to be adjusted by X days,
-	// where X is the difference in days between today and the requested date.
-	returnValue.push( 'dates need adjustment' );
+    // Dates are set from today, not the requested date. They need to be adjusted by X days,
+    // where X is the difference in days between today and the requested date.
+    returnValue.push( 'dates need adjustment' );
 
     // Find block of departures
     var str = helper.extractBlock( html,
@@ -46,20 +78,20 @@ function parseTimetable( html ) {
 		}
 
 		// Initialize result variables with defaults
-		var time, typeOfVehicle = "", transportLine, targetString, platformString = "", operator = "",
-			delay = -1, delayReason = "", journeyNews = "",
-			routeStops = new Array, routeTimes = new Array, exactRouteStops = 0;
+		var departure = { RouteStops: new Array, RouteTimes: new Array, RouteExactStops: 0 };
 
 		// Parse time column
 		time = helper.matchTime( helper.trim(columns[0]), "hh:mm" );
-		if ( time.length != 2 ) {
+		if ( time.error ) {
 			helper.error("Unexcepted string in time column", columns[0]);
 			continue;
 		}
+		departure.DepartureDateTime = new Date(); // FIXME: Assume today
+		departure.DepartureDateTime.setHours( time.hour, time.minute, 0 );
 
 		// Parse type of vehicle column
 		if ( (typeOfVehicleArr = typeOfVehicleRegExp.exec(columns[1])) != null ) {
-			typeOfVehicle = typeOfVehicleArr[1];
+			departure.TypeOfVehicle = typeOfVehicleFromString( typeOfVehicleArr[1] );
 		} else {
 			helper.error("Unexcepted string in type of vehicle column", columns[1]);
 			continue;
@@ -67,12 +99,12 @@ function parseTimetable( html ) {
 
 		// Parse operator column
 		if ( (operatorArr = operatorRegExp.exec(columns[2])) != null )
-			operator = operatorArr[1];
+			departure.Operator = operatorArr[1];
 
 		// Parse transport line column
-		transportLine = helper.trim( helper.stripTags(columns[3]) );
-		if ( transportLine.substring(0, 4) == "Lin " )
-			transportLine = helper.trim( transportLine.substring(4) );
+		departure.TransportLine = helper.trim( helper.stripTags(columns[3]) );
+		if ( departure.TransportLine.substring(0, 4) == "Lin " )
+			departure.TransportLine = helper.trim( departure.TransportLine.substring(4) );
 
 		// Parse route column ..
 		//  .. target
@@ -80,7 +112,7 @@ function parseTimetable( html ) {
 			helper.error("Unexcepted string in target column", columns[4]);
 			continue;
 		}
-		targetString = helper.trim( targetString[1] );
+		departure.Target = helper.trim( targetString[1] );
 
 		// .. route
 		var routeColumn = columns[4].substring( targetRegExp.lastIndex );
@@ -91,10 +123,10 @@ function parseTimetable( html ) {
 			var routeBlocks = route.split( routeBlocksRegExp );
 
 			if ( !routeBlockEndOfExactRouteMarkerRegExp.test(route) ) {
-				exactRouteStops = routeBlocks.length;
+				departure.RouteExactStops = routeBlocks.length;
 			} else {
 				while ( (splitter = routeBlocksRegExp.exec(route)) ) {
-					++exactRouteStops;
+					++departure.RouteExactStops;
 					if ( routeBlockEndOfExactRouteMarkerRegExp.test(splitter) )
 					break;
 				}
@@ -105,8 +137,8 @@ function parseTimetable( html ) {
 				if ( lines.count < 4 )
 					continue;
 
-				routeStops.push( lines[1] );
-				routeTimes.push( lines[3] );
+				departure.RouteStops.push( lines[1] );
+				departure.RouteTimes.push( lines[3] );
 			}
 		}
 	//
@@ -122,50 +154,37 @@ function parseTimetable( html ) {
 	// 	}
 
 		// Add departure
-		timetableData.clear();
-		timetableData.set( 'TransportLine', transportLine );
-		timetableData.set( 'TypeOfVehicle', typeOfVehicle );
-		timetableData.set( 'Target', targetString );
-		timetableData.set( 'DepartureHour', time[0] );
-		timetableData.set( 'DepartureMinute', time[1] );
-		timetableData.set( 'Operator', operator );
-	// 	timetableData.set( 'Platform', platformString );
-	// 	timetableData.set( 'Delay', delay );
-	// 	timetableData.set( 'DelayReason', delayReason );
-	// 	timetableData.set( 'JourneyNews', journeyNews );
-		timetableData.set( 'RouteStops', routeStops );
-		timetableData.set( 'RouteTimes', routeTimes );
-		timetableData.set( 'RouteExactStops', exactRouteStops );
-		result.addData( timetableData );
+		result.addData( departure );
     }
 
     return returnValue;
 }
 
-function parseStopSuggestions( html ) {
-    // Find block of stops
-    var pos = html.search( /<select class="error".*?name="input"[^>]*?>/i );
-    if ( pos == -1 ) {
-		helper.error("Stop suggestion element not found!", html);
-		return;
+function getStopSuggestions( values ) {
+    var url = "http://www.orariotrasporti.regione.liguria.it/JourneyPlanner/bin/stboard.exe/en" +
+	      "?input=" + values.stop + "?";
+
+    var html = network.getSynchronous( url );
+    if ( !network.lastDownloadAborted ) {
+        // Find all stop suggestions
+	var pos = html.search( /<select class="error".*?name="input"[^>]*?>/i );
+	if ( pos == -1 ) {
+	    helper.error("Stop suggestion element not found!", html);
+	    return;
 	}
-    var end = html.indexOf( '</select>', pos + 1 );
-    var str = html.substr( pos, end - pos );
+	var end = html.indexOf( '</select>', pos + 1 );
+	var str = html.substr( pos, end - pos );
 
-    // Initialize regular expressions (compile them only once)
-    var stopRegExp = /<option value="[^"]+?#([0-9]+)">([^<]*?)<\/option>/ig;
+	// Initialize regular expressions (compile them only once)
+	var stopRegExp = /<option value="[^"]+?#([0-9]+)">([^<]*?)<\/option>/ig;
 
-    // Go through all stop options
-    while ( (stop = stopRegExp.exec(str)) ) {
-		var stopID = stop[1];
-		var stopName = stop[2];
+	// Go through all stop options
+	while ( (stop = stopRegExp.exec(str)) ) {
+	    result.addData( {StopID: stop[1], StopName: stop[2]} );
+	}
 
-		// Add stop
-		timetableData.clear();
-		timetableData.set( 'StopName', stopName );
-		timetableData.set( 'StopID', stopID );
-		result.addData( timetableData );
+        return result.hasData();
+    } else {
+        return false;
     }
-
-    return result.hasData();
 }

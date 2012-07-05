@@ -31,21 +31,21 @@ function getStopSuggestions( values  ) {
 
 // This function parses a given HTML document for departure/arrival data.
 function parseTimetable( html ) {
-	// Find block of departures
-	if ( html.search(/<td class=\"errormessage\">Your input is ambiguous. Please choose from the selection list.<\/td>/i) != -1 ) {
-		helper.error("No data, only stop suggestions in the HTML document");
-		return false;
-	} else if ( html.search(/<td [^>]*class="errormessage"[^>]*>[^<]*No trains in this space of time[^<]*<\/td>/) != -1 ) {
-		helper.error("No data for the given space of time in the HTML document", html.substr(test, 100));
-		return true;
-	}
+    // Find block of departures
+    if ( html.search(/<td class=\"errormessage\">Your input is ambiguous. Please choose from the selection list.<\/td>/i) != -1 ) {
+	    helper.error("No data, only stop suggestions in the HTML document");
+	    return false;
+    } else if ( html.search(/<td [^>]*class="errormessage"[^>]*>[^<]*No trains in this space of time[^<]*<\/td>/) != -1 ) {
+	    helper.error("No data for the given space of time in the HTML document", html.substr(test, 100));
+	    return true;
+    }
 
-	// Initialize regular expressions
-	var departureRegExp = /<tr class="depboard-(?:dark|light)">([\s\S]*?)<\/tr>/ig;
+    // Initialize regular expressions
+    var departureRegExp = /<tr class="(?:dep|arr)board-(?:dark|light)">([\s\S]*?)<\/tr>/ig;
     var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
-	var transportLineRegExp = /<a[^>]*>([\s\S]*?)<\/a>/i;
-	var typeOfVehicleRegExp = /<img [^>]*src="\/hafas-res\/img\/([^_]*)_pic.gif"[^>]*>/i;
-	var targetRegExp = /<span[^>]*>([\s\S]*?)<\/span>/i;
+    var transportLineRegExp = /<a[^>]*>([\s\S]*?)<\/a>/i;
+    var typeOfVehicleRegExp = /<img [^>]*src="\/hafas-res\/img\/([^_]*)_pic.gif"[^>]*>/i;
+    var targetRegExp = /<span[^>]*>([\s\S]*?)<\/span>/i;
     var routeBlocksRegExp = /\r?\n\s*(-|&#8226;)\s*\r?\n/gi;
     var routeBlockEndOfExactRouteMarkerRegExp = /&#8226;/i;
     var meaningsRegExp = /<table [^>]*class="[^"]*hafasResult(?:\s+[^"]*)?"[^>]*>[\s\S]*?<tr>[\s\S]*?(<th[\s\S]*?)<\/tr>/i;
@@ -110,36 +110,28 @@ function parseTimetable( html ) {
 		}
 
 		// Initialize result variables with defaults
-		var time = 0, typeOfVehicle = "", transportLine = "", targetString = "", platformString = "",
-			routeStops = new Array, routeTimes = new Array, exactRouteStops = 0;
+		var departure = { RouteStops: new Array, RouteTimes: new Array, RouteExactStops: 0 };
 
 		// Parse time column
 		time = helper.matchTime( helper.trim(helper.stripTags(columns[timeCol])), "hh:mm" );
-		if ( time.length != 2 ) {
+		if ( time.error ) {
 			helper.error("Unexpected string in time column", columns[timeCol]);
 			continue;
 		}
+		departure.DepartureDateTime = new Date(); // FIXME Expect today
+		departure.DepartureDateTime.setHours( time.hour, time.minute );
 
 		if ( (typeOfVehicle = typeOfVehicleRegExp.exec(columns[typeOfVehicleCol])) ) {
-			typeOfVehicle = typeOfVehicle[1].toLowerCase();
+			departure.TypeOfVehicle = typeOfVehicleFromString( typeOfVehicle[1].toLowerCase() );
 		} else {
 			helper.error("Unexpected string in type of vehicle column", columns[typeOfVehicleCol]);
 			continue;
 		}
 
-		if ( typeOfVehicle == "skw" || typeOfVehicle == "wkd" || typeOfVehicle == "km" ) {
-			typeOfVehicle = "regional";
-		} else if ( typeOfVehicle == "tlk" ) {
-			typeOfVehicle = "interregional";
-		} else if ( typeOfVehicle == "eic" || typeOfVehicle == "ex" ) {
-			typeOfVehicle = "intercity";
-		} else if ( typeOfVehicle == "trm" ) {
-			typeOfVehicle = "tram";
-		}
 
 		// Parse transport line column
 		if ( (transportLine = transportLineRegExp.exec(columns[transportLineCol])) ) {
-			transportLine = helper.trim(helper.stripTags(transportLine[1]));
+			departure.TransportLine = helper.trim(helper.stripTags(transportLine[1]));
 		} else {
 			helper.error("Unexpected string in transport line column", columns[transportLineCol]);
 			continue;
@@ -147,7 +139,7 @@ function parseTimetable( html ) {
 
 		// Parse target column
 		if ( (targetString = targetRegExp.exec(columns[targetCol])) ) {
-			targetString = helper.trim( helper.stripTags(targetString[1]) );
+			departure.Target = helper.trim( helper.stripTags(targetString[1]) );
 		} else {
 			helper.error("Unexpected string in target column", columns[targetCol]);
 			continue;
@@ -161,10 +153,10 @@ function parseTimetable( html ) {
 			var routeBlocks = route.split( routeBlocksRegExp );
 
 			if ( !routeBlockEndOfExactRouteMarkerRegExp.test(route) ) {
-				exactRouteStops = routeBlocks.length;
+				departure.RouteExactStops = routeBlocks.length;
 			} else {
 				while ( (splitter = routeBlocksRegExp.exec(route)) ) {
-					++exactRouteStops;
+					++departure.RouteExactStops;
 					if ( routeBlockEndOfExactRouteMarkerRegExp.test(splitter) )
 						break;
 				}
@@ -175,53 +167,42 @@ function parseTimetable( html ) {
 				if ( lines.count < 4 )
 					continue;
 
-				routeStops.push( helper.trim(helper.stripTags(lines[1])) );
-				routeTimes.push( lines[3] );
+				departure.RouteStops.push( helper.trim(helper.stripTags(lines[1])) );
+				departure.RouteTimes.push( lines[3] );
 			}
 		}
 
 		// Parse platform column
-		var platformString = columns.length > platformCol && typeof(columns[platformCol]) != 'undefined'
+		departure.Platform = columns.length > platformCol && typeof(columns[platformCol]) != 'undefined'
 				? helper.trim( helper.stripTags(columns[platformCol]) ) : "";
 
-        // Parse delay column
-        var delay = -1;
-        if ( delayCol != -1 ) {
-            var delayString = helper.trim( helper.stripTags(columns[delayCol]) );
-            if ( delayString.length != 0 ) {
-                if ( delayString.indexOf("/hafas-res/img/rt_on_time.gif") != -1 ) {
-                    delay = 0;
-                } else {
-                    var prognosisTime = helper.matchTime( delayString, "hh:mm" );
-                    if ( prognosisTime.length == 2 ) {
-                        // Prognosis time found
-                        var delayResult = helper.duration( timeString,
-                                helper.formatTime(prognosisTime[0], prognosisTime[1], "hh:mm"),
-                                "hh:mm" );
-                        if ( delayResult < 0 ) {
-                            helper.error("Unexpected string in prognosis column!", columns[delayCol]);
-                        } else {
-                            println("parsed delay: " + delayResult + " minutes");
-                            delay = delayResult;
-                        }
-                    }
-                }
-            }
-        }
+		// Parse delay column
+		departure.Delay = -1;
+		if ( delayCol != -1 ) {
+		    var delayString = helper.trim( helper.stripTags(columns[delayCol]) );
+		    if ( delayString.length != 0 ) {
+			if ( delayString.indexOf("/hafas-res/img/rt_on_time.gif") != -1 ) {
+			    departure.Delay = 0;
+			} else {
+			    var prognosisTime = helper.matchTime( delayString, "hh:mm" );
+			    if ( prognosisTime.length == 2 ) {
+				// Prognosis time found
+				var delayResult = helper.duration( timeString,
+					helper.formatTime(prognosisTime[0], prognosisTime[1], "hh:mm"),
+					"hh:mm" );
+				if ( delayResult < 0 ) {
+				    helper.error("Unexpected string in prognosis column!", columns[delayCol]);
+				} else {
+				    println("parsed delay: " + delayResult + " minutes");
+				    departure.Delay = delayResult;
+				}
+			    }
+			}
+		    }
+		}
 
 		// Add departure to the result set
-		timetableData.clear();
-		timetableData.set( 'DepartureHour', time[0] );
-		timetableData.set( 'DepartureMinute', time[1] );
-		timetableData.set( 'TransportLine', transportLine );
-		timetableData.set( 'TypeOfVehicle', typeOfVehicle );
-		timetableData.set( 'Platform', platformString );
-        timetableData.set( 'Target', targetString );
-        timetableData.set( 'Delay', delay );
-		timetableData.set( 'RouteStops', routeStops );
-		timetableData.set( 'RouteTimes', routeTimes );
-		timetableData.set( 'RouteExactStops', exactRouteStops );
-		result.addData( timetableData );
+		result.addData( departure );
 
 		++departureNumber;
 	}
@@ -231,30 +212,47 @@ function parseTimetable( html ) {
 	}
 }
 
+function typeOfVehicleFromString( string ) {
+    string = string.toLowerCase();
+    if ( string == "trm" ) {
+        return "tram";
+    } else if ( string == "ic" || string == "eic" || string == "ex" || string == "ec" ) { // Eurocity
+        return "intercitytrain";
+    } else if ( string == "re" ) {
+        return "regionalexpresstrain";
+    } else if ( string == "skw" || string == "wkd" || string == "km" ) { // Metronom regional
+        return "regionaltrain";
+    } else if ( string == "tlk" || string == "ir" ) {
+        return "interregionaltrain";	
+    } else {
+        return string;
+    }
+}
+
 // This function parses a given HTML document for stop suggestions.
 function parseStopSuggestions( html ) {
     // Find block of stops
     var stopRangeRegExp = /<select class="error" name="input"[^>]*>([\s\S]*?)<\/select>/i;
-	var range = stopRangeRegExp.exec( html );
-	if ( range == null ) {
-		helper.error( "Stop range not found", html );
-		return false;
-	}
-	range = range[1];
+    var range = stopRangeRegExp.exec( html );
+    if ( range == null ) {
+	    helper.error( "Stop range not found", html );
+	    return false;
+    }
+    range = range[1];
 
     // Initialize regular expressions (compile them only once)
     var stopRegExp = /<option value="[^"]+#([0-9]+)">([^<]*)<\/option>/ig;
 
     // Go through all stop options
     while ( (stop = stopRegExp.exec(range)) ) {
-		var stopID = stop[1];
-		var stopName = stop[2];
+	    var stopID = stop[1];
+	    var stopName = stop[2];
 
-		// Add stop
-		timetableData.clear();
-		timetableData.set( 'StopName', stopName );
-		timetableData.set( 'StopID', stopID );
-		result.addData( timetableData );
+	    // Add stop
+	    timetableData.clear();
+	    timetableData.set( 'StopName', stopName );
+	    timetableData.set( 'StopID', stopID );
+	    result.addData( timetableData );
     }
 
     return result.hasData();
