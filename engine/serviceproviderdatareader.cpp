@@ -212,7 +212,8 @@ QString ServiceProviderDataReader::readStartElementString() const
     for ( QXmlStreamAttributes::ConstIterator it = attr.constBegin();
           it != attr.constEnd(); ++it )
     {
-        elementString.append( "=\"" ).append( it->value() ).append( '\"' );
+        elementString.append( QString(" %1=\"%2\"")
+                .arg(it->name().toString(), it->value().toString()) );
     }
     elementString.append( '>' );
     return elementString;
