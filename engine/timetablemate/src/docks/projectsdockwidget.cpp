@@ -31,7 +31,6 @@
 
 // KDE includes
 #include <KLocalizedString>
-#include <KComboBox>
 #include <KIconLoader>
 #include <KDebug>
 #include <KIcon>
@@ -47,7 +46,7 @@ ProjectsDockWidget::ProjectsDockWidget( ProjectModel *model, KActionMenu *showDo
                                         QWidget *parent )
         : AbstractDockWidget( i18nc("@window:title Dock title", "Projects"),
                              showDocksAction, parent ),
-          m_model(model), m_debugProjectComboBox(0), m_projectsWidget(0)
+          m_model(model), m_projectsWidget(0)
 {
     setObjectName( "projects" );
 
@@ -63,15 +62,6 @@ ProjectsDockWidget::ProjectsDockWidget( ProjectModel *model, KActionMenu *showDo
     QWidget *container = new QWidget( this );
     container->setMinimumSize( 150, 150 );
     QLabel *label = new QLabel( i18nc("@info", "Active Project:"), container );
-    m_debugProjectComboBox = new KComboBox( container );
-    m_debugProjectComboBox->setModel( model );
-    m_debugProjectComboBox->setToolTip( i18nc("@info:tooltip",
-            "Select the project you want to debug here") );
-    m_debugProjectComboBox->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
-    connect( m_debugProjectComboBox, SIGNAL(currentIndexChanged(int)),
-             model, SLOT(setActiveProjectFromRow(int)) );
-    connect( model, SIGNAL(activeProjectAboutToChange(Project*,Project*)),
-             this, SLOT(activeProjectAboutToChange(Project*,Project*)) );
     m_projectsWidget = new QTreeView( container );
     m_projectsWidget->setModel( model );
     m_projectsWidget->setHeaderHidden( true );
@@ -89,21 +79,11 @@ ProjectsDockWidget::ProjectsDockWidget( ProjectModel *model, KActionMenu *showDo
     projectsLayout->setVerticalSpacing( 0 );
     projectsLayout->setRowWrapPolicy( QFormLayout::WrapLongRows );
     projectsLayout->addRow( m_projectsWidget );
-    projectsLayout->addRow( label, m_debugProjectComboBox );
     setWidget( container );
     connect( m_projectsWidget, SIGNAL(doubleClicked(QModelIndex)),
              this, SLOT(projectItemDoubleClicked(QModelIndex)) );
     connect( m_projectsWidget, SIGNAL(customContextMenuRequested(QPoint)),
              this, SLOT(projectItemContextMenuRequested(QPoint)) );
-}
-
-void ProjectsDockWidget::activeProjectAboutToChange( Project *debugProject,
-                                                     Project *previousDebugProject )
-{
-    Q_UNUSED( previousDebugProject );
-    const bool wasBlocked = m_debugProjectComboBox->blockSignals( true );
-    m_debugProjectComboBox->setCurrentIndex( m_model->indexFromProject(debugProject).row() );
-    m_debugProjectComboBox->blockSignals( wasBlocked );
 }
 
 void ProjectsDockWidget::projectItemDoubleClicked( const QModelIndex &index )

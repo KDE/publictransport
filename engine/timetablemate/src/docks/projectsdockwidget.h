@@ -24,7 +24,6 @@
 
 class Project;
 class ProjectModel;
-class KComboBox;
 class QModelIndex;
 class QTreeView;
 
@@ -37,17 +36,14 @@ public:
     virtual KIcon icon() const { return KIcon("project-development"); };
     virtual Qt::DockWidgetArea defaultDockArea() const { return Qt::LeftDockWidgetArea; };
     ProjectModel *model() const { return m_model; };
-    KComboBox *debugProjectComboBox() const { return m_debugProjectComboBox; };
     QTreeView *projectsWidget() const { return m_projectsWidget; };
 
 protected slots:
-    void activeProjectAboutToChange( Project *debugProject, Project *previousDebugProject );
     void projectItemDoubleClicked( const QModelIndex &index );
     void projectItemContextMenuRequested( const QPoint &pos );
 
 private:
     ProjectModel *m_model;
-    KComboBox *m_debugProjectComboBox;
     QTreeView *m_projectsWidget;
 };
 

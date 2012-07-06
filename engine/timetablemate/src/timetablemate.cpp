@@ -1243,6 +1243,12 @@ void TimetableMate::setupActions() {
             KIcon("edit-select"), i18nc("@action", "&Active Project"), this );
     actionCollection()->addAction( QLatin1String("project_choose_active"), chooseActiveProject );
 
+    QToolButton *activeProjectButton = new QToolButton( this );
+    activeProjectButton->setDefaultAction( chooseActiveProject );
+    activeProjectButton->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
+    activeProjectButton->setPopupMode( QToolButton::InstantPopup );
+    menuBar()->setCornerWidget( activeProjectButton );
+
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     // TODO Move to Project? => Project::ProjectAction
     KAction *scriptNextFunction = ScriptTab::createNextFunctionAction( this );
