@@ -359,6 +359,9 @@ CodeNode::Ptr JavaScriptParser::parseStatement()
     Token *firstToken = currentToken();
     if ( m_lastToken == firstToken ) {
         moveToNextToken();
+        if ( atEnd() ) {
+            return CodeNode::Ptr( 0 );
+        }
         firstToken = currentToken();
     }
     m_lastToken = firstToken;
