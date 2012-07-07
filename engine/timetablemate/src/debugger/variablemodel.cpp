@@ -432,7 +432,7 @@ bool VariableData::operator==( const VariableData &other ) const
            description == other.description;
 }
 
-void VariableModel::updateVariables( const QList<VariableTreeData> &variables,
+bool VariableModel::updateVariables( const QList<VariableTreeData> &variables,
                                      VariableItem *parent, bool currentDepth )
 {
     VariableItemList *currentVariables;
@@ -443,38 +443,32 @@ void VariableModel::updateVariables( const QList<VariableTreeData> &variables,
         currentVariables = &m_variableStack[ m_depthIndex ];
     } else {
         kDebug() << "Invalid depth" << m_depthIndex;
-        return;
+        return false;
     }
 
     if ( currentVariables->isEmpty() && variables.isEmpty() ) {
-        return;
+        return false;
     }
 
+    bool hasChanges = false;
     QHash< QString, VariableTreeData > newVariables;
-    QStringList newNames;// = newVariables.nameToVariable.keys();
     foreach ( const VariableTreeData &item, variables ) {
         newVariables.insert( item.name, item );
-        newNames << item.name;
     }
 
     QList< VariableItemPair > newItems, changedItems;
     QStringList removedNames;
     if ( currentVariables ) {
-        currentVariables->nameToVariable.keys();
+        foreach ( VariableItem *item, currentVariables->variables ) {
+            // Do not remove helper objects or special type variables
+            // Only remove variables from the current depth
+            if ( !item->isHelperObject() && item->type() != SpecialVariable &&
+                 (item->isDefinedInParentContext() ^ currentDepth) )
+            {
+                removedNames << item->name();
+            }
+        }
     }
-
-//     if ( !parent && currentDepthIndex > 0 ) {
-//         // Add global items from the first variable list in the stack
-//         VariableItemList &globalVariables = m_variableStack.first();
-//         kDebug() << globalVariables.count();
-//         foreach ( VariableItem *globalVariable, globalVariables.variables ) {
-//             if ( globalVariable->isHelperObject() ) {
-//                 kDebug() << "ADD GLOBAL" << globalVariable->name(); // TODO TODO
-//                 newItems << globalVariable;
-// //                 globalItems << globalVariable;
-//             }
-//         }
-//     }
 
     for ( QHash< QString, VariableTreeData >::ConstIterator it = newVariables.constBegin();
           it != newVariables.constEnd(); ++it )
@@ -483,48 +477,59 @@ void VariableModel::updateVariables( const QList<VariableTreeData> &variables,
         if ( !currentDepth ) {
             data.flags |= VariableIsDefinedInParentContext;
         }
+        removedNames.removeOne( it.key() );
 
         if ( currentVariables && currentVariables->nameToVariable.contains(it.key()) ) {
             VariableItem *variable = currentVariables->nameToVariable[ it.key() ];
-            if ( variable->data() == data ) {
+            const bool childrenChanged = updateVariables( data.children, variable )
+                    && (!data.scriptValue.isFunction() || data.scriptValue.isRegExp());
+
+            const bool changed = !data.scriptValue.isVariant() &&
+                    (!data.scriptValue.isFunction() || data.scriptValue.isRegExp()) &&
+                    variable->data() != data;
+            if ( !changed && !childrenChanged ) {
+                // Remove change mark,
+                // do not set hasChanges to true, because only the change mark gets removed
                 data.flags &= ~VariableIsChanged;
             } else {
+                // Mark as changed
                 data.flags |= VariableIsChanged;
+                hasChanges = true;
             }
             changedItems << qMakePair( variable, data ); // Change values of variable to values of it.value()
         } else {
             VariableItem *variable = new VariableItem( this, data, parent );
             newItems << qMakePair( variable, data );
         }
-        removedNames.removeOne( it.key() );
     }
 
-    const QModelIndex parentIndex = indexFromVariable( parent );
-
-//     kDebug() << newItems.count() << "new," << changedItems.count() << "changed,"
-//              << removedNames.count() << "removed items"
-//              << "  -  " << "Parent" << (parent ? parent->name() : "No Parent") << row;
+    // Remove old variables, if any
+    if ( !removedNames.isEmpty() ) {
+        foreach ( const QString &removedName, removedNames ) {
+            VariableItem *item = currentVariables->nameToVariable[ removedName ];
+            const QModelIndex index = item->index();
+            beginRemoveRows( index.parent(), index.row(), index.row() );
+            currentVariables->remove( removedName );
+            endRemoveRows();
+        }
+    }
 
     // Insert new variables, if any
     if ( !newItems.isEmpty() ) {
         // No parent for the new items
         const int count = currentVariables->count();
-        beginInsertRows( parentIndex, count, count + newItems.count() - 1 );
+        const QModelIndex parentIndex = indexFromVariable( parent );
 
         // Append copied variable item
+        beginInsertRows( parentIndex, count, count + newItems.count() - 1 );
         foreach ( const VariableItemPair &newItem, newItems ) {
             currentVariables->append( newItem.first );
         }
-
         endInsertRows();
 
         // Recursively add children
         foreach ( const VariableItemPair &newItemPair, newItems ) {
-            VariableItem *newModelItem = newItemPair.first;
-            const VariableTreeData &newItem = newItemPair.second; // Created in DebuggerAgent with m_model == 0
-            if ( !newItem.scriptValue.isFunction() ) {
-                updateVariables( newItem.children, newModelItem );
-            }
+            updateVariables( newItemPair.second.children, newItemPair.first );
         }
     }
 
@@ -540,11 +545,6 @@ void VariableModel::updateVariables( const QList<VariableTreeData> &variables,
             currentVariables->append( modelItem );
             QModelIndex index = indexFromVariableAlreadyLocked( modelItem );
             indexes << indexFromVariableAlreadyLocked( modelItem );
-
-            // Recursively change/add/remove children
-            if ( !changedItem.scriptValue.isFunction() ) {
-                updateVariables( changedItem.children, modelItem );
-            }
         }
 
         foreach ( const QModelIndex &index, indexes ) {
@@ -552,16 +552,8 @@ void VariableModel::updateVariables( const QList<VariableTreeData> &variables,
         }
     }
 
-    // Remove old variables, if any
-    if ( !removedNames.isEmpty() ) {
-        foreach ( const QString &removedName, removedNames ) {
-            VariableItem *item = currentVariables->nameToVariable[ removedName ];
-            const QModelIndex index = item->index();
-            beginRemoveRows( index.parent(), index.row(), index.row() );
-            currentVariables->remove( removedName );
-            endRemoveRows();
-        }
-    }
+    // Return true, if changes have been made
+    return hasChanges || !removedNames.isEmpty() || !newItems.isEmpty();
 }
 
 void VariableModel::applyChange( const VariableChange &change )
@@ -605,21 +597,40 @@ void VariableItem::setValue( const QVariant &value )
     }
 }
 
+int variableTypeSort( VariableType type ) {
+    switch ( type ) {
+    case SpecialVariable:
+        return 0;
+    case ErrorVariable:
+        return 1;
+    case ObjectVariable:
+    case RegExpVariable:
+    case DateVariable:
+    case ArrayVariable:
+    case BooleanVariable:
+    case StringVariable:
+    case NumberVariable:
+        return 5;
+    case NullVariable:
+        return 9;
+    case InvalidVariable:
+    case FunctionVariable:
+    default:
+        return 10;
+    }
+}
+
 bool variableItemLessThan( VariableItem *item1, VariableItem *item2 ) {
     if ( item1->isHelperObject() && !item2->isHelperObject() ) {
         return true;
     } else if ( !item1->isHelperObject() && item2->isHelperObject() ) {
         return false;
-    } else if ( item1->type() != NullVariable && item2->type() == NullVariable ) {
-        return true; // Sort variables with valid values to the beginning
-    } else if ( item1->type() == NullVariable && !item2->type() != NullVariable ) {
-        return false;
+    } else if ( variableTypeSort(item1->type()) != variableTypeSort(item2->type()) ) {
+        return variableTypeSort(item1->type()) < variableTypeSort(item2->type());
     } else if ( item1->isDefinedInParentContext() && !item2->isDefinedInParentContext() ) {
         return true; // Sort variables from parent context to the beginning
     } else if ( !item1->isDefinedInParentContext() && item2->isDefinedInParentContext() ) {
         return false;
-    } else if ( item1->type() != item2->type() ) {
-        return item1->type() < item2->type();
     } else {
         // Sort by variable name
         if ( KGlobalSettings::naturalSorting() ) {
@@ -715,10 +726,10 @@ QList<VariableTreeData> VariableModel::variablesFromScriptValue( const QScriptVa
     const KColorScheme scheme( QPalette::Active );
     while ( it.hasNext() ) {
         it.next();
-        if ( (it.value().isFunction() && !it.value().isRegExp()) ||
-              it.flags().testFlag(QScriptValue::SkipInEnumeration) ||
-              it.name() == QLatin1String("NaN") || it.name() == QLatin1String("undefined") ||
-              it.name() == QLatin1String("Infinity") || it.name() == QLatin1String("objectName") )
+        if ( it.flags().testFlag(QScriptValue::SkipInEnumeration) ||
+            it.name() == QLatin1String("NaN") || it.name() == QLatin1String("undefined") ||
+            it.name() == QLatin1String("Infinity") || it.name() == QLatin1String("objectName") ||
+            it.name() == QLatin1String("callee") )
         {
             continue;
         }
@@ -727,9 +738,7 @@ QList<VariableTreeData> VariableModel::variablesFromScriptValue( const QScriptVa
         VariableTreeData item = VariableTreeData::fromScripValue( it.name(), it.value() );
 
         // Recursively add children, but not for functions
-        if ( !it.value().isFunction() ) {
-            item.children << variablesFromScriptValue( it.value() );
-        }
+        item.children << variablesFromScriptValue( it.value() );
 
         // Add variable item to the return list
         variables << item;
@@ -815,7 +824,7 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
         } else if ( value.isString() ) {
             data.type = StringVariable;
         }
-    } else if ( value.isObject() || value.isQObject() || value.isQMetaObject() ) {
+    } else if ( value.isObject() || value.isQMetaObject() ) {
         data.icon = KIcon("code-class");
         data.type = ObjectVariable;
     } else if ( value.isError() ) {
@@ -828,7 +837,6 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
     if ( name == QLatin1String("result") ) {
         // Add special items for the "result" script object, which is an exposed ResultObject object
         ResultObject *result = qobject_cast< ResultObject* >( value.toQObject() );
-        data.value = data.description;
         if ( !result ) {
             data.description = i18nc("@info/plain", "(invalid)");
         } else {
@@ -894,10 +902,11 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
             }
             data.children << dataItem;
         }
+        data.value = data.description;
+        data.valueString = data.description;
     } else if ( name == QLatin1String("network") ) {
         // Add special items for the "network" script object, which is an exposed Network object
         Network *network = qobject_cast< Network* >( value.toQObject() );
-        data.value = data.description;
         if ( !network ) {
             data.description = i18nc("@info/plain", "(invalid)");
         } else {
@@ -916,10 +925,11 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
             }
             data.children << requestsItem;
         }
+        data.value = data.description;
+        data.valueString = data.description;
     } else if ( name == QLatin1String("storage") ) {
         // Add special items for the "storage" script object, which is an exposed Storage object
         Storage *storage = qobject_cast< Storage* >( value.toQObject() );
-        data.value = data.description;
         if ( !storage ) {
             data.description = i18nc("@info/plain", "(invalid)");
         } else {
@@ -930,21 +940,24 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
                     i18nc("@info/plain", "Memory"), data.description, KIcon("documentinfo") );
             int i = 1;
             for ( QVariantMap::ConstIterator it = memory.constBegin(); it != memory.constEnd(); ++it ) {
-                VariableTreeData valueItem( SpecialVariable, it.key(),
-                        VariableItem::variableValueTooltip(value.toString(), encodeValue, endCharacter),
-                        KIcon("code-variable") );
+                VariableTreeData valueItem( SpecialVariable, it.key(), it.value().toString(),
+                                            KIcon("code-variable") );
                 memoryItem.children << valueItem;
                 ++i;
             }
             data.children << memoryItem;
         }
+        data.value = data.description;
+        data.valueString = data.description;
     } else if ( name == QLatin1String("helper") ) {
         data.description = i18nc("@info/plain", "Offers helper functions to scripts");
         data.value = data.description;
+        data.valueString = data.description;
     } else if ( name == QLatin1String("provider") ) {
         data.description = i18nc("@info/plain", "Exposes service provider information to scripts, "
                                  "which got read from the XML file");
         data.value = data.description;
+        data.valueString = data.description;
     }
 
     return data;

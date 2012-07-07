@@ -120,6 +120,9 @@ struct VariableData {
             return flags.testFlag(VariableIsDefinedInParentContext); };
 
     bool operator ==( const VariableData &other ) const;
+    inline bool operator !=( const VariableData &other ) const {
+        return !this->operator==( other );
+    };
 };
 
 /**
@@ -373,8 +376,11 @@ public slots:
                               VariableItem *parent = 0 );
 
 protected slots:
-    /** @brief Updates the variable list in the current depth with those in @p newVariables. */
-    void updateVariables( const QList<VariableTreeData> &newVariables,
+    /**
+     * @brief Updates the variable list in the current depth with those in @p newVariables.
+     * @return @c True, if variables have changed, @c false otherwise.
+     **/
+    bool updateVariables( const QList<VariableTreeData> &newVariables,
                           VariableItem *parent = 0, bool currentDepth = true );
 
 protected:
