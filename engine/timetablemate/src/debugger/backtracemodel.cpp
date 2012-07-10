@@ -116,8 +116,6 @@ void BacktraceModel::applyChange( const BacktraceChange &change )
         }
 
         m_frames.top()->setValuesOf( change.frame );
-        const QModelIndex index = indexFromRow( 0 );
-        dataChanged( index, index );
     } break;
     default:
         kWarning() << "BacktraceChange type not implemented" << change.type;
@@ -127,12 +125,13 @@ void BacktraceModel::applyChange( const BacktraceChange &change )
 
 void BacktraceModel::frameChanged( Frame *frame )
 {
-    QModelIndex index = indexFromFrame( frame );
-    if ( !index.isValid() ) {
+    QModelIndex frameIndex = indexFromFrame( frame );
+    if ( !frameIndex.isValid() ) {
+        kWarning() << "Frame not found" << frame;
         return;
     }
 
-    dataChanged( index, index );
+    dataChanged( frameIndex, index(frameIndex.row(), ColumnCount - 1) );
 }
 
 FrameStack BacktraceModel::frameStack() const
