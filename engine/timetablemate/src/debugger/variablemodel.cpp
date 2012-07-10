@@ -488,6 +488,11 @@ bool VariableModel::updateVariables( const QList<VariableTreeData> &variables,
                     (!data.scriptValue.isFunction() || data.scriptValue.isRegExp()) &&
                     variable->data() != data;
             if ( !changed && !childrenChanged ) {
+                if ( !data.flags.testFlag(VariableIsChanged) ) {
+                    // Nothing changed
+                    continue;
+                }
+
                 // Remove change mark,
                 // do not set hasChanges to true, because only the change mark gets removed
                 data.flags &= ~VariableIsChanged;
@@ -726,10 +731,13 @@ QList<VariableTreeData> VariableModel::variablesFromScriptValue( const QScriptVa
     const KColorScheme scheme( QPalette::Active );
     while ( it.hasNext() ) {
         it.next();
-        if ( it.flags().testFlag(QScriptValue::SkipInEnumeration) ||
+        if ( (it.value().isFunction() && it.value().property("prototype").isValid()) || // Constructors
+            it.flags().testFlag(QScriptValue::SkipInEnumeration) ||
+            it.name() == QLatin1String("Qt")|| // Too many enumerables in there, bad performance
+            it.name() == QLatin1String("QtConcurrent")|| // Unused
             it.name() == QLatin1String("NaN") || it.name() == QLatin1String("undefined") ||
             it.name() == QLatin1String("Infinity") || it.name() == QLatin1String("objectName") ||
-            it.name() == QLatin1String("callee") )
+            it.name() == QLatin1String("callee") || it.name() == QLatin1String("__qt_data__") )
         {
             continue;
         }
@@ -761,7 +769,8 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
     VariableTreeData data;
     if ( name == QLatin1String("helper") || name == QLatin1String("network") ||
          name == QLatin1String("storage") || name == QLatin1String("result") ||
-         name == QLatin1String("provider") )
+         name == QLatin1String("provider") ||
+         name == QLatin1String("PublicTransport") || name == QLatin1String("enum") )
     {
         data.flags |= VariableIsHelperObject;
     }
