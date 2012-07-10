@@ -258,12 +258,14 @@ void ConsoleDockWidget::cancelEvaluation()
 void ConsoleDockWidget::consoleTextChanged( const QString &consoleText )
 {
     m_consoleWidget->document()->setHtml( consoleText );
+    m_consoleWidget->ensureCursorVisible();
 }
 
 void ConsoleDockWidget::appendToConsole( const QString &text )
 {
     if ( m_projectModel->activeProject() ) {
         m_projectModel->activeProject()->appendToConsole( text );
+        m_consoleWidget->ensureCursorVisible();
     }
 }
 
