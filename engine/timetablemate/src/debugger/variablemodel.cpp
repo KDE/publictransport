@@ -403,7 +403,7 @@ void VariableModel::updateVariableStack( const QStack< QList<VariableTreeData> >
 
     for ( int currentIndex = 0; currentIndex < newVariableStack.count(); ++currentIndex ) {
         // Update variables
-        kDebug() << "Update variables at" << currentIndex << "current depth:" << m_depthIndex;
+        // kDebug() << "Update variables at" << currentIndex << "current depth:" << m_depthIndex;
         updateVariables( newVariableStack.at(currentIndex), parent,
                          newVariableStack.count() - 1 - currentIndex != m_depthIndex );
     }
@@ -439,7 +439,6 @@ bool VariableModel::updateVariables( const QList<VariableTreeData> &variables,
     if ( parent ) {
         currentVariables = parent->childrenPointer();
     } else if ( isIndexValid(m_depthIndex) ) {
-        kDebug() << "Take current variables from stack depth" << m_depthIndex;
         currentVariables = &m_variableStack[ m_depthIndex ];
     } else {
         kDebug() << "Invalid depth" << m_depthIndex;
@@ -874,11 +873,19 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
                     QString subValueString;
                     const bool isList = it->isValid() && it->canConvert( QVariant::List );
                     if ( isList ) {
+                        const bool isVehicleTypeList = it.key() == Enums::TypesOfVehicleInJourney;
                         const QVariantList list = it->toList();
                         QStringList stringList;
                         int count = 0;
                         for ( int i = 0; i < list.count(); ++i ) {
-                            const QString str = list[i].toString();
+                            QString str;
+                            if ( isVehicleTypeList ) {
+                                Enums::VehicleType vehicleType =
+                                        static_cast<Enums::VehicleType>( list[i].toInt() );
+                                str = "PublicTransport." + Enums::toString( vehicleType );
+                            } else {
+                                str = list[i].toString();
+                            }
                             count += str.length();
                             if ( count > 100 ) {
                                 stringList << "...";
@@ -887,6 +894,10 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
                             stringList << str;
                         }
                         subValueString = '[' + stringList.join(", ") + ']';
+                    } else if ( it.key() == Enums::TypeOfVehicle ) {
+                        Enums::VehicleType vehicleType =
+                                static_cast<Enums::VehicleType>( it.value().toInt() );
+                        subValueString = "PublicTransport." + Enums::toString( vehicleType );
                     } else {
                         subValueString = it->toString();
                     }
