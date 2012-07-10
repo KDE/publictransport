@@ -124,25 +124,6 @@ public:
     QString pricing() const {
             return contains(Enums::Pricing) ? value(Enums::Pricing).toString() : QString(); };
 
-    /**
-     * @brief Parses the given string for a vehicle type.
-     *
-     * @param sLineType The string to be parsed (e.g. "STR", "ICE", "RB", ...).
-     * @return The type of vehicle that was parsed or VehicleType::Unknown if
-     *   it couldn't be parsed.
-     **/
-    // DEPRECATED Use Global::vehicleTypeFromString() instead
-    static Enums::VehicleType getVehicleTypeFromString( const QString &sLineType );
-
-    /**
-     * @brief Gets the operator for the given vehicle type string.
-     *
-     * @param sLineType The string to get the operator for (e.g. "ME", "ERB", "NWB", ...).
-     * @return The operator for the given vehicle type string or QString() if
-     *   it couldn't be determined.
-     **/
-    static QString operatorFromVehicleTypeString( const QString &sLineType );
-
 protected:
     bool m_isValid;
     TimetableData m_data;
