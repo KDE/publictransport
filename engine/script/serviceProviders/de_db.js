@@ -11,7 +11,7 @@ Array.prototype.contains = function( element ) {
 
 function usedTimetableInformations() {
     return [ 'Arrivals', 'Delay', 'DelayReason', 'Platform', 'JourneyNews',
-            'StopID', 'Pricing', 'Changes', 'RouteStops', 'RouteTimes',
+            'StopID', 'Pricing', 'Changes', 'Operator', 'RouteStops', 'RouteTimes',
             'RoutePlatformsDeparture', 'RoutePlatformsArrival',
             'RouteTimesDeparture', 'RouteTimesArrival',
             'RouteTypesOfVehicles', 'RouteTransportLines' ];
@@ -74,34 +74,168 @@ function getStopSuggestions( values  ) {
 
     if ( !network.lastDownloadAborted ) {
         // Find all stop suggestions
-        var stopRegExp = /{"value":"([^"]*?)","id":"[^"]*?@L=([0-9]+)@[^"]*?"[^}]*?"weight":"(\d+)"[^}]*?}/ig;
-        while ( (stop = stopRegExp.exec(json)) ) {
-            result.addData({ StopName: stop[1], StopID: stop[2], StopWeight: stop[3] });
-        }
+        if ( json.substr(0, 24) != "SLs.sls={\"suggestions\":[" ) {
+	    helper.error( "Incorrect stop suggestions document received", json );
+	    return false;
+	}
+	json = json.substr(24);
+	var stopValueRegExp = /"(\w+)":"([^"]+)"/ig;
+	var stopIdRegExp = /@L=(\d+)/i;
+	var jsonStops = helper.splitSkipEmptyParts( json, "},{" );
+	for ( i = 0; i < jsonStops.length; ++i ) {
+	    var jsonStop = jsonStops[i];
+	    var stop = {};
+	    while ( (rx = stopValueRegExp.exec(jsonStop)) ) {
+		var name = rx[1];
+		var value = rx[2];
+		if ( name == "value" ) {
+		    stop.StopName = value;
+		} else if ( name == "id" ) {
+		    var rx = stopIdRegExp.exec( value );
+		    if ( rx ) {
+		        stop.StopID = rx[1];
+		    }
+		} else if ( name == "weight" ) {
+		    stop.StopWeight = parseInt(value);
+		} else if ( name == "xcoord" ) {
+		    stop.StopLongitude = parseInt(value) / 1000000;
+		} else if ( name == "ycoord" ) {
+		    stop.StopLatitude = parseInt(value) / 1000000;
+		}
+	    }
+	    
+            result.addData( stop );
+	}
         return result.hasData();
     } else {
         return false;
     }
 }
 
+function operatorFromTransportLine( string ) {
+    var abbreviationRegExp = /^(?:([^\s]+)\s+|([^\d]+)\d+)/i;
+    var abbr = abbreviationRegExp.exec( string );
+    if ( !abbr ) {
+	return undefined;
+    }
+    abbr = (abbr[1] ? abbr[1] : abbr[2]).toLowerCase();
+
+    if ( abbr == "ice" || abbr == "ic" || abbr == "ec" || abbr == "ire" ||
+         abbr == "re" || abbr == "rb" || abbr == "cnl" || abbr == "en" ) return "Deutsche Bahn AG";
+    else if ( abbr == "tha" ) return "Thalys International";
+    else if ( abbr == "est" ) return "Eurostar Group Ltd.";
+    else if ( abbr == "rj" ) return "Österreichische Bundesbahnen, railjet";
+    else if ( abbr == "me" ) return "metronom Eisenbahngesellschaft mbH";
+    else if ( abbr == "mer" ) return "metronom Eisenbahngesellschaft mbH, metronomRegional";
+    else if ( abbr == "wfb" ) return "WestfalenBahn GmbH";
+    else if ( abbr == "nwb" ) return "NordWestBahn GmbH";
+    else if ( abbr == "osb" ) return "Ortenau-S-Bahn GmbH";
+    else if ( abbr == "swe" ) return "Südwestdeutsche Verkehrs-AG";
+    else if ( abbr == "ktb" ) return "Südwestdeutsche Verkehrs-AG, Kandertalbahn";
+    else if ( abbr == "rer" ) return "Réseau Express Régional";
+    else if ( abbr == "wkd" ) return "Warszawska Kolej Dojazdowa";
+    else if ( abbr == "skm" ) return "Szybka Kolej Miejska Tricity";
+    else if ( abbr == "skw" ) return "Szybka Kolej Miejska Warschau";
+    else if ( abbr == "erx" ) return "Erixx GmbH";
+    else if ( abbr == "hex" ) return "Veolia Verkehr Sachsen-Anhalt GmbH, HarzElbeExpress";
+    else if ( abbr == "pe" || abbr == "peg" ) return "Prignitzer Eisenbahn GmbH";
+    else if ( abbr == "ne" ) return "NEB Betriebsgesellschaft mbH";
+    else if ( abbr == "mrb" ) return "Mitteldeutsche Regiobahn";
+    else if ( abbr == "erb" ) return "Keolis Deutschland, eurobahn";
+    else if ( abbr == "hlb" ) return "Hessische Landesbahn GmbH";
+    else if ( abbr == "hsb" ) return "Harzer Schmalspurbahnen GmbH";
+    else if ( abbr == "vbg" ) return "Vogtlandbahn GmbH";
+    else if ( abbr == "vx" ) return "Vogtlandbahn GmbH, Vogtland-Express";
+    else if ( abbr == "tlx" ) return "Vogtlandbahn GmbH, Trilex";
+    else if ( abbr == "alx" ) return "Vogtlandbahn GmbH, alex";
+    else if ( abbr == "akn" ) return "AKN Eisenbahn AG";
+    else if ( abbr == "ola" ) return "Ostseeland Verkehr GmbH";
+    else if ( abbr == "ubb" ) return "Usedomer Bäderbahn GmbH";
+    else if ( abbr == "can" ) return "cantus Verkehrsgesellschaft mbH";
+    else if ( abbr == "brb" ) return "Abellio Rail NRW GmbH";
+    else if ( abbr == "sbb" ) return "Schweizerische Bundesbahnen";
+    else if ( abbr == "vec" ) return "vectus Verkehrsgesellschaft mbH";
+    else if ( abbr == "hzl" ) return "Hohenzollerische Landesbahn AG";
+    else if ( abbr == "abr" ) return "Bayerische Regiobahn GmbH";
+    else if ( abbr == "cb" ) return "City Bahn Chemnitz GmbH";
+    else if ( abbr == "weg" ) return "Württembergische Eisenbahn-Gesellschaft mbH";
+    else if ( abbr == "neb" ) return "Niederbarnimer Eisenbahn AG";
+    else if ( abbr == "eb" ) return "Erfurter Bahn GmbH";
+    else if ( abbr == "ebx" ) return "Erfurter Bahn GmbH, express";
+    else if ( abbr == "ven" ) return "Rhenus Veniro GmbH & Co. KG";
+    else if ( abbr == "bob" ) return "Bayerische Oberlandbahn GmbH";
+    else if ( abbr == "sbs" ) return "Städtebahn Sachsen GmbH";
+    else if ( abbr == "ses" ) return "Städtebahn Sachsen GmbH, express";
+    else if ( abbr == "evb" ) return "Eisenbahnen und Verkehrsbetriebe Elbe-Weser GmbH";
+    else if ( abbr == "stb" ) return "Süd-Thüringen-Bahn GmbH";
+    else if ( abbr == "pre" ) return "Eisenbahn-Bau- und Betriebsgesellschaft Pressnitztalbahn";
+    else if ( abbr == "dbg" ) return "Döllnitzbahn GmbH";
+    else if ( abbr == "nob" ) return "Nord-Ostsee-Bahn GmbH";
+    else if ( abbr == "rtb" ) return "Rurtalbahn GmbH";
+    else if ( abbr == "blb" ) return "Berchtesgadener Land Bahn GmbH";
+    else if ( abbr == "nbe" ) return "nordbahn Eisenbahngesellschaft mbh & Co. KG";
+    else if ( abbr == "soe" ) return "Sächsisch-Oberlausitzer Eisenbahngesellschaft";
+    else if ( abbr == "sdg" ) return "Sächsische Dampfeisenbahngesellschaft mbH";
+    else if ( abbr == "dab" ) return "Westerwaldbahn GmbH, Daadetalbahn";
+    else if ( abbr == "htb" ) return "Hörseltalbahn GmbH";
+    else if ( abbr == "feg" ) return "Freiberger Eisenbahngesellschaft mbH";
+    else if ( abbr == "neg" ) return "Norddeutsche Eisenbahngesellschaft Niebüll GmbH";
+    else if ( abbr == "rbg" ) return "Regentalbahn AG";
+    else if ( abbr == "mbb" ) return "Mecklenburgische Bäderbahn Molli";
+    else if ( abbr == "veb" ) return "Vulkan-Eifel-Bahn Betriebsgesellschaft mbH";
+    else if ( abbr == "msb" ) return "Betriebsgesellschaft Mainschleifenbahn";
+    else if ( abbr == "öba" ) return "Öchsle Bahn Betriebs-GmbH";
+    else if ( abbr == "wb" ) return "WESTbahn Management GmbH";
+    else if ( abbr == "rnv" ) return "Rhein-Neckar-Verkehr GmbH";
+    else if ( abbr == "dwe" ) return "Dessauer Verkehrs- und Eisenbahngesellschaft";
+    else return undefined;
+}
+
 function typeOfVehicleFromString( string ) {
     string = string.toLowerCase();
-    if ( string == "sbahn" ) {
-        return "interurbantrain";
+    if ( string == "bus" ) {
+        return PublicTransport.Bus;
+    } else if ( string == "tro" ) {
+        return PublicTransport.TrolleyBus;
+    } else if ( string == "tram" ) {
+        return PublicTransport.Tram;
+    } else if ( string == "sbahn" ) {
+        return PublicTransport.InterurbanTrain;
     } else if ( string == "ubahn" ) {
-        return "subway";
-    } else if ( string == "ice" ) {
-        return "highspeedtrain";
-    } else if ( string == "ic" || string == "ec" ) { // Eurocity
-        return "intercitytrain";
-    } else if ( string == "re" || string == "me" ) { // Metronom
-        return "regionalexpresstrain";
-    } else if ( string == "rb" || string == "mer" ) { // Metronom regional
-        return "regionaltrain";
-    } else if ( string == "ir" ) {
-        return "interregionaltrain";
+        return PublicTransport.Subway;
+    } else if ( string == "met" || string == "metro" ) {
+        return PublicTransport.Metro;
+    } else if ( string == "ice" || // InterCityExpress, Germany
+                string == "eic" ) // Ekspres InterCity, Poland
+    {
+        return PublicTransport.HighSpeedTrain;
+    } else if ( string == "ic" || string == "ict" || // InterCity
+                string == "icn" || // Intercity-Neigezug, Switzerland
+                string == "ec" || // EuroCity
+                string == "en" || // EuroNight
+                string == "d" || //  EuroNight, Sitzwagenabteil
+                string == "cnl" || //  CityNightLine
+                string == "d" )//  EuroNight, Sitzwagenabteil
+    {
+        return PublicTransport.IntercityTrain;
+    } else if ( string == "re"/* || string == "me"*/ /* Metronom, germany */ ) {
+        return PublicTransport.RegionalExpressTrain;
+    } else if ( string == "rb" || string == "r" || string == "zug" ||
+            string == "rt" || // RegioTram
+            /*string == "mer" ||*/ // Metronom Regional, Germany
+            string == "wfb" || // Westfalenbahn, Germany
+            string == "dz" ) // Steam train (Dampfzug), Germany
+    {
+        return PublicTransport.RegionalTrain;
+    } else if ( string == "ir" || string == "ire" ) {
+        return PublicTransport.InterregionalTrain;
+    } else if ( string == "ferry" || string == "faehre" ) {
+        return PublicTransport.Ferry;
+    } else if ( string == "feet" || string == "zu fu&szlig;" || string == "zu fu&#223;" ) {
+        return PublicTransport.Feet;
     } else {
-        return string;
+        helper.error( "Unknown vehicle type", string );
+        return PublicTransport.Unknown;
     }
 }
 
@@ -188,7 +322,12 @@ function parseTimetable( html ) {
         departure.TypeOfVehicle = typeOfVehicleFromString( typeOfVehicle[1] );
 
         // Parse transport line column
-        departure.TransportLine = helper.trim( helper.stripTags(columns["train2"].contents) );
+	var transportLine = helper.trim( helper.stripTags(columns["train2"].contents) );
+	var operator = operatorFromTransportLine( transportLine );
+	if ( operator != undefined ) {
+	    departure.Operator = operator;
+	}
+        departure.TransportLine = transportLine.replace( /^((?:Bus|STR)\s+)/g, "" );
 
         // Parse route column:
         // > Target information
@@ -256,7 +395,7 @@ function parseTimetable( html ) {
         }
 
         // Add departure
-        print( "Add Data: " + departure.TransportLine + ": " + departure.Target + " " + departure.DepartureDateTime );
+        print( "Add Data: " + departure.TransportLine + ": " + departure.Operator + " " + departure.Target + " " + departure.DepartureDateTime );
 //         result.addData( departure );
 	if ( lastDeparture != false &&
 	     !compareDepartures(lastDeparture, departure) )
@@ -519,9 +658,9 @@ function parseJourneyDetails( details, resultObject ) {
 
         var routeTransportLine;
         var separatorPos = columnsRow1[5].search( /<br \/>/i );
-        if ( separatorPos <= 0 )
+        if ( separatorPos <= 0 ) {
             routeTransportLine = helper.trim( helper.stripTags(columnsRow1[5]) );
-        else {
+        } else {
             // When the line of the vehicle changes during the journey,
             // both lines are written into the column, separated by <br />
             var line1 = columnsRow1[5].substr( 0, separatorPos );
