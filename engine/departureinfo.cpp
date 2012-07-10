@@ -34,72 +34,72 @@ PublicTransportInfo::~PublicTransportInfo()
 {
 }
 
-PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVariant >& data,
+PublicTransportInfo::PublicTransportInfo( const QHash< Enums::TimetableInformation, QVariant >& data,
                                           Corrections corrections, QObject *parent )
     : QObject(parent), m_data(data)
 {
     m_isValid = false;
 
     // Insert -1 as Delay if none is given (-1 means "no delay information available")
-    if ( !contains(Delay) ) {
-        insert( Delay, -1 );
+    if ( !contains(Enums::Delay) ) {
+        insert( Enums::Delay, -1 );
     }
 
     if ( corrections.testFlag(DeduceMissingValues) ) {
         // Try to deduct operator from vehicle type
-        if ( contains(TypeOfVehicle) && value(TypeOfVehicle).canConvert(QVariant::String) ) {
+        if ( contains(Enums::TypeOfVehicle) && value(Enums::TypeOfVehicle).canConvert(QVariant::String) ) {
             // Try to get operator from vehicle type string if no operator is given
-            const QString vehicleType = value(TypeOfVehicle).toString();
-            if ( !contains(Operator) || (value(Operator).canConvert(QVariant::String)
-                                      && value(Operator).toString().isEmpty()) )
+            const QString vehicleType = value(Enums::TypeOfVehicle).toString();
+            if ( !contains(Enums::Operator) || (value(Enums::Operator).canConvert(QVariant::String)
+                                      && value(Enums::Operator).toString().isEmpty()) )
             {
                 // Operator not available or empty, try to get it from the vehicle type string
                 QString sOperator = operatorFromVehicleTypeString( vehicleType );
                 if ( !sOperator.isNull() ) {
-                    insert( Operator, sOperator );
+                    insert( Enums::Operator, sOperator );
                 }
             }
         }
 
         // Fix transport line string and try to get vehicle type and/or operator from it
-        if ( contains(TransportLine) ) {
-            const QString sTransportLine = value(TransportLine).toString();
+        if ( contains(Enums::TransportLine) ) {
+            const QString sTransportLine = value(Enums::TransportLine).toString();
 
             // Try to get vehicle type from transport line string if no vehicle type is given
-            if ( !contains(TypeOfVehicle) || value(TypeOfVehicle) == Unknown ) {
+            if ( !contains(Enums::TypeOfVehicle) || value(Enums::TypeOfVehicle) == Enums::Unknown ) {
                 if ( sTransportLine.contains("F&#228;hre") ) {
-                    insert( TypeOfVehicle, Ferry );
+                    insert( Enums::TypeOfVehicle, Enums::Ferry );
                 } else {
                     QRegExp rx = QRegExp( "^(bus|tro|tram|str|s|u|m)\\s*", Qt::CaseInsensitive );
                     rx.indexIn( sTransportLine );
-                    insert( TypeOfVehicle, rx.cap() );
+                    insert( Enums::TypeOfVehicle, rx.cap() );
                 }
             }
         }
 
         // Guess date value if none is given,
         // this could produce wrong dates (better give DepartureDate in scripts)
-        if ( !contains(DepartureDate) && contains(DepartureTime) ) {
-            QTime departureTime = value( DepartureTime ).toTime();
+        if ( !contains(Enums::DepartureDate) && contains(Enums::DepartureTime) ) {
+            QTime departureTime = value( Enums::DepartureTime ).toTime();
             if ( departureTime < QTime::currentTime().addSecs(-5 * 60) ) {
                 kDebug() << "Guessed DepartureDate as tomorrow";
-                insert( DepartureDate, QDate::currentDate().addDays(1) );
+                insert( Enums::DepartureDate, QDate::currentDate().addDays(1) );
             } else {
                 kDebug() << "Guessed DepartureDate as today";
-                insert( DepartureDate, QDate::currentDate() );
+                insert( Enums::DepartureDate, QDate::currentDate() );
             }
-    //         insert( DepartureYear, value(DepartureDate).toDate().year() ); TEST not needed? maybe use DepartureYear as comine-correction to DepartureDate
+    //         insert( Enums::DepartureYear, value(DepartureDate).toDate().year() ); TEST not needed? maybe use DepartureYear as comine-correction to DepartureDate
         }
     }
 
     if ( corrections.testFlag(CombineToPreferredValueType) ) {
         // Convert date value from string if not given as date
-        if ( !contains(DepartureDateTime) ) {
-            if ( contains(DepartureTime) ) {
-                const QTime time = value( DepartureTime ).toTime();
+        if ( !contains(Enums::DepartureDateTime) ) {
+            if ( contains(Enums::DepartureTime) ) {
+                const QTime time = value( Enums::DepartureTime ).toTime();
                 QDate date;
-                if ( contains(DepartureDate) ) {
-                    date = value( DepartureDate ).toDate();
+                if ( contains(Enums::DepartureDate) ) {
+                    date = value( Enums::DepartureDate ).toDate();
                 } else if ( time < QTime::currentTime().addSecs(-5 * 60) ) {
                     kDebug() << "Guessed DepartureDate as tomorrow";
                     date = QDate::currentDate().addDays( 1 );
@@ -107,9 +107,9 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
                     kDebug() << "Guessed DepartureDate as today";
                     date = QDate::currentDate();
                 }
-                insert( DepartureDateTime, QDateTime(date, time) );
-                remove( DepartureDate );
-                remove( DepartureTime );
+                insert( Enums::DepartureDateTime, QDateTime(date, time) );
+                remove( Enums::DepartureDate );
+                remove( Enums::DepartureTime );
             } else {
                 kDebug() << "No DepartureDateTime or DepartureTime information given";
             }
@@ -163,10 +163,10 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
 
     if ( corrections.testFlag(ConvertValuesToCorrectFormat) ) {
         // Convert route times list to a list of QTime objects (from string and time objects)
-        if ( contains(RouteTimes) ) {
-            if ( value(RouteTimes).canConvert(QVariant::List) ) {
+        if ( contains(Enums::RouteTimes) ) {
+            if ( value(Enums::RouteTimes).canConvert(QVariant::List) ) {
                 QVariantList times;
-                QVariantList vars = value( RouteTimes ).toList();
+                QVariantList vars = value( Enums::RouteTimes ).toList();
                 foreach ( const QVariant &var, vars ) {
                     // Convert from QVariant to QTime
                     if ( var.canConvert(QVariant::Time) && var.toTime().isValid() ) {
@@ -176,18 +176,18 @@ PublicTransportInfo::PublicTransportInfo( const QHash< TimetableInformation, QVa
                     }
                 }
 
-                insert( RouteTimes, times );
+                insert( Enums::RouteTimes, times );
             } else {
                 // No list of values given for RouteTimes, remove the invalid value
                 kDebug() << "RouteTimes value is invalid (not a list of values): "
-                         << value(RouteTimes);
-                remove( RouteTimes );
+                         << value(Enums::RouteTimes);
+                remove( Enums::RouteTimes );
             }
         }
 
         // Convert vehicle types given as strings to the associated enumerable values
-        if ( contains(TypeOfVehicle) && value(TypeOfVehicle).canConvert(QVariant::String) ) {
-            insert( TypeOfVehicle, getVehicleTypeFromString(value(TypeOfVehicle).toString()) );
+        if ( contains(Enums::TypeOfVehicle) && value(Enums::TypeOfVehicle).canConvert(QVariant::String) ) {
+            insert( Enums::TypeOfVehicle, getVehicleTypeFromString(value(Enums::TypeOfVehicle).toString()) );
         }
     }
 }
@@ -198,12 +198,12 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
     if ( corrections.testFlag(DeduceMissingValues) ) {
         // Guess arrival date value if none is given,
         // this could produce wrong dates (better give ArrivalDate eg. in scripts)
-        if ( !contains(ArrivalDate) && contains(ArrivalTime) ) {
-            QTime arrivalTime = value(ArrivalTime).toTime();
+        if ( !contains(Enums::ArrivalDate) && contains(Enums::ArrivalTime) ) {
+            QTime arrivalTime = value(Enums::ArrivalTime).toTime();
             if ( arrivalTime < QTime::currentTime().addSecs(-5 * 60) ) {
-                insert( ArrivalDate, QDate::currentDate().addDays(1) );
+                insert( Enums::ArrivalDate, QDate::currentDate().addDays(1) );
             } else {
-                insert( ArrivalDate, QDate::currentDate() );
+                insert( Enums::ArrivalDate, QDate::currentDate() );
             }
         }
     }
@@ -211,24 +211,24 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
 //     TODO Move to PublicTransportInfo? ...or is it already in there?
     if ( corrections.testFlag(ConvertValuesToCorrectFormat) ) {
         // Convert departure time from string value
-        if ( contains(DepartureTime) ) {
-            QVariant timeValue = value( DepartureTime );
+        if ( contains(Enums::DepartureTime) ) {
+            QVariant timeValue = value( Enums::DepartureTime );
             if ( !timeValue.canConvert(QVariant::Time) ) {
                 // Value for DepartureTime is not QTime, read string
                 QTime departureTime = QTime::fromString( timeValue.toString(), "hh:mm:ss" );
                 if ( !departureTime.isValid() ) {
                     departureTime = QTime::fromString( timeValue.toString(), "hh:mm" );
                 }
-                insert( DepartureTime, departureTime );
+                insert( Enums::DepartureTime, departureTime );
             }
         }
 
         // Convert date value from string if not given as date
-        if ( contains(DepartureDate) && (!value(DepartureDate).canConvert(QVariant::Date)
-                                      || !value(DepartureDate).toDate().isValid()) )
+        if ( contains(Enums::DepartureDate) && (!value(Enums::DepartureDate).canConvert(QVariant::Date)
+                                      || !value(Enums::DepartureDate).toDate().isValid()) )
         {
-            if ( value(DepartureDate).canConvert(QVariant::String) ) {
-                QString sDate = value(DepartureDate).toString();
+            if ( value(Enums::DepartureDate).canConvert(QVariant::String) ) {
+                QString sDate = value(Enums::DepartureDate).toString();
                 QDate date = QDate::fromString( sDate, "dd.MM.yyyy" );
                 if ( !date.isValid() ) {
                     int currentYear = QDate::currentDate().year();
@@ -237,35 +237,35 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
                         date.setDate( currentYear, date.month(), date.day() );
                     }
                 }
-                insert( DepartureDate, date );
+                insert( Enums::DepartureDate, date );
             } else {
-                kDebug() << "Departure date is in wrong format:" << value( DepartureDate );
-                remove( DepartureDate );
+                kDebug() << "Departure date is in wrong format:" << value( Enums::DepartureDate );
+                remove( Enums::DepartureDate );
             }
         }
 
-        if ( contains(TransportLine) ) {
+        if ( contains(Enums::TransportLine) ) {
             // Fix transport line string, eg. do not repeat vehicle type name
-            const QString sTransportLine = value(TransportLine).toString().trimmed()
+            const QString sTransportLine = value(Enums::TransportLine).toString().trimmed()
                     .remove( QRegExp("^(bus|tro|tram|str)", Qt::CaseInsensitive) )
                     .replace( QRegExp("\\s{2,}"), " " );
-            insert( TransportLine, sTransportLine );
+            insert( Enums::TransportLine, sTransportLine );
         }
 
         // Convert TypesOfVehicleInJourney value from a string list or integer list
         // into a list of valid, distinct VehicleType values
-        if ( contains(TypesOfVehicleInJourney) ) {
+        if ( contains(Enums::TypesOfVehicleInJourney) ) {
             QVariantList vehicleTypes;
-            if ( value(TypesOfVehicleInJourney).canConvert(QVariant::StringList) ) {
-                QStringList strings = value( TypesOfVehicleInJourney ).toStringList();
+            if ( value(Enums::TypesOfVehicleInJourney).canConvert(QVariant::StringList) ) {
+                QStringList strings = value( Enums::TypesOfVehicleInJourney ).toStringList();
                 foreach( const QString &str, strings ) {
                     int vehicleType = static_cast<int>( getVehicleTypeFromString(str) );
                     if ( !vehicleTypes.contains(vehicleType) ) {
                         vehicleTypes << vehicleType;
                     }
                 }
-            } else if ( value(TypesOfVehicleInJourney).canConvert(QVariant::List) ) {
-                QVariantList vars = value( TypesOfVehicleInJourney ).toList();
+            } else if ( value(Enums::TypesOfVehicleInJourney).canConvert(QVariant::List) ) {
+                QVariantList vars = value( Enums::TypesOfVehicleInJourney ).toList();
                 foreach( const QVariant &var, vars ) {
                     if ( var.canConvert(QVariant::Int) ) {
                         int vehicleType = var.toInt();
@@ -276,20 +276,20 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
                 }
             }
 
-            insert( TypesOfVehicleInJourney, vehicleTypes );
+            insert( Enums::TypesOfVehicleInJourney, vehicleTypes );
         }
 
         // Convert RouteTypesOfVehicles value from a string list or integer list
         // into a list of valid, distinct VehicleType values
-        if ( contains(RouteTypesOfVehicles) ) {
+        if ( contains(Enums::RouteTypesOfVehicles) ) {
             QVariantList vehicleTypes;
-            if ( value(RouteTypesOfVehicles).canConvert(QVariant::StringList) ) {
-                QStringList strings = value( RouteTypesOfVehicles ).toStringList();
+            if ( value(Enums::RouteTypesOfVehicles).canConvert(QVariant::StringList) ) {
+                QStringList strings = value( Enums::RouteTypesOfVehicles ).toStringList();
                 foreach( const QString &str, strings ) {
                     vehicleTypes << static_cast<int>( getVehicleTypeFromString(str) );
                 }
-            } else if ( value(RouteTypesOfVehicles).canConvert(QVariant::List) ) {
-                QVariantList vars = value( RouteTypesOfVehicles ).toList();
+            } else if ( value(Enums::RouteTypesOfVehicles).canConvert(QVariant::List) ) {
+                QVariantList vars = value( Enums::RouteTypesOfVehicles ).toList();
                 foreach( const QVariant &var, vars ) {
                     if ( var.canConvert(QVariant::Int) ) {
                         vehicleTypes << var.toInt();
@@ -297,26 +297,26 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
                 }
             }
 
-            insert( RouteTypesOfVehicles, vehicleTypes );
+            insert( Enums::RouteTypesOfVehicles, vehicleTypes );
         }
 
         // Fix transport line strings in RouteTransportLines, eg. do not repeat vehicle type name
-        if ( contains(RouteTransportLines) ) {
-            QStringList transportLines = value( RouteTransportLines ).toStringList();
+        if ( contains(Enums::RouteTransportLines) ) {
+            QStringList transportLines = value( Enums::RouteTransportLines ).toStringList();
             for ( int i = 0; i < transportLines.count(); ++i ) {
                 transportLines[i] = transportLines[i].trimmed()
                         .remove( QRegExp("^(bus|tro|tram|str)", Qt::CaseInsensitive) )
                         .replace( QRegExp("\\s{2,}"), " " ).trimmed();
             }
-            insert( RouteTransportLines, transportLines );
+            insert( Enums::RouteTransportLines, transportLines );
         }
 
         // Convert date value from string if not given as date
-        if ( contains(ArrivalDate) && (!value(ArrivalDate).canConvert(QVariant::Date)
-                                    || !value(ArrivalDate).toDate().isValid()) )
+        if ( contains(Enums::ArrivalDate) && (!value(Enums::ArrivalDate).canConvert(QVariant::Date)
+                                    || !value(Enums::ArrivalDate).toDate().isValid()) )
         {
-            if ( value(ArrivalDate).canConvert(QVariant::String) ) {
-                const QString sDate = value(ArrivalDate).toString();
+            if ( value(Enums::ArrivalDate).canConvert(QVariant::String) ) {
+                const QString sDate = value(Enums::ArrivalDate).toString();
                 QDate date = QDate::fromString( sDate, "dd.MM.yyyy" );
 
                 if ( !date.isValid() ) {
@@ -326,19 +326,19 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
                         date.setDate( currentYear, date.month(), date.day() );
                     }
                 }
-                insert( ArrivalDate, date );
+                insert( Enums::ArrivalDate, date );
             } else {
-                kDebug() << "Arrival date is in wrong format:" << value(ArrivalDate);
-                remove( ArrivalDate );
+                kDebug() << "Arrival date is in wrong format:" << value(Enums::ArrivalDate);
+                remove( Enums::ArrivalDate );
             }
         }
 
-        if ( !contains(ArrivalDateTime) ) {
-            if ( contains(ArrivalTime) ) {
-                const QTime time = value( ArrivalTime ).toTime();
+        if ( !contains(Enums::ArrivalDateTime) ) {
+            if ( contains(Enums::ArrivalTime) ) {
+                const QTime time = value( Enums::ArrivalTime ).toTime();
                 QDate date;
-                if ( contains(ArrivalDate) ) {
-                    date = value( ArrivalDate ).toDate();
+                if ( contains(Enums::ArrivalDate) ) {
+                    date = value( Enums::ArrivalDate ).toDate();
                 } else if ( time < QTime::currentTime().addSecs(-5 * 60) ) {
                     kDebug() << "Guessed ArrivalDate as tomorrow";
                     date = QDate::currentDate().addDays( 1 );
@@ -346,96 +346,98 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
                     kDebug() << "Guessed ArrivalDate as today";
                     date = QDate::currentDate();
                 }
-                insert( ArrivalDateTime, QDateTime(date, time) );
-                remove( ArrivalDate );
-                remove( ArrivalTime );
+                insert( Enums::ArrivalDateTime, QDateTime(date, time) );
+                remove( Enums::ArrivalDate );
+                remove( Enums::ArrivalTime );
             } else {
                 kDebug() << "No ArrivalDateTime or ArrivalTime information given";
             }
         }
-        if ( value(Duration).toInt() <= 0 && contains(DepartureDateTime) && contains(ArrivalDateTime) ) {
-            QDateTime departure = value( DepartureDateTime ).toDateTime();
-            QDateTime arrival = value( ArrivalDateTime ).toDateTime();
+        if ( value(Enums::Duration).toInt() <= 0 && contains(Enums::DepartureDateTime) &&
+             contains(Enums::ArrivalDateTime) )
+        {
+            QDateTime departure = value( Enums::DepartureDateTime ).toDateTime();
+            QDateTime arrival = value( Enums::ArrivalDateTime ).toDateTime();
             int minsDuration = departure.secsTo( arrival ) / 60;
             if ( minsDuration < 0 ) {
                 kDebug() << "Calculated duration is negative" << minsDuration
                         << "departure" << departure << "arrival" << arrival;
-                insert( Duration, -1 );
+                insert( Enums::Duration, -1 );
             } else {
-                insert( Duration, minsDuration );
+                insert( Enums::Duration, minsDuration );
             }
         }
 
         // Convert duration value given as string in "h:mm" format to minutes
-        if ( contains(Duration) && value(Duration).toInt() <= 0 &&
-             value(Duration).canConvert(QVariant::String) )
+        if ( contains(Enums::Duration) && value(Enums::Duration).toInt() <= 0 &&
+             value(Enums::Duration).canConvert(QVariant::String) )
         {
-            QString duration = value( Duration ).toString();
+            QString duration = value( Enums::Duration ).toString();
             QTime timeDuration = QTime::fromString( duration, "h:mm" );
             if ( timeDuration.isValid() ) {
                 const int minsDuration = QTime( 0, 0 ).secsTo( timeDuration ) / 60;
-                insert( Duration, minsDuration );
+                insert( Enums::Duration, minsDuration );
             }
         }
 
         // Convert route departure time values to QTime
-        if ( contains(RouteTimesDeparture) ) {
+        if ( contains(Enums::RouteTimesDeparture) ) {
             QVariantList times;
-            if ( value(RouteTimesDeparture).canConvert(QVariant::StringList) ) {
-                QStringList strings = value( RouteTimesDeparture ).toStringList();
+            if ( value(Enums::RouteTimesDeparture).canConvert(QVariant::StringList) ) {
+                QStringList strings = value( Enums::RouteTimesDeparture ).toStringList();
                 foreach( const QString &str, strings ) {
                     times << QTime::fromString( str.trimmed(), "hh:mm" );
                 }
-            } else if ( value(RouteTimesDeparture).canConvert(QVariant::List) ) {
-                QVariantList vars = value( RouteTimesDeparture ).toList();
+            } else if ( value(Enums::RouteTimesDeparture).canConvert(QVariant::List) ) {
+                QVariantList vars = value( Enums::RouteTimesDeparture ).toList();
                 foreach( const QVariant &var, vars ) {
                     times << var.toTime();
                 }
             }
 
-            insert( RouteTimesDeparture, times );
+            insert( Enums::RouteTimesDeparture, times );
         }
 
         // Convert route arrival time values to QTime
-        if ( contains(RouteTimesArrival) ) {
+        if ( contains(Enums::RouteTimesArrival) ) {
             QVariantList times;
-            if ( value(RouteTimesArrival).canConvert(QVariant::StringList) ) {
-                QStringList strings = value( RouteTimesArrival ).toStringList();
+            if ( value(Enums::RouteTimesArrival).canConvert(QVariant::StringList) ) {
+                QStringList strings = value( Enums::RouteTimesArrival ).toStringList();
                 foreach( const QString &str, strings ) {
                     times << QTime::fromString( str.trimmed(), "hh:mm" );
                 }
-            } else if ( value(RouteTimesArrival).canConvert(QVariant::List) ) {
-                QVariantList vars = value( RouteTimesArrival ).toList();
+            } else if ( value(Enums::RouteTimesArrival).canConvert(QVariant::List) ) {
+                QVariantList vars = value( Enums::RouteTimesArrival ).toList();
                 foreach( const QVariant &var, vars ) {
                     times << var.toTime();
                 }
             }
 
-            insert( RouteTimesArrival, times );
+            insert( Enums::RouteTimesArrival, times );
         }
     }
 
     if ( corrections.testFlag(CombineToPreferredValueType) ) {
         // If the duration value is invalid, but there are departure and arrival date and time
         // values available, calculate the duration between departure and arrival
-        if ( value(Duration).toInt() <= 0 && contains(DepartureDate) && contains(DepartureTime) &&
-             contains(ArrivalDate) && contains(ArrivalTime) )
+        if ( value(Enums::Duration).toInt() <= 0 && contains(Enums::DepartureDate) && contains(Enums::DepartureTime) &&
+             contains(Enums::ArrivalDate) && contains(Enums::ArrivalTime) )
         {
-            QDateTime departure( value(DepartureDate).toDate(), value(ArrivalTime).toTime() );
-            QDateTime arrival( value(ArrivalDate).toDate(), value(ArrivalTime).toTime() );
+            QDateTime departure( value(Enums::DepartureDate).toDate(), value(Enums::ArrivalTime).toTime() );
+            QDateTime arrival( value(Enums::ArrivalDate).toDate(), value(Enums::ArrivalTime).toTime() );
             int minsDuration = departure.secsTo( arrival ) / 60;
             if ( minsDuration < 0 ) {
                 kDebug() << "Calculated duration is negative" << minsDuration
                         << "departure" << departure << "arrival" << arrival;
-                insert( Duration, -1 );
+                insert( Enums::Duration, -1 );
             } else {
-                insert( Duration, minsDuration );
+                insert( Enums::Duration, minsDuration );
             }
         }
     }
 
-    m_isValid = contains( DepartureDateTime ) && contains( ArrivalDateTime )
-            && contains( StartStopName ) && contains( TargetStopName );
+    m_isValid = contains( Enums::DepartureDateTime ) && contains( Enums::ArrivalDateTime )
+            && contains( Enums::StartStopName ) && contains( Enums::TargetStopName );
 }
 
 StopInfo::StopInfo( QObject *parent ) : PublicTransportInfo(parent)
@@ -443,28 +445,28 @@ StopInfo::StopInfo( QObject *parent ) : PublicTransportInfo(parent)
     m_isValid = false;
 }
 
-StopInfo::StopInfo( const QHash< TimetableInformation, QVariant >& data, QObject *parent )
+StopInfo::StopInfo( const QHash< Enums::TimetableInformation, QVariant >& data, QObject *parent )
     : PublicTransportInfo(parent)
 {
     m_data.unite( data );
-    m_isValid = contains( StopName );
+    m_isValid = contains( Enums::StopName );
 }
 
 StopInfo::StopInfo( const QString& name, const QString& id, int weight, const QString& city,
                     const QString& countryCode,  QObject *parent  ) : PublicTransportInfo(parent)
 {
-    insert( StopName, name );
+    insert( Enums::StopName, name );
     if ( !id.isNull() ) {
-        insert( StopID, id );
+        insert( Enums::StopID, id );
     }
     if ( !city.isNull() ) {
-        insert( StopCity, city );
+        insert( Enums::StopCity, city );
     }
     if ( !countryCode.isNull() ) {
-        insert( StopCountryCode, countryCode );
+        insert( Enums::StopCountryCode, countryCode );
     }
     if ( weight != -1 ) {
-        insert( StopWeight, weight );
+        insert( Enums::StopWeight, weight );
     }
 
     m_isValid = !name.isEmpty();
@@ -478,16 +480,16 @@ DepartureInfo::DepartureInfo( QObject *parent ) : PublicTransportInfo(parent)
 DepartureInfo::DepartureInfo( const TimetableData &data, Corrections corrections, QObject *parent )
         : PublicTransportInfo( data, corrections, parent )
 {
-    if ( (contains(RouteStops) || contains(RouteTimes)) &&
-         value(RouteTimes).toList().count() != value(RouteStops).toStringList().count() )
+    if ( (contains(Enums::RouteStops) || contains(Enums::RouteTimes)) &&
+         value(Enums::RouteTimes).toList().count() != value(Enums::RouteStops).toStringList().count() )
     {
-        int difference = value(RouteStops).toList().count() -
-                         value(RouteTimes).toStringList().count();
+        int difference = value(Enums::RouteStops).toList().count() -
+                         value(Enums::RouteTimes).toStringList().count();
         if ( difference > 0 ) {
             // More route stops than times, add invalid times
             kDebug() << "The script stored" << difference << "more route stops than route times "
                         "for a departure, invalid route times will be added";
-            QVariantList routeTimes = value( RouteTimes ).toList();
+            QVariantList routeTimes = value( Enums::RouteTimes ).toList();
             while ( difference > 0 ) {
                 routeTimes << QTime();
                 --difference;
@@ -496,7 +498,7 @@ DepartureInfo::DepartureInfo( const TimetableData &data, Corrections corrections
             // More route times than stops, add empty stops
             kDebug() << "The script stored" << -difference << "more route times than route "
                         "stops for a departure, empty route stops will be added";
-            QStringList routeStops = value( RouteStops ).toStringList();
+            QStringList routeStops = value( Enums::RouteStops ).toStringList();
             while ( difference < 0 ) {
                 routeStops << QString();
                 ++difference;
@@ -504,10 +506,11 @@ DepartureInfo::DepartureInfo( const TimetableData &data, Corrections corrections
         }
     }
 
-    m_isValid = contains( TransportLine ) && contains( Target ) && contains( DepartureDateTime );
+    m_isValid = contains( Enums::TransportLine ) && contains( Enums::Target ) &&
+                contains( Enums::DepartureDateTime );
 }
 
-VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineType )
+Enums::VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineType )
 {
     QString sLineTypeLower = sLineType.trimmed().toLower();
 
@@ -520,40 +523,40 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
             sLineTypeLower == QLatin1String("ubahn") ||
             sLineTypeLower == QLatin1String("u") ||
             sLineTypeLower == QLatin1String("rt") || // regio tram TODO Which service provider uses this?
-            sLineTypeLower.toInt() == static_cast<int>(Subway) ) {
-        return Subway;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::Subway) ) {
+        return Enums::Subway;
     } else if ( sLineTypeLower == QLatin1String("interurban") ||
             sLineTypeLower == QLatin1String("interurbantrain") ||
             sLineTypeLower == QLatin1String("s-bahn") ||
             sLineTypeLower == QLatin1String("sbahn") ||
             sLineTypeLower == QLatin1String("s") ||
             sLineTypeLower == QLatin1String("rsb") || // "regio-s-bahn", TODO move to au_oebb
-            sLineTypeLower.toInt() == static_cast<int>(InterurbanTrain) ) {
-        return InterurbanTrain;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::InterurbanTrain) ) {
+        return Enums::InterurbanTrain;
     } else if ( sLineTypeLower == QLatin1String("tram") ||
             sLineTypeLower == QLatin1String("straßenbahn") ||
             sLineTypeLower == QLatin1String("str") ||
             sLineTypeLower == QLatin1String("stb") || // "stadtbahn", germany
             sLineTypeLower == QLatin1String("dm_train") ||
             sLineTypeLower == QLatin1String("streetcar (tram)") || // for sk_imhd TODO move to the script
-            sLineTypeLower.toInt() == static_cast<int>(Tram) ) { //
-        return Tram;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::Tram) ) { //
+        return Enums::Tram;
     } else if ( sLineTypeLower == QLatin1String("bus") ||
             sLineTypeLower == QLatin1String("dm_bus") ||
             sLineTypeLower == QLatin1String("express bus") || // for sk_imhd
             sLineTypeLower == QLatin1String("night line - bus") || // for sk_imhd TODO move to the script
-            sLineTypeLower.toInt() == static_cast<int>(Bus) ) {
-        return Bus;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::Bus) ) {
+        return Enums::Bus;
     } else if ( sLineTypeLower == QLatin1String("metro") ||
             sLineTypeLower == QLatin1String("m") ||
-            sLineTypeLower.toInt() == static_cast<int>(Metro) ) {
-        return Metro;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::Metro) ) {
+        return Enums::Metro;
     } else if ( sLineTypeLower == QLatin1String("trolleybus") ||
             sLineTypeLower == QLatin1String("tro") ||
             sLineTypeLower == QLatin1String("trolley bus") ||
             sLineTypeLower.startsWith(QLatin1String("trolleybus")) || // for sk_imhd
-            sLineTypeLower.toInt() == static_cast<int>(TrolleyBus) ) {
-        return TrolleyBus;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::TrolleyBus) ) {
+        return Enums::TrolleyBus;
     } else if ( sLineTypeLower == QLatin1String("regionaltrain") ||
             sLineTypeLower == QLatin1String("regional") ||
             sLineTypeLower == QLatin1String("rb") || // Regional, "RegionalBahn", germany
@@ -566,8 +569,8 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
             sLineTypeLower == QLatin1String("osb") || // "Ortenau-S-Bahn GmbH" (no interurban train), germany
             sLineTypeLower == QLatin1String("r") || // austria, switzerland
             sLineTypeLower == QLatin1String("os") || // czech, "Osobní vlak", basic local (stopping) trains
-            sLineTypeLower.toInt() == static_cast<int>(RegionalTrain) ) {
-        return RegionalTrain;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::RegionalTrain) ) {
+        return Enums::RegionalTrain;
     } else if ( sLineTypeLower == QLatin1String("regionalexpresstrain") ||
             sLineTypeLower == QLatin1String("regionalexpress") ||
             sLineTypeLower == QLatin1String("re") || // RegionalExpress
@@ -575,8 +578,8 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
             sLineTypeLower == QLatin1String("sp") || // czech, "Spěšný vlak", semi-fast trains (Eilzug)
             sLineTypeLower == QLatin1String("zr") || // slovakia, "Zrýchlený vlak", train serving almost all stations en route fast
             sLineTypeLower == QLatin1String("regional express trains") || // used by gares-en-mouvement.com (france)
-            sLineTypeLower.toInt() == static_cast<int>(RegionalExpressTrain) ) {
-        return RegionalExpressTrain;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::RegionalExpressTrain) ) {
+        return Enums::RegionalExpressTrain;
     } else if ( sLineTypeLower == QLatin1String("interregionaltrain") ||
             sLineTypeLower == QLatin1String("interregional") ||
             sLineTypeLower == QLatin1String("ir") || // InterRegio
@@ -585,8 +588,8 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
             sLineTypeLower == QLatin1String("er") || // border-crossing local train stopping at few stations; semi-fast
             sLineTypeLower == QLatin1String("ex") || // czech, express trains with no supplementary fare, similar to the German Interregio or also Regional-Express
             sLineTypeLower == QLatin1String("express") ||
-            sLineTypeLower.toInt() == static_cast<int>(InterregionalTrain) ) {
-        return InterregionalTrain;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::InterregionalTrain) ) {
+        return Enums::InterregionalTrain;
     } else if ( sLineTypeLower == QLatin1String("intercitytrain") ||
             sLineTypeLower == QLatin1String("eurocitytrain") ||
             sLineTypeLower == QLatin1String("intercity") ||
@@ -598,8 +601,8 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
             sLineTypeLower == QLatin1String("en") || // EuroNight
             sLineTypeLower == QLatin1String("nz") || // "Nachtzug"
             sLineTypeLower == QLatin1String("icn") || // national long-distance train with tilting technology
-            sLineTypeLower.toInt() == static_cast<int>(IntercityTrain) ) {
-        return IntercityTrain;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::IntercityTrain) ) {
+        return Enums::IntercityTrain;
     } else if ( sLineTypeLower == QLatin1String("highspeedtrain") ||
             sLineTypeLower == QLatin1String("highspeed") ||
             sLineTypeLower == QLatin1String("ice") || // germany
@@ -608,8 +611,8 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
             sLineTypeLower == QLatin1String("hst") || // great britain
             sLineTypeLower == QLatin1String("est") || // eurostar
             sLineTypeLower == QLatin1String("es") || // eurostar, High-speed, tilting trains for long-distance services
-            sLineTypeLower.toInt() == static_cast<int>(HighSpeedTrain) ) {
-        return HighSpeedTrain;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::HighSpeedTrain) ) {
+        return Enums::HighSpeedTrain;
     } else if ( sLineTypeLower == QLatin1String("feet") ||
             sLineTypeLower == QLatin1String("by feet") ||
             sLineTypeLower == QLatin1String("fu&#223;weg") ||
@@ -621,24 +624,24 @@ VehicleType PublicTransportInfo::getVehicleTypeFromString( const QString& sLineT
             sLineTypeLower == QLatin1String("&#220;bergang") ||
             sLineTypeLower == QLatin1String("uebergang") ||
             sLineTypeLower == QLatin1String("&uuml;bergang") ||
-            sLineTypeLower.toInt() == static_cast<int>(Feet) ) {
-        return Feet;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::Feet) ) {
+        return Enums::Feet;
     } else if ( sLineTypeLower == QLatin1String("ferry") ||
             sLineTypeLower == QLatin1String("faehre") ||
-            sLineTypeLower.toInt() == static_cast<int>(Ferry) ) {
-        return Ferry;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::Ferry) ) {
+        return Enums::Ferry;
     } else if ( sLineTypeLower == QLatin1String("ship") ||
             sLineTypeLower == QLatin1String("boat") ||
             sLineTypeLower == QLatin1String("schiff") ||
-            sLineTypeLower.toInt() == static_cast<int>(Ship) ) {
-        return Ship;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::Ship) ) {
+        return Enums::Ship;
     } else if ( sLineTypeLower == QLatin1String("plane") ||
             sLineTypeLower == QLatin1String("air") ||
             sLineTypeLower == QLatin1String("aeroplane") ||
-            sLineTypeLower.toInt() == static_cast<int>(Plane) ) {
-        return Plane;
+            sLineTypeLower.toInt() == static_cast<int>(Enums::Plane) ) {
+        return Enums::Plane;
     } else {
-        return Unknown;
+        return Enums::Unknown;
     }
 }
 
@@ -771,134 +774,135 @@ QString PublicTransportInfo::operatorFromVehicleTypeString( const QString& sLine
 
 QDateTime PublicTransportInfo::departure() const
 {
-    return value( DepartureDateTime ).toDateTime();
+    return value( Enums::DepartureDateTime ).toDateTime();
 }
 
 QString PublicTransportInfo::operatorName() const
 {
-    return contains( Operator ) ? value( Operator ).toString() : QString();
+    return contains( Enums::Operator ) ? value( Enums::Operator ).toString() : QString();
 }
 
 QStringList PublicTransportInfo::routeStops( PublicTransportInfo::StopNameOptions stopNameOptions ) const
 {
     switch ( stopNameOptions ) {
     case UseShortenedStopNames:
-        return contains(RouteStopsShortened) ? value(RouteStopsShortened).toStringList()
+        return contains(Enums::RouteStopsShortened) ? value(Enums::RouteStopsShortened).toStringList()
                                              : routeStops(UseFullStopNames);
     case UseFullStopNames:
     default:
-        return contains( RouteStops ) ? value( RouteStops ).toStringList() : QStringList();
+        return contains( Enums::RouteStops )
+                ? value( Enums::RouteStops ).toStringList() : QStringList();
     }
 }
 
 int PublicTransportInfo::routeExactStops() const
 {
-    return contains( RouteExactStops ) ? value( RouteExactStops ).toInt() : 0;
+    return contains( Enums::RouteExactStops ) ? value( Enums::RouteExactStops ).toInt() : 0;
 }
 
 QString DepartureInfo::target( PublicTransportInfo::StopNameOptions stopNameOptions ) const
 {
     switch ( stopNameOptions ) {
     case UseShortenedStopNames:
-        return contains(TargetShortened) ? value(TargetShortened).toString()
+        return contains(Enums::TargetShortened) ? value(Enums::TargetShortened).toString()
                                          : target(UseFullStopNames);
     case UseFullStopNames:
     default:
-        return contains( Target ) ? value( Target ).toString() : QString();
+        return contains( Enums::Target ) ? value( Enums::Target ).toString() : QString();
     }
 }
 
 QDateTime JourneyInfo::arrival() const
 {
-    return value( ArrivalDateTime ).toDateTime();
+    return value( Enums::ArrivalDateTime ).toDateTime();
 }
 
-QList< VehicleType > JourneyInfo::vehicleTypes() const
+QList< Enums::VehicleType > JourneyInfo::vehicleTypes() const
 {
-    if ( contains( TypesOfVehicleInJourney ) ) {
-        QVariantList listVariant = value( TypesOfVehicleInJourney ).toList();
-        QList<VehicleType> listRet;
+    if ( contains( Enums::TypesOfVehicleInJourney ) ) {
+        QVariantList listVariant = value( Enums::TypesOfVehicleInJourney ).toList();
+        QList<Enums::VehicleType> listRet;
         foreach( QVariant vehicleType, listVariant ) {
-            listRet.append( static_cast<VehicleType>( vehicleType.toInt() ) );
+            listRet.append( static_cast<Enums::VehicleType>( vehicleType.toInt() ) );
         }
         return listRet;
     } else {
-        return QList<VehicleType>();
+        return QList<Enums::VehicleType>();
     }
 }
 
 QStringList JourneyInfo::vehicleIconNames() const
 {
-    if ( !contains( TypesOfVehicleInJourney ) ) {
+    if ( !contains(Enums::TypesOfVehicleInJourney) ) {
         return QStringList();
     }
-    QVariantList vehicles = value( TypesOfVehicleInJourney ).toList();
+    QVariantList vehicles = value( Enums::TypesOfVehicleInJourney ).toList();
     QStringList iconNames;
     foreach( QVariant vehicle, vehicles ) {
-        iconNames << Global::vehicleTypeToIcon( static_cast<VehicleType>( vehicle.toInt() ) );
+        iconNames << Global::vehicleTypeToIcon( static_cast<Enums::VehicleType>( vehicle.toInt() ) );
     }
     return iconNames;
 }
 
 QStringList JourneyInfo::vehicleNames( bool plural ) const
 {
-    if ( !contains( TypesOfVehicleInJourney ) ) {
+    if ( !contains( Enums::TypesOfVehicleInJourney ) ) {
         return QStringList();
     }
-    QVariantList vehicles = value( TypesOfVehicleInJourney ).toList();
+    QVariantList vehicles = value( Enums::TypesOfVehicleInJourney ).toList();
     QStringList names;
     foreach( QVariant vehicle, vehicles ) {
-        names << Global::vehicleTypeToString( static_cast<VehicleType>( vehicle.toInt() ), plural );
+        names << Global::vehicleTypeToString( static_cast<Enums::VehicleType>( vehicle.toInt() ), plural );
     }
     return names;
 }
 
 QVariantList JourneyInfo::vehicleTypesVariant() const
 {
-    return contains( TypesOfVehicleInJourney )
-           ? value( TypesOfVehicleInJourney ).toList() : QVariantList();
+    return contains( Enums::TypesOfVehicleInJourney )
+           ? value( Enums::TypesOfVehicleInJourney ).toList() : QVariantList();
 }
 
 QVariantList JourneyInfo::routeVehicleTypesVariant() const
 {
-    return contains( RouteTypesOfVehicles )
-           ? value( RouteTypesOfVehicles ).toList() : QVariantList();
+    return contains( Enums::RouteTypesOfVehicles )
+           ? value( Enums::RouteTypesOfVehicles ).toList() : QVariantList();
 }
 
 QStringList JourneyInfo::routeTransportLines() const
 {
-    return contains( RouteTransportLines )
-           ? value( RouteTransportLines ).toStringList() : QStringList();
+    return contains( Enums::RouteTransportLines )
+           ? value( Enums::RouteTransportLines ).toStringList() : QStringList();
 }
 
 QStringList JourneyInfo::routePlatformsDeparture() const
 {
-    return contains( RoutePlatformsDeparture )
-           ? value( RoutePlatformsDeparture ).toStringList() : QStringList();
+    return contains( Enums::RoutePlatformsDeparture )
+           ? value( Enums::RoutePlatformsDeparture ).toStringList() : QStringList();
 }
 
 QStringList JourneyInfo::routePlatformsArrival() const
 {
-    return contains( RoutePlatformsArrival )
-           ? value( RoutePlatformsArrival ).toStringList() : QStringList();
+    return contains( Enums::RoutePlatformsArrival )
+           ? value( Enums::RoutePlatformsArrival ).toStringList() : QStringList();
 }
 
 int JourneyInfo::changes() const
 {
-    return contains( Changes ) ? value( Changes ).toInt() : -1;
+    return contains( Enums::Changes ) ? value( Enums::Changes ).toInt() : -1;
 }
 
 QVariantList JourneyInfo::routeTimesDepartureVariant() const
 {
-    return contains( RouteTimesDeparture )
-           ? value( RouteTimesDeparture ).toList() : QVariantList();
+    return contains( Enums::RouteTimesDeparture )
+           ? value( Enums::RouteTimesDeparture ).toList() : QVariantList();
 }
 
 QList< QTime > JourneyInfo::routeTimesDeparture() const
 {
-    if ( contains( RouteTimesDeparture ) ) {
+    if ( contains(Enums::RouteTimesDeparture) ) {
         QList<QTime> ret;
-        QVariantList times = value( RouteTimesDeparture ).toList();
+        QVariantList times = value( Enums::RouteTimesDeparture ).toList();
         foreach( QVariant time, times ) {
             ret << time.toTime();
         }
@@ -910,15 +914,15 @@ QList< QTime > JourneyInfo::routeTimesDeparture() const
 
 QVariantList JourneyInfo::routeTimesArrivalVariant() const
 {
-    return contains( RouteTimesArrival )
-           ? value( RouteTimesArrival ).toList() : QVariantList();
+    return contains( Enums::RouteTimesArrival )
+           ? value( Enums::RouteTimesArrival ).toList() : QVariantList();
 }
 
 QList< QTime > JourneyInfo::routeTimesArrival() const
 {
-    if ( contains( RouteTimesArrival ) ) {
+    if ( contains(Enums::RouteTimesArrival) ) {
         QList<QTime> ret;
-        QVariantList times = value( RouteTimesArrival ).toList();
+        QVariantList times = value( Enums::RouteTimesArrival ).toList();
         foreach( QVariant time, times ) {
             ret << time.toTime();
         }
@@ -930,8 +934,8 @@ QList< QTime > JourneyInfo::routeTimesArrival() const
 
 QVariantList JourneyInfo::routeTimesDepartureDelay() const
 {
-    if ( contains( RouteTimesDepartureDelay ) ) {
-        return value( RouteTimesDepartureDelay ).toList();
+    if ( contains( Enums::RouteTimesDepartureDelay ) ) {
+        return value( Enums::RouteTimesDepartureDelay ).toList();
     } else {
         return QVariantList();
     }
@@ -939,8 +943,8 @@ QVariantList JourneyInfo::routeTimesDepartureDelay() const
 
 QVariantList JourneyInfo::routeTimesArrivalDelay() const
 {
-    if ( contains( RouteTimesArrivalDelay ) ) {
-        return value( RouteTimesArrivalDelay ).toList();
+    if ( contains(Enums::RouteTimesArrivalDelay) ) {
+        return value( Enums::RouteTimesArrivalDelay ).toList();
     } else {
         return QVariantList();
     }
@@ -948,9 +952,9 @@ QVariantList JourneyInfo::routeTimesArrivalDelay() const
 
 QList< QTime > DepartureInfo::routeTimes() const
 {
-    if ( contains( RouteTimes ) ) {
+    if ( contains(Enums::RouteTimes) ) {
         QList<QTime> ret;
-        QVariantList times = value( RouteTimes ).toList();
+        QVariantList times = value( Enums::RouteTimes ).toList();
         foreach( QVariant time, times ) {
             ret << time.toTime();
         }

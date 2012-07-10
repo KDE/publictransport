@@ -82,12 +82,12 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     setButtonText( KDialog::User1, i18nc("@info/plain", "Check") );
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    ui_provider->type->addItem( ServiceProviderGlobal::typeName(ScriptedProvider),
-                                static_cast<int>(ScriptedProvider) );
+    ui_provider->type->addItem( ServiceProviderGlobal::typeName(Enums::ScriptedProvider),
+                                static_cast<int>(Enums::ScriptedProvider) );
 #endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
-    ui_provider->type->addItem( ServiceProviderGlobal::typeName(GtfsProvider),
-                                static_cast<int>(GtfsProvider)  );
+    ui_provider->type->addItem( ServiceProviderGlobal::typeName(Enums::GtfsProvider),
+                                static_cast<int>(Enums::GtfsProvider)  );
 #endif
 
     QToolBar *notesToolBar = new QToolBar( "notesToolBar", ui_provider->tabNotes );
@@ -558,7 +558,7 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     QHash< QString, QString > descriptions = m_providerData->descriptions();
     names[lang] = ui_provider->name->text();
     descriptions[lang] = ui_provider->description->toPlainText();
-    const VehicleType defaultVehicleType = Global::vehicleTypeFromString(
+    const Enums::VehicleType defaultVehicleType = Global::vehicleTypeFromString(
             ui_provider->defaultVehicleType->itemData(
             ui_provider->defaultVehicleType->currentIndex()).toString() );
 
@@ -576,7 +576,7 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     }
 
     // Update values that can be edited in this dialog
-    const ServiceProviderType providerType =
+    const Enums::ServiceProviderType providerType =
             providerTypeFromComboBoxIndex( ui_provider->type->currentIndex() );
     m_providerData->setType( providerType );
     m_providerData->setNames( names );
@@ -598,13 +598,13 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     m_providerData->setNotes( ui_provider->notes->textOrHtml() );
     switch ( providerType ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    case ScriptedProvider:
+    case Enums::ScriptedProvider:
         m_providerData->setScriptFile( ui_provider->scriptFile->text(),
                                        scriptExtensionsFromWidget() );
         break;
 #endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
-    case GtfsProvider:
+    case Enums::GtfsProvider:
         m_providerData->setFeedUrl( ui_provider->gtfsFeed->text() );
         m_providerData->setRealtimeTripUpdateUrl( ui_provider->gtfsTripUpdates->text() );
         m_providerData->setRealtimeAlertsUrl( ui_provider->gtfsAlerts->text() );
@@ -642,14 +642,14 @@ void ProjectSettingsDialog::checkScriptExtensionsInWidget( const QStringList &sc
 void ProjectSettingsDialog::providerTypeChanged( int newProviderTypeIndex )
 {
     // Show settings widgets specific to the chosen provider type
-    const ServiceProviderType providerType = providerTypeFromComboBoxIndex( newProviderTypeIndex );
+    const Enums::ServiceProviderType providerType = providerTypeFromComboBoxIndex( newProviderTypeIndex );
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    ui_provider->scriptSettingsWidget->setVisible( providerType == ScriptedProvider );
+    ui_provider->scriptSettingsWidget->setVisible( providerType == Enums::ScriptedProvider );
 #else
     ui_provider->scriptSettingsWidget->hide();
 #endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
-    ui_provider->gtfsSettingsWidget->setVisible( providerType == GtfsProvider );
+    ui_provider->gtfsSettingsWidget->setVisible( providerType == Enums::GtfsProvider );
 #else
     ui_provider->gtfsSettingsWidget->hide();
 #endif
@@ -875,8 +875,8 @@ void ProjectSettingsDialog::setScriptFile( const QString &scriptFile )
 
 const ServiceProviderData *ProjectSettingsDialog::providerData( QObject *parent ) const
 {
-    m_providerData->setParent( parent );
-    return m_providerData;
+//     m_providerData->setParent( parent );
+    return m_providerData->clone(parent);
 }
 
 void ProjectSettingsDialog::setProviderData( const ServiceProviderData *info,
@@ -952,7 +952,7 @@ void ProjectSettingsDialog::settingsChanged()
     emit signalChangeStatusbar( i18n("Settings changed") );
 }
 
-int ProjectSettingsDialog::providerTypeToComboBoxIndex( ServiceProviderType providerType ) const
+int ProjectSettingsDialog::providerTypeToComboBoxIndex( Enums::ServiceProviderType providerType ) const
 {
     for ( int index = 0; index < ui_provider->type->count(); ++index ) {
         if ( providerTypeFromComboBoxIndex(index) == providerType ) {
@@ -962,9 +962,9 @@ int ProjectSettingsDialog::providerTypeToComboBoxIndex( ServiceProviderType prov
     return -1;
 }
 
-ServiceProviderType ProjectSettingsDialog::providerTypeFromComboBoxIndex( int index ) const
+Enums::ServiceProviderType ProjectSettingsDialog::providerTypeFromComboBoxIndex( int index ) const
 {
-    return static_cast< ServiceProviderType >( ui_provider->type->itemData(index).toInt() );
+    return static_cast< Enums::ServiceProviderType >( ui_provider->type->itemData(index).toInt() );
 }
 
 #include "projectsettingsdialog.moc"

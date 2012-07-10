@@ -44,7 +44,7 @@ public:
     };
 };
 
-ServiceProviderData::ServiceProviderData( const ServiceProviderType& type,
+ServiceProviderData::ServiceProviderData( const Enums::ServiceProviderType& type,
                                           const QString& id, QObject *parent )
         : QObject(parent)
 {
@@ -54,18 +54,18 @@ ServiceProviderData::ServiceProviderData( const ServiceProviderType& type,
     m_fileFormatVersion = "1.1";
     m_useSeparateCityValue = false;
     m_onlyUseCitiesInList = false;
-    m_defaultVehicleType = Unknown;
+    m_defaultVehicleType = Enums::Unknown;
     m_minFetchWait = 0;
 
-    qRegisterMetaType< ServiceProviderType >( "ServiceProviderType" );
+    qRegisterMetaType< Enums::ServiceProviderType >( "Enums::ServiceProviderType" );
 }
 
-ServiceProviderData::ServiceProviderData( const ServiceProviderType &type,
+ServiceProviderData::ServiceProviderData( const Enums::ServiceProviderType &type,
         const QString &id, const QHash< QString, QString > &names,
         const QHash< QString, QString >& descriptions, const QString &version,
         const QString &fileVersion, bool useSeparateCityValue, bool onlyUseCitiesInList,
         const QString &url, const QString &shortUrl, int minFetchWait, const QString &author,
-        const QString &email, VehicleType defaultVehicleType,
+        const QString &email, Enums::VehicleType defaultVehicleType,
         const QList< ChangelogEntry >& changelog, const QStringList &cities,
         const QHash< QString, QString >& cityNameToValueReplacementHash,
         QObject *parent )

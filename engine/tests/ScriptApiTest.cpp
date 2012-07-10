@@ -791,10 +791,10 @@ void ScriptApiTest::resultDataTest()
     QList< TimetableData > data = result.data();
     QCOMPARE( data.count(), 1 );
     const TimetableData first = data.first();
-    QCOMPARE( first[DepartureTime].toTime(), QTime(11, 10) );
-    QCOMPARE( first[TypeOfVehicle].toString(), QString("HighSpeedTrain") );
-    QCOMPARE( first[TransportLine].toString(), QString("N1") );
-    QCOMPARE( first[Target].toString(), QString("Test-Target") );
+    QCOMPARE( first[Enums::DepartureTime].toTime(), QTime(11, 10) );
+    QCOMPARE( first[Enums::TypeOfVehicle].toString(), QString("HighSpeedTrain") );
+    QCOMPARE( first[Enums::TransportLine].toString(), QString("N1") );
+    QCOMPARE( first[Enums::Target].toString(), QString("Test-Target") );
 
     // Test clear()
     result.clear();
@@ -823,8 +823,8 @@ void ScriptApiTest::resultDataTest()
     data = result.data();
     const TimetableData dataRoute = data.at( 10 );
     QCOMPARE( dataRoute.count(), 2 ); // Contains RouteStops and RouteTimes
-    QCOMPARE( dataRoute[RouteStops].toStringList(), routeStops );
-    QCOMPARE( dataRoute[RouteTimes].toStringList(), routeTimes );
+    QCOMPARE( dataRoute[Enums::RouteStops].toStringList(), routeStops );
+    QCOMPARE( dataRoute[Enums::RouteTimes].toStringList(), routeTimes );
 }
 
 void ScriptApiTest::networkSynchronousTest()

@@ -146,7 +146,7 @@ QScriptValue CallScriptFunctionJob::returnValue() const
     return m_returnValue;
 }
 
-QList< TimetableInformation > TestUsedTimetableInformationsJob::timetableInformations() const
+QList< Enums::TimetableInformation > TestUsedTimetableInformationsJob::timetableInformations() const
 {
     return m_timetableInformations;
 }
@@ -207,9 +207,9 @@ bool TestUsedTimetableInformationsJob::testResults()
         foreach ( const QString &string, strings ) {
             const bool stringEqualsArrivals =
                     string.compare(QLatin1String("arrivals"), Qt::CaseInsensitive) == 0;
-            const TimetableInformation info = stringEqualsArrivals
-                    ? Nothing : Global::timetableInformationFromString( string );
-            if ( info == Nothing && !stringEqualsArrivals ) {
+            const Enums::TimetableInformation info = stringEqualsArrivals
+                    ? Enums::Nothing : Global::timetableInformationFromString( string );
+            if ( info == Enums::Nothing && !stringEqualsArrivals ) {
                 m_additionalMessages << TimetableDataRequestMessage(
                         i18nc("@info/plain", "Invalid TimetableInformation string returned: '%1'",
                               string),
@@ -281,8 +281,8 @@ void CallScriptFunctionJob::debuggerRun()
     connect( scriptHelper, SIGNAL(errorReceived(QString,QScriptContextInfo,QString)),
              this, SLOT(scriptErrorReceived(QString,QScriptContextInfo,QString)) );
 
-    connect( scriptResult, SIGNAL(invalidDataReceived(TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)),
-             this, SLOT(invalidDataReceived(TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)) );
+    connect( scriptResult, SIGNAL(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)),
+             this, SLOT(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)) );
 
     // Call script function
     if ( debugFlags.testFlag(InterruptAtStart) ) {
@@ -355,11 +355,11 @@ void CallScriptFunctionJob::debuggerRun()
         engine->abortEvaluation();
     }
 
-    disconnect( scriptResult, SIGNAL(invalidDataReceived(TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)),
-                this, SLOT(invalidDataReceived(TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)) );
+    disconnect( scriptResult, SIGNAL(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)),
+                this, SLOT(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)) );
 
     // Check for exceptions
-    if ( !debugger->isLastRunAborted() && finishedSuccessfully && engine->hasUncaughtException() ) {
+    if ( finishedSuccessfully && engine->hasUncaughtException() ) {
         m_engineMutex->unlockInline();
         ThreadWeaver::debug( 0, " - Run script ERROR: In function %s: %s\n",
                             functionName.toUtf8().constData(),
@@ -374,9 +374,10 @@ void CallScriptFunctionJob::debuggerRun()
 //     engine->clearExceptions();
     m_engineMutex->unlockInline();
 
-    QMutexLocker locker( m_mutex );
+    m_mutex->lockInline();
     m_returnValue = returnValue;
     finish( scriptResult );
+    m_mutex->unlockInline();
 
     // Mark job as done for Debugger to know that the script is not waiting for a signal
     setFinished( true );
@@ -384,9 +385,12 @@ void CallScriptFunctionJob::debuggerRun()
     // Use the previous Network object in the engine again and delete the one for this thread
     // This needs to be called after setFinished(true), otherwise the Debugger thinks there are
     // still running jobs, ie. waiting for a signal
+    m_engineMutex->lockInline();
     engine->globalObject().setProperty( "network", previousScriptNetwork );
+    m_engineMutex->unlockInline();
     delete scriptNetwork;
 
+    QMutexLocker locker( m_mutex );
     if ( allNetworkRequestsFinished && finishedSuccessfully ) {
         // No uncaught exceptions, all network requests finished
         if ( debugger->isLastRunAborted() ) {
@@ -423,7 +427,7 @@ void CallScriptFunctionJob::scriptErrorReceived( const QString &message,
             TimetableDataRequestMessage::Warning, context.lineNumber() );
 }
 
-void CallScriptFunctionJob::invalidDataReceived( TimetableInformation information,
+void CallScriptFunctionJob::invalidDataReceived( Enums::TimetableInformation information,
                                                  const QString &message,
                                                  const QScriptContextInfo &context,
                                                  int index, const QVariantMap& map )
@@ -484,7 +488,7 @@ bool TimetableDataRequestJob::testResults()
 }
 
 TimetableDataRequestMessage CallScriptFunctionJob::message( MessageType messageType,
-        TimetableInformation info1, TimetableInformation info2, int count1, int count2,
+        Enums::TimetableInformation info1, Enums::TimetableInformation info2, int count1, int count2,
         TimetableDataRequestMessage::Type type, int lineNumber )
 {
     QString msg;
@@ -532,12 +536,12 @@ bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request
     QTime lastTime;
     for ( int i = 0; i < m_timetableData.count(); ++ i ) {
         TimetableData timetableData = m_timetableData[ i ];
-        QDateTime departureDateTime = timetableData.value( DepartureDateTime ).toDateTime();
+        QDateTime departureDateTime = timetableData.value( Enums::DepartureDateTime ).toDateTime();
         if ( !departureDateTime.isValid() ) {
-            QDate date = timetableData.value( DepartureDate ).toDate();
+            QDate date = timetableData.value( Enums::DepartureDate ).toDate();
             QTime departureTime;
             if ( timetableData.values().contains(departureTime) ) {
-                QVariant timeValue = timetableData.value( DepartureTime );
+                QVariant timeValue = timetableData.value( Enums::DepartureTime );
                 if ( timeValue.canConvert(QVariant::Time) ) {
                     departureTime = timeValue.toTime();
                 } else {
@@ -565,15 +569,15 @@ bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request
             }
 
             departureDateTime = QDateTime( date, departureTime );
-            timetableData.insert( DepartureDateTime, departureDateTime );
+            timetableData.insert( Enums::DepartureDateTime, departureDateTime );
         }
 
         curDate = departureDateTime.date();
         lastTime = departureDateTime.time();
 
-        const bool isValid = timetableData.contains(TransportLine) &&
-                             timetableData.contains(Target) &&
-                             timetableData.contains(DepartureDateTime);
+        const bool isValid = timetableData.contains(Enums::TransportLine) &&
+                             timetableData.contains(Enums::Target) &&
+                             timetableData.contains(Enums::DepartureDateTime);
         if ( !isValid ) {
             ++countInvalid;
             m_additionalMessages << TimetableDataRequestMessage(
@@ -588,74 +592,74 @@ bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request
         TimetableData values = m_timetableData[i];
 
         // If RouteStops data is available test it and associated TimetableInformation values
-        if ( values.contains(RouteStops) && !values[RouteStops].toStringList().isEmpty() ) {
+        if ( values.contains(Enums::RouteStops) && !values[Enums::RouteStops].toStringList().isEmpty() ) {
             // Check if RouteTimesDeparture has one element less than RouteStops
             // and if RouteTimesDepartureDelay has the same number of elements as RouteStops (if set)
-            const QStringList routeStops = values[RouteStops].toStringList();
-            if ( values.contains(RouteTimes) && !values[RouteTimes].toStringList().isEmpty() ) {
-                const QStringList routeTimes = values[RouteTimes].toStringList();
+            const QStringList routeStops = values[Enums::RouteStops].toStringList();
+            if ( values.contains(Enums::RouteTimes) && !values[Enums::RouteTimes].toStringList().isEmpty() ) {
+                const QStringList routeTimes = values[Enums::RouteTimes].toStringList();
                 if ( routeTimes.count() != routeStops.count() ) {
-                    m_additionalMessages << message( NotSameNumberOfItems, RouteTimes, RouteStops,
+                    m_additionalMessages << message( NotSameNumberOfItems, Enums::RouteTimes, Enums::RouteStops,
                                                      routeTimes.count(), routeStops.count() );
                     success = false;
                 }
 
-                if ( values.contains(RouteTimesDepartureDelay) &&
-                     !values[RouteTimesDepartureDelay].toStringList().isEmpty() )
+                if ( values.contains(Enums::RouteTimesDepartureDelay) &&
+                     !values[Enums::RouteTimesDepartureDelay].toStringList().isEmpty() )
                 {
                     const QStringList routeTimesDepartureDelay =
-                        values[RouteTimesDepartureDelay].toStringList();
+                        values[Enums::RouteTimesDepartureDelay].toStringList();
                     if ( routeTimesDepartureDelay.count() != routeTimes.count() ) {
                         m_additionalMessages << message( NotSameNumberOfItems,
-                                RouteTimesDepartureDelay, RouteTimes,
+                                Enums::RouteTimesDepartureDelay, Enums::RouteTimes,
                                 routeTimesDepartureDelay.count(), routeTimes.count() );
                         success = false;
                     }
                 }
             }
 
-            if ( values.contains(RouteTypesOfVehicles) &&
-                 !values[RouteTypesOfVehicles].toList().isEmpty() )
+            if ( values.contains(Enums::RouteTypesOfVehicles) &&
+                 !values[Enums::RouteTypesOfVehicles].toList().isEmpty() )
             {
-                const QVariantList routeTypesOfVehicles = values[RouteTypesOfVehicles].toList();
+                const QVariantList routeTypesOfVehicles = values[Enums::RouteTypesOfVehicles].toList();
                 if ( routeTypesOfVehicles.count() != routeStops.count() - 1 ) {
-                    m_additionalMessages << message( NotOneItemLessThan, RouteTypesOfVehicles,
-                            RouteStops, routeTypesOfVehicles.count(), routeStops.count() );
+                    m_additionalMessages << message( NotOneItemLessThan, Enums::RouteTypesOfVehicles,
+                            Enums::RouteStops, routeTypesOfVehicles.count(), routeStops.count() );
                     success = false;
                 }
             }
 
             // Check if RoutePlatformsDeparture has one element less than RouteStops
-            if ( values.contains(RoutePlatformsDeparture) &&
-                 !values[RoutePlatformsDeparture].toStringList().isEmpty() )
+            if ( values.contains(Enums::RoutePlatformsDeparture) &&
+                 !values[Enums::RoutePlatformsDeparture].toStringList().isEmpty() )
             {
                 const QStringList routePlatformsDeparture =
-                        values[RoutePlatformsDeparture].toStringList();
+                        values[Enums::RoutePlatformsDeparture].toStringList();
                 if ( routePlatformsDeparture.count() != routeStops.count() - 1 ) {
-                    m_additionalMessages << message( NotOneItemLessThan, RoutePlatformsDeparture,
-                            RouteStops, routePlatformsDeparture.count(), routeStops.count() );
+                    m_additionalMessages << message( NotOneItemLessThan, Enums::RoutePlatformsDeparture,
+                            Enums::RouteStops, routePlatformsDeparture.count(), routeStops.count() );
                     success = false;
                 }
             }
 
             // Check if RoutePlatformsArrival has one element less than RouteStops
-            if ( values.contains(RoutePlatformsArrival) &&
-                 !values[RoutePlatformsArrival].toStringList().isEmpty() )
+            if ( values.contains(Enums::RoutePlatformsArrival) &&
+                 !values[Enums::RoutePlatformsArrival].toStringList().isEmpty() )
             {
                 const QStringList routePlatformsArrival =
-                        values[RoutePlatformsArrival].toStringList();
+                        values[Enums::RoutePlatformsArrival].toStringList();
                 if ( routePlatformsArrival.count() != routeStops.count() - 1 ) {
-                    m_additionalMessages << message( NotOneItemLessThan, RoutePlatformsArrival,
-                            RouteStops, routePlatformsArrival.count(), routeStops.count() );
+                    m_additionalMessages << message( NotOneItemLessThan, Enums::RoutePlatformsArrival,
+                            Enums::RouteStops, routePlatformsArrival.count(), routeStops.count() );
                     success = false;
                 }
             }
         } else { // values does not contain RouteStops
-            QList< TimetableInformation > infos;
-            infos << RouteTimes << RoutePlatformsDeparture << RoutePlatformsArrival
-                  << RouteExactStops << RouteStopsShortened << RouteTypesOfVehicles
-                  << RouteTransportLines;
-            foreach ( TimetableInformation info, infos ) {
+            QList< Enums::TimetableInformation > infos;
+            infos << Enums::RouteTimes << Enums::RoutePlatformsDeparture << Enums::RoutePlatformsArrival
+                  << Enums::RouteExactStops << Enums::RouteStopsShortened << Enums::RouteTypesOfVehicles
+                  << Enums::RouteTransportLines;
+            foreach ( Enums::TimetableInformation info, infos ) {
                 if ( values.contains(info) ) {
                     m_additionalMessages << TimetableDataRequestMessage( i18nc("@info/plain",
                             "'%1' data ignored, because data for 'RouteStops' is missing.",
@@ -719,23 +723,23 @@ bool TimetableDataRequestJob::testStopSuggestionData(
     int countInvalid = 0;
     int i = 1;
     foreach ( const TimetableData &timetableData, m_timetableData ) {
-        const bool isValid = !timetableData[StopName].toString().isEmpty();
+        const bool isValid = !timetableData[Enums::StopName].toString().isEmpty();
         if ( !isValid ) {
             ++countInvalid;
         }
 
-        QString info = timetableData[StopName].toString();
+        QString info = timetableData[Enums::StopName].toString();
         if ( info.length() > 50 ) {
             info = info.left(50) + "...";
         }
-        if ( timetableData.contains(StopID) ) {
-            info += ", ID: " + timetableData[StopID].toString();
+        if ( timetableData.contains(Enums::StopID) ) {
+            info += ", ID: " + timetableData[Enums::StopID].toString();
         }
-        if ( timetableData.contains(StopWeight) ) {
-            info += ", weight: " + timetableData[StopWeight].toString();
+        if ( timetableData.contains(Enums::StopWeight) ) {
+            info += ", weight: " + timetableData[Enums::StopWeight].toString();
         }
-        if ( timetableData.contains(StopCity) ) {
-            info += ", city: " + timetableData[StopCity].toString();
+        if ( timetableData.contains(Enums::StopCity) ) {
+            info += ", city: " + timetableData[Enums::StopCity].toString();
         }
         m_additionalMessages << TimetableDataRequestMessage(
                 QString("%1%2: %3").arg(i)
@@ -783,12 +787,12 @@ bool TimetableDataRequestJob::testJourneyData( const JourneyRequest *request )
     QTime lastTime;
     for ( int i = 0; i < m_timetableData.count(); ++ i ) {
         TimetableData timetableData = m_timetableData[ i ];
-        QDateTime departureDateTime = timetableData.value( DepartureDateTime ).toDateTime();
+        QDateTime departureDateTime = timetableData.value( Enums::DepartureDateTime ).toDateTime();
         if ( !departureDateTime.isValid() ) {
-            QDate date = timetableData.value( DepartureDate ).toDate();
+            QDate date = timetableData.value( Enums::DepartureDate ).toDate();
             QTime departureTime;
-            if ( timetableData.values().contains(DepartureTime) ) {
-                QVariant timeValue = timetableData[ DepartureTime ];
+            if ( timetableData.values().contains(Enums::DepartureTime) ) {
+                QVariant timeValue = timetableData[ Enums::DepartureTime ];
                 if ( timeValue.canConvert(QVariant::Time) ) {
                     departureTime = timeValue.toTime();
                 } else {
@@ -816,15 +820,15 @@ bool TimetableDataRequestJob::testJourneyData( const JourneyRequest *request )
             }
 
             departureDateTime = QDateTime( date, departureTime );
-            timetableData.insert( DepartureDateTime, departureDateTime );
+            timetableData.insert( Enums::DepartureDateTime, departureDateTime );
         }
 
-        QDateTime arrivalDateTime = timetableData[ ArrivalDateTime ].toDateTime();
+        QDateTime arrivalDateTime = timetableData[ Enums::ArrivalDateTime ].toDateTime();
         if ( !departureDateTime.isValid() ) {
-            QDate date = timetableData[ ArrivalDate ].toDate();
+            QDate date = timetableData[ Enums::ArrivalDate ].toDate();
             QTime arrivalTime;
-            if ( timetableData.contains(ArrivalTime) ) {
-                QVariant timeValue = timetableData[ ArrivalTime ];
+            if ( timetableData.contains(Enums::ArrivalTime) ) {
+                QVariant timeValue = timetableData[ Enums::ArrivalTime ];
                 if ( timeValue.canConvert(QVariant::Time) ) {
                     arrivalTime = timeValue.toTime();
                 } else {
@@ -842,16 +846,16 @@ bool TimetableDataRequestJob::testJourneyData( const JourneyRequest *request )
             if ( arrivalDateTime < departureDateTime ) {
                 arrivalDateTime = arrivalDateTime.addDays( 1 );
             }
-            timetableData.insert( ArrivalDateTime, arrivalDateTime );
+            timetableData.insert( Enums::ArrivalDateTime, arrivalDateTime );
         }
 
         curDate = departureDateTime.date();
         lastTime = departureDateTime.time();
 
-        bool isValid = timetableData.contains(StartStopName) &&
-                       timetableData.contains(TargetStopName) &&
-                       timetableData.contains(DepartureDateTime) &&
-                       timetableData.contains(ArrivalDateTime);
+        bool isValid = timetableData.contains(Enums::StartStopName) &&
+                       timetableData.contains(Enums::TargetStopName) &&
+                       timetableData.contains(Enums::DepartureDateTime) &&
+                       timetableData.contains(Enums::ArrivalDateTime);
         if ( !isValid ) {
             ++countInvalid;
         }
@@ -860,28 +864,28 @@ bool TimetableDataRequestJob::testJourneyData( const JourneyRequest *request )
     bool success = true;
     for ( int i = 0; i < m_timetableData.count(); ++i ) {
         TimetableData values = m_timetableData[i];
-        if ( values.contains(RouteStops) && !values[RouteStops].toStringList().isEmpty() ) {
+        if ( values.contains(Enums::RouteStops) && !values[Enums::RouteStops].toStringList().isEmpty() ) {
             // Check if RouteTimesDeparture has one element less than RouteStops
             // and if RouteTimesDepartureDelay has the same number of elements as RouteStops (if set)
-            const QStringList routeStops = values[RouteStops].toStringList();
-            if ( values.contains(RouteTimesDeparture) &&
-                 !values[RouteTimesDeparture].toStringList().isEmpty() )
+            const QStringList routeStops = values[Enums::RouteStops].toStringList();
+            if ( values.contains(Enums::RouteTimesDeparture) &&
+                 !values[Enums::RouteTimesDeparture].toStringList().isEmpty() )
             {
-                const QStringList routeTimesDeparture = values[RouteTimesDeparture].toStringList();
+                const QStringList routeTimesDeparture = values[Enums::RouteTimesDeparture].toStringList();
                 if ( routeTimesDeparture.count() != routeStops.count() - 1 ) {
-                    m_additionalMessages << message( NotOneItemLessThan, RouteTimesDeparture,
-                            RouteStops, routeTimesDeparture.count(), routeStops.count() );
+                    m_additionalMessages << message( NotOneItemLessThan, Enums::RouteTimesDeparture,
+                            Enums::RouteStops, routeTimesDeparture.count(), routeStops.count() );
                     success = false;
                 }
 
-                if ( values.contains(RouteTimesDepartureDelay) &&
-                     !values[RouteTimesDepartureDelay].toStringList().isEmpty() )
+                if ( values.contains(Enums::RouteTimesDepartureDelay) &&
+                     !values[Enums::RouteTimesDepartureDelay].toStringList().isEmpty() )
                 {
                     const QStringList routeTimesDepartureDelay =
-                        values[RouteTimesDepartureDelay].toStringList();
+                        values[Enums::RouteTimesDepartureDelay].toStringList();
                     if ( routeTimesDepartureDelay.count() != routeTimesDeparture.count() ) {
                         m_additionalMessages << message( NotSameNumberOfItems,
-                                RouteTimesDepartureDelay, RouteTimesDeparture,
+                                Enums::RouteTimesDepartureDelay, Enums::RouteTimesDeparture,
                                 routeTimesDepartureDelay.count(), routeTimesDeparture.count() );
                         success = false;
                     }
@@ -889,38 +893,38 @@ bool TimetableDataRequestJob::testJourneyData( const JourneyRequest *request )
             }
 
             // Check if RoutePlatformsDeparture has one element less than RouteStops
-            if ( values.contains(RoutePlatformsDeparture)
-                    && !values[RoutePlatformsDeparture].toStringList().isEmpty() )
+            if ( values.contains(Enums::RoutePlatformsDeparture)
+                    && !values[Enums::RoutePlatformsDeparture].toStringList().isEmpty() )
             {
                 const QStringList routePlatformsArrival =
-                        values[RoutePlatformsArrival].toStringList();
+                        values[Enums::RoutePlatformsArrival].toStringList();
                 if ( routePlatformsArrival.count() != routeStops.count() - 1 ) {
-                    m_additionalMessages << message( NotOneItemLessThan, RoutePlatformsArrival,
-                            RouteStops, routePlatformsArrival.count(), routeStops.count() );
+                    m_additionalMessages << message( NotOneItemLessThan, Enums::RoutePlatformsArrival,
+                            Enums::RouteStops, routePlatformsArrival.count(), routeStops.count() );
                     success = false;
                 }
             }
 
             // Check if RouteTimesArrival has one element less than RouteStops
             // and if RouteTimesArrivalDelay has the same number of elements as RouteStops (if set)
-            if ( values.contains(RouteTimesArrival)
-                    && !values[RouteTimesArrival].toStringList().isEmpty() )
+            if ( values.contains(Enums::RouteTimesArrival)
+                    && !values[Enums::RouteTimesArrival].toStringList().isEmpty() )
             {
-                const QStringList routeTimesArrival = values[RouteTimesArrival].toStringList();
+                const QStringList routeTimesArrival = values[Enums::RouteTimesArrival].toStringList();
                 if ( routeTimesArrival.count() != routeStops.count() - 1 ) {
-                    m_additionalMessages << message( NotOneItemLessThan, RouteTimesArrival,
-                            RouteStops, routeTimesArrival.count(), routeStops.count() );
+                    m_additionalMessages << message( NotOneItemLessThan, Enums::RouteTimesArrival,
+                            Enums::RouteStops, routeTimesArrival.count(), routeStops.count() );
                     success = false;
                 }
 
-                if ( values.contains(RouteTimesArrivalDelay)
-                        && !values[RouteTimesArrivalDelay].toStringList().isEmpty() )
+                if ( values.contains(Enums::RouteTimesArrivalDelay)
+                        && !values[Enums::RouteTimesArrivalDelay].toStringList().isEmpty() )
                 {
                     const QStringList routeTimesArrivalDelay =
-                        values[RouteTimesArrivalDelay].toStringList();
+                        values[Enums::RouteTimesArrivalDelay].toStringList();
                     if ( routeTimesArrivalDelay.count() != routeTimesArrival.count() ) {
                         m_additionalMessages << message( NotSameNumberOfItems,
-                                RouteTimesArrivalDelay, RouteTimesArrival,
+                                Enums::RouteTimesArrivalDelay, Enums::RouteTimesArrival,
                                 routeTimesArrivalDelay.count(), routeTimesArrival.count() );
                         success = false;
                     }
@@ -928,24 +932,24 @@ bool TimetableDataRequestJob::testJourneyData( const JourneyRequest *request )
             }
 
             // Check if RoutePlatformsArrival has one element less than RouteStops
-            if ( values.contains(RoutePlatformsArrival)
-                    && !values[RoutePlatformsArrival].toStringList().isEmpty() )
+            if ( values.contains(Enums::RoutePlatformsArrival)
+                    && !values[Enums::RoutePlatformsArrival].toStringList().isEmpty() )
             {
                 const QStringList routePlatformsArrival =
-                        values[RoutePlatformsArrival].toStringList();
+                        values[Enums::RoutePlatformsArrival].toStringList();
                 if ( routePlatformsArrival.count() != routeStops.count() - 1 ) {
-                    m_additionalMessages << message( NotOneItemLessThan, RoutePlatformsArrival,
-                            RouteStops, routePlatformsArrival.count(), routeStops.count() );
+                    m_additionalMessages << message( NotOneItemLessThan, Enums::RoutePlatformsArrival,
+                            Enums::RouteStops, routePlatformsArrival.count(), routeStops.count() );
                     success = false;
                 }
             }
         } else { // values does not contain RouteStops else { // values does not contain RouteStops
-            QList< TimetableInformation > infos;
-            infos << RouteTimes << RoutePlatformsDeparture << RoutePlatformsArrival
-                  << RouteTimesArrival << RouteTimesArrivalDelay << RouteTimesDeparture
-                  << RouteTimesDepartureDelay << RouteStopsShortened << RouteTypesOfVehicles
-                  << RouteTransportLines;
-            foreach ( TimetableInformation info, infos ) {
+            QList< Enums::TimetableInformation > infos;
+            infos << Enums::RouteTimes << Enums::RoutePlatformsDeparture << Enums::RoutePlatformsArrival
+                  << Enums::RouteTimesArrival << Enums::RouteTimesArrivalDelay << Enums::RouteTimesDeparture
+                  << Enums::RouteTimesDepartureDelay << Enums::RouteStopsShortened << Enums::RouteTypesOfVehicles
+                  << Enums::RouteTransportLines;
+            foreach ( Enums::TimetableInformation info, infos ) {
                 if ( values.contains(info) ) {
                     m_additionalMessages << TimetableDataRequestMessage( i18nc("@info/plain",
                             "'%1' data ignored, because data for 'RouteStops' is missing.",

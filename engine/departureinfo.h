@@ -37,7 +37,7 @@
  * @brief LineService-Flags.
  * @see LineService
  **/
-Q_DECLARE_FLAGS( LineServices, LineService )
+Q_DECLARE_FLAGS( LineServices, Enums::LineService )
 
 /**
  * @brief This is the abstract base class of all other timetable information classes.
@@ -80,12 +80,12 @@ public:
 
     virtual ~PublicTransportInfo();
 
-    bool contains( TimetableInformation info ) const { return m_data.contains(info); };
-    QVariant value( TimetableInformation info ) const { return m_data[info]; };
-    void insert( TimetableInformation info, const QVariant &data ) {
+    bool contains( Enums::TimetableInformation info ) const { return m_data.contains(info); };
+    QVariant value( Enums::TimetableInformation info ) const { return m_data[info]; };
+    void insert( Enums::TimetableInformation info, const QVariant &data ) {
         m_data.insert( info, data );
     };
-    void remove( TimetableInformation info ) { m_data.remove(info); };
+    void remove( Enums::TimetableInformation info ) { m_data.remove(info); };
 
     /**
      * @brief Wheather or not this PublicTransportInfo object is valid.
@@ -122,7 +122,7 @@ public:
 
     /** @brief Gets information about the pricing of the departure/arrival/journey. */
     QString pricing() const {
-            return contains(Pricing) ? value(Pricing).toString() : QString(); };
+            return contains(Enums::Pricing) ? value(Enums::Pricing).toString() : QString(); };
 
     /**
      * @brief Parses the given string for a vehicle type.
@@ -132,7 +132,7 @@ public:
      *   it couldn't be parsed.
      **/
     // DEPRECATED Use Global::vehicleTypeFromString() instead
-    static VehicleType getVehicleTypeFromString( const QString &sLineType );
+    static Enums::VehicleType getVehicleTypeFromString( const QString &sLineType );
 
     /**
      * @brief Gets the operator for the given vehicle type string.
@@ -169,28 +169,28 @@ public:
 
     /** @brief Gets information about the pricing of the journey. */
     QString pricing() const {
-            return contains(Pricing) ? value(Pricing).toString() : QString(); };
+            return contains(Enums::Pricing) ? value(Enums::Pricing).toString() : QString(); };
 
     /** @brief Gets news for the journey, such as "platform changed". */
     QString journeyNews() const {
-            return contains(JourneyNews) ? value(JourneyNews).toString() : QString(); };
+            return contains(Enums::JourneyNews) ? value(Enums::JourneyNews).toString() : QString(); };
 
     /** @brief Gets the stop name at which the journey starts */
     QString startStopName() const {
-            return contains(StartStopName) ? value(StartStopName).toString() : QString(); };
+            return contains(Enums::StartStopName) ? value(Enums::StartStopName).toString() : QString(); };
 
     /** @brief Gets the stop name of the target of the journey */
     QString targetStopName() const {
-            return contains(TargetStopName) ? value(TargetStopName).toString() : QString(); };
+            return contains(Enums::TargetStopName) ? value(Enums::TargetStopName).toString() : QString(); };
 
     /** @brief Gets the date and time of the arrival at the journey target */
     QDateTime arrival() const;
 
     /** @brief Gets the duration in minutes of the journey. */
-    int duration() const { return contains(Duration) ? value(Duration).toInt() : -1; };
+    int duration() const { return contains(Enums::Duration) ? value(Enums::Duration).toInt() : -1; };
 
     /** @brief Gets the types of vehicle used in the journey. */
-    QList<VehicleType> vehicleTypes() const;
+    QList<Enums::VehicleType> vehicleTypes() const;
 
     QStringList vehicleIconNames() const;
 
@@ -302,38 +302,38 @@ public:
     QString target( StopNameOptions stopNameOptions = UseFullStopNames ) const;
 
     /** @brief Gets the line name of the departing / arriving vehicle. */
-    QString line() const { return contains(TransportLine)
-        ? value(TransportLine).toString() : QString(); };
+    QString line() const { return contains(Enums::TransportLine)
+        ? value(Enums::TransportLine).toString() : QString(); };
 
     /** @brief Gets the type of the departing / arriving vehicle. */
-    VehicleType vehicleType() const { return contains(TypeOfVehicle)
-        ? static_cast<VehicleType>( value(TypeOfVehicle).toInt() ) : Unknown; };
+    Enums::VehicleType vehicleType() const { return contains(Enums::TypeOfVehicle)
+        ? static_cast<Enums::VehicleType>( value(Enums::TypeOfVehicle).toInt() ) : Enums::Unknown; };
 
     /** @brief Wheather or not the departing / arriving vehicle is a night line. */
-    bool isNightLine() const { return m_lineServices.testFlag( NightLine ); };
+    bool isNightLine() const { return m_lineServices.testFlag( Enums::NightLine ); };
 
     /** @brief Wheather or not the departing / arriving vehicle is an express line. */
-    bool isExpressLine() const { return m_lineServices.testFlag( ExpressLine ); };
+    bool isExpressLine() const { return m_lineServices.testFlag( Enums::ExpressLine ); };
 
     /** @brief Gets the platform from/at which the vehicle departs/arrives. */
-    QString platform() const { return contains(Platform)
-        ? value(Platform).toString() : QString(); };
+    QString platform() const { return contains(Enums::Platform)
+        ? value(Enums::Platform).toString() : QString(); };
 
     /** @brief Gets the delay in minutes of the vehicle. -1 means that no delay information is available. */
-    int delay() const { return contains(Delay)
-        ? value(Delay).toInt() : -1; };
+    int delay() const { return contains(Enums::Delay)
+        ? value(Enums::Delay).toInt() : -1; };
 
     /** @brief Gets the delay reason. */
-    QString delayReason() const { return contains(DelayReason)
-        ? value(DelayReason).toString() : QString(); };
+    QString delayReason() const { return contains(Enums::DelayReason)
+        ? value(Enums::DelayReason).toString() : QString(); };
 
     /** @brief Gets news for the departure/arrival, such as "platform changed". */
-    QString journeyNews() const { return contains(JourneyNews)
-        ? value(JourneyNews).toString() : QString(); };
+    QString journeyNews() const { return contains(Enums::JourneyNews)
+        ? value(Enums::JourneyNews).toString() : QString(); };
 
     /** @brief Gets the status of the departure/arrival, such as "departing". */
-    QString status() const { return contains(Status)
-        ? value(Status).toString() : QString(); };
+    QString status() const { return contains(Enums::Status)
+        ? value(Enums::Status).toString() : QString(); };
 
     /**
      * @brief Gets a list of times of the departure / arrival to it's destination
@@ -347,8 +347,8 @@ public:
      * @see routeTimes
      * @see routeStops
      **/
-    QVariantList routeTimesVariant() const { return contains(RouteTimes)
-        ? value(RouteTimes).toList() : QVariantList(); };
+    QVariantList routeTimesVariant() const { return contains(Enums::RouteTimes)
+        ? value(Enums::RouteTimes).toList() : QVariantList(); };
 
     /**
      * @brief Gets a list of times of the departure / arrival to it's destination stop.
@@ -382,7 +382,7 @@ public:
      *
      * @param data A hash that contains values for at least the required TimetableInformations
      *   (StopName). */
-    StopInfo( const QHash<TimetableInformation, QVariant> &data, QObject *parent = 0 );
+    StopInfo( const QHash<Enums::TimetableInformation, QVariant> &data, QObject *parent = 0 );
 
     /**
      * @brief Constructs a new StopInfo object.
@@ -399,19 +399,19 @@ public:
               QObject *parent = 0 );
 
     /** @brief Gets the name of the stop. */
-    QString name() const { return value(StopName).toString(); };
+    QString name() const { return value(Enums::StopName).toString(); };
 
     /** @brief Gets the ID for the stop, if available. */
-    QString id() const { return value(StopID).toString(); };
+    QString id() const { return value(Enums::StopID).toString(); };
 
     /** @brief Gets the weight of the stop. */
-    QString weight() const { return value(StopWeight).toString(); };
+    QString weight() const { return value(Enums::StopWeight).toString(); };
 
     /** @brief Gets the city in which the stop is. */
-    QString city() const { return value(StopCity).toString(); };
+    QString city() const { return value(Enums::StopCity).toString(); };
 
     /** @brief Gets the code of the country in which the stop is. */
-    QString countryCode() const { return value(StopCountryCode).toString(); };
+    QString countryCode() const { return value(Enums::StopCountryCode).toString(); };
 };
 
 typedef DepartureInfo ArrivalInfo;

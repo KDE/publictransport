@@ -85,7 +85,7 @@ protected slots:
      * This slot gets connected to the invalidDataReceived() signal of the scripts ResultObject
      * object.
      **/
-    void invalidDataReceived( TimetableInformation information, const QString &message,
+    void invalidDataReceived( Enums::TimetableInformation information, const QString &message,
                               const QScriptContextInfo &context,
                               int index, const QVariantMap& map );
 
@@ -143,8 +143,8 @@ protected:
         NotOneItemLessThan
     };
 
-    TimetableDataRequestMessage message( MessageType messageType, TimetableInformation info1,
-            TimetableInformation info2, int count1, int count2,
+    TimetableDataRequestMessage message( MessageType messageType, Enums::TimetableInformation info1,
+            Enums::TimetableInformation info2, int count1, int count2,
             TimetableDataRequestMessage::Type type = TimetableDataRequestMessage::Warning,
             int lineNumber = -1 );
 
@@ -168,7 +168,7 @@ public:
     virtual Type type() const { return TestUsedTimetableInformations; };
 
     /** @brief Returns the list of valid TimetableInformation elements found in the return value. */
-    QList< TimetableInformation > timetableInformations() const;
+    QList< Enums::TimetableInformation > timetableInformations() const;
 
 protected:
     /**
@@ -191,7 +191,7 @@ protected:
     virtual bool testResults();
 
 private:
-    QList< TimetableInformation > m_timetableInformations;
+    QList< Enums::TimetableInformation > m_timetableInformations;
 };
 
 /**

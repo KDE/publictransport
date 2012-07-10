@@ -238,14 +238,14 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
     const QString lang = KGlobal::locale()->country();
     QString langRead, url, shortUrl;
     QHash<QString, QString> names, descriptions;
-    ServiceProviderType serviceProviderType;
+    Enums::ServiceProviderType serviceProviderType;
     QString serviceProviderTypeString;
     const QString fileVersion = attributes().value("fileVersion").toString();
 
     if ( attributes().hasAttribute(QLatin1String("type")) ) {
         serviceProviderTypeString = attributes().value( QLatin1String("type") ).toString();
         serviceProviderType = ServiceProviderGlobal::typeFromString( serviceProviderTypeString );
-        if ( serviceProviderType == InvalidProvider && errorAcceptance == OnlyReadCorrectFiles ) {
+        if ( serviceProviderType == Enums::InvalidProvider && errorAcceptance == OnlyReadCorrectFiles ) {
             raiseError( QString("The service provider type %1 is invalid. "
                                 "Currently there are two values allowed: Script or GTFS.")
                         .arg(serviceProviderTypeString) );
@@ -254,7 +254,7 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
     } else {
         // No provider type in the XML file, use a default one
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        serviceProviderType = ScriptedProvider;
+        serviceProviderType = Enums::ScriptedProvider;
         serviceProviderTypeString = ServiceProviderGlobal::typeToString( serviceProviderType );
 #else
     #ifdef BUILD_PROVIDER_TYPE_GTFS
@@ -339,7 +339,7 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
                 serviceProviderData->setTimeZone( readElementText() );
 #endif
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-            } else if ( serviceProviderType == ScriptedProvider &&
+            } else if ( serviceProviderType == Enums::ScriptedProvider &&
                         name().compare(QLatin1String("script"), Qt::CaseInsensitive) == 0 )
             {
                 const QStringList extensions = attributes().value( QLatin1String("extensions") )

@@ -56,9 +56,12 @@ DashboardTab::DashboardTab( Project *project, QWidget *parent )
     qRegisterMetaType< const ServiceProviderData* >( "const ServiceProviderData*" );
     qRegisterMetaType< Project* >( "Project*" );
     qRegisterMetaType< TestModel* >( "TestModel*" );
+    qRegisterMetaType< Enums::ServiceProviderType >( "Enums::ServiceProviderType" );
     qmlRegisterType< ServiceProviderData, 1 >( "TimetableMate", 1, 0, "ServiceProviderData" );
     qmlRegisterType< Project, 1 >( "TimetableMate", 1, 0, "Project" );
     qmlRegisterType< Tabs, 1 >( "TimetableMate", 1, 0, "Tabs" );
+    qmlRegisterUncreatableType< Enums >( "TimetableMate", 1, 0, "PublicTransport",
+                                         "Only for enumerables" );
 
     // Create dashboard widget
     QWidget *container = new QWidget( parent );

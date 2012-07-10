@@ -54,6 +54,7 @@ if ( INSTALL_TIMETABLEMATE )
 endif ( INSTALL_TIMETABLEMATE )
 
 # Source files
+qt4_wrap_cpp( publictransport_engine_MOC_SRCS enums.h )
 set( publictransport_engine_SRCS
     publictransportdataengine.cpp
     global.cpp
@@ -64,6 +65,7 @@ set( publictransport_engine_SRCS
     serviceproviderdatareader.cpp
     serviceproviderglobal.cpp
     serviceprovidertestdata.cpp
+    ${publictransport_engine_MOC_SRCS}
 )
 
 # Add provider types (adding their sources to publictransport_engine_SRCS)

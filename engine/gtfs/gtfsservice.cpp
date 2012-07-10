@@ -51,7 +51,7 @@ ImportGtfsToDatabaseJob::ImportGtfsToDatabaseJob( const QString &destination,
         return;
     }
 
-    if ( m_data->type() != GtfsProvider ) {
+    if ( m_data->type() != Enums::GtfsProvider ) {
         setError( -2 );
         setErrorText( i18nc("@info/plain", "Not a GTFS provider") );
     }

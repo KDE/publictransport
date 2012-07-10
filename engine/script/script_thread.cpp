@@ -378,6 +378,8 @@ bool ScriptJob::loadScript( QScriptProgram *script )
     m_engine->globalObject().setProperty( "result", m_engine->newQObject(m_scriptResult.data()) );
     m_engine->globalObject().setProperty( "enum",
             m_engine->newQMetaObject(&ResultObject::staticMetaObject) );
+    m_engine->globalObject().setProperty( "PublicTransport",
+            m_engine->newQMetaObject(&Enums::staticMetaObject) );
 
     // Load the script program
     m_engine->evaluate( *script );

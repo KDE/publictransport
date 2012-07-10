@@ -226,6 +226,10 @@ bool LoadScriptJob::loadScriptObjects()
     if ( !engine->globalObject().property("helper").isValid() ) {
         engine->globalObject().setProperty( "helper", engine->newQObject(m_scriptHelper) );
     }
+    if ( !engine->globalObject().property("PublicTransport").isValid() ) {
+        engine->globalObject().setProperty( "PublicTransport",
+                engine->newQMetaObject(&Enums::staticMetaObject) );
+    }
     if ( !engine->globalObject().property("network").isValid() ) {
         engine->globalObject().setProperty( "network", engine->newQObject(m_scriptNetwork) );
     }

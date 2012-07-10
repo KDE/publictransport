@@ -126,7 +126,7 @@ public:
     /** @brief Get the ID of this service provider. */
     QString id() const;
 
-    ServiceProviderType type() const;
+    Enums::ServiceProviderType type() const;
 
     /** @brief Whether or not the source XML file was modified since the cache was last updated. */
     bool isSourceFileModified( const QSharedPointer<KConfig> &cache ) const;

@@ -845,11 +845,12 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
             VariableTreeData dataItem( SpecialVariable, i18nc("@info/plain", "Data"),
                                     data.description, KIcon("documentinfo") );
             int i = 1;
-            QList<TimetableInformation> shortInfoTypes = QList<TimetableInformation>()
-                    << Target << TargetStopName << DepartureDateTime << DepartureTime << StopName;
+            QList<Enums::TimetableInformation> shortInfoTypes = QList<Enums::TimetableInformation>()
+                    << Enums::Target << Enums::TargetStopName << Enums::DepartureDateTime
+                    << Enums::DepartureTime << Enums::StopName;
             foreach ( const TimetableData &timetableData, result->data() ) {
                 QString shortInfo;
-                foreach ( TimetableInformation infoType, shortInfoTypes) {
+                foreach ( Enums::TimetableInformation infoType, shortInfoTypes) {
                     if ( timetableData.contains(infoType) ) {
                         shortInfo = timetableData[ infoType ].toString();
                         break;

@@ -28,400 +28,306 @@
 #include <QRegExp>
 #include <QTextCodec>
 
-VehicleType Global::vehicleTypeFromString( QString sVehicleType )
+Enums::VehicleType Global::vehicleTypeFromString( QString sVehicleType )
 {
     QString sLower = sVehicleType.toLower();
     if ( sLower == QLatin1String("unknown") ) {
-        return Unknown;
+        return Enums::Unknown;
     } else if ( sLower == QLatin1String("tram") ) {
-        return Tram;
+        return Enums::Tram;
     } else if ( sLower == QLatin1String("bus") ) {
-        return Bus;
+        return Enums::Bus;
     } else if ( sLower == QLatin1String("subway") ) {
-        return Subway;
+        return Enums::Subway;
     } else if ( sLower == QLatin1String("interurbantrain") ) {
-        return InterurbanTrain;
+        return Enums::InterurbanTrain;
     } else if ( sLower == QLatin1String("metro") ) {
-        return Metro;
+        return Enums::Metro;
     } else if ( sLower == QLatin1String("trolleybus") ) {
-        return TrolleyBus;
+        return Enums::TrolleyBus;
     } else if ( sLower == QLatin1String("regionaltrain") ) {
-        return RegionalTrain;
+        return Enums::RegionalTrain;
     } else if ( sLower == QLatin1String("regionalexpresstrain") ) {
-        return RegionalExpressTrain;
+        return Enums::RegionalExpressTrain;
     } else if ( sLower == QLatin1String("interregionaltrain") ) {
-        return InterregionalTrain;
+        return Enums::InterregionalTrain;
     } else if ( sLower == QLatin1String("intercitytrain") ) {
-        return IntercityTrain;
+        return Enums::IntercityTrain;
     } else if ( sLower == QLatin1String("highspeedtrain") ) {
-        return HighSpeedTrain;
+        return Enums::HighSpeedTrain;
     } else if ( sLower == QLatin1String("feet") ) {
-        return Feet;
+        return Enums::Feet;
     } else if ( sLower == QLatin1String("ferry") ) {
-        return Ferry;
+        return Enums::Ferry;
     } else if ( sLower == QLatin1String("ship") ) {
-        return Ship;
+        return Enums::Ship;
     } else if ( sLower == QLatin1String("plane") ) {
-        return Plane;
+        return Enums::Plane;
     } else {
-        return Invalid;
+        return Enums::Invalid;
     }
 }
 
-QString Global::vehicleTypeToString( const VehicleType& vehicleType, bool plural )
+QString Global::vehicleTypeToString( const Enums::VehicleType& vehicleType, bool plural )
 {
     switch ( vehicleType ) {
-    case Tram:
+    case Enums::Tram:
         return plural ? i18nc( "@info/plain", "trams" )
                : i18nc( "@info/plain", "tram" );
-    case Bus:
+    case Enums::Bus:
         return plural ? i18nc( "@info/plain", "buses" )
                : i18nc( "@info/plain", "bus" );
-    case Subway:
+    case Enums::Subway:
         return plural ? i18nc( "@info/plain", "subways" )
                : i18nc( "@info/plain", "subway" );
-    case InterurbanTrain:
+    case Enums::InterurbanTrain:
         return plural ? i18nc( "@info/plain", "interurban trains" )
                : i18nc( "@info/plain", "interurban train" );
-    case Metro:
+    case Enums::Metro:
         return plural ? i18nc( "@info/plain", "metros" )
                : i18nc( "@info/plain", "metro" );
-    case TrolleyBus:
+    case Enums::TrolleyBus:
         return plural ? i18nc( "@info/plain", "trolley buses" )
                : i18nc( "@info/plain", "trolley bus" );
 
-    case RegionalTrain:
+    case Enums::RegionalTrain:
         return plural ? i18nc( "@info/plain", "regional trains" )
                : i18nc( "@info/plain", "regional train" );
-    case RegionalExpressTrain:
+    case Enums::RegionalExpressTrain:
         return plural ? i18nc( "@info/plain", "regional express trains" )
                : i18nc( "@info/plain", "regional express train" );
-    case InterregionalTrain:
+    case Enums::InterregionalTrain:
         return plural ? i18nc( "@info/plain", "interregional trains" )
                : i18nc( "@info/plain", "interregional train" );
-    case IntercityTrain:
+    case Enums::IntercityTrain:
         return plural ? i18nc( "@info/plain", "intercity / eurocity trains" )
                : i18nc( "@info/plain", "intercity / eurocity train" );
-    case HighSpeedTrain:
+    case Enums::HighSpeedTrain:
         return plural ? i18nc( "@info/plain", "intercity express trains" )
                : i18nc( "@info/plain", "intercity express train" );
 
-    case Feet:
+    case Enums::Feet:
         return i18nc( "@info/plain", "Footway" );
 
-    case Ferry:
+    case Enums::Ferry:
         return plural ? i18nc( "@info/plain", "ferries" )
                : i18nc( "@info/plain", "ferry" );
-    case Ship:
+    case Enums::Ship:
         return plural ? i18nc( "@info/plain", "ships" )
                : i18nc( "@info/plain", "ship" );
-    case Plane:
+    case Enums::Plane:
         return plural ? i18nc( "@info/plain airplanes", "planes" )
                : i18nc( "@info/plain an airplane", "plane" );
 
-    case Unknown:
+    case Enums::Unknown:
     default:
         return i18nc( "@info/plain Unknown type of vehicle", "Unknown" );
     }
 }
 
-QString Global::vehicleTypeToIcon( const VehicleType& vehicleType )
+QString Global::vehicleTypeToIcon( const Enums::VehicleType& vehicleType )
 {
     switch ( vehicleType ) {
-    case Tram:
+    case Enums::Tram:
         return "vehicle_type_tram";
-    case Bus:
+    case Enums::Bus:
         return "vehicle_type_bus";
-    case Subway:
+    case Enums::Subway:
         return "vehicle_type_subway";
-    case Metro:
+    case Enums::Metro:
         return "vehicle_type_metro";
-    case TrolleyBus:
+    case Enums::TrolleyBus:
         return "vehicle_type_trolleybus";
-    case Feet:
+    case Enums::Feet:
         return "vehicle_type_feet";
-    case InterurbanTrain:
+    case Enums::InterurbanTrain:
         return "vehicle_type_train_interurban";
-    case RegionalTrain: // aIcon not done yet, using this for now
-    case RegionalExpressTrain:
+    case Enums::RegionalTrain: // aIcon not done yet, using this for now
+    case Enums::RegionalExpressTrain:
         return "vehicle_type_train_regional";
-    case InterregionalTrain:
+    case Enums::InterregionalTrain:
         return "vehicle_type_train_interregional";
-    case IntercityTrain:
+    case Enums::IntercityTrain:
         return "vehicle_type_train_intercity";
-    case HighSpeedTrain:
+    case Enums::HighSpeedTrain:
         return "vehicle_type_train_highspeed";
 
-    case Ferry:
-    case Ship:
+    case Enums::Ferry:
+    case Enums::Ship:
         return "vehicle_type_ferry";
-    case Plane:
+    case Enums::Plane:
         return "vehicle_type_plane";
 
-    case Unknown:
+    case Enums::Unknown:
     default:
         return "status_unknown";
     }
 }
 
-TimetableInformation Global::timetableInformationFromString(
+Enums::TimetableInformation Global::timetableInformationFromString(
     const QString& sTimetableInformation )
 {
     QString sInfo = sTimetableInformation.toLower();
     if ( sInfo == QLatin1String("nothing") ) {
-        return Nothing;
+        return Enums::Nothing;
     } else if ( sInfo == QLatin1String("departuredatetime") ) {
-        return DepartureDateTime;
+        return Enums::DepartureDateTime;
     } else if ( sInfo == QLatin1String("departuredate") ) {
-        return DepartureDate;
+        return Enums::DepartureDate;
     } else if ( sInfo == QLatin1String("departuretime") ) {
-        return DepartureTime;
+        return Enums::DepartureTime;
     } else if ( sInfo == QLatin1String("typeofvehicle") ) {
-        return TypeOfVehicle;
+        return Enums::TypeOfVehicle;
     } else if ( sInfo == QLatin1String("transportline") ) {
-        return TransportLine;
+        return Enums::TransportLine;
     } else if ( sInfo == QLatin1String("flightnumber") ) {
-        return FlightNumber;
+        return Enums::FlightNumber;
     } else if ( sInfo == QLatin1String("target") ) {
-        return Target;
+        return Enums::Target;
     } else if ( sInfo == QLatin1String("platform") ) {
-        return Platform;
+        return Enums::Platform;
     } else if ( sInfo == QLatin1String("delay") ) {
-        return Delay;
+        return Enums::Delay;
     } else if ( sInfo == QLatin1String("delayreason") ) {
-        return DelayReason;
+        return Enums::DelayReason;
     } else if ( sInfo == QLatin1String("journeynews") ) {
-        return JourneyNews;
+        return Enums::JourneyNews;
     } else if ( sInfo == QLatin1String("journeynewsother") ) {
-        return JourneyNewsOther;
+        return Enums::JourneyNewsOther;
     } else if ( sInfo == QLatin1String("journeynewslink") ) {
-        return JourneyNewsLink;
+        return Enums::JourneyNewsLink;
     } else if ( sInfo == QLatin1String("status") ) {
-        return Status;
+        return Enums::Status;
     } else if ( sInfo == QLatin1String("routestops") ) {
-        return RouteStops;
+        return Enums::RouteStops;
     } else if ( sInfo == QLatin1String("routetimes") ) {
-        return RouteTimes;
+        return Enums::RouteTimes;
     } else if ( sInfo == QLatin1String("routetimesdeparture") ) {
-        return RouteTimesDeparture;
+        return Enums::RouteTimesDeparture;
     } else if ( sInfo == QLatin1String("routetimesarrival") ) {
-        return RouteTimesArrival;
+        return Enums::RouteTimesArrival;
     } else if ( sInfo == QLatin1String("routeexactstops") ) {
-        return RouteExactStops;
+        return Enums::RouteExactStops;
     } else if ( sInfo == QLatin1String("routetypesofvehicles") ) {
-        return RouteTypesOfVehicles;
+        return Enums::RouteTypesOfVehicles;
     } else if ( sInfo == QLatin1String("routetransportlines") ) {
-        return RouteTransportLines;
+        return Enums::RouteTransportLines;
     } else if ( sInfo == QLatin1String("routeplatformsdeparture") ) {
-        return RoutePlatformsDeparture;
+        return Enums::RoutePlatformsDeparture;
     } else if ( sInfo == QLatin1String("routeplatformsarrival") ) {
-        return RoutePlatformsArrival;
+        return Enums::RoutePlatformsArrival;
     } else if ( sInfo == QLatin1String("routetimesdeparturedelay") ) {
-        return RouteTimesDepartureDelay;
+        return Enums::RouteTimesDepartureDelay;
     } else if ( sInfo == QLatin1String("routetimesarrivaldelay") ) {
-        return RouteTimesArrivalDelay;
+        return Enums::RouteTimesArrivalDelay;
     } else if ( sInfo == QLatin1String("operator") ) {
-        return Operator;
+        return Enums::Operator;
     } else if ( sInfo == QLatin1String("duration") ) {
-        return Duration;
+        return Enums::Duration;
     } else if ( sInfo == QLatin1String("startstopname") ) {
-        return StartStopName;
+        return Enums::StartStopName;
     } else if ( sInfo == QLatin1String("startstopid") ) {
-        return StartStopID;
+        return Enums::StartStopID;
     } else if ( sInfo == QLatin1String("targetstopname") ) {
-        return TargetStopName;
+        return Enums::TargetStopName;
     } else if ( sInfo == QLatin1String("targetstopid") ) {
-        return TargetStopID;
+        return Enums::TargetStopID;
     } else if ( sInfo == QLatin1String("arrivaldatetime") ) {
-        return ArrivalDateTime;
+        return Enums::ArrivalDateTime;
     } else if ( sInfo == QLatin1String("arrivaldate") ) {
-        return ArrivalDate;
+        return Enums::ArrivalDate;
     } else if ( sInfo == QLatin1String("arrivaltime") ) {
-        return ArrivalTime;
+        return Enums::ArrivalTime;
     } else if ( sInfo == QLatin1String("changes") ) {
-        return Changes;
+        return Enums::Changes;
     } else if ( sInfo == QLatin1String("typesofvehicleinjourney") ) {
-        return TypesOfVehicleInJourney;
+        return Enums::TypesOfVehicleInJourney;
     } else if ( sInfo == QLatin1String("pricing") ) {
-        return Pricing;
+        return Enums::Pricing;
     } else if ( sInfo == QLatin1String("isnightline") ) {
-        return IsNightLine;
+        return Enums::IsNightLine;
     } else if ( sInfo == QLatin1String("stopname") ) {
-        return StopName;
+        return Enums::StopName;
     } else if ( sInfo == QLatin1String("stopid") ) {
-        return StopID;
+        return Enums::StopID;
     } else if ( sInfo == QLatin1String("stopweight") ) {
-        return StopWeight;
+        return Enums::StopWeight;
     } else if ( sInfo == QLatin1String("stopcity") ) {
-        return StopCity;
+        return Enums::StopCity;
     } else if ( sInfo == QLatin1String("stopcountrycode") ) {
-        return StopCountryCode;
+        return Enums::StopCountryCode;
     } else {
         kDebug() << sTimetableInformation
                  << "is an unknown timetable information value! Assuming value Nothing.";
-        return Nothing;
+        return Enums::Nothing;
     }
 }
 
-QString Global::timetableInformationToString( TimetableInformation timetableInformation )
+QString Global::timetableInformationToString( Enums::TimetableInformation timetableInformation )
 {
-    switch ( timetableInformation ) {
-    case Nothing:
-        return "Nothing";
-    case DepartureDateTime:
-        return "DepartureDateTime";
-    case DepartureDate:
-        return "DepartureDate";
-    case DepartureTime:
-        return "DepartureTime";
-    case TypeOfVehicle:
-        return "TypeOfVehicle";
-    case TransportLine:
-        return "TransportLine";
-    case Target:
-        return "Target";
-    case TargetShortened:
-        return "TargetShortened";
-    case Platform:
-        return "Platform";
-    case Delay:
-        return "Delay";
-    case DelayReason:
-        return "DelayReason";
-    case JourneyNews:
-        return "JourneyNews";
-    case JourneyNewsOther:
-        return "JourneyNewsOther";
-    case JourneyNewsLink:
-        return "JourneyNewsLink";
-    case Operator:
-        return "Operator";
-    case Status:
-        return "Status";
-    case Duration:
-        return "Duration";
-    case StartStopName:
-        return "StartStopName";
-    case StartStopID:
-        return "StartStopID";
-    case StopWeight:
-        return "StopWeight";
-    case StopCity:
-        return "StopCity";
-    case StopCountryCode:
-        return "StopCountryCode";
-    case TargetStopName:
-        return "TargetStopName";
-    case TargetStopID:
-        return "TargetStopID";
-    case ArrivalDateTime:
-        return "ArrivalDateTime";
-    case ArrivalDate:
-        return "ArrivalDate";
-    case ArrivalTime:
-        return "ArrivalTime";
-    case Changes:
-        return "Changes";
-    case TypesOfVehicleInJourney:
-        return "TypesOfVehicleInJourney";
-    case Pricing:
-        return "Pricing";
-    case IsNightLine:
-        return "IsNightline";
-    case StopName:
-        return "StopName";
-    case StopID:
-        return "StopID";
-    case RouteStops:
-        return "RouteStops";
-    case RouteStopsShortened:
-        return "RouteStopsShortened";
-    case RouteTimes:
-        return "RouteTimes";
-    case RouteTimesDeparture:
-        return "RouteTimesDeparture";
-    case RouteTimesArrival:
-        return "RouteTimesArrival";
-    case RouteExactStops:
-        return "RouteExactStops";
-    case RouteTypesOfVehicles:
-        return "RouteTypesOfVehicles";
-    case RouteTransportLines:
-        return "RouteTransportLines";
-    case RoutePlatformsDeparture:
-        return "RoutePlatformsDeparture";
-    case RoutePlatformsArrival:
-        return "RoutePlatformsArrival";
-    case RouteTimesDepartureDelay:
-        return "RouteTimesDepartureDelay";
-    case RouteTimesArrivalDelay:
-        return "RouteTimesArrivalDelay";
-
-    default:
-        return QString::number( static_cast<int>(timetableInformation) );
-    }
+    return Enums::toString( timetableInformation );
 }
 
-bool Global::checkTimetableInformation( TimetableInformation info, const QVariant &value )
+bool Global::checkTimetableInformation( Enums::TimetableInformation info, const QVariant &value )
 {
     if ( !value.isValid() ) {
         return false;
     }
 
     switch ( info ) {
-    case DepartureDateTime:
-    case ArrivalDateTime:
+    case Enums::DepartureDateTime:
+    case Enums::ArrivalDateTime:
         return value.toDateTime().isValid();
-    case DepartureDate:
-    case ArrivalDate:
+    case Enums::DepartureDate:
+    case Enums::ArrivalDate:
         return value.toDate().isValid();
-    case DepartureTime:
-    case ArrivalTime:
+    case Enums::DepartureTime:
+    case Enums::ArrivalTime:
         return value.toTime().isValid();
-    case TypeOfVehicle:
-        return vehicleTypeFromString( value.toString() ) != Unknown;
-    case TransportLine:
-    case Target:
-    case TargetShortened:
-    case Platform:
-    case DelayReason:
-    case JourneyNews:
-    case JourneyNewsOther:
-    case JourneyNewsLink:
-    case Operator:
-    case Status:
-    case StartStopName:
-    case StartStopID:
-    case StopCity:
-    case StopCountryCode:
-    case TargetStopName:
-    case TargetStopID:
-    case Pricing:
-    case StopName:
-    case StopID:
+    case Enums::TypeOfVehicle:
+        return vehicleTypeFromString( value.toString() ) != Enums::Unknown;
+    case Enums::TransportLine:
+    case Enums::Target:
+    case Enums::TargetShortened:
+    case Enums::Platform:
+    case Enums::DelayReason:
+    case Enums::JourneyNews:
+    case Enums::JourneyNewsOther:
+    case Enums::JourneyNewsLink:
+    case Enums::Operator:
+    case Enums::Status:
+    case Enums::StartStopName:
+    case Enums::StartStopID:
+    case Enums::StopCity:
+    case Enums::StopCountryCode:
+    case Enums::TargetStopName:
+    case Enums::TargetStopID:
+    case Enums::Pricing:
+    case Enums::StopName:
+    case Enums::StopID:
         return !value.toString().trimmed().isEmpty();
-    case Delay:
+    case Enums::Delay:
         return value.canConvert( QVariant::Int ) && value.toInt() >= -1;
-    case Duration:
-    case StopWeight:
-    case Changes:
-    case RouteExactStops:
+    case Enums::Duration:
+    case Enums::StopWeight:
+    case Enums::Changes:
+    case Enums::RouteExactStops:
         return value.canConvert( QVariant::Int ) && value.toInt() >= 0;
-    case TypesOfVehicleInJourney:
-    case RouteTimes:
-    case RouteTimesDeparture:
-    case RouteTimesArrival:
-    case RouteTypesOfVehicles:
-    case RouteTimesDepartureDelay:
-    case RouteTimesArrivalDelay:
+    case Enums::TypesOfVehicleInJourney:
+    case Enums::RouteTimes:
+    case Enums::RouteTimesDeparture:
+    case Enums::RouteTimesArrival:
+    case Enums::RouteTypesOfVehicles:
+    case Enums::RouteTimesDepartureDelay:
+    case Enums::RouteTimesArrivalDelay:
         return !value.toList().isEmpty();
-    case IsNightLine:
+    case Enums::IsNightLine:
         return value.canConvert( QVariant::Bool );
-    case RouteStops:
-    case RouteStopsShortened:
-    case RouteTransportLines:
-    case RoutePlatformsDeparture:
-    case RoutePlatformsArrival:
+    case Enums::RouteStops:
+    case Enums::RouteStopsShortened:
+    case Enums::RouteTransportLines:
+    case Enums::RoutePlatformsDeparture:
+    case Enums::RoutePlatformsArrival:
         return !value.toStringList().isEmpty();
 
     default:

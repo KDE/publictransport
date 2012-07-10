@@ -104,7 +104,7 @@ public:
     virtual bool isTestResultUnchanged( const QSharedPointer<KConfig> &cache ) const;
 
     /** @brief Returns the type of this provider, ie. GtfsProvider. */
-    virtual ServiceProviderType type() const { return GtfsProvider; };
+    virtual Enums::ServiceProviderType type() const { return Enums::GtfsProvider; };
 
     /** @brief Checks if there was an error. */
     bool hasErrors( QString *errorMessage = 0 ) const;
@@ -206,7 +206,7 @@ private:
      *
      * @see http://code.google.com/intl/en-US/transit/spec/transit_feed_specification.html#routes_txt___Field_Definitions
      **/
-    VehicleType vehicleTypeFromGtfsRouteType( int gtfsRouteType ) const;
+    Enums::VehicleType vehicleTypeFromGtfsRouteType( int gtfsRouteType ) const;
 
     QTime timeFromSecondsSinceMidnight( int secondsSinceMidnight, QDate *date = 0 ) const;
 

@@ -40,7 +40,7 @@ class QScriptProgram;
 class ScriptThread;
 
 /** @brief Stores information about a departure/arrival/journey/stop suggestion. */
-typedef QHash<TimetableInformation, QVariant> TimetableData;
+typedef QHash<Enums::TimetableInformation, QVariant> TimetableData;
 
 using namespace Scripting;
 

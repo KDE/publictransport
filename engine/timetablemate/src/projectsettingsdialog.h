@@ -132,8 +132,8 @@ private:
     bool testWidget( QWidget *widget );
     void appendMessageWidgetAfter( QWidget *after, const QString &errorMessage );
 
-    ServiceProviderType providerTypeFromComboBoxIndex( int index ) const;
-    int providerTypeToComboBoxIndex( ServiceProviderType providerType ) const;
+    Enums::ServiceProviderType providerTypeFromComboBoxIndex( int index ) const;
+    int providerTypeToComboBoxIndex( Enums::ServiceProviderType providerType ) const;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     QStringList scriptExtensionsFromWidget() const;

@@ -47,7 +47,7 @@
 ServiceProvider::ServiceProvider( const ServiceProviderData *data, QObject *parent,
                                   const QSharedPointer< KConfig > &cache )
         : QObject(parent),
-          m_data(data ? data : new ServiceProviderData(InvalidProvider, QString(), this))
+          m_data(data ? data : new ServiceProviderData(Enums::InvalidProvider, QString(), this))
 {
     Q_UNUSED( cache );
     const_cast<ServiceProviderData*>(m_data)->setParent( this );
@@ -169,7 +169,7 @@ QString ServiceProvider::id() const
     return m_data->id();
 }
 
-ServiceProviderType ServiceProvider::type() const
+Enums::ServiceProviderType ServiceProvider::type() const
 {
     return m_data->type();
 }

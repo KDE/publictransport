@@ -35,36 +35,36 @@
 #include <QFile>
 #include <QFileInfo>
 
-QList< ServiceProviderType > ServiceProviderGlobal::availableProviderTypes()
+QList< Enums::ServiceProviderType > ServiceProviderGlobal::availableProviderTypes()
 {
-    QList< ServiceProviderType > types;
+    QList< Enums::ServiceProviderType > types;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    types << ScriptedProvider;
+    types << Enums::ScriptedProvider;
 #endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
-    types << GtfsProvider;
+    types << Enums::GtfsProvider;
 #endif
     return types;
 }
 
-bool ServiceProviderGlobal::isProviderTypeAvailable( ServiceProviderType type )
+bool ServiceProviderGlobal::isProviderTypeAvailable( Enums::ServiceProviderType type )
 {
     switch ( type ) {
-    case ScriptedProvider:
+    case Enums::ScriptedProvider:
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         return true;
 #else
         return false;
 #endif
 
-    case GtfsProvider:
+    case Enums::GtfsProvider:
 #ifdef BUILD_PROVIDER_TYPE_GTFS
         return true;
 #else
         return false;
 #endif
 
-    case InvalidProvider:
+    case Enums::InvalidProvider:
     default:
         return false;
     }
@@ -126,45 +126,45 @@ QString ServiceProviderGlobal::fileNameFromId( const QString &serviceProviderId 
     return QString();
 }
 
-ServiceProviderType ServiceProviderGlobal::typeFromString(
+Enums::ServiceProviderType ServiceProviderGlobal::typeFromString(
         const QString &serviceProviderType )
 {
     QString s = serviceProviderType.toLower();
     if ( s == QLatin1String("script") ||
          s == QLatin1String("html") ) // DEPRECATED
     {
-        return ScriptedProvider;
+        return Enums::ScriptedProvider;
     } else if ( s == QLatin1String("gtfs") ) {
-        return GtfsProvider;
+        return Enums::GtfsProvider;
     } else {
-        return InvalidProvider;
+        return Enums::InvalidProvider;
     }
 }
 
-QString ServiceProviderGlobal::typeToString( ServiceProviderType type )
+QString ServiceProviderGlobal::typeToString( Enums::ServiceProviderType type )
 {
     switch ( type ) {
-    case ScriptedProvider:
+    case Enums::ScriptedProvider:
         return "script";
-    case GtfsProvider:
+    case Enums::GtfsProvider:
         return "gtfs";
-    case InvalidProvider:
+    case Enums::InvalidProvider:
     default:
         return "invalid";
     }
 }
 
-QString ServiceProviderGlobal::typeName( ServiceProviderType type, ProviderTypeNameOptions options )
+QString ServiceProviderGlobal::typeName( Enums::ServiceProviderType type, ProviderTypeNameOptions options )
 {
     QString name;
     switch ( type ) {
-    case ScriptedProvider:
+    case Enums::ScriptedProvider:
         name = i18nc("@info/plain Name of a service provider plugin type", "Scripted");
         break;
-    case GtfsProvider:
+    case Enums::GtfsProvider:
         name = i18nc("@info/plain Name of a service provider plugin type", "GTFS");
         break;
-    case InvalidProvider:
+    case Enums::InvalidProvider:
     default:
         kWarning() << "Invalid provider type" << type;
         return i18nc("@info/plain Name of the invalid service provider plugin type", "Invalid");

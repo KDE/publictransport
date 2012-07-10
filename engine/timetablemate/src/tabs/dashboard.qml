@@ -303,8 +303,8 @@ Flickable { id: flickable
             }
 
             function updateLayoutToProviderType( type ) {
-                var isScriptProvider = type == "script";
-                var isGtfsProvider = type == "gtfs";
+                var isScriptProvider = type == PublicTransport.ScriptedProvider;
+                var isGtfsProvider = type == PublicTransport.GtfsProvider;
 
                 lblScriptFileName.visible = isScriptProvider;
                 scriptFileName.visible = isScriptProvider;
@@ -321,12 +321,12 @@ Flickable { id: flickable
                 timeZone.visible = isGtfsProvider;
             }
 
-            Component.onCompleted: projectInfo.updateLayoutToProviderType(project.data.typeString)
+            Component.onCompleted: projectInfo.updateLayoutToProviderType(project.data.type)
 
             // Show / hide type specific settings (ScriptedProvider, GtfsProvider, ...)
             Connections {
                 target: project
-                onDataChanged: projectInfo.updateLayoutToProviderType(project.data.typeString)
+                onDataChanged: projectInfo.updateLayoutToProviderType(project.data.type)
             }
 
             // Show the description for the project
@@ -401,7 +401,7 @@ Flickable { id: flickable
             Text { id: lblType; text: i18nc("@label", "Type:");
                 width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
             Text { id: type
-                color: project.data.typeString == "invalid" ? "red" : "black"
+                color: project.data.type == PublicTransport.InvalidProvider ? "red" : "black"
                 text: project.data.typeName
                 width: parent.fieldWidth; elide: Text.ElideMiddle }
 

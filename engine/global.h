@@ -31,24 +31,25 @@ public:
     Global() {};
 
     /** @brief Gets the VehicleType enumerable for the given string. */
-    static VehicleType vehicleTypeFromString( QString sVehicleType );
+    static Enums::VehicleType vehicleTypeFromString( QString sVehicleType );
 
     /** Gets the name of the given type of vehicle. */
-    static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );
+    static QString vehicleTypeToString( const Enums::VehicleType &vehicleType, bool plural = false );
 
     /** Gets an icon for the given type of vehicle. */
-    static QString vehicleTypeToIcon( const VehicleType &vehicleType );
+    static QString vehicleTypeToIcon( const Enums::VehicleType &vehicleType );
 
     /**
      * @brief Gets the TimetableInformation enumerable for the given string.
      * If no TimetableInformation matches @p sTimetableInformation Nothing is returned.
      **/
-    static TimetableInformation timetableInformationFromString( const QString& sTimetableInformation );
+    static Enums::TimetableInformation timetableInformationFromString(
+            const QString& sTimetableInformation );
 
     /** @brief Gets a string for the given @p timetableInformation. */
-    static QString timetableInformationToString( TimetableInformation timetableInformation );
+    static QString timetableInformationToString( Enums::TimetableInformation timetableInformation );
 
-    static bool checkTimetableInformation( TimetableInformation info, const QVariant &value );
+    static bool checkTimetableInformation( Enums::TimetableInformation info, const QVariant &value );
 
     /** @brief Decodes HTML entities in @p html, e.g. "&nbsp;" is replaced by " ". */
     static QString decodeHtmlEntities( const QString& html );

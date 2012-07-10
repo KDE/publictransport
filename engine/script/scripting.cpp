@@ -485,7 +485,7 @@ QString Network::getSynchronous( const QString &url, int timeout )
 ResultObject::ResultObject( QObject* parent )
         : QObject(parent), m_mutex(new QMutex()), m_features(AllFeatures), m_hints(NoHint)
 {
-    qRegisterMetaType< TimetableInformation >( "TimetableInformation" );
+    qRegisterMetaType< Enums::TimetableInformation >( "Enums::TimetableInformation" );
 }
 
 ResultObject::~ResultObject()
@@ -533,7 +533,7 @@ void ResultObject::enableFeature( ResultObject::Feature feature, bool enable )
 
 void ResultObject::dataList( const QList< TimetableData > &dataList,
                              PublicTransportInfoList *infoList, ParseDocumentMode parseMode,
-                             VehicleType defaultVehicleType, const GlobalTimetableInfo *globalInfo,
+                             Enums::VehicleType defaultVehicleType, const GlobalTimetableInfo *globalInfo,
                              ResultObject::Features features, ResultObject::Hints hints )
 {                               // TODO Use features and hints
     Q_UNUSED( features );
@@ -570,19 +570,19 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
         TimetableData timetableData = dataList[ i ];
 
         // Set default vehicle type if none is set
-        if ( !timetableData.contains(TypeOfVehicle) ||
-             timetableData[TypeOfVehicle].toString().isEmpty() )
+        if ( !timetableData.contains(Enums::TypeOfVehicle) ||
+             timetableData[Enums::TypeOfVehicle].toString().isEmpty() )
         {
-            timetableData[ TypeOfVehicle ] = static_cast<int>( defaultVehicleType );
+            timetableData[ Enums::TypeOfVehicle ] = static_cast<int>( defaultVehicleType );
         }
 
         if ( parseMode != ParseForStopSuggestions ) {
-            QDateTime dateTime = timetableData[ DepartureDateTime ].toDateTime();
-            QDate departureDate = timetableData[ DepartureDate ].toDate();
-            QTime departureTime = timetableData[ DepartureTime ].toTime();
+            QDateTime dateTime = timetableData[ Enums::DepartureDateTime ].toDateTime();
+            QDate departureDate = timetableData[ Enums::DepartureDate ].toDate();
+            QTime departureTime = timetableData[ Enums::DepartureTime ].toTime();
 
             if ( !dateTime.isValid() && !departureTime.isValid() ) {
-                kDebug() << "No departure time given!" << timetableData[DepartureTime];
+                kDebug() << "No departure time given!" << timetableData[Enums::DepartureTime];
                 kDebug() << "Use eg. helper.matchTime() to convert a string to a time object";
             }
 
@@ -604,12 +604,12 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
                 } else {
                     dateTime.setDate( curDate );
                 }
-                timetableData[ DepartureDateTime ] = dateTime;
+                timetableData[ Enums::DepartureDateTime ] = dateTime;
             }
 
             if ( dayAdjustment != 0 ) {
                 dateTime.setDate( dateTime.date().addDays(dayAdjustment) );
-                timetableData[ DepartureDateTime ] = dateTime;
+                timetableData[ Enums::DepartureDateTime ] = dateTime;
             }
             curDate = dateTime.date();
             lastTime = departureTime;
@@ -637,7 +637,7 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
         // TODO Use hint from the data engine..
         if ( removeFirstWord.isEmpty() && removeLastWord.isEmpty() ) {
             // First count the first/last word of the target stop name
-            const QString target = info->value( Target ).toString();
+            const QString target = info->value( Enums::Target ).toString();
             int pos = target.indexOf( ' ' );
             if ( pos > 0 && ++firstWordCounts[target.left(pos)] >= maxWordOccurrence ) {
                 removeFirstWord = target.left(pos);
@@ -649,9 +649,9 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
             }
 
             // Check if route stop names are available
-            if ( info->contains(RouteStops) ) {
-                QStringList stops = info->value( RouteStops ).toStringList();
-                QString target = info->value( Target ).toString();
+            if ( info->contains(Enums::RouteStops) ) {
+                QStringList stops = info->value( Enums::RouteStops ).toStringList();
+                QString target = info->value( Enums::Target ).toString();
 
                 // TODO Break if 70% or at least three of the route stop names
                 // begin/end with the same word
@@ -720,37 +720,37 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
         // Remove removeFirstWord from all stop names
         for ( int i = 0; i < infoList->count(); ++i ) {
             QSharedPointer<PublicTransportInfo> info = infoList->at( i );
-            QString target = info->value( Target ).toString();
+            QString target = info->value( Enums::Target ).toString();
             if ( target.startsWith(removeFirstWord) ) {
                 target = target.mid( removeFirstWord.length() + 1 );
-                info->insert( TargetShortened, target );
+                info->insert( Enums::TargetShortened, target );
             }
 
-            QStringList stops = info->value( RouteStops ).toStringList();
+            QStringList stops = info->value( Enums::RouteStops ).toStringList();
             for ( int i = 0; i < stops.count(); ++i ) {
                 if ( stops[i].startsWith(removeFirstWord) ) {
                     stops[i] = stops[i].mid( removeFirstWord.length() + 1 );
                 }
             }
-            info->insert( RouteStopsShortened, stops );
+            info->insert( Enums::RouteStopsShortened, stops );
         }
     } else if ( !removeLastWord.isEmpty() ) {
         // Remove removeLastWord from all stop names
         for ( int i = 0; i < infoList->count(); ++i ) {
             QSharedPointer<PublicTransportInfo> info = infoList->at( i );
-            QString target = info->value( Target ).toString();
+            QString target = info->value( Enums::Target ).toString();
             if ( target.endsWith(removeLastWord) ) {
                 target = target.left( target.length() - removeLastWord.length() );
-                info->insert( TargetShortened, target );
+                info->insert( Enums::TargetShortened, target );
             }
 
-            QStringList stops = info->value( RouteStops ).toStringList();
+            QStringList stops = info->value( Enums::RouteStops ).toStringList();
             for ( int i = 0; i < stops.count(); ++i ) {
                 if ( stops[i].endsWith(removeLastWord) ) {
                     stops[i] = stops[i].left( stops[i].length() - removeLastWord.length() );
                 }
             }
-            info->insert( RouteStopsShortened, stops );
+            info->insert( Enums::RouteStopsShortened, stops );
         }
     }
 }
@@ -815,9 +815,14 @@ void ResultObject::addData( const QVariantMap& map )
     QMutexLocker locker( m_mutex );
     TimetableData data;
     for ( QVariantMap::ConstIterator it = map.constBegin(); it != map.constEnd(); ++it ) {
-        const TimetableInformation info = Global::timetableInformationFromString( it.key() );
+        bool ok;
+        Enums::TimetableInformation info =
+                static_cast< Enums::TimetableInformation >( it.key().toInt(&ok) );
+        if ( !ok || info == Enums::Nothing ) {
+            info = Global::timetableInformationFromString( it.key() );
+        }
         const QVariant value = it.value();
-        if ( info == Nothing ) {
+        if ( info == Enums::Nothing ) {
             kDebug() << "Unknown timetable information" << it.key() << "with value" << value;
             const QString message = i18nc("@info/plain", "Invalid timetable information \"%1\" "
                                           "with value \"%2\"", it.key(), value.toString());
@@ -831,18 +836,21 @@ void ResultObject::addData( const QVariantMap& map )
             emit invalidDataReceived( info, message, context()->parentContext(),
                                       m_timetableData.count(), map );
             continue;
-        } else if ( info == TypeOfVehicle &&
-                    Global::vehicleTypeFromString(value.toString()) == Invalid )
+        } else if ( info == Enums::TypeOfVehicle &&
+                    static_cast<Enums::VehicleType>(value.toInt()) == Enums::Invalid &&
+                    Global::vehicleTypeFromString(value.toString()) == Enums::Invalid )
         {
             kDebug() << "Invalid type of vehicle value" << value;
             const QString message = i18nc("@info/plain",
                     "Invalid type of vehicle received: \"%1\"", value.toString());
             emit invalidDataReceived( info, message, context()->parentContext(),
                                       m_timetableData.count(), map );
-        } else if ( info == TypesOfVehicleInJourney || info == RouteTypesOfVehicles ) {
+        } else if ( info == Enums::TypesOfVehicleInJourney || info == Enums::RouteTypesOfVehicles ) {
             const QVariantList types = value.toList();
             foreach ( const QVariant &type, types ) {
-                if ( Global::vehicleTypeFromString(type.toString()) == Invalid ) {
+                if ( static_cast<Enums::VehicleType>(type.toInt()) == Enums::Invalid &&
+                     Global::vehicleTypeFromString(type.toString()) == Enums::Invalid )
+                {
                     kDebug() << "Invalid type of vehicle value in"
                              << Global::timetableInformationToString(info) << value;
                     const QString message = i18nc("@info/plain",
@@ -856,15 +864,16 @@ void ResultObject::addData( const QVariantMap& map )
 
         if ( m_features.testFlag(AutoDecodeHtmlEntities) ) {
             if ( value.canConvert(QVariant::String) &&
-                 (info == StopName || info == Target || info == StartStopName ||
-                  info == TargetStopName || info == Operator || info == TransportLine ||
-                  info == Platform || info == DelayReason || info == Status || info == Pricing) )
+                 (info == Enums::StopName || info == Enums::Target || info == Enums::StartStopName ||
+                  info == Enums::TargetStopName || info == Enums::Operator ||
+                  info == Enums::TransportLine || info == Enums::Platform ||
+                  info == Enums::DelayReason || info == Enums::Status || info == Enums::Pricing) )
             {
                 // Decode HTML entities in string values
                 data[ info ] = Global::decodeHtmlEntities( value.toString() ).trimmed();
             } else if ( value.canConvert(QVariant::StringList) &&
-                 (info == RouteStops || info == RoutePlatformsDeparture ||
-                  info == RoutePlatformsArrival) )
+                 (info == Enums::RouteStops || info == Enums::RoutePlatformsDeparture ||
+                  info == Enums::RoutePlatformsArrival) )
             {
                 // Decode HTML entities in string list values
                 QStringList stops = value.toStringList();

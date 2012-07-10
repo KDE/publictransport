@@ -441,7 +441,7 @@ signals:
     void callScriptFunctionResult( const QString &functionName,
                                    const QScriptValue &returnValue = QScriptValue() );
 
-    void testUsedTimetableInformationsResult( const QList<TimetableInformation> timetableInformations );
+    void testUsedTimetableInformationsResult( const QList<Enums::TimetableInformation> timetableInformations );
 
     void scriptErrorReceived( const QString &errorMessage, const QScriptContextInfo &contextInfo,
                               const QString &failedParseText );

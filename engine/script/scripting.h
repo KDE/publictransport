@@ -45,7 +45,7 @@ class QNetworkAccessManager;
 class QMutex;
 
 /** @brief Stores information about a departure/arrival/journey/stop suggestion. */
-typedef QHash<TimetableInformation, QVariant> TimetableData;
+typedef QHash<Enums::TimetableInformation, QVariant> TimetableData;
 
 /** @brief Namespace for classes exposed to scripts. */
 namespace Scripting {
@@ -183,16 +183,25 @@ class Network;
  * to the result object like this:
  * @code
  * result.addData({ DepartureDateTime: new Date(),
- *                  VehicleType: "Bus",
+ *                  VehicleType: PublicTransport.Bus,
  *                  Target: "SomeTarget" });
  * @endcode
  *
  * Another possibility is to assign the properties when they get parsed, like this:
  * @code
  * var departure = {};
- * departure.departureDateTime = new Date();
- * departure.vehicleType = "Bus";
- * departure.target = "SomeTarget";
+ * departure.DepartureDateTime = new Date();
+ * departure.VehicleType = PublicTransport.Bus;
+ * departure.Target = "SomeTarget";
+ * result.addData( departure );
+ * @endcode
+ *
+ * You can also use enumerable values to store data (available in "PublicTransport"):
+ * @code
+ * var departure = {};
+ * departure[ PublicTransport.DepartureDateTime ] = new Date();
+ * departure[ PublicTransport.VehicleType ] = PublicTransport.Bus;
+ * departure[ PublicTransport.Target ] = "SomeTarget";
  * result.addData( departure );
  * @endcode
  *
@@ -240,43 +249,43 @@ class Network;
  * @n
  * @subsection script_collecting_items_vehicletypes Vehicle Types
  *
- * Vehicle types can be given as strings (in @em TypeOfVehicle, @em RouteTypesOfVehicles,
- * @em TypesOfVehicleInJourney).@n
+ * Vehicle types can be given as enumerable values or names (in @em TypeOfVehicle,
+ * @em RouteTypesOfVehicles, @em TypesOfVehicleInJourney), see @ref Enums::VehicleType. @n
  *
- * The easiest/safest way to provide information about what type of vehicle gets used is
- * providing it as one of these strings of currently supported vehicle types:@n
+ * These are the enumerables of currently supported vehicle types (the names without
+ * "PublicTransport." can also be used as vehicle type):@n
  * <table>
- * <tr><td></td><td>"Unknown"</td>
+ * <tr><td></td><td>PublicTransport.Unknown</td>
  * <tr><td>@image html hi16-app-vehicle_type_tram.png
- * </td><td>"Tram"</td>
+ * </td><td>PublicTransport.Tram</td>
  * <tr><td>@image html hi16-app-vehicle_type_bus.png
- * </td><td>"Bus"</td>
+ * </td><td>PublicTransport.Bus</td>
  * <tr><td>@image html hi16-app-vehicle_type_subway.png
- * </td><td>"Subway"</td>
+ * </td><td>PublicTransport.Subway</td>
  * <tr><td>@image html hi16-app-vehicle_type_train_interurban.png
- * </td><td>"TrainInterurban"</td>
+ * </td><td>PublicTransport.TrainInterurban</td>
  * <tr><td>@image html hi16-app-vehicle_type_metro.png
- * </td><td>"Metro"</td>
+ * </td><td>PublicTransport.Metro</td>
  * <tr><td>@image html hi16-app-vehicle_type_trolleybus.png
- * </td><td>"TrolleyBus"</td>
+ * </td><td>PublicTransport.TrolleyBus</td>
  * <tr><td>@image html hi16-app-vehicle_type_train_regional.png
- * </td><td>"RegionalTrain"</td>
+ * </td><td>PublicTransport.RegionalTrain</td>
  * <tr><td>@image html hi16-app-vehicle_type_train_regional.png
- * </td><td>"RegionalExpressTrain"</td>
+ * </td><td>PublicTransport.RegionalExpressTrain</td>
  * <tr><td>@image html hi16-app-vehicle_type_train_interregional.png
- * </td><td>"InterregionalTrain"</td>
+ * </td><td>PublicTransport.InterregionalTrain</td>
  * <tr><td>@image html hi16-app-vehicle_type_train_intercity.png
- * </td><td>"IntercityTrain"</td>
+ * </td><td>PublicTransport.IntercityTrain</td>
  * <tr><td>@image html hi16-app-vehicle_type_train_highspeed.png
- * </td><td>"HighSpeedTrain"</td>
+ * </td><td>PublicTransport.HighSpeedTrain</td>
  * <tr><td>@image html hi16-app-vehicle_type_feet.png
- * </td><td>"Feet" (for journeys to walk from one intermediate stop to the next)</td>
+ * </td><td>PublicTransport.Feet" (for journeys to walk from one intermediate stop to the next)</td>
  * <tr><td>@image html hi16-app-vehicle_type_ferry.png
- * </td><td>"Ferry"</td>
+ * </td><td>PublicTransport.Ferry</td>
  * <tr><td>@image html hi16-app-vehicle_type_ferry.png
- * </td><td>"Ship"</td>
+ * </td><td>PublicTransport.Ship</td>
  * <tr><td>@image html hi16-app-vehicle_type_plane.png
- * </td><td>"Plane"</td>
+ * </td><td>PublicTransport.Plane</td>
  * </table>
  *
  * @see TimetableInformation
@@ -1352,7 +1361,7 @@ public:
 
     static void dataList( const QList< TimetableData > &dataList,
                           PublicTransportInfoList *infoList, ParseDocumentMode parseMode,
-                          VehicleType defaultVehicleType, const GlobalTimetableInfo *globalInfo,
+                          Enums::VehicleType defaultVehicleType, const GlobalTimetableInfo *globalInfo,
                           ResultObject::Features features, ResultObject::Hints hints );
 
 Q_SIGNALS:
@@ -1401,7 +1410,7 @@ Q_SIGNALS:
      *   object.
      * @param map The argument for addData(), which contained invalid data.
      **/
-    void invalidDataReceived( TimetableInformation info, const QString &errorMessage,
+    void invalidDataReceived( Enums::TimetableInformation info, const QString &errorMessage,
                               const QScriptContextInfo &context,
                               int index, const QVariantMap& map );
 
@@ -1423,7 +1432,13 @@ public Q_SLOTS:
      * A predefined object can also be added like this:
      * @code
      *  var departure = { DepartureDateTime: new Date() };
+     *
+     *  // Use "Target" as property name
      *  departure.Target = 'Test';
+     *
+     *  // Alternative: Use enumerable value
+     *  departure[ PublicTransport.Target ] = 'Test';
+     *
      *  result.addData( departure );
      * @endcode
      *

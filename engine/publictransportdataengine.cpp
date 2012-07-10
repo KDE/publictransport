@@ -152,7 +152,7 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
     dataServiceProvider.insert( "fileName", data.fileName() );
     dataServiceProvider.insert( "type", ServiceProviderGlobal::typeName(data.type()) );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
-    if ( data.type() == GtfsProvider ) {
+    if ( data.type() == Enums::GtfsProvider ) {
         dataServiceProvider.insert( "feedUrl", data.feedUrl() );
 
         const QString databasePath = GeneralTransitFeedDatabase::databasePath( data.id() );
@@ -161,7 +161,7 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
     }
 #endif
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    if ( data.type() == ScriptedProvider ) {
+    if ( data.type() == Enums::ScriptedProvider ) {
         dataServiceProvider.insert( "scriptFileName", data.scriptFileName() );
     }
 #endif
@@ -459,10 +459,10 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
     ServiceProviderTestData testData = ServiceProviderTestData::read( providerId, cache );
 
     // TODO Needs to be done for each provider sub class here
-    foreach ( ServiceProviderType type, ServiceProviderGlobal::availableProviderTypes() ) {
+    foreach ( Enums::ServiceProviderType type, ServiceProviderGlobal::availableProviderTypes() ) {
         switch ( type ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        case ScriptedProvider:
+        case Enums::ScriptedProvider:
             if ( !ServiceProviderScript::isTestResultUnchanged(providerId, cache) ) {
                 kDebug() << "Script changed" << providerId;
                 testData.setSubTypeTestStatus( ServiceProviderTestData::Pending );
@@ -470,9 +470,9 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
             }
             break;
 #endif
-        case GtfsProvider:
+        case Enums::GtfsProvider:
             break;
-        case InvalidProvider:
+        case Enums::InvalidProvider:
         default:
             kWarning() << "Provider type unknown" << type;
             break;
@@ -1159,19 +1159,19 @@ void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
     foreach( const StopInfoPtr &stopInfo, stops ) {
         QVariantHash data;
         data.insert( "stopName", stopInfo->name() );
-        if ( stopInfo->contains(StopID) ) {
+        if ( stopInfo->contains(Enums::StopID) ) {
             data.insert( "stopID", stopInfo->id() );
         }
 
-        if ( stopInfo->contains(StopWeight) ) {
+        if ( stopInfo->contains(Enums::StopWeight) ) {
             data.insert( "stopWeight", stopInfo->weight() );
         }
 
-        if ( stopInfo->contains(StopCity) ) {
+        if ( stopInfo->contains(Enums::StopCity) ) {
             data.insert( "stopCity", stopInfo->city() );
         }
 
-        if ( stopInfo->contains(StopCountryCode) ) {
+        if ( stopInfo->contains(Enums::StopCountryCode) ) {
             data.insert( "stopCountryCode", stopInfo->countryCode() );
         }
 
@@ -1269,7 +1269,7 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
     const int secsSinceLastUpdate = dataSource["updated"].toDateTime().secsTo(
                                     QDateTime::currentDateTime() );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
-    if ( provider->type() == GtfsProvider ) {
+    if ( provider->type() == Enums::GtfsProvider ) {
         // Update GTFS accessors once a week
         // TODO: Check for an updated GTFS feed every X seconds, eg. once an hour
         const QSharedPointer<ServiceProviderGtfs> gtfsAccessor =
@@ -1314,14 +1314,14 @@ ServiceProvider *PublicTransportEngine::createProviderForData( const ServiceProv
 
     switch ( data->type() ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    case ScriptedProvider:
+    case Enums::ScriptedProvider:
         return new ServiceProviderScript( data, parent, cache );
 #endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
-    case GtfsProvider:
+    case Enums::GtfsProvider:
         return new ServiceProviderGtfs( data, parent, cache );
 #endif
-    case InvalidProvider:
+    case Enums::InvalidProvider:
     default:
         kWarning() << "Invalid/unknown provider type" << data->type();
         return 0;

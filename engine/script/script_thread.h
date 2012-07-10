@@ -57,7 +57,7 @@ class QScriptEngine;
 using namespace Scripting;
 
 /** @brief Stores information about a departure/arrival/journey/stop suggestion. */
-typedef QHash<TimetableInformation, QVariant> TimetableData;
+typedef QHash<Enums::TimetableInformation, QVariant> TimetableData;
 
 typedef NetworkRequest* NetworkRequestPtr;
 QScriptValue networkRequestToScript( QScriptEngine *engine, const NetworkRequestPtr &request );

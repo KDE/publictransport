@@ -3,6 +3,7 @@
 set_source_files_properties( ../../gtfs-realtime.pb.h ../../gtfs-realtime.pb.cc
                              PROPERTIES GENERATED TRUE )
 
+qt4_wrap_cpp( timetablemate_MOC_SRCS ../../enums.h )
 set( timetablemate_SRCS
    main.cpp
    timetablemate.cpp
@@ -29,6 +30,7 @@ set( timetablemate_SRCS
    ../../serviceprovidertestdata.cpp
    ../../serviceproviderglobal.cpp
    ../../serviceproviderdatareader.cpp
+   ${timetablemate_MOC_SRCS}
 )
 
 if ( BUILD_PROVIDER_TYPE_SCRIPT )

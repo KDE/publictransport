@@ -56,7 +56,7 @@ class ServiceProviderData : public QObject {
     // ServiceProviderData instances as returned by eg. ServiceProvider::data().
     // Otherwise QML would give warnings because NOTIFY signals are missing, although the object
     // itself is constant.
-    Q_PROPERTY( ServiceProviderType type READ type CONSTANT )
+    Q_PROPERTY( Enums::ServiceProviderType type READ type CONSTANT )
     Q_PROPERTY( QString typeString READ typeString CONSTANT )
     Q_PROPERTY( QString typeName READ typeName CONSTANT )
     Q_PROPERTY( QString name READ name CONSTANT )
@@ -105,15 +105,15 @@ public:
      *
      * @see ServiceProviderType
      **/
-    explicit ServiceProviderData( const ServiceProviderType& type = InvalidProvider,
+    explicit ServiceProviderData( const Enums::ServiceProviderType& type = Enums::InvalidProvider,
                                   const QString& id = QString(), QObject *parent = 0 );
 
-    ServiceProviderData( const ServiceProviderType &type, const QString &id,
+    ServiceProviderData( const Enums::ServiceProviderType &type, const QString &id,
             const QHash<QString, QString> &names, const QHash<QString, QString> &descriptions,
             const QString &version, const QString &fileFormatVersion, bool useSeparateCityValue,
             bool onlyUseCitiesInList, const QString &url, const QString &shortUrl,
             int minFetchWait, const QString &author, const QString &email,
-            VehicleType defaultVehicleType, const QList<ChangelogEntry> &changelog,
+            Enums::VehicleType defaultVehicleType, const QList<ChangelogEntry> &changelog,
             const QStringList &cities,
             const QHash<QString, QString> &cityNameToValueReplacementHash,
             QObject *parent = 0 );
@@ -154,7 +154,7 @@ public:
     QHash<QString, QString> descriptions() const { return m_description; };
 
     /** @brief The type of the service provider (scripted, GTFS, ...) */
-    ServiceProviderType type() const { return m_serviceProviderType; };
+    Enums::ServiceProviderType type() const { return m_serviceProviderType; };
 
     /** @brief Convenience function that uses ServiceProviderGlobal::typeToString(). */
     QString typeString() const;
@@ -193,7 +193,7 @@ public:
     QStringList cities() const { return m_cities; };
 
     QString credit() const { return m_credit; };
-    VehicleType defaultVehicleType() const { return m_defaultVehicleType; };
+    Enums::VehicleType defaultVehicleType() const { return m_defaultVehicleType; };
 
     /**
      * @brief If empty, use unicode (QUrl::toPercentEncoding()), otherwise use
@@ -346,7 +346,7 @@ public:
      * @brief Set the type of the service provider.
      * @param type The new type of the service provider.
      **/
-    void setType( ServiceProviderType type ) { m_serviceProviderType = type; };
+    void setType( Enums::ServiceProviderType type ) { m_serviceProviderType = type; };
 
     /**
      * @brief Set the charset used to encode documents from the service provider.
@@ -433,7 +433,7 @@ public:
 
     void setMinFetchWait( int minFetchWait ) { m_minFetchWait = minFetchWait; };
 
-    void setDefaultVehicleType( VehicleType vehicleType ) {
+    void setDefaultVehicleType( Enums::VehicleType vehicleType ) {
         m_defaultVehicleType = vehicleType; };
 
     /**
@@ -479,7 +479,7 @@ public:
     void setTimeZone( const QString &timeZone ) { m_timeZone = timeZone; };
 
 protected:
-    virtual bool supportsByJourneyNewsParsing( const TimetableInformation &info ) const {
+    virtual bool supportsByJourneyNewsParsing( const Enums::TimetableInformation &info ) const {
         Q_UNUSED(info)
         return false; };
 
@@ -522,8 +522,8 @@ protected:
     QList<ChangelogEntry> m_changelog;
 
     // Type of the service provider
-    ServiceProviderType m_serviceProviderType;
-    VehicleType m_defaultVehicleType;
+    Enums::ServiceProviderType m_serviceProviderType;
+    Enums::VehicleType m_defaultVehicleType;
     int m_minFetchWait;
     QString m_id;
     QString m_country;

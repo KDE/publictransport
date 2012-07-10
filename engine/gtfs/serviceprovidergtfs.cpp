@@ -759,16 +759,16 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
         }
 
         TimetableData data;
-        data[ DepartureDateTime ] = request->parseMode == ParseForArrivals ? arrivalTime : departureTime;
-        data[ TypeOfVehicle ] = vehicleTypeFromGtfsRouteType( query.value(routeTypeColumn).toInt() );
-        data[ Operator ] = agency ? agency->name : QString();
+        data[ Enums::DepartureDateTime ] = request->parseMode == ParseForArrivals ? arrivalTime : departureTime;
+        data[ Enums::TypeOfVehicle ] = vehicleTypeFromGtfsRouteType( query.value(routeTypeColumn).toInt() );
+        data[ Enums::Operator ] = agency ? agency->name : QString();
 
         const QString transportLine = query.value(routeShortNameColumn).toString();
-        data[ TransportLine ] = !transportLine.isEmpty() ? transportLine
+        data[ Enums::TransportLine ] = !transportLine.isEmpty() ? transportLine
                          : query.value(routeLongNameColumn).toString();
 
         const QString tripHeadsign = query.value(tripHeadsignColumn).toString();
-        data[ Target ] = !tripHeadsign.isEmpty() ? tripHeadsign
+        data[ Enums::Target ] = !tripHeadsign.isEmpty() ? tripHeadsign
                          : query.value(stopHeadsignColumn).toString();
 
         const QStringList routeStops = query.value(routeStopsColumn).toString().split( routeSeparator );
@@ -777,15 +777,15 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
             // the target station and vice versa for arrivals.
             continue;
         }
-        data[ RouteStops ] = routeStops;
-        data[ RouteExactStops ] = routeStops.count();
+        data[ Enums::RouteStops ] = routeStops;
+        data[ Enums::RouteExactStops ] = routeStops.count();
 
         const QStringList routeTimeValues = query.value(routeTimesColumn).toString().split( routeSeparator );
         QVariantList routeTimes;
         foreach ( const QString routeTimeValue, routeTimeValues ) {
             routeTimes << timeFromSecondsSinceMidnight( routeTimeValue.toInt(), &arrivalDate );
         }
-        data[ RouteTimes ] = routeTimes;
+        data[ Enums::RouteTimes ] = routeTimes;
 
 //         const QString symbol = KCurrencyCode( query.value(fareCurrencyColumn).toString() ).defaultSymbol();
 //         data[ Pricing ] = KGlobal::locale()->formatMoney(
@@ -803,8 +803,8 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
                 }
             }
             if ( !journeyNews.isEmpty() ) {
-                data[ JourneyNews ] = journeyNews.join( ", " );
-                data[ JourneyNewsLink ] = journeyNewsLink;
+                data[ Enums::JourneyNews ] = journeyNews.join( ", " );
+                data[ Enums::JourneyNewsLink ] = journeyNewsLink;
             }
         }
 
@@ -955,27 +955,27 @@ bool ServiceProviderGtfs::checkForDiskIoErrorInDatabase( const QSqlError &error,
     }
 }
 
-VehicleType ServiceProviderGtfs::vehicleTypeFromGtfsRouteType(
+Enums::VehicleType ServiceProviderGtfs::vehicleTypeFromGtfsRouteType(
         int gtfsRouteType ) const
 {
     switch ( gtfsRouteType ) {
     case 0: // Tram, Streetcar, Light rail. Any light rail or street level system within a metropolitan area.
-        return Tram;
+        return Enums::Tram;
     case 1: // Subway, Metro. Any underground rail system within a metropolitan area.
-        return Subway;
+        return Enums::Subway;
     case 2: // Rail. Used for intercity or long-distance travel.
-        return IntercityTrain;
+        return Enums::IntercityTrain;
     case 3: // Bus. Used for short- and long-distance bus routes.
-        return Bus;
+        return Enums::Bus;
     case 4: // Ferry. Used for short- and long-distance boat service.
-        return Ferry;
+        return Enums::Ferry;
     case 5: // Cable car. Used for street-level cable cars where the cable runs beneath the car.
-        return TrolleyBus;
+        return Enums::TrolleyBus;
     case 6: // Gondola, Suspended cable car. Typically used for aerial cable cars where the car is suspended from the cable.
-        return Unknown; // TODO Add new type to VehicleType: eg. Gondola
+        return Enums::Unknown; // TODO Add new type to VehicleType: eg. Gondola
     case 7: // Funicular. Any rail system designed for steep inclines.
-        return Unknown; // TODO Add new type to VehicleType: eg. Funicular
+        return Enums::Unknown; // TODO Add new type to VehicleType: eg. Funicular
     default:
-        return Unknown;
+        return Enums::Unknown;
     }
 }

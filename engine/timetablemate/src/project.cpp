@@ -558,7 +558,7 @@ public:
                 device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q, &xmlComments );
         if ( readData ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-            if ( readData->type() == ScriptedProvider ) {
+            if ( readData->type() == Enums::ScriptedProvider ) {
                 provider = new ServiceProviderScript( readData, q );
             } else
 #endif
@@ -3657,7 +3657,7 @@ void Project::setProviderData( const ServiceProviderData *providerData )
     // Recreate service provider plugin with new info
     delete d->provider;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    if ( providerData->type() == ScriptedProvider ) {
+    if ( providerData->type() == Enums::ScriptedProvider ) {
         d->provider = new ServiceProviderScript( providerData, this );
     } else
 #endif
