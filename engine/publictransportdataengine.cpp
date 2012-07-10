@@ -1175,6 +1175,14 @@ void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
             data.insert( "stopCountryCode", stopInfo->countryCode() );
         }
 
+        if ( stopInfo->contains(Enums::StopLongitude) ) {
+            data.insert( "stopLongitude", stopInfo->longitude() );
+        }
+
+        if ( stopInfo->contains(Enums::StopLatitude) ) {
+            data.insert( "stopLatitude", stopInfo->latitude() );
+        }
+
         setData( sourceName, QString("stopName %1").arg(i++), data );
     }
 

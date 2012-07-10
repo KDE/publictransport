@@ -393,6 +393,12 @@ public:
 
     /** @brief Gets the code of the country in which the stop is. */
     QString countryCode() const { return value(Enums::StopCountryCode).toString(); };
+
+    /** @brief Get the longitude of the stop. */
+    qreal longitude() const { return value(Enums::StopLongitude).toReal(); };
+
+    /** @brief Get the latitude of the stop. */
+    qreal latitude() const { return value(Enums::StopLatitude).toReal(); };
 };
 
 typedef DepartureInfo ArrivalInfo;

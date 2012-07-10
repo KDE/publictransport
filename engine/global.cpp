@@ -30,6 +30,7 @@
 
 Enums::VehicleType Global::vehicleTypeFromString( QString sVehicleType )
 {
+    return Enums::stringToVehicleType( sVehicleType.toAscii().data() );
     QString sLower = sVehicleType.toLower();
     if ( sLower == QLatin1String("unknown") ) {
         return Enums::Unknown;
@@ -256,6 +257,10 @@ Enums::TimetableInformation Global::timetableInformationFromString(
         return Enums::StopCity;
     } else if ( sInfo == QLatin1String("stopcountrycode") ) {
         return Enums::StopCountryCode;
+    } else if ( sInfo == QLatin1String("stoplongitude") ) {
+        return Enums::StopLongitude;
+    } else if ( sInfo == QLatin1String("stoplatitude") ) {
+        return Enums::StopLatitude;
     } else {
         kDebug() << sTimetableInformation
                  << "is an unknown timetable information value! Assuming value Nothing.";
@@ -306,6 +311,15 @@ bool Global::checkTimetableInformation( Enums::TimetableInformation info, const 
     case Enums::StopName:
     case Enums::StopID:
         return !value.toString().trimmed().isEmpty();
+    case Enums::StopLongitude:
+    case Enums::StopLatitude:
+        if ( !value.canConvert(QVariant::Double) ) {
+            return false;
+        } else {
+            bool ok;
+            qreal real = value.toReal( &ok );
+            return ok;
+        }
     case Enums::Delay:
         return value.canConvert( QVariant::Int ) && value.toInt() >= -1;
     case Enums::Duration:

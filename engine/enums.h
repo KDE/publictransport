@@ -235,7 +235,9 @@ public:
         StopID = 201, /**< The ID of a stop/station. */
         StopWeight = 202, /**< The weight of a stop suggestion. */
         StopCity = 203, /**< The city in which a stop is. */
-        StopCountryCode = 204 /**< The country code of the country in which the stop is. */
+        StopCountryCode = 204, /**< The country code of the country in which the stop is. */
+        StopLongitude = 205, /**< The longitude of the stop. */
+        StopLatitude = 206 /**< The latitude of the stop. */
     };
 
     /**
