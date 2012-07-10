@@ -136,10 +136,16 @@ bool DebuggerAgent::isRunning() const
     return m_state != NotRunning;
 }
 
-bool DebuggerAgent::isLastRunAborted() const
+bool DebuggerAgent::isAborting() const
 {
     QMutexLocker locker( m_mutex );
-    return m_lastRunAborted;
+    return m_state == Aborting;
+}
+
+bool DebuggerAgent::wasLastRunAborted() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_state == NotRunning && m_lastRunAborted;
 }
 
 NextEvaluatableLineHint DebuggerAgent::canBreakAt( int lineNumber, const QStringList &programLines )
@@ -801,26 +807,28 @@ void DebuggerAgent::setExecutionControlType( ExecutionControl executionType )
 void DebuggerAgent::abortDebugger()
 {
     m_mutex->lockInline();
-    if ( m_state == Aborting ) {
+    switch ( m_state ) {
+    case Aborting:
         kDebug() << "Is already aborting";
         return;
-    }
-    if ( m_state == NotRunning ) {
+    case NotRunning:
         if ( m_injectedScriptState == InjectedScriptEvaluating ) {
             m_mutex->unlockInline();
             cancelInjectedCodeExecution();
         } else {
             m_mutex->unlockInline();
 
-//             // Debugger is not running, check to be sure..
+            // Debugger is not running, check to be sure..
 //             checkHasExited();
         }
-    } else {
+        break;
+    default:
         m_lastRunAborted = true;
         m_executionControl = ExecuteAbort;
         m_mutex->unlockInline();
 
         setState( Aborting );
+        break;
     }
 
     m_interruptWaiter->wakeAll();
@@ -1486,12 +1494,14 @@ bool DebuggerAgent::checkHasExited()
     }
 
     bool isEvaluating;
-    if ( m_engineMutex->tryLock(100) ) {
+    if ( m_engineMutex->tryLock(500) ) {
         isEvaluating = engine()->isEvaluating();
         m_engineMutex->unlockInline();
     } else {
         kWarning() << "Cannot lock the engine";
-        return false;
+        engine()->abortEvaluation();
+        shutdown();
+        return true;
     }
 
     if ( state != NotRunning && !isEvaluating ) {
@@ -1544,6 +1554,7 @@ void DebuggerAgent::shutdown()
     if ( oldState == Aborting ) {
         emit aborted();
     }
+    engine()->clearExceptions();
     setState( NotRunning );
     emit stopped();
 

@@ -107,11 +107,16 @@ public:
     /** @brief Whether or not the script currently gets executed or is interrupted. */
     bool isRunning() const;
 
+    /** @brief Whether or not the script currently gets aborted. */
+    bool isAborting() const;
+
     /**
-     * @brief Whether or not the last started script execution was aborted.
+     * @brief Whether or not the last script execution was aborted.
+     * Returns only true, if the debugger currently is @em not running and refers to the last
+     * script execution.
      * @see abortDebugger()
      **/
-    bool isLastRunAborted() const;
+    bool wasLastRunAborted() const;
 
     /**
      * @brief Checks whether script execution can be interrupted at @p lineNumber.

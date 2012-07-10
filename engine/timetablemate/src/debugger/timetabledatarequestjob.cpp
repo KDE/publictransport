@@ -298,7 +298,7 @@ void CallScriptFunctionJob::debuggerRun()
     // Wait for all network requests to finish, because slots in the script may get called
     const int finishWaitTime = 500;
     int finishWaitCounter = 0;
-    while ( !debugger->isLastRunAborted() && scriptNetwork->hasRunningRequests() &&
+    while ( !debugger->wasLastRunAborted() && scriptNetwork->hasRunningRequests() &&
             finishWaitCounter < 20 )
     {
         QEventLoop loop;
@@ -321,7 +321,7 @@ void CallScriptFunctionJob::debuggerRun()
 
     // Waiting for script execution to finish
     finishWaitCounter = 0;
-    while ( !debugger->isLastRunAborted() && m_debugger->isRunning() && finishWaitCounter < 20 ) {
+    while ( !debugger->wasLastRunAborted() && m_debugger->isRunning() && finishWaitCounter < 20 ) {
         QEventLoop loop;
         connect( m_debugger, SIGNAL(stopped()), &loop, SLOT(quit()) );
 //         connect( this, SIGNAL(destroyed(QObject*)), &loop, SLOT(quit()) );
@@ -338,14 +338,14 @@ void CallScriptFunctionJob::debuggerRun()
 
         ++finishWaitCounter;
     }
-    const bool finishedSuccessfully = !debugger->isLastRunAborted() && finishWaitCounter < 20;
+    const bool finishedSuccessfully = !debugger->wasLastRunAborted() && finishWaitCounter < 20;
 
 //     GlobalTimetableInfo globalInfo;
 //     globalInfo.requestDate = QDate::currentDate();
 //     globalInfo.delayInfoAvailable =
 //             !m_scriptResult->isHintGiven( ResultObject::NoDelaysForStop );
 
-    if ( finishedSuccessfully || debugger->isLastRunAborted() ) {
+    if ( finishedSuccessfully || debugger->wasLastRunAborted() ) {
         // Script finished or was aborted
         m_engineMutex->lockInline();
     } else {
@@ -393,7 +393,7 @@ void CallScriptFunctionJob::debuggerRun()
     QMutexLocker locker( m_mutex );
     if ( allNetworkRequestsFinished && finishedSuccessfully ) {
         // No uncaught exceptions, all network requests finished
-        if ( debugger->isLastRunAborted() ) {
+        if ( debugger->wasLastRunAborted() ) {
             m_success = false;
             m_explanation = i18nc("@info/plain", "Execution was aborted");
         } else {
@@ -403,7 +403,7 @@ void CallScriptFunctionJob::debuggerRun()
         // The script finish successfully, but not all network requests finished
         m_explanation = i18nc("@info/plain", "Not all network requests were finished in time");
         m_success = false;
-    } else if ( debugger->isLastRunAborted() ) {
+    } else if ( debugger->wasLastRunAborted() ) {
         // Script was aborted
         m_explanation = i18nc("@info/plain", "Aborted");
         m_success = false;
