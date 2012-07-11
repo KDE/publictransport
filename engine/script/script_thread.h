@@ -65,6 +65,21 @@ void networkRequestFromScript( const QScriptValue &object, NetworkRequestPtr &re
 bool importExtension( QScriptEngine *engine, const QString &extension );
 
 /**
+ * @brief Script function to include external script files.
+ *
+ * Calls to this function need to be the first statements in the global context of the script file,
+ * otherwise an exception gets thrown. It expects one argument, the name of the file to be included,
+ * without it's path. The file needs to be in the same directory as the main script.
+ * If the file is already included this function does nothing. A list of included files gets stored
+ * in the engine's global object, in the "includedFiles" property, as QStringList.
+ * @see maxIncludeLine()
+ **/
+QScriptValue include( QScriptContext *context, QScriptEngine *engine );
+
+/** @brief Get the maximum line number for valid include() calls in @p program. */
+quint16 maxIncludeLine( const QString &program );
+
+/**
  * @brief A QScriptEngineAgent that signals when a script finishes.
  *
  * After a function exit the agent waits a little bit and checks if the script is still executing

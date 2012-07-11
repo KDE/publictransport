@@ -170,7 +170,21 @@ bool ServiceProviderScript::isTestResultUnchanged( const QString &providerId,
     const KConfigGroup scriptGroup = group.group( "script" );
     const QDateTime scriptModifiedTime = scriptGroup.readEntry("modifiedTime", QDateTime());
     const QString scriptFilePath = scriptGroup.readEntry( "scriptFileName", QString() );
-    return QFileInfo( scriptFilePath ).lastModified() == scriptModifiedTime;
+    if ( QFileInfo(scriptFilePath).lastModified() != scriptModifiedTime ) {
+        return false;
+    }
+
+    const QStringList includedFiles = scriptGroup.readEntry( "includedFiles", QStringList() );
+    foreach ( const QString &includedFile, includedFiles ) {
+        const QFileInfo fileInfo( includedFile );
+        const QDateTime includedFileModifiedTime =
+                scriptGroup.readEntry("include_" + fileInfo.fileName() + "_modifiedTime", QDateTime());
+        if ( fileInfo.lastModified() != includedFileModifiedTime ) {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 bool ServiceProviderScript::isTestResultUnchanged( const QSharedPointer<KConfig> &cache ) const
@@ -189,7 +203,7 @@ QStringList ServiceProviderScript::readScriptFeatures( const QSharedPointer<KCon
 
     // No actual cached information about the service provider
     kDebug() << "No up-to-date cache information for service provider" << m_data->id();
-    QStringList features;
+    QStringList features, includedFiles;
     bool ok = lazyLoadScript();
     QString errorMessage;
     if ( !ok ) {
@@ -206,6 +220,10 @@ QStringList ServiceProviderScript::readScriptFeatures( const QSharedPointer<KCon
             }
         }
         if ( ok ) {
+            QScriptValue includeFunction = engine.newFunction( include, 1 );
+            includeFunction.setData( maxIncludeLine(m_script->sourceCode()) );
+            engine.globalObject().setProperty( "include", includeFunction );
+
             engine.evaluate( *m_script );
             if ( engine.hasUncaughtException() ) {
                 kDebug() << "Error in the script" << engine.uncaughtExceptionLineNumber()
@@ -217,6 +235,9 @@ QStringList ServiceProviderScript::readScriptFeatures( const QSharedPointer<KCon
                                      engine.uncaughtExceptionLineNumber(),
                                      engine.uncaughtException().toString());
             } else {
+                includedFiles = engine.globalObject().property( "includedFiles" )
+                                                     .toVariant().toStringList();
+
                 // Test if specific functions exist in the script
                 if ( engine.globalObject().property(SCRIPT_FUNCTION_GETSTOPSUGGESTIONS).isValid() ) {
                     features << "Autocompletion";
@@ -277,6 +298,14 @@ QStringList ServiceProviderScript::readScriptFeatures( const QSharedPointer<KCon
     KConfigGroup scriptGroup = group.group( "script" );
     scriptGroup.writeEntry( "scriptFileName", m_data->scriptFileName() );
     scriptGroup.writeEntry( "modifiedTime", QFileInfo(m_data->scriptFileName()).lastModified() );
+
+    // Update modified times of included files
+    scriptGroup.writeEntry( "includedFiles", includedFiles );
+    foreach ( const QString &includedFile, includedFiles ) {
+        const QFileInfo fileInfo( includedFile );
+        scriptGroup.writeEntry("include_" + fileInfo.fileName() + "_modifiedTime",
+                               fileInfo.lastModified());
+    }
 
     // Set error in default cache group
     if ( !ok ) {

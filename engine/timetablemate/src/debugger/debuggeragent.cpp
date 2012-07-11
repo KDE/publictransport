@@ -28,6 +28,7 @@
 // PublicTransport engine includes
 #include <engine/script/scripting.h>
 #include <engine/script/serviceproviderscript.h>
+#include <engine/script/script_thread.h>
 #include <engine/global.h>
 
 // KDE includes
@@ -102,6 +103,11 @@ DebuggerAgent::DebuggerAgent( QScriptEngine *engine, QMutex *engineMutex )
     QScriptValue printFunction = engine->newFunction( debugPrintFunction );
     printFunction.setData( engine->newQObject(this) );
     engine->globalObject().setProperty( "print", printFunction );
+/*
+    // Make include() function available to scripts, store programBegin to be able to check
+    // if an include() call is at the beginning of a script
+    QScriptValue includeFunction = engine->newFunction( include, 1 );
+    engine->globalObject().setProperty( "include", includeFunction );*/
 
 //     kDebug() << "Check execution in 250ms";
 //     QTimer::singleShot( 250, this, SLOT(checkExecution()) );

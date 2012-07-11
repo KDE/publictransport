@@ -36,9 +36,11 @@
 #include <QScriptEngine>
 #include <QScriptEngineAgent>
 #include <QScriptValueIterator>
+#include <QScriptContextInfo>
 #include <QFile>
 #include <QTimer>
 #include <QEventLoop>
+#include <QFileInfo>
 
 static int thread_count = 0;
 ScriptJob::ScriptJob( QScriptProgram *script, const ServiceProviderData* data,
@@ -330,6 +332,98 @@ bool importExtension( QScriptEngine *engine, const QString &extension )
     }
 }
 
+QScriptValue include( QScriptContext *context, QScriptEngine *engine )
+{
+    // Check argument count, include() call in global context?
+    if ( context->argumentCount() < 1 ) {
+        context->throwError( i18nc("@info/plain", "One argument expected for <icode>include()</icode>") );
+        return engine->undefinedValue();
+    } else if ( context->parentContext() && context->parentContext()->parentContext() ) {
+        context->throwError( i18nc("@info/plain", "<icode>include()</icode> calls must be in global context") );
+        return engine->undefinedValue();
+    }
+
+    // Check if this include() call is before all other statements
+    const QScriptContextInfo contextInfo( context->parentContext() );
+    const quint16 maxIncludeLine = context->callee().data().toUInt16();
+    if ( contextInfo.lineNumber() > maxIncludeLine ) {
+        context->throwError( i18nc("@info/plain", "<icode>include()</icode> calls must be the first statements") );
+        return engine->undefinedValue();
+    }
+
+    // Get argument and check that it's not pointing to another directory
+    const QString fileName = context->argument(0).toString();
+    if ( fileName.contains('/') ) {
+        context->throwError( i18nc("@info/plain", "Cannot include files from other directories") );
+        return engine->undefinedValue();
+    }
+
+    // Get path of the main script
+    QString path;
+    QScriptContext *fileInfoContext = context;
+    do {
+        path = QFileInfo( QScriptContextInfo(fileInfoContext).fileName() ).path();
+        fileInfoContext = fileInfoContext->parentContext();
+    } while ( path.isEmpty() || path == QLatin1String(".") );
+
+    // Construct file path to the file to be included and check if the file is already included
+    const QString filePath = path + '/' + fileName;
+    QStringList includedFiles =
+            engine->globalObject().property( "includedFiles" ).toVariant().toStringList();
+    if ( includedFiles.contains(filePath) ) {
+        kWarning() << "File already included" << filePath;
+        return engine->undefinedValue();
+    }
+
+    // Try to open the file to be included
+    QFile scriptFile( filePath );
+    if ( !scriptFile.open(QIODevice::ReadOnly) ) {
+        context->throwError( i18nc("@info/plain", "Cannot find file to be included: "
+                                   "<filename>%1</filename>", filePath) );
+        return engine->undefinedValue();
+    }
+
+    // Read the file
+    kDebug() << "include(" << filePath << ")";
+    QTextStream stream( &scriptFile );
+    const QString program = stream.readAll();
+    scriptFile.close();
+
+    // Set script context
+    QScriptContext *parent = context->parentContext();
+    if ( parent ) {
+        context->setActivationObject( parent->activationObject() );
+        context->setThisObject( parent->thisObject() );
+    }
+
+    // Store included files in global property "includedFiles"
+    includedFiles << filePath;
+    includedFiles.removeDuplicates();
+    engine->globalObject().setProperty( "includedFiles", engine->newVariant(includedFiles) );
+
+    // Evaluate script
+    return engine->evaluate( program, filePath );
+}
+
+quint16 maxIncludeLine( const QString &program )
+{
+    // Get first lines of script code until the first statement which is not an include() call
+    // The regular expression matches in blocks: Multiline comments (needs non-greedy regexp),
+    // one line comments, whitespaces & newlines, include("...") calls and semi-colons (needed,
+    // because the regexp is non-greedy)
+    QRegExp programRegExp( "\\s*(?:\\s*//[^\\n]*\\n|/\\*.*\\*/|[\\s\\n]+|include\\s*\\(\\s*\"[^\"]*\"\\s*\\)|;)+" );
+    programRegExp.setMinimal( true );
+    int pos = 0, nextPos = 0;
+    QString programBegin;
+    while ( (pos = programRegExp.indexIn(program, pos)) == nextPos ) {
+        const QString capture = programRegExp.cap();
+        programBegin.append( capture );
+        pos += programRegExp.matchedLength();
+        nextPos = pos;
+    }
+    return programBegin.count( '\n' );
+}
+
 bool ScriptJob::loadScript( QScriptProgram *script )
 {
     // Create script engine
@@ -352,11 +446,12 @@ bool ScriptJob::loadScript( QScriptProgram *script )
 
     m_engine->globalObject().setProperty( "provider", m_engine->newQObject(&m_data) ); //parent()) );
 
-    // Add "importExtension()" function to import extensions
-    // Importing Kross not from the GUI thread causes some warnings about pixmaps being used
-    // outside the GUI thread...
-//     m_engine->globalObject().setProperty( "importExtension",
-//                                           m_engine->newFunction(importExtension, 1) );
+    QScriptValue includeFunction = m_engine->globalObject().property("include");
+    if ( !includeFunction.isValid() ) {
+        includeFunction = m_engine->newFunction( include, 1 );
+    }
+    includeFunction.setData( maxIncludeLine(script->sourceCode()) );
+    m_engine->globalObject().setProperty( "include", includeFunction );
 
     // Process events every 100ms
 //     m_engine->setProcessEventsInterval( 100 );

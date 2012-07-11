@@ -163,6 +163,11 @@ void LoadScriptJob::debuggerRun()
         return;
     }
 
+    // Get first lines of script code until the first statement after any previous include() calls
+    QScriptValue includeFunction = engine->globalObject().property("include");
+    includeFunction.setData( maxIncludeLine(script.sourceCode()) );
+    engine->globalObject().setProperty( "include", includeFunction );
+
     debugger->setExecutionControlType( ExecuteRun );
 
     m_engineMutex->lockInline();
@@ -243,6 +248,10 @@ bool LoadScriptJob::loadScriptObjects()
         engine->globalObject().setProperty( "enum",
                 engine->newQMetaObject(&ResultObject::staticMetaObject) );
     }
+
+    // Make include() function available to scripts, store programBegin to be able to check
+    // if an include() call is at the beginning of a script
+    engine->globalObject().setProperty( "include", engine->newFunction(include, 1) );
 
     // Import extensions (from XML file, <script extensions="...">)
     foreach ( const QString &extension, data.scriptExtensions() ) {
