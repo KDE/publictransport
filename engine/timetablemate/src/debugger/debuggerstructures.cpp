@@ -39,6 +39,9 @@ void Frame::setValuesOf( const Frame &frame )
 {
     m_contextInfo = frame.contextInfo();
     m_contextString = frame.contextString();
+    if ( m_model ) {
+        m_model->frameChanged( this );
+    }
 }
 
 void Frame::setContextInfo( const QScriptContextInfo &info, bool global )
