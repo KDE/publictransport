@@ -60,6 +60,7 @@ public:
     inline KComboBox *functionsWidget() const { return m_functionsWidget; };
     inline KAction *previousFunctionAction() const { return m_previousFunctionAction; };
     inline KAction *nextFunctionAction() const { return m_nextFunctionAction; };
+    inline int executionLine() const { return m_executionLine; };
 
     static KAction *createNextFunctionAction( QObject *parent = 0 );
     static KAction *createPreviousFunctionAction( QObject *parent = 0 );
@@ -74,6 +75,8 @@ public slots:
     void goToPreviousFunction();
     void goToNextFunction();
     void toggleBreakpoint( int lineNumber = -1 );
+    void setExecutionLine( int executionLine = -1 );
+    void removeExecutionMarker();
 
 protected slots:
     void documentChanged( KTextEditor::Document *document );
@@ -98,6 +101,7 @@ private:
     KAction *m_previousFunctionAction;
     KAction *m_nextFunctionAction;
     QTimer *m_backgroundParserTimer;
+    int m_executionLine;
 };
 
 #endif // Multiple inclusion guard

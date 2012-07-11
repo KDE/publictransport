@@ -39,6 +39,7 @@
 #endif
 #include "docks/breakpointdockwidget.h"
 #include "debugger/debugger.h"
+#include "debugger/backtracemodel.h"
 #include "debugger/breakpointmodel.h"
 #include "debugger/debuggerjobs.h"
 #include "debugger/timetabledatarequestjob.h"
@@ -110,7 +111,7 @@ public:
           dashboardTab(0), projectSourceTab(0), plasmaPreviewTab(0), webTab(0),
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
           scriptTab(0),
-          debugger(new Debugger::Debugger(project)), executionLine(-1),
+          debugger(new Debugger::Debugger(project)),
 #endif
           provider(ServiceProvider::createInvalidProvider(project)),
           testModel(new TestModel(project)), testState(NoTestRunning), q_ptr(project)
@@ -305,8 +306,8 @@ public:
         unsavedScriptContents.clear();
         if ( scriptTab ) {
             scriptTab->document()->closeUrl( false );
+            scriptTab->setExecutionLine( -1 );
         }
-        executionLine = -1;
         debugger->abortDebugger();
 #endif
         testModel->clear();
@@ -811,6 +812,7 @@ public:
         case Project::ShowDashboard:
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case Project::ShowScript:
+        case Project::ShowExternalScript:
 #endif
         case Project::ShowProjectSource:
         case Project::ShowPlasmaPreview:
@@ -1569,10 +1571,10 @@ public:
     WebTab *webTab;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     ScriptTab *scriptTab;
+    QList< ScriptTab* > externalScriptTabs;
 
     QString unsavedScriptContents;
     Debugger::Debugger *debugger;
-    int executionLine;
 #endif
 
     ServiceProvider *provider;
@@ -1751,6 +1753,25 @@ ScriptTab *Project::scriptTab() const
     Q_D( const Project );
     return d->scriptTab;
 }
+
+QList< ScriptTab * > Project::externalScriptTabs() const
+{
+    Q_D( const Project );
+    return d->externalScriptTabs;
+}
+
+ScriptTab *Project::externalScriptTab( const QString &filePath ) const
+{
+    Q_D( const Project );
+    foreach ( ScriptTab *tab, d->externalScriptTabs ) {
+        if ( tab->fileName() == filePath ) {
+            return tab;
+        }
+    }
+
+    // No script tab with the given filePath found
+    return 0;
+}
 #endif
 
 PlasmaPreviewTab *Project::plasmaPreviewTab() const
@@ -1772,6 +1793,12 @@ Debugger::Debugger *Project::debugger() const
     return d->debugger;
 }
 #endif
+
+QString Project::path() const
+{
+    Q_D( const Project );
+    return QFileInfo( d->filePath ).path();
+}
 
 QString Project::filePath() const
 {
@@ -1841,6 +1868,8 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ShowScript:
         return "project_show_script";
+    case ShowExternalScript:
+        return "project_show_external_script";
 #endif
     case ShowProjectSource:
         return "project_show_source";
@@ -2117,6 +2146,9 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
     case ShowScript:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(showScriptTab()) );
         break;
+    case ShowExternalScript:
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showExternalScriptActionTriggered()) );
+        break;
 #endif
     case ShowProjectSource:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(showProjectSourceTab()) );
@@ -2315,8 +2347,15 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
     case ShowScript:
         action = new KAction( KIcon("application-javascript"),
                               i18nc("@action", "Show &Script"), parent );
-        action->setToolTip( i18nc("@info:tooltip", "Opens the <emphasis>script</emphasis> in a tab.") );
+        action->setToolTip( i18nc("@info:tooltip", "Opens the main <emphasis>script</emphasis> in a tab.") );
         break;
+    case ShowExternalScript: {
+        const QString filePath = data.toString();
+        action = new KAction( KIcon("application-javascript"),
+                              i18nc("@action", "Show External Script <filename>%1</filename>",
+                                    QFileInfo(filePath).fileName()), parent );
+        action->setToolTip( i18nc("@info:tooltip", "Opens an external <emphasis>script</emphasis> in a tab.") );
+    } break;
 #endif
     case ShowProjectSource:
         action = new KAction( KIcon("application-x-publictransport-serviceprovider"),
@@ -2567,6 +2606,31 @@ ScriptTab *Project::showScriptTab( QWidget *parent )
     }
     return d->scriptTab;
 }
+
+ScriptTab *Project::showExternalScriptTab( const QString &filePath, QWidget *parent )
+{
+    Q_D( Project );
+    Q_ASSERT( !filePath.isEmpty() );
+
+    ScriptTab *tab = externalScriptTab( filePath );
+    if ( tab ) {
+        emit tabGoToRequest( tab );
+    } else {
+        tab = createExternalScriptTab( filePath, d->parentWidget(parent) );
+        if ( tab ) {
+            d->externalScriptTabs << tab;
+            emit tabOpenRequest( tab );
+        }
+    }
+    return tab;
+}
+
+ScriptTab *Project::showExternalScriptActionTriggered( QWidget *parent )
+{
+    QAction *action = qobject_cast< QAction* >( sender() );
+    const QString filePath = action->data().toString();
+    return showExternalScriptTab( filePath, parent );
+}
 #endif
 
 ProjectSourceTab *Project::showProjectSourceTab( QWidget *parent )
@@ -2627,6 +2691,7 @@ Project::ProjectActionGroup Project::actionGroupFromType( Project::ProjectAction
     case ShowHomepage:
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ShowScript:
+    case ShowExternalScript:
 #endif
     case ShowProjectSource:
     case ShowPlasmaPreview:
@@ -2684,7 +2749,7 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
         actionTypes << ShowProjectSettings << ShowDashboard << ShowHomepage
                     << ShowProjectSource << ShowPlasmaPreview
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-                    << ShowScript
+                    << ShowScript << ShowExternalScript
 #endif
                     ;
         break;
@@ -3198,62 +3263,31 @@ void Project::debugInterrupted()
     Q_D( Project );
     kDebug() << "Interrupted";
 
+    const QString interruptFile = d->debugger->backtraceModel()->topFrame()->fileName();
+
     // Show script tab and ask to activate the project if it's not already active
-    ScriptTab *tab = showScriptTab();
+    ScriptTab *tab = interruptFile == scriptFileName() || interruptFile.isEmpty()
+            ? showScriptTab() : showExternalScriptTab(interruptFile);
     d->askForProjectActivation( ProjectPrivate::ActivateProjectForDebugging );
-
-    // Move cursor position to interrupt line
-    KTextEditor::View *view = tab->document()->activeView();
-    view->blockSignals( true );
-    view->setCursorPosition( KTextEditor::Cursor(d->debugger->lineNumber() - 1,
-                                                    d->debugger->columnNumber()) );
-    view->blockSignals( false );
-
-    // Move execution mark
-    KTextEditor::MarkInterface *markInterface =
-            qobject_cast<KTextEditor::MarkInterface*>( tab->document() );
-    if ( !markInterface ) {
-        kDebug() << "Cannot mark current execution line, no KTextEditor::MarkInterface";
-    } else if ( d->executionLine != d->debugger->lineNumber() - 1 ) {
-        if ( d->executionLine != -1 ) {
-            markInterface->removeMark( d->executionLine, KTextEditor::MarkInterface::Execution );
-        }
-        if ( d->debugger->lineNumber() != -1 ) {
-            d->executionLine = d->debugger->lineNumber() - 1;
-            markInterface->addMark( d->executionLine, KTextEditor::MarkInterface::Execution );
-        }
-    }
-
     d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
                                                          << DebuggerActionGroup );
 
+    tab->setExecutionLine( d->debugger->lineNumber() );
+
+    // Update title of all script tabs
     if ( d->scriptTab ) {
         d->scriptTab->slotTitleChanged();
+    }
+    foreach ( ScriptTab *externalTab, d->externalScriptTabs ) {
+        externalTab->slotTitleChanged();
     }
 }
 
 void Project::debugContinued()
 {
     Q_D( Project );
-
-    // Remove execution mark
-    if ( scriptTab() ) {
-        KTextEditor::MarkInterface *iface =
-                qobject_cast<KTextEditor::MarkInterface*>( scriptTab()->document() );
-        if ( !iface ) {
-            kDebug() << "Cannot remove execution mark, no KTextEditor::MarkInterface";
-        } else if ( d->executionLine != -1 ) {
-            iface->removeMark( d->executionLine, KTextEditor::MarkInterface::Execution );
-            d->executionLine = -1;
-        }
-    }
-
     d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
                                                       << DebuggerActionGroup );
-
-    if ( d->scriptTab ) {
-        d->scriptTab->slotTitleChanged();
-    }
 }
 
 void Project::debugStarted()
@@ -3290,16 +3324,6 @@ void Project::debugStopped( const ScriptRunData &scriptRunData )
         d->scriptTab->slotTitleChanged();
     }
 
-    // Remove execution mark
-    ScriptTab *tab = scriptTab();
-    if ( tab ) {
-        KTextEditor::MarkInterface *markInterface =
-                qobject_cast<KTextEditor::MarkInterface*>( tab->document() );
-        if ( markInterface && d->executionLine != -1 ) {
-            markInterface->removeMark( d->executionLine, KTextEditor::MarkInterface::Execution );
-            d->executionLine = -1;
-        }
-    }
     emit debuggerRunningChanged( false );
 }
 
@@ -3641,6 +3665,51 @@ ScriptTab *Project::createScriptTab( QWidget *parent )
              this, SIGNAL(scriptModifiedStateChanged(bool)) );
     return d->scriptTab;
 }
+
+ScriptTab *Project::createExternalScriptTab( const QString &filePath, QWidget *parent )
+{
+    Q_D( Project );
+
+    foreach ( ScriptTab *externalScriptTab, d->externalScriptTabs ) {
+        if ( externalScriptTab->fileName() == filePath ) {
+            kWarning() << "Script tab already created";
+            return externalScriptTab;
+        }
+    }
+
+    // Create script tab
+    parent = d->parentWidget( parent );
+    ScriptTab *externalScriptTab = ScriptTab::create( this, parent );
+    if ( !externalScriptTab ) {
+        d->errorHappened( KatePartError, i18nc("@info", "Service katepart.desktop not found") );
+        return 0;
+    } else if ( !QFile::exists(filePath) ) {
+        d->errorHappened( Project::ScriptFileNotFound,
+                          i18nc("@info", "The external script file <filename>%1</filename> "
+                                "could not be found.", filePath) );
+        delete externalScriptTab;
+        return 0;
+    } else if ( !externalScriptTab->document()->openUrl(KUrl(filePath)) ) {
+        d->errorHappened( Project::ScriptFileNotFound, // TODO
+                          i18nc("@info", "The external script file <filename>%1</filename> "
+                                "could not be opened.", filePath) );
+        delete externalScriptTab;
+        return 0;
+    }
+    externalScriptTab->document()->setModified( false );
+
+    emit tabTitleChanged( externalScriptTab, externalScriptTab->title(), externalScriptTab->icon() );
+
+    d->updateProjectActions( QList< ProjectAction >() << ToggleBreakpoint );
+
+    // Connect default tab slots with the tab
+    d->connectTab( externalScriptTab );
+    connect( externalScriptTab, SIGNAL(destroyed(QObject*)),
+             this, SLOT(externalScriptTabDestroyed(QObject*)) );
+//     connect( externalScriptTab, SIGNAL(modifiedStatusChanged(bool)),
+//              this, SIGNAL(externalScriptModifiedStateChanged(bool)) );
+    return externalScriptTab;
+}
 #endif
 
 ServiceProvider *Project::provider() const
@@ -3743,6 +3812,14 @@ void Project::scriptTabDestroyed()
     Q_D( Project );
     d->scriptTab = 0;
     d->updateProjectActions( QList< ProjectAction >() << ToggleBreakpoint );
+}
+
+void Project::externalScriptTabDestroyed( QObject *tab )
+{
+    Q_D( Project );
+    // qobject_cast does not work here, but only the address gets compared in removeOne(),
+    // which needs to be casted to the list element type
+    d->externalScriptTabs.removeOne( dynamic_cast<ScriptTab*>(tab) );
 }
 #endif
 

@@ -753,7 +753,17 @@ void TimetableMate::updateWindowTitle() {
         tab = projectTabAt( m_tabWidget->currentIndex() );
         const ProjectModelItem::Type type =
                 ProjectModelItem::projectItemTypeFromTabType( tab->type() );
-        caption = m_projectModel->projectItemChildFromProject( project, type )->text();
+        if ( type != ProjectModelItem::ScriptItem || tab->fileName() == project->scriptFileName() ) {
+            // Get caption from the model by tab type, but not for external script tabs
+            caption = m_projectModel->projectItemChildFromProject( project, type )->text();
+        } else {
+            // External script tab, manually construct caption
+            QString name = tab->fileName().isEmpty()
+                    ? i18nc("@info/plain", "External Script File")
+                    : QFileInfo(tab->fileName()).fileName();
+            caption = KDialog::makeStandardCaption( name, 0,
+                    tab && tab->isModified() ? KDialog::ModifiedCaption : KDialog::NoCaptionFlags );
+        }
 
         // Add project name
         caption += " - " + tab->project()->projectName();

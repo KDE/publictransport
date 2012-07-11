@@ -27,6 +27,7 @@
 #include "javascriptparser.h"
 #include "javascriptcompletionmodel.h"
 #include "../debugger/debugger.h"
+#include <debugger/backtracemodel.h>
 
 // Public Transport engine include
 #include <engine/serviceproviderdata.h>
@@ -173,12 +174,12 @@ QLatin1String AbstractTab::typeName() const
     return Tabs::nameForType( type() );
 }
 
-QString AbstractTab::fileName()
+QString AbstractTab::fileName() const
 {
     return i18nc("@info/plain", "Unsaved Document");
 }
 
-QString AbstractDocumentTab::fileName()
+QString AbstractDocumentTab::fileName() const
 {
     const KUrl url = document()->url();
     return url.isValid() ? url.path() : AbstractTab::fileName();
@@ -222,20 +223,32 @@ QString AbstractTab::title() const
     }
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Tabs::Script: {
-        const QString scriptFileName = m_project->provider()->data()->scriptFileName() ;
-        QString title = !scriptFileName.isEmpty() ? QFileInfo(scriptFileName).fileName()
-                : i18nc("@title:tab", "Script %1", m_project->serviceProviderId());
+        const QString mainScriptFile = m_project->provider()->data()->scriptFileName();
+        const QString scriptFileName = fileName();
+        const bool isMainScript = mainScriptFile == scriptFileName;
+        QString title;
+        if ( !scriptFileName.isEmpty() ) {
+            title = QFileInfo( scriptFileName ).fileName();
+        } else if ( isMainScript ) {
+            title = i18nc("@title:tab", "Script %1", m_project->serviceProviderId());
+        } else {
+            title = i18nc("@title:tab", "External Script %1", m_project->serviceProviderId());
+        }
 
         Debugger::Debugger *debugger = project()->debugger();
         if ( debugger->isRunning() ) {
-            if ( debugger->hasUncaughtException() ) { //m_engine->hasUncaughtException() ) {
-                title += " - " + i18nc("@info/plain", "Exception in Line %1",
-                                       debugger->uncaughtExceptionLineNumber());
-            } else if ( debugger->isInterrupted() ) {
-                title += " - " + i18nc("@info/plain", "Interrupted at Line %1",
-                                       debugger->lineNumber());
-            } else if ( debugger->isRunning() ) {
-                title += " - " + i18nc("@info/plain", "Running");
+            const bool isDebuggerInTab =
+                    debugger->backtraceModel()->topFrame()->fileName() == scriptFileName;
+            if ( isDebuggerInTab ) {
+                if ( debugger->hasUncaughtException() ) { //m_engine->hasUncaughtException() ) {
+                    title += " - " + i18nc("@info/plain", "Exception in Line %1",
+                                        debugger->uncaughtExceptionLineNumber());
+                } else if ( debugger->isInterrupted() ) {
+                    title += " - " + i18nc("@info/plain", "Interrupted at Line %1",
+                                        debugger->lineNumber());
+                } else if ( debugger->isRunning() ) {
+                    title += " - " + i18nc("@info/plain", "Running");
+                }
             }
         }
         return title;

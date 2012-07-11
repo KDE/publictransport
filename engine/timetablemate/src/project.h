@@ -198,7 +198,13 @@ public:
         ShowDashboard, /**< Show the dashboard tab. */
         ShowHomepage, /**< Show the web tab. */
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        ShowScript, /**< Show the script tab. */
+        ShowScript, /**< Show the main script tab. */
+        ShowExternalScript, /**< Show a script tab with an external script (included into the
+                               * main script). The file path to the external script gets specified
+                               * as data of type QString in calls to projectAction() or
+                               * createProjectAction(). If no file path is given an open file
+                               * dialog gets shown to select the file to open. That file could
+                               * later be included into the main script. */
 #endif
         ShowProjectSource, /**< Show the project source XML document tab. */
         ShowPlasmaPreview, /**< Show the plasma preview tab. */
@@ -505,6 +511,12 @@ public:
      * @see showScriptTab
      **/
     ScriptTab *scriptTab() const;
+
+    /** @brief Get a list of pointers to opened script document tabs for external scripts. */
+    QList< ScriptTab* > externalScriptTabs() const;
+
+    /** @brief Get a pointer to an opened script tab for the external script at @p filePath. */
+    ScriptTab *externalScriptTab( const QString &filePath ) const;
 #endif
 
     /**
@@ -539,6 +551,12 @@ public:
      * @see scriptTab
      **/
     ScriptTab *createScriptTab( QWidget *parent = 0 );
+
+    /**
+     * @brief Create an external script document tab or return an already created one.
+     * @see externalScriptTabs
+     **/
+    ScriptTab *createExternalScriptTab( const QString &filePath, QWidget *parent = 0 );
 #endif
 
     /**
@@ -571,7 +589,10 @@ public:
      **/
     void setProviderData( const ServiceProviderData *providerData );
 
-    /** @brief Get the path of the project source XML file. */
+    /** @brief Get the path to the project files. */
+    Q_INVOKABLE QString path() const;
+
+    /** @brief Get the file path to the project source XML file. */
     Q_INVOKABLE QString filePath() const;
 
     /** @brief Get the script file name. */
@@ -827,8 +848,11 @@ public slots:
     /** @brief Run the getJourneys() script function and interrupt at the first executed line. */
     void debugGetJourneys();
 
-    /** @brief Show the script tab. */
+    /** @brief Show the main script tab. */
     ScriptTab *showScriptTab( QWidget *parent = 0 );
+
+    /** @brief Show a script tab containing the external script at @p filePath. */
+    ScriptTab *showExternalScriptTab( const QString &filePath, QWidget *parent = 0 );
 #endif // BUILD_PROVIDER_TYPE_SCRIPT
 
     /** @brief Show the project dashboard tab. */
@@ -886,7 +910,10 @@ protected slots:
     void scriptOutput( const QString &message, const QScriptContextInfo &context );
     void scriptErrorReceived( const QString &errorMessage, const QScriptContextInfo &context,
                               const QString &failedParseText );
-#endif
+
+    /** @brief Show a script tab containing an external script, included into the main script. */
+    ScriptTab *showExternalScriptActionTriggered( QWidget *parent = 0 );
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
     /**
      * @brief The active project has changed from @p previousProject to @p project.
@@ -933,6 +960,7 @@ protected slots:
     void scriptException( int lineNumber, const QString &errorMessage );
 
     void scriptTabDestroyed();
+    void externalScriptTabDestroyed( QObject *tab );
 #endif
 
     void dashboardTabDestroyed();

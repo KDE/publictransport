@@ -152,10 +152,16 @@ void BacktraceDockWidget::clickedBacktraceItem( const QModelIndex &index )
         return;
     }
 
+    Frame *frame = project->debugger()->backtraceModel()->frameFromIndex( index );
+    ScriptTab *tab;
+    if ( frame->fileName() == project->scriptFileName() || frame->fileName().isEmpty() ) {
+        tab = project->showScriptTab( parentWidget() );
+    } else {
+        tab = project->showExternalScriptTab( frame->fileName(), parentWidget() );
+    }
+
     // Set cursor position to the current execution position in frame
-    ScriptTab *tab = project->showScriptTab( parentWidget() );
     if ( tab ) {
-        Frame *frame = project->debugger()->backtraceModel()->frameFromIndex( index );
         KTextEditor::View *view = tab->document()->activeView();
         view->blockSignals( true );
         view->setCursorPosition( KTextEditor::Cursor(frame->lineNumber() - 1, 0) );

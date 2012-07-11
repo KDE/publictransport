@@ -107,7 +107,7 @@ public:
      *
      * The default implementation always returns a translated placeholder string.
      **/
-    virtual QString fileName();
+    virtual QString fileName() const;
 
     /** @brief Show a context menu for this tab at @p globalPos. */
     void showTabContextMenu( const QPoint &globalPos );
@@ -184,7 +184,7 @@ public:
      * The default implementation uses url() on the document to get the file name. If no file
      * is loaded a translated placeholder string gets returned.
      **/
-    virtual QString fileName();
+    virtual QString fileName() const;
 
 protected slots:
     void slotModifiedChanged( KTextEditor::Document *document );

@@ -60,8 +60,48 @@
 ScriptTab::ScriptTab( Project *project, KTextEditor::Document *document, QWidget *parent )
         : AbstractDocumentTab(project, document, Tabs::Script, parent),
           m_scriptModel(0), m_completionModel(0), m_functionsModel(0), m_functionsWidget(0),
-          m_previousFunctionAction(0), m_nextFunctionAction(0), m_backgroundParserTimer(0)
+          m_previousFunctionAction(0), m_nextFunctionAction(0), m_backgroundParserTimer(0),
+          m_executionLine(-1)
 {
+    connect( project->debugger(), SIGNAL(continued()), this, SLOT(removeExecutionMarker()) );
+    connect( project->debugger(), SIGNAL(stopped()), this, SLOT(removeExecutionMarker()) );
+}
+
+void ScriptTab::setExecutionLine( int executionLine )
+{
+    KTextEditor::View *view = document()->activeView();
+    view->blockSignals( true );
+    Debugger::Debugger *debugger = project()->debugger();
+    view->setCursorPosition( KTextEditor::Cursor(debugger->lineNumber() - 1,
+                                                 debugger->columnNumber()) );
+    view->blockSignals( false );
+
+    // Move execution mark
+    KTextEditor::MarkInterface *markInterface =
+            qobject_cast<KTextEditor::MarkInterface*>( document() );
+    if ( !markInterface ) {
+        kDebug() << "Cannot mark current execution line, no KTextEditor::MarkInterface";
+    } else if ( m_executionLine != debugger->lineNumber() - 1 ) {
+        if ( m_executionLine != -1 ) {
+            markInterface->removeMark( m_executionLine, KTextEditor::MarkInterface::Execution );
+        }
+        if ( debugger->lineNumber() != -1 ) {
+            m_executionLine = debugger->lineNumber() - 1;
+            markInterface->addMark( m_executionLine, KTextEditor::MarkInterface::Execution );
+        }
+    }
+}
+
+void ScriptTab::removeExecutionMarker()
+{
+    KTextEditor::MarkInterface *iface = qobject_cast<KTextEditor::MarkInterface*>( document() );
+    if ( !iface ) {
+        kDebug() << "Cannot remove execution mark, no KTextEditor::MarkInterface";
+    } else if ( m_executionLine != -1 ) {
+        iface->removeMark( m_executionLine, KTextEditor::MarkInterface::Execution );
+        m_executionLine = -1;
+        slotTitleChanged();
+    }
 }
 
 KAction *ScriptTab::createNextFunctionAction( QObject *parent )
@@ -407,7 +447,8 @@ bool ScriptTab::save()
         return true;
     }
 
-    if ( project()->scriptFileName().isEmpty() ) {
+//     if ( project()->scriptFileName().isEmpty() ) {
+    if ( fileName().isEmpty() ) {
         if ( project()->filePath().isEmpty() ) {
             KMessageBox::error( this, i18nc("@info", "Save the project first") );
             return false;
@@ -425,9 +466,10 @@ bool ScriptTab::save()
         newInfo->setScriptFile( fileName );
         project()->setProviderData( newInfo );
         project()->save( this );
-    } else if ( !document()->saveAs(project()->scriptFileName()) ) {
+//     } else if ( !document()->saveAs(project()->scriptFileName()) ) {
+    } else if ( !document()->saveAs(fileName()) ) {
         KMessageBox::error( this, i18nc("@info",
-                "Cannot save script to <filename>%1</filename>", project()->scriptFileName()) );
+                "Cannot save script to <filename>%1</filename>", fileName()) );
     }
 
     return true;

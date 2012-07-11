@@ -35,6 +35,7 @@
 #include <KDebug>
 #include <KIcon>
 #include <KMenu>
+#include <KFileDialog>
 
 // Qt includes
 #include <QLabel>
@@ -140,6 +141,7 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
         QAction *openInTabAction = 0;
         QAction *closeTabAction = 0;
         QAction *documentSaveAction = 0;
+        QAction *openExternalAction = 0;
         ProjectSourceTab *projectSourceTab = projectItem->project()->projectSourceTab();
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         ScriptTab *scriptTab = projectItem->project()->scriptTab();
@@ -165,6 +167,12 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
                                              i18nc("@item:inmenu", "Create From Template"))
                     : projectMenu->addAction(KIcon("document-open"),
                                              i18nc("@item:inmenu", "Open in Tab"));
+        }
+
+        // Add an action to open external script files for the script item
+        if ( projectItem->isScriptItem() ) {
+            openExternalAction = projectMenu->addAction( KIcon("document-open"),
+                    i18nc("@item:inmenu", "Open External Script") );
         }
 
         // Add a save action for document items
@@ -205,6 +213,17 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
             } else if ( projectItem->isScriptItem() && scriptTab ) {
                 scriptTab->save();
             }
+        } else if ( triggeredAction == openExternalAction ) {
+            // Open external script file (from the same directory)
+            QPointer<KFileDialog> dialog( new KFileDialog(projectItem->project()->path(),
+                                                          QString(), this) );
+            dialog->setMimeFilter( QStringList() << "application/javascript" );
+            if ( dialog->exec() == KFileDialog::Accepted ) {
+                const QString filePath = dialog->selectedFile();
+                // TODO Check if the directory was changed
+                projectItem->project()->showExternalScriptTab( filePath );
+            }
+            delete dialog.data();
         }
     } else {
         // A project item was clicked, open the project context menu
