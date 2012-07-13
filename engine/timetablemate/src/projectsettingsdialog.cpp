@@ -879,7 +879,7 @@ const ServiceProviderData *ProjectSettingsDialog::providerData( QObject *parent 
     return m_providerData->clone(parent);
 }
 
-void ProjectSettingsDialog::setProviderData( const ServiceProviderData *info,
+void ProjectSettingsDialog::setProviderData( const ServiceProviderData *data,
                                              const QString &fileName )
 {
     // Disable changed signals from widgets while setting the read values
@@ -888,56 +888,56 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *info,
     m_shortAuthorAutoFilled = false;
     m_shortUrlAutoFilled = false;
 
-    m_providerData = info->clone( info->parent() );
+    m_providerData = data->clone( data->parent() );
     m_openedPath = fileName;
-    ui_provider->type->setCurrentIndex( providerTypeToComboBoxIndex(info->type()) );
+    ui_provider->type->setCurrentIndex( providerTypeToComboBoxIndex(data->type()) );
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    ui_provider->scriptFile->setText( info->scriptFileName() );
-    checkScriptExtensionsInWidget( info->scriptExtensions() );
+    ui_provider->scriptFile->setText( data->scriptFileName() );
+    checkScriptExtensionsInWidget( data->scriptExtensions() );
 #endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
-    ui_provider->gtfsFeed->setText( info->feedUrl() );
-    ui_provider->gtfsTripUpdates->setText( info->realtimeTripUpdateUrl() );
-    ui_provider->gtfsAlerts->setText( info->realtimeAlertsUrl() );
-    ui_provider->timeZone->setSelected( info->timeZone(), true );
+    ui_provider->gtfsFeed->setText( data->feedUrl() );
+    ui_provider->gtfsTripUpdates->setText( data->realtimeTripUpdateUrl() );
+    ui_provider->gtfsAlerts->setText( data->realtimeAlertsUrl() );
+    ui_provider->timeZone->setSelected( data->timeZone(), true );
 #endif
 
     ui_provider->savePath->setText( fileName );
     ui_provider->currentLanguage->setCurrentItem( "en" );
-    ui_provider->name->setText( info->names()["en"] );
-    ui_provider->description->setText( info->descriptions()["en"] );
-    ui_provider->version->setText( info->version() );
-    ui_provider->useCityValue->setChecked( info->useSeparateCityValue() );
-    ui_provider->onlyAllowPredefinedCities->setChecked( info->onlyUseCitiesInList() );
-    ui_provider->url->setText( info->url() );
-    ui_provider->shortUrl->setText( info->shortUrl() );
-    ui_provider->minFetchWait->setValue( info->minFetchWait() );
-    ui_provider->author->setText( info->author() );
-    ui_provider->shortAuthor->setText( info->shortAuthor() );
-    ui_provider->email->setText( info->email() );
+    ui_provider->name->setText( data->names()["en"] );
+    ui_provider->description->setText( data->descriptions()["en"] );
+    ui_provider->version->setText( data->version() );
+    ui_provider->useCityValue->setChecked( data->useSeparateCityValue() );
+    ui_provider->onlyAllowPredefinedCities->setChecked( data->onlyUseCitiesInList() );
+    ui_provider->url->setText( data->url() );
+    ui_provider->shortUrl->setText( data->shortUrl() );
+    ui_provider->minFetchWait->setValue( data->minFetchWait() );
+    ui_provider->author->setText( data->author() );
+    ui_provider->shortAuthor->setText( data->shortAuthor() );
+    ui_provider->email->setText( data->email() );
     int defaultVehicleTypeIndex =
-            ui_provider->defaultVehicleType->findData( info->defaultVehicleType() );
+            ui_provider->defaultVehicleType->findData( data->defaultVehicleType() );
     ui_provider->defaultVehicleType->setCurrentIndex(
             defaultVehicleTypeIndex > 0 ? defaultVehicleTypeIndex : 0 );
-    ui_provider->fileVersion->setText( info->fileFormatVersion() );
+    ui_provider->fileVersion->setText( data->fileFormatVersion() );
     m_changelog->clear();
-    m_changelog->addChangelog( info->changelog(), info->shortAuthor() );
+    m_changelog->addChangelog( data->changelog(), data->shortAuthor() );
 
     ui_provider->predefinedCities->clear();
-    foreach( const QString & city, info->cities() ) {
+    foreach( const QString & city, data->cities() ) {
         QString lowerCity = city.toLower();
-        if( info->cityNameToValueReplacementHash().contains( lowerCity ) ) {
+        if( data->cityNameToValueReplacementHash().contains( lowerCity ) ) {
             ui_provider->predefinedCities->insertItem( city + "   ->   " +
-                    info->cityNameToValueReplacementHash()[lowerCity] );
+                    data->cityNameToValueReplacementHash()[lowerCity] );
         } else {
             ui_provider->predefinedCities->insertItem( city );
         }
     }
 
-    ui_provider->sampleStopNames->setItems( info->sampleStopNames() );
-    ui_provider->sampleCity->setText( info->sampleCity() );
+    ui_provider->sampleStopNames->setItems( data->sampleStopNames() );
+    ui_provider->sampleCity->setText( data->sampleCity() );
 
-    ui_provider->notes->setText( info->notes() );
+    ui_provider->notes->setText( data->notes() );
 
     // Enable changed signals from widgets again and emit changed signals once
     m_mapper->blockSignals( false );

@@ -66,7 +66,7 @@ public:
     void setScriptFile( const QString &scriptFile );
 #endif
 
-    void setProviderData( const ServiceProviderData *info, const QString &fileName = QString() );
+    void setProviderData( const ServiceProviderData *data, const QString &fileName = QString() );
 
     void setCurrentServiceProviderID( const QString &currentServiceProviderID ) {
         m_currentServiceProviderID = currentServiceProviderID;

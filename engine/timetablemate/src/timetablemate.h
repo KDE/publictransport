@@ -307,7 +307,7 @@ private:
     void scriptTabAction( ScriptTab *scriptTab, TabAction tabAction );
 #endif
 
-    bool hasHomePageURL( const ServiceProviderData *info );
+    bool hasHomePageURL( const ServiceProviderData *data );
 
     Ui::preferences *ui_preferences;
 

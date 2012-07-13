@@ -730,8 +730,8 @@ QList<VariableTreeData> VariableModel::variablesFromScriptValue( const QScriptVa
     const KColorScheme scheme( QPalette::Active );
     while ( it.hasNext() ) {
         it.next();
-        if ( (it.value().isFunction() && it.value().property("prototype").isValid()) || // Constructors
-            it.flags().testFlag(QScriptValue::SkipInEnumeration) ||
+//         if ( (it.value().isFunction() && it.value().property("prototype").isValid()) || // Constructors
+        if ( it.flags().testFlag(QScriptValue::SkipInEnumeration) ||
             it.name() == QLatin1String("Qt")|| // Too many enumerables in there, bad performance
             it.name() == QLatin1String("QtConcurrent")|| // Unused
             it.name() == QLatin1String("NaN") || it.name() == QLatin1String("undefined") ||
@@ -789,7 +789,7 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
                 .arg( value.toRegExp().caseSensitivity() == Qt::CaseSensitive ? "" : "i" );
         encodeValue = true;
     } else if ( value.isFunction() ) {
-        valueString = QString("function %1").arg( name ); // it.value() is the function definition
+        valueString = QString(); //QString("function %1").arg( name ); // it.value() is the function definition
     } else {
         valueString = value.toString();
     }

@@ -74,7 +74,7 @@ public:
     };
 
     /** @brief Constructor. */
-    explicit DebuggerJob( DebuggerAgent *debugger, const ServiceProviderData &info,
+    explicit DebuggerJob( DebuggerAgent *debugger, const ServiceProviderData &data,
                           QMutex *engineMutex, QObject* parent = 0 );
 
     /** @brief Destructor. */

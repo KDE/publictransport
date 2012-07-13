@@ -1135,8 +1135,8 @@ public:
     {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Q_Q( Project );
-        const ServiceProviderData *info = provider->data();
-        if ( info->sampleStopNames().isEmpty() ) {
+        const ServiceProviderData *data = provider->data();
+        if ( data->sampleStopNames().isEmpty() ) {
             testModel->markTestCaseAsUnstartable( TestModel::ScriptExecutionTestCase,
                     i18nc("@info/plain", "Missing sample stop name"),
                     i18nc("@info", "<title>Missing sample stop name</title> "
@@ -1144,7 +1144,7 @@ public:
                         "one or more <interface>Sample Stop Names</interface></para>"),
                     q->projectAction(Project::ShowProjectSettings) );
             return false;
-        } else if ( info->useSeparateCityValue() && info->sampleCity().isEmpty() ) {
+        } else if ( data->useSeparateCityValue() && data->sampleCity().isEmpty() ) {
             testModel->markTestCaseAsUnstartable( TestModel::ScriptExecutionTestCase,
                     i18nc("@info/plain", "Missing sample city"),
                     i18nc("@info", "<title>Missing sample city</title> "
@@ -1162,8 +1162,8 @@ public:
     {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Q_Q( Project );
-        const ServiceProviderData *info = provider->data();
-        if ( info->sampleStopNames().count() < 2 ) {
+        const ServiceProviderData *data = provider->data();
+        if ( data->sampleStopNames().count() < 2 ) {
             testModel->addTestResult( TestModel::JourneyTest, TestModel::TestCouldNotBeStarted,
                     i18nc("@info/plain", "To test journeys at least two sample stop names are needed"),
                     i18nc("@info", "<title>To test journeys at least two sample stop names are needed</title> "
@@ -1246,8 +1246,8 @@ public:
             return false;
         } else {
             // Function is implemented, ensure, that the current version of the script is loaded
-            const ServiceProviderData *info = provider->data();
-            debugger->loadScript( q->scriptText(), info );
+            const ServiceProviderData *data = provider->data();
+            debugger->loadScript( q->scriptText(), data );
 
             // Create job
             DebuggerJob *job;
@@ -1265,23 +1265,23 @@ public:
                 switch ( test ) {
                 case TestModel::DepartureTest:
                     request = new DepartureRequest( "TEST_DEPARTURES",
-                            info->sampleStopNames().first(), QDateTime::currentDateTime(),
-                            testItemCount, info->sampleCity() );
+                            data->sampleStopNames().first(), QDateTime::currentDateTime(),
+                            testItemCount, data->sampleCity() );
                     break;
                 case TestModel::ArrivalTest:
                     request = new ArrivalRequest( "TEST_ARRIVALS",
-                            info->sampleStopNames().first(), QDateTime::currentDateTime(),
-                            testItemCount, info->sampleCity() );
+                            data->sampleStopNames().first(), QDateTime::currentDateTime(),
+                            testItemCount, data->sampleCity() );
                     break;
                 case TestModel::StopSuggestionTest:
                     request = new StopSuggestionRequest( "TEST_STOP_SUGGESTIONS",
-                            info->sampleStopNames().first().left(4), testItemCount, info->sampleCity() );
+                            data->sampleStopNames().first().left(4), testItemCount, data->sampleCity() );
                     break;
                 case TestModel::JourneyTest:
                     request = new JourneyRequest( "TEST_JOURNEYS",
-                            info->sampleStopNames().first(), info->sampleStopNames()[1],
+                            data->sampleStopNames().first(), data->sampleStopNames()[1],
                             QDateTime::currentDateTime(), testItemCount, QString(),
-                            info->sampleCity() );
+                            data->sampleCity() );
                     break;
                 default:
                     kWarning() << "Invalid test" << test;

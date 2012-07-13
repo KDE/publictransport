@@ -90,96 +90,96 @@ ServiceProviderData::ServiceProviderData( const Enums::ServiceProviderType &type
     m_hashCityNameToValue = cityNameToValueReplacementHash;
 }
 
-ServiceProviderData::ServiceProviderData( const ServiceProviderData &info, QObject *parent )
+ServiceProviderData::ServiceProviderData( const ServiceProviderData &data, QObject *parent )
         : QObject(parent)
 {
     // Use assignment operator for initialization
-    operator=( info );
+    operator=( data );
 }
 
 ServiceProviderData::~ServiceProviderData()
 {
 }
 
-ServiceProviderData &ServiceProviderData::operator=( const ServiceProviderData &info )
+ServiceProviderData &ServiceProviderData::operator=( const ServiceProviderData &data )
 {
-    m_serviceProviderType = info.m_serviceProviderType;
-    m_id = info.m_id;
-    m_name = info.m_name;
-    m_description = info.m_description;
-    m_version = info.m_version;
-    m_fileFormatVersion = info.m_fileFormatVersion;
-    m_useSeparateCityValue = info.m_useSeparateCityValue;
-    m_onlyUseCitiesInList = info.m_onlyUseCitiesInList;
-    m_url = info.m_url;
-    m_shortUrl = info.m_shortUrl;
-    m_minFetchWait = info.m_minFetchWait;
-    m_author = info.m_author;
-    m_shortAuthor = info.m_shortAuthor;
-    m_email = info.m_email;
-    m_defaultVehicleType = info.m_defaultVehicleType;
-    m_changelog = info.m_changelog;
-    m_country = info.m_country;
-    m_cities = info.m_cities;
-    m_credit = info.m_credit;
-    m_hashCityNameToValue = info.m_hashCityNameToValue;
-    m_fileName = info.m_fileName;
-    m_charsetForUrlEncoding = info.m_charsetForUrlEncoding;
-    m_fallbackCharset = info.m_fallbackCharset;
-    m_sampleStopNames = info.m_sampleStopNames;
-    m_sampleCity = info.m_sampleCity;
-    m_notes = info.m_notes;
+    m_serviceProviderType = data.m_serviceProviderType;
+    m_id = data.m_id;
+    m_name = data.m_name;
+    m_description = data.m_description;
+    m_version = data.m_version;
+    m_fileFormatVersion = data.m_fileFormatVersion;
+    m_useSeparateCityValue = data.m_useSeparateCityValue;
+    m_onlyUseCitiesInList = data.m_onlyUseCitiesInList;
+    m_url = data.m_url;
+    m_shortUrl = data.m_shortUrl;
+    m_minFetchWait = data.m_minFetchWait;
+    m_author = data.m_author;
+    m_shortAuthor = data.m_shortAuthor;
+    m_email = data.m_email;
+    m_defaultVehicleType = data.m_defaultVehicleType;
+    m_changelog = data.m_changelog;
+    m_country = data.m_country;
+    m_cities = data.m_cities;
+    m_credit = data.m_credit;
+    m_hashCityNameToValue = data.m_hashCityNameToValue;
+    m_fileName = data.m_fileName;
+    m_charsetForUrlEncoding = data.m_charsetForUrlEncoding;
+    m_fallbackCharset = data.m_fallbackCharset;
+    m_sampleStopNames = data.m_sampleStopNames;
+    m_sampleCity = data.m_sampleCity;
+    m_notes = data.m_notes;
 
     // For ScriptedProvider
-    m_scriptFileName = info.m_scriptFileName;
-    m_scriptExtensions = info.m_scriptExtensions;
+    m_scriptFileName = data.m_scriptFileName;
+    m_scriptExtensions = data.m_scriptExtensions;
 
     // For GtfsProvider
-    m_feedUrl = info.m_feedUrl;
-    m_tripUpdatesUrl = info.m_tripUpdatesUrl;
-    m_alertsUrl = info.m_alertsUrl;
-    m_timeZone = info.m_timeZone;
+    m_feedUrl = data.m_feedUrl;
+    m_tripUpdatesUrl = data.m_tripUpdatesUrl;
+    m_alertsUrl = data.m_alertsUrl;
+    m_timeZone = data.m_timeZone;
     return *this;
 }
 
-bool ServiceProviderData::operator ==( const ServiceProviderData &info ) const
+bool ServiceProviderData::operator ==( const ServiceProviderData &data ) const
 {
-    return m_serviceProviderType == info.m_serviceProviderType &&
-           m_id == info.m_id &&
-           m_name == info.m_name &&
-           m_description == info.m_description &&
-           m_version == info.m_version &&
-           m_fileFormatVersion == info.m_fileFormatVersion &&
-           m_useSeparateCityValue == info.m_useSeparateCityValue &&
-           m_onlyUseCitiesInList == info.m_onlyUseCitiesInList &&
-           m_url == info.m_url &&
-           m_shortUrl == info.m_shortUrl &&
-           m_minFetchWait == info.m_minFetchWait &&
-           m_author == info.m_author &&
-           m_shortAuthor == info.m_shortAuthor &&
-           m_email == info.m_email &&
-           m_defaultVehicleType == info.m_defaultVehicleType &&
-           m_changelog == info.m_changelog &&
-           m_country == info.m_country &&
-           m_cities == info.m_cities &&
-           m_credit == info.m_credit &&
-           m_hashCityNameToValue == info.m_hashCityNameToValue &&
-           m_fileName == info.m_fileName &&
-           m_charsetForUrlEncoding == info.m_charsetForUrlEncoding &&
-           m_fallbackCharset == info.m_fallbackCharset &&
-           m_sampleStopNames == info.m_sampleStopNames &&
-           m_sampleCity == info.m_sampleCity &&
-           m_notes == info.m_notes &&
+    return m_serviceProviderType == data.m_serviceProviderType &&
+           m_id == data.m_id &&
+           m_name == data.m_name &&
+           m_description == data.m_description &&
+           m_version == data.m_version &&
+           m_fileFormatVersion == data.m_fileFormatVersion &&
+           m_useSeparateCityValue == data.m_useSeparateCityValue &&
+           m_onlyUseCitiesInList == data.m_onlyUseCitiesInList &&
+           m_url == data.m_url &&
+           m_shortUrl == data.m_shortUrl &&
+           m_minFetchWait == data.m_minFetchWait &&
+           m_author == data.m_author &&
+           m_shortAuthor == data.m_shortAuthor &&
+           m_email == data.m_email &&
+           m_defaultVehicleType == data.m_defaultVehicleType &&
+           m_changelog == data.m_changelog &&
+           m_country == data.m_country &&
+           m_cities == data.m_cities &&
+           m_credit == data.m_credit &&
+           m_hashCityNameToValue == data.m_hashCityNameToValue &&
+           m_fileName == data.m_fileName &&
+           m_charsetForUrlEncoding == data.m_charsetForUrlEncoding &&
+           m_fallbackCharset == data.m_fallbackCharset &&
+           m_sampleStopNames == data.m_sampleStopNames &&
+           m_sampleCity == data.m_sampleCity &&
+           m_notes == data.m_notes &&
 
            // For ScriptedProvider
-           m_scriptFileName == info.m_scriptFileName &&
-           m_scriptExtensions == info.m_scriptExtensions &&
+           m_scriptFileName == data.m_scriptFileName &&
+           m_scriptExtensions == data.m_scriptExtensions &&
 
            // For GtfsProvider
-           m_feedUrl == info.m_feedUrl &&
-           m_tripUpdatesUrl == info.m_tripUpdatesUrl &&
-           m_alertsUrl == info.m_alertsUrl &&
-           m_timeZone == info.m_timeZone;
+           m_feedUrl == data.m_feedUrl &&
+           m_tripUpdatesUrl == data.m_tripUpdatesUrl &&
+           m_alertsUrl == data.m_alertsUrl &&
+           m_timeZone == data.m_timeZone;
 }
 
 void ServiceProviderData::finish()

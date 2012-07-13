@@ -42,9 +42,9 @@
 
 namespace Debugger {
 
-DebuggerJob::DebuggerJob( DebuggerAgent *debugger, const ServiceProviderData &info,
+DebuggerJob::DebuggerJob( DebuggerAgent *debugger, const ServiceProviderData &data,
                           QMutex *engineMutex, QObject *parent )
-        : ThreadWeaver::Job(parent), m_debugger(debugger), m_data(info), m_success(true),
+        : ThreadWeaver::Job(parent), m_debugger(debugger), m_data(data), m_success(true),
           m_mutex(new QMutex()), m_engineMutex(engineMutex)
 {
 }

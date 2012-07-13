@@ -32,7 +32,7 @@ class ServiceProviderDataTester {
 public:
     static bool runServiceProviderDataTest( TestModel::Test test, const QString &text,
             QString *errorMessage = 0, QString *tooltip = 0 );
-    static bool runServiceProviderDataTest( TestModel::Test test, const ServiceProviderData *info,
+    static bool runServiceProviderDataTest( TestModel::Test test, const ServiceProviderData *data,
             QString *errorMessage = 0, QString *tooltip = 0 );
 
     static bool isNameValid( const QString &name,

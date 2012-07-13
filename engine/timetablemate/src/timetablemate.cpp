@@ -1746,8 +1746,8 @@ void TimetableMate::preferencesDialogFinished()
     ui_preferences = 0;
 }
 
-bool TimetableMate::hasHomePageURL( const ServiceProviderData *info ) {
-    if ( info->url().isEmpty() ) {
+bool TimetableMate::hasHomePageURL( const ServiceProviderData *data ) {
+    if ( data->url().isEmpty() ) {
         KMessageBox::information( this, i18nc("@info",
                 "The <interface>Home Page URL</interface> is empty.<nl/>"
                 "Please set it in the project settings dialog first.") );

@@ -118,15 +118,15 @@ public:
             const QHash<QString, QString> &cityNameToValueReplacementHash,
             QObject *parent = 0 );
 
-    ServiceProviderData( const ServiceProviderData &info, QObject *parent = 0 );
+    ServiceProviderData( const ServiceProviderData &data, QObject *parent = 0 );
 
     virtual ~ServiceProviderData();
 
     ServiceProviderData *clone( QObject *parent = 0 ) const {
             return new ServiceProviderData(*this, parent); };
 
-    ServiceProviderData &operator =( const ServiceProviderData &info );
-    bool operator ==( const ServiceProviderData &info ) const;
+    ServiceProviderData &operator =( const ServiceProviderData &data );
+    bool operator ==( const ServiceProviderData &data ) const;
 
     /**
      * @brief Compare version strings in @p version1 and @p version2.

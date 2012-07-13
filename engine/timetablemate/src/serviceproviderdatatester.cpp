@@ -63,30 +63,30 @@ bool ServiceProviderDataTester::runServiceProviderDataTest( TestModel::Test test
 }
 
 bool ServiceProviderDataTester::runServiceProviderDataTest( TestModel::Test test,
-                                              const ServiceProviderData *info,
+                                              const ServiceProviderData *data,
                                               QString *errorMessage, QString *tooltip )
 {
     switch ( test ) {
     case TestModel::ServiceProviderDataNameTest:
-        return isNameValid( info->name(), errorMessage, tooltip );
+        return isNameValid( data->name(), errorMessage, tooltip );
     case TestModel::ServiceProviderDataVersionTest:
-        return isVersionValid( info->version(), errorMessage, tooltip );
+        return isVersionValid( data->version(), errorMessage, tooltip );
     case TestModel::ServiceProviderDataFileFormatVersionTest:
-        return isFileVersionValid( info->fileFormatVersion(), errorMessage, tooltip );
+        return isFileVersionValid( data->fileFormatVersion(), errorMessage, tooltip );
     case TestModel::ServiceProviderDataAuthorNameTest:
-        return isAuthorNameValid( info->author(), errorMessage, tooltip );
+        return isAuthorNameValid( data->author(), errorMessage, tooltip );
     case TestModel::ServiceProviderDataShortAuthorNameTest:
-        return isShortAuthorNameValid( info->shortAuthor(), errorMessage, tooltip );
+        return isShortAuthorNameValid( data->shortAuthor(), errorMessage, tooltip );
     case TestModel::ServiceProviderDataEmailTest:
-        return isEmailValid( info->email(), errorMessage, tooltip );
+        return isEmailValid( data->email(), errorMessage, tooltip );
     case TestModel::ServiceProviderDataUrlTest:
-        return isUrlValid( info->url(), errorMessage, tooltip );
+        return isUrlValid( data->url(), errorMessage, tooltip );
     case TestModel::ServiceProviderDataShortUrlTest:
-        return isShortUrlValid( info->shortUrl(), errorMessage, tooltip );
+        return isShortUrlValid( data->shortUrl(), errorMessage, tooltip );
     case TestModel::ServiceProviderDataScriptFileNameTest:
-        return isScriptFileNameValid( info->scriptFileName(), errorMessage, tooltip );
+        return isScriptFileNameValid( data->scriptFileName(), errorMessage, tooltip );
     case TestModel::ServiceProviderDataDescriptionTest:
-        return isDescriptionValid( info->description(), errorMessage, tooltip );
+        return isDescriptionValid( data->description(), errorMessage, tooltip );
 
     default:
         kWarning() << "Unknown test";

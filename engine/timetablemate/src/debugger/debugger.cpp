@@ -58,7 +58,7 @@ Debugger::Debugger( QObject *parent )
           m_loadScriptJob(0), m_engineMutex(new QMutex()),
           m_engine(new QScriptEngine(this)), m_script(0),
           m_debugger(new DebuggerAgent(m_engine, m_engineMutex)), m_lastScriptError(NoScriptError),
-          m_info(0), m_scriptNetwork(0), m_scriptHelper(0), m_scriptResult(0), m_scriptStorage(0),
+          m_data(0), m_scriptNetwork(0), m_scriptHelper(0), m_scriptResult(0), m_scriptStorage(0),
           m_variableModel(new VariableModel(this)),
           m_backtraceModel(new BacktraceModel(this)),
           m_breakpointModel(new BreakpointModel(this)),
@@ -253,11 +253,11 @@ void Debugger::timeout()
     abortDebugger();
 }
 
-void Debugger::createScriptObjects( const ServiceProviderData *info )
+void Debugger::createScriptObjects( const ServiceProviderData *data )
 {
     // Create objects for the script, they get inserted into the engine in LoadScriptJob
     if ( !m_scriptHelper ) {
-        m_scriptHelper = new Helper( info->id(), m_engine );
+        m_scriptHelper = new Helper( data->id(), m_engine );
         connect( m_scriptHelper, SIGNAL(errorReceived(QString,QScriptContextInfo,QString)),
                  this, SIGNAL(scriptErrorReceived(QString,QScriptContextInfo,QString)) );
     }
@@ -270,13 +270,13 @@ void Debugger::createScriptObjects( const ServiceProviderData *info )
     }
 
     if ( !m_scriptNetwork ) {
-        m_scriptNetwork = new Network( info->fallbackCharset(), m_engine );
+        m_scriptNetwork = new Network( data->fallbackCharset(), m_engine );
     } else {
         m_scriptNetwork->clear();
     }
 
     if ( !m_scriptStorage ) {
-        m_scriptStorage = new Storage( info->id() );
+        m_scriptStorage = new Storage( data->id() );
     }
 }
 
@@ -303,31 +303,31 @@ void Debugger::evaluateInContext( const QString &program, const QString &context
     return;
 }
 
-void Debugger::loadScript( const QString &program, const ServiceProviderData *info )
+void Debugger::loadScript( const QString &program, const ServiceProviderData *data )
 {
     if ( m_loadScriptJob ) {
         kDebug() << "Script already gets loaded, please wait...";
         return;
     }
     if ( m_script && m_script->sourceCode() == program &&
-         (!m_info || m_info == info) )
+         (!m_data || m_data == data) )
     {
         kDebug() << "Script code and provider data unchanged";
         return;
     }
 
     m_state = ScriptModified;
-    m_script = new QScriptProgram( program, info->scriptFileName() );
-    m_info = info;
+    m_script = new QScriptProgram( program, data->scriptFileName() );
+    m_data = data;
     m_lastScriptError = NoScriptError;
     enqueueNewLoadScriptJob();
 }
 
 LoadScriptJob *Debugger::enqueueNewLoadScriptJob()
 {
-    Q_ASSERT( m_info );
-    createScriptObjects( m_info );
-    m_loadScriptJob = new LoadScriptJob( m_debugger, *m_info, m_engineMutex, m_script,
+    Q_ASSERT( m_data );
+    createScriptObjects( m_data );
+    m_loadScriptJob = new LoadScriptJob( m_debugger, *m_data, m_engineMutex, m_script,
                                          m_scriptHelper, m_scriptResult, m_scriptNetwork,
                                          m_scriptStorage, ResultObject::staticMetaObject, this );
     enqueueJob( m_loadScriptJob );
@@ -337,37 +337,36 @@ LoadScriptJob *Debugger::enqueueNewLoadScriptJob()
 TimetableDataRequestJob *Debugger::createTimetableDataRequestJob(
         const AbstractRequest *request, DebugFlags debugFlags )
 {
-    Q_ASSERT( m_info );
-    return new TimetableDataRequestJob( m_debugger, *m_info, m_engineMutex,
+    Q_ASSERT( m_data );
+    return new TimetableDataRequestJob( m_debugger, *m_data, m_engineMutex,
                                         request, debugFlags, this );
 }
 
 ExecuteConsoleCommandJob *Debugger::createExecuteConsoleCommandJob( const ConsoleCommand &command )
 {
-    Q_ASSERT( m_info );
-    return new ExecuteConsoleCommandJob( m_debugger, *m_info, m_engineMutex, command, this );
+    Q_ASSERT( m_data );
+    return new ExecuteConsoleCommandJob( m_debugger, *m_data, m_engineMutex, command, this );
 }
 
 EvaluateInContextJob *Debugger::createEvaluateInContextJob( const QString &program,
                                                             const QString &context )
 {
-    Q_ASSERT( m_info );
-    return new EvaluateInContextJob( m_debugger, *m_info, m_engineMutex, program, context, this );
+    Q_ASSERT( m_data );
+    return new EvaluateInContextJob( m_debugger, *m_data, m_engineMutex, program, context, this );
 }
 
 CallScriptFunctionJob *Debugger::createCallScriptFunctionJob( const QString &functionName,
         const QVariantList &arguments, DebugFlags debugFlags )
 {
-    Q_ASSERT( m_info );
-    return new CallScriptFunctionJob( m_debugger, *m_info, m_engineMutex, functionName, arguments,
+    Q_ASSERT( m_data );
+    return new CallScriptFunctionJob( m_debugger, *m_data, m_engineMutex, functionName, arguments,
                                       debugFlags, this );
 }
 
 TestFeaturesJob *Debugger::createTestFeaturesJob( DebugFlags debugFlags )
 {
-    Q_ASSERT( m_info );
-    return new TestFeaturesJob( m_debugger, *m_info, m_engineMutex,
-                                                 debugFlags, this );
+    Q_ASSERT( m_data );
+    return new TestFeaturesJob( m_debugger, *m_data, m_engineMutex, debugFlags, this );
 }
 
 bool Debugger::canEvaluate( const QString &program ) const
