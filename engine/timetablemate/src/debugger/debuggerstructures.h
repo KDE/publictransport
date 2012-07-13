@@ -193,14 +193,16 @@ public:
     /**
      * @brief Create a new breakpoint at @p lineNumber.
      *
+     * @param fileName The name of the file in which this breakpoint should be added.
      * @param lineNumber The line number where to interrupt execution.
      * @param enabled Whether or not the breakpoint should be enabled initially.
      * @param maxHitCount The maximum number of hits for this breakpoint or -1 for infinite hits.
      *   If the maximum hit count gets reached, the breakpoint gets disabled.
      **/
-    Breakpoint( int lineNumber = -1, bool enabled = true, int maxHitCount = -1 )
-        : m_model(0), m_lineNumber(lineNumber), m_enabled(enabled), m_hitCount(0),
-          m_maxHitCount(maxHitCount)
+    Breakpoint( const QString &fileName = QString(), int lineNumber = -1,
+                bool enabled = true, int maxHitCount = -1 )
+        : m_model(0), m_fileName(fileName), m_lineNumber(lineNumber), m_enabled(enabled),
+          m_hitCount(0), m_maxHitCount(maxHitCount)
     {
     };
 
@@ -210,13 +212,16 @@ public:
     /** @brief Destructor. */
     virtual ~Breakpoint() {};
 
-    /** @brief Create a one-time breakpoint at @p lineNumber. */
-    static Breakpoint *createOneTimeBreakpoint( int lineNumber ) {
-        return new Breakpoint( lineNumber, true, 1 );
+    /** @brief Create a one-time breakpoint in @p fileName at @p lineNumber. */
+    static Breakpoint *createOneTimeBreakpoint( const QString &fileName, int lineNumber ) {
+        return new Breakpoint( fileName, lineNumber, true, 1 );
     };
 
     /** @brief Whether or not this breakpoint is valid. */
     bool isValid() const { return m_lineNumber > 0; };
+
+    /** @brief The name of the file of this breakpoint. */
+    QString fileName() const { return m_fileName; };
 
     /** @brief The line number of this breakpoint. */
     int lineNumber() const { return m_lineNumber; };
@@ -279,6 +284,7 @@ protected:
 
 private:
     BreakpointModel *m_model;
+    QString m_fileName;
     int m_lineNumber;
     bool m_enabled;
     int m_hitCount;

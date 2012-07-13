@@ -92,28 +92,32 @@ public:
     virtual Qt::ItemFlags flags( const QModelIndex &index ) const;
     virtual bool removeRows( int row, int count, const QModelIndex &parent = QModelIndex() );
     void clear();
+    bool isEmpty() const { return rowCount() == 0; };
+
+    bool hasBreakpoint( int lineNumber ) const;
+    bool hasBreakpoint( const QString &fileName, int lineNumber ) const;
 
     QModelIndex indexFromRow( int row ) const;
     QModelIndex indexFromBreakpoint( Breakpoint *breakpoint ) const;
 
     Breakpoint *breakpointFromRow( int row ) const;
     Breakpoint *breakpointFromIndex( const QModelIndex &index ) const;
-    Breakpoint *breakpointFromLineNumber( int lineNumber ) const;
+    Breakpoint *breakpointFromLineNumber( const QString &fileName, int lineNumber ) const;
 
-    Breakpoint *setBreakpoint( int lineNumber, bool enable = true );
-    Breakpoint *toggleBreakpoint( int lineNumber );
+    Breakpoint *setBreakpoint( const QString &fileName, int lineNumber, bool enable = true );
+    Breakpoint *toggleBreakpoint( const QString &fileName, int lineNumber );
 
     /** @brief Get the state of the breakpoint at @p lineNumber or NoBreakpoint if there is none. */
-    Breakpoint::State breakpointState( int lineNumber ) const;
+    Breakpoint::State breakpointState( const QString &fileName, int lineNumber ) const;
 
     /** @brief Get a list of all Breakpoint objects in this model. */
-    QList< Breakpoint* > breakpoints() const;
+    QList< Breakpoint* > breakpoints( const QString &fileName ) const;
 
     /** @brief Get a list of all line numbers with an associated breakpoint in this model. */
-    QList< uint > breakpointLineNumbers() const;
+    QList< uint > breakpointLineNumbers( const QString &fileName ) const;
 
     /** @brief Get a hash with all Breakpoints in this model keyed by their line numbers. */
-    QHash< uint, Breakpoint* > breakpointsByLineNumber() const { return m_breakpointsByLineNumber; };
+    QHash< uint, Breakpoint* > breakpointsByLineNumber( const QString &fileName ) const;
 
 signals:
     /** @brief Emitted when @p breakpoint gets added to the model. */
@@ -150,8 +154,13 @@ protected slots:
     void slotBreakpointChanged( Breakpoint *breakpoint );
 
 private:
-    QList< Breakpoint* > m_breakpoints;
-    QHash< uint, Breakpoint* > m_breakpointsByLineNumber;
+    struct BreakpointData {
+        QList< Breakpoint* > breakpoints;
+        QHash< uint, Breakpoint* > breakpointsByLineNumber;
+    };
+
+    QHash< QString, BreakpointData > m_breakpointsByFile;
+    QString m_fileName;
 };
 
 class CheckboxDelegate : public KWidgetItemDelegate {

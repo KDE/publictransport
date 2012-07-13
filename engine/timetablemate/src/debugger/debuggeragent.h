@@ -134,7 +134,7 @@ public:
      * @warning This does not always work. The breakpoint may always be skipped although this
      *   function says it could break there.
      **/
-    NextEvaluatableLineHint canBreakAt( int lineNumber ) const;
+    NextEvaluatableLineHint canBreakAt( const QString &fileName, int lineNumber ) const;
 
     /**
      * @brief Get the first executable line number bigger than or equal to @p lineNumber.
@@ -143,14 +143,18 @@ public:
      * If not, the line number gets increased and again checked, etc.
      * If no such line number could be found -1 gets returned.
      **/
-    int getNextBreakableLineNumber( int lineNumber ) const;
+    int getNextBreakableLineNumber( const QString &fileName, int lineNumber ) const;
 
     static NextEvaluatableLineHint canBreakAt( int lineNumber, const QStringList &programLines );
     static int getNextBreakableLineNumber( int lineNumber, const QStringList &programLines );
-    inline static NextEvaluatableLineHint canBreakAt( int lineNumber, const QString &program ) {
-            return canBreakAt(lineNumber, program.split('\n', QString::KeepEmptyParts)); };
-    inline static int getNextBreakableLineNumber( int lineNumber, const QString &program ){
-            return getNextBreakableLineNumber(lineNumber, program.split('\n', QString::KeepEmptyParts)); };
+    inline static NextEvaluatableLineHint canBreakAt( int lineNumber, const QString &program )
+    {
+        return canBreakAt(lineNumber, program.split('\n', QString::KeepEmptyParts));
+    };
+    inline static int getNextBreakableLineNumber( int lineNumber, const QString &program )
+    {
+        return getNextBreakableLineNumber(lineNumber, program.split('\n', QString::KeepEmptyParts));
+    };
 
     /** @brief The current line number. */
     int lineNumber() const;
@@ -259,7 +263,7 @@ public slots:
     void debugStepOut( int repeat = 0 );
 
     /** @brief Continue script execution until @p lineNumber is reached. */
-    void debugRunUntilLineNumber( int lineNumber );
+    void debugRunUntilLineNumber( const QString &fileName, int lineNumber );
 
     /** @brief Interrupt script execution. */
     void debugInterrupt();
@@ -296,7 +300,7 @@ public: // QScriptAgent-Implementation
     virtual void functionEntry( qint64 scriptId );
     virtual void functionExit( qint64 scriptId, const QScriptValue& returnValue );
 
-    void setScriptText( const QString &program );
+    void setScriptText( const QString &fileName, const QString &program );
 
 protected:
     /** @brief Creates a new Debugger instance. */
@@ -388,7 +392,7 @@ private:
 
     QHash< qint64, QString > m_scriptIdToFileName;
     QString m_mainScriptFileName;
-    QStringList m_scriptLines;
+    QHash< QString, QStringList > m_scriptLines;
 };
 
 }; // namespace Debugger

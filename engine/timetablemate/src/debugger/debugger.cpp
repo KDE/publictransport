@@ -431,6 +431,8 @@ void Debugger::connectJob( DebuggerJob *debuggerJob )
         connect( qobject_cast<CallScriptFunctionJob*>(debuggerJob), SIGNAL(synchronousRequestWaitFinished(int,int)),
                  this, SLOT(synchronousRequestWaitFinished(int,int)) );
         break;
+    default:
+        break;
     }
 }
 

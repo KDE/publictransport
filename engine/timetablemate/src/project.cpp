@@ -1555,6 +1555,30 @@ public:
         return true;
     };
 
+    // Get the currently shown script tab, if any.
+    // Otherwise any of the currently opened script tabs gets returned.
+    ScriptTab *currentScriptTab()
+    {
+        // First try to find an active tab
+        if ( scriptTab && scriptTab->isVisible() ) {
+            return scriptTab;
+        }
+        foreach ( ScriptTab *tab, externalScriptTabs ) {
+            if ( tab->isVisible() ) {
+                return tab;
+            }
+        }
+
+        // No active script tab, find any script tab
+        if ( scriptTab ) {
+            return scriptTab;
+        } else if ( !externalScriptTabs.isEmpty() ) {
+            return externalScriptTabs.first();
+        } else {
+            return 0;
+        }
+    };
+
     Project::State state;
     ProjectModel *projectModel;
 
@@ -3238,24 +3262,26 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
 void Project::toggleBreakpoint( int lineNumber )
 {
     Q_D( Project );
-    if ( !d->scriptTab ) {
+    ScriptTab *scriptTab = d->currentScriptTab();
+    if ( !scriptTab ) {
         kDebug() << "No script tab opened";
         return;
     }
 
-    d->scriptTab->toggleBreakpoint( lineNumber );
+    scriptTab->toggleBreakpoint( lineNumber );
 }
 
 void Project::runToCursor()
 {
     Q_D( Project );
-    if ( !d->scriptTab ) {
+    ScriptTab *scriptTab = d->currentScriptTab();
+    if ( !scriptTab ) {
         kError() << "No script tab opened";
         return;
     }
 
-    const KTextEditor::View *view = d->scriptTab->document()->activeView();
-    d->debugger->debugRunUntilLineNumber( view->cursorPosition().line() + 1 );
+    const KTextEditor::View *view = scriptTab->document()->activeView();
+    d->debugger->debugRunUntilLineNumber( scriptTab->fileName(), view->cursorPosition().line() + 1 );
 }
 
 void Project::debugInterrupted()
@@ -3852,7 +3878,13 @@ void Project::externalScriptTabDestroyed( QObject *tab )
     Q_D( Project );
     // qobject_cast does not work here, but only the address gets compared in removeOne(),
     // which needs to be casted to the list element type
-    d->externalScriptTabs.removeOne( dynamic_cast<ScriptTab*>(tab) );
+    for ( int i = 0; i < d->externalScriptTabs.count(); ++i ) {
+        if ( qobject_cast<QObject*>(d->externalScriptTabs[i]) == tab ) {
+            d->externalScriptTabs.removeAt( i );
+            return;
+        }
+    }
+    qWarning() << "Internal error: Script tab destroyed but not found in the list";
 }
 #endif
 

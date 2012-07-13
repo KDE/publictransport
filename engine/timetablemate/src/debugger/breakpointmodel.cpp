@@ -34,6 +34,7 @@
 #include <QAbstractItemView>
 #include <QTreeView>
 #include <QHeaderView>
+#include <QFileInfo>
 
 using namespace Debugger;
 
@@ -44,7 +45,11 @@ BreakpointModel::BreakpointModel( QObject *parent )
 
 BreakpointModel::~BreakpointModel()
 {
-    qDeleteAll( m_breakpoints );
+    for ( QHash<QString, BreakpointData>::Iterator it = m_breakpointsByFile.begin();
+          it != m_breakpointsByFile.end(); ++it )
+    {
+        qDeleteAll( it->breakpoints );
+    }
 }
 
 void BreakpointModel::slotBreakpointChanged( Breakpoint *breakpoint )
@@ -82,18 +87,19 @@ QVariant BreakpointModel::headerData( int section, Qt::Orientation orientation, 
 
 QVariant BreakpointModel::data( const QModelIndex &index, int role ) const
 {
-    if ( !index.isValid() || index.row() >= m_breakpoints.count() ) {
+    if ( !index.isValid() || index.row() >= rowCount(index.parent()) ) {
         return QVariant();
     }
 
-    Breakpoint *breakpoint = m_breakpoints[ index.row() ];
+    Breakpoint *breakpoint = breakpointFromRow( index.row() );
     switch ( role ) {
     case Qt::DisplayRole:
         switch ( index.column() ) {
         case EnableColumn:
             return breakpoint->isEnabled();
         case SourceColumn:
-            return i18nc("@info/plain", "Line %1", breakpoint->lineNumber());
+            return QString("%1:%2").arg( QFileInfo(breakpoint->fileName()).fileName() )
+                                   .arg( breakpoint->lineNumber() );
         case HitCountColumn:
             return breakpoint->hitCount();
         case ConditionColumn:
@@ -121,11 +127,11 @@ QVariant BreakpointModel::data( const QModelIndex &index, int role ) const
 
 bool BreakpointModel::setData( const QModelIndex &index, const QVariant &value, int role )
 {
-    if ( !index.isValid() || index.row() >= m_breakpoints.count() ) {
+    if ( !index.isValid() || index.row() >= rowCount(index.parent()) ) {
         return false;
     }
 
-    Breakpoint *breakpoint = m_breakpoints[ index.row() ];
+    Breakpoint *breakpoint = breakpointFromRow( index.row() );
     switch ( role ) {
     case Qt::EditRole:
         switch ( index.column() ) {
@@ -156,9 +162,14 @@ Qt::ItemFlags BreakpointModel::flags( const QModelIndex &index ) const
     }
 }
 
-QList< Breakpoint * > BreakpointModel::breakpoints() const
+QList< Breakpoint * > BreakpointModel::breakpoints( const QString &fileName ) const
 {
-    return m_breakpoints;
+    return m_breakpointsByFile[ fileName ].breakpoints;
+}
+
+QHash< uint, Breakpoint * > BreakpointModel::breakpointsByLineNumber( const QString &fileName ) const
+{
+    return m_breakpointsByFile[ fileName ].breakpointsByLineNumber;
 }
 
 void BreakpointModel::applyChange( const BreakpointChange &change )
@@ -168,7 +179,8 @@ void BreakpointModel::applyChange( const BreakpointChange &change )
         addBreakpoint( new Breakpoint(change.breakpoint) );
         break;
     case RemoveBreakpoint:
-        removeBreakpoint( breakpointFromLineNumber(change.breakpoint.lineNumber()) );
+        removeBreakpoint( breakpointFromLineNumber(change.breakpoint.fileName(),
+                                                   change.breakpoint.lineNumber()) );
         break;
     case UpdateBreakpoint:
         updateBreakpoint( change.breakpoint );
@@ -180,6 +192,23 @@ void BreakpointModel::applyChange( const BreakpointChange &change )
     }
 }
 
+bool BreakpointModel::hasBreakpoint( int lineNumber ) const
+{
+    for ( QHash<QString, BreakpointData>::ConstIterator it = m_breakpointsByFile.constBegin();
+          it != m_breakpointsByFile.constEnd(); ++it )
+    {
+        if ( it->breakpointsByLineNumber.contains(lineNumber) ) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool BreakpointModel::hasBreakpoint( const QString &fileName, int lineNumber ) const
+{
+    return m_breakpointsByFile[ fileName ].breakpointsByLineNumber.contains( lineNumber );
+}
+
 void BreakpointModel::updateBreakpoint( const Breakpoint &breakpoint )
 {
     if ( !breakpoint.isValid() ) {
@@ -188,12 +217,13 @@ void BreakpointModel::updateBreakpoint( const Breakpoint &breakpoint )
     }
 
     // Check if there already is a Breakpoint object for the line number
-    if ( !m_breakpointsByLineNumber.contains(breakpoint.lineNumber()) ) {
+    if ( !hasBreakpoint(breakpoint.fileName(), breakpoint.lineNumber()) ) {
         kDebug() << "No breakpoint found to update at line" << breakpoint.lineNumber();
         return;
     }
 
-    Breakpoint *foundBreakpoint = m_breakpointsByLineNumber[ breakpoint.lineNumber() ];
+    Breakpoint *foundBreakpoint = breakpointFromLineNumber( breakpoint.fileName(),
+                                                            breakpoint.lineNumber() );
     const QModelIndex index = indexFromBreakpoint( foundBreakpoint );
     foundBreakpoint->setValuesOf( breakpoint );
     emit dataChanged( index, index );
@@ -202,25 +232,28 @@ void BreakpointModel::updateBreakpoint( const Breakpoint &breakpoint )
 
 void BreakpointModel::addBreakpoint( Breakpoint *breakpoint )
 {
+    kDebug() << "Add breakpoint in" << QFileInfo(breakpoint->fileName()).fileName()
+             << "at line" << breakpoint->lineNumber();
     if ( !breakpoint->isValid() ) {
         kDebug() << "Breakpoint is invalid" << breakpoint->lineNumber() << breakpoint->condition();
         return;
     }
 
     // Check if there already is a Breakpoint object for the line number
-    if ( m_breakpointsByLineNumber.contains(breakpoint->lineNumber()) ) {
+    if ( hasBreakpoint(breakpoint->fileName(), breakpoint->lineNumber()) ) {
         updateBreakpoint( *breakpoint );
         return;
     }
 
-    const int count = m_breakpoints.count();
+    const int count = rowCount();
     beginInsertRows( QModelIndex(), count, count );
     if ( breakpoint->model() ) {
         kWarning() << "Breakpoint already used in another model";
     }
     breakpoint->setModel( this );
-    m_breakpoints << breakpoint;
-    m_breakpointsByLineNumber.insert( breakpoint->lineNumber(), breakpoint );
+    BreakpointData &data = m_breakpointsByFile[ breakpoint->fileName() ];
+    data.breakpoints << breakpoint;
+    data.breakpointsByLineNumber.insert( breakpoint->lineNumber(), breakpoint );
     endInsertRows();
 
     emit breakpointAdded( *breakpoint );
@@ -231,8 +264,9 @@ void BreakpointModel::addBreakpoint( Breakpoint *breakpoint )
 
 void BreakpointModel::removeBreakpoint( Breakpoint *breakpoint )
 {
-    const int row = m_breakpoints.indexOf( breakpoint );
-
+    kDebug() << "Remove breakpoint in" << QFileInfo(breakpoint->fileName()).fileName()
+             << "at line" << breakpoint->lineNumber();
+    int row = indexFromBreakpoint( breakpoint ).row();
     if ( row == -1 ) {
         kWarning() << "Breakpoint not found";
         return;
@@ -243,11 +277,29 @@ void BreakpointModel::removeBreakpoint( Breakpoint *breakpoint )
 
 bool BreakpointModel::removeRows( int row, int count, const QModelIndex &parent )
 {
+    if ( isEmpty() || parent.isValid() ) {
+        return false;
+    }
+
     // Collect breakpoints to be removed
-    const bool wasEmpty = m_breakpoints.isEmpty();
     QList< Breakpoint* > removeBreakpoints;
-    for ( int i = row; i < row + count; ++i ) {
-        removeBreakpoints << m_breakpoints[i];
+    int _row = row;
+    int _count = count;
+    for ( QHash<QString, BreakpointData>::ConstIterator it = m_breakpointsByFile.constBegin();
+          it != m_breakpointsByFile.constEnd(); ++it )
+    {
+        if ( _row < it->breakpoints.count() ) {
+            QList< Breakpoint* > newRemoveBreakpoints = it->breakpoints.mid( _row, _count );
+            _count -= newRemoveBreakpoints.count();
+            _row = 0;
+            removeBreakpoints << newRemoveBreakpoints;
+
+            if ( _count == 0 ) {
+                break;
+            }
+        } else if ( _row > 0 ) {
+            _row -= it->breakpoints.count();
+        }
     }
 
     // Emit signals for breakpoints that get removed (before they get deleted)
@@ -257,16 +309,19 @@ bool BreakpointModel::removeRows( int row, int count, const QModelIndex &parent 
 
     // Remove the breakpoints from the model
     beginRemoveRows( parent, row, row + count - 1 );
-    for ( int i = row + count - 1; i >= row; --i ) {
-        // Remove breakpoint from both collections and delete it
-        Breakpoint *breakpoint = m_breakpoints.takeAt( i );
-        m_breakpointsByLineNumber.remove( breakpoint->lineNumber() );
+    BreakpointData *data = 0;
+    foreach ( Breakpoint *breakpoint, removeBreakpoints ) {
+        if ( !data || data->breakpoints.first()->fileName() != breakpoint->fileName() ) {
+            data = &m_breakpointsByFile[ breakpoint->fileName() ];
+        }
+
+        data->breakpoints.removeOne( breakpoint );
+        data->breakpointsByLineNumber.remove( breakpoint->lineNumber() );
         delete breakpoint;
     }
-    const bool isEmpty = m_breakpoints.isEmpty();
     endRemoveRows();
 
-    if ( !wasEmpty && isEmpty ) {
+    if ( isEmpty() ) {
         emit emptinessChanged( true );
     }
     return true;
@@ -274,40 +329,59 @@ bool BreakpointModel::removeRows( int row, int count, const QModelIndex &parent 
 
 void BreakpointModel::clear()
 {
-    removeRows( 0, m_breakpoints.count() );
+    removeRows( 0, rowCount() );
 }
 
 QModelIndex BreakpointModel::index( int row, int column, const QModelIndex &parent ) const
 {
-    if ( parent.isValid() || row < 0 || row >= m_breakpoints.count() ||
+    if ( parent.isValid() || row < 0 || row >= rowCount(parent) ||
          column < 0 || column >= ColumnCount )
     {
         return QModelIndex();
     } else {
-        return createIndex( row, column, m_breakpoints[row] );
+        return createIndex( row, column, breakpointFromRow(row) );
     }
 }
 
 QModelIndex BreakpointModel::indexFromBreakpoint( Breakpoint *breakpoint ) const
 {
-    const int row = m_breakpoints.indexOf( breakpoint );
-    return row == -1 ? QModelIndex() : createIndex( row, 0, m_breakpoints[row] );
+    int row = 0;
+    for ( QHash<QString, BreakpointData>::ConstIterator it = m_breakpointsByFile.constBegin();
+          it != m_breakpointsByFile.constEnd(); ++it )
+    {
+        int r = it->breakpoints.indexOf( breakpoint );
+        if ( r != -1 ) {
+            row += r;
+            break;
+        } else {
+            row += it->breakpoints.count();
+        }
+    }
+
+//     const int row = m_breakpoints.indexOf( breakpoint );
+    return row == -1 ? QModelIndex() : createIndex( row, 0, breakpoint );
 }
 
 
 QModelIndex BreakpointModel::indexFromRow( int row ) const
 {
-    if ( row < 0 || row >= m_breakpoints.count() ) {
+    Breakpoint *breakpoint = breakpointFromRow( row );
+    if ( !breakpoint ) {
         return QModelIndex();
     } else {
-        return createIndex( row, 0, m_breakpoints[row] );
+        return createIndex( row, 0, breakpoint );
     }
 }
 
-Breakpoint *BreakpointModel::breakpointFromLineNumber( int lineNumber ) const
+Breakpoint *BreakpointModel::breakpointFromLineNumber( const QString &fileName, int lineNumber ) const
 {
-    if ( m_breakpointsByLineNumber.contains(lineNumber) ) {
-        return m_breakpointsByLineNumber[ lineNumber ];
+    if ( !m_breakpointsByFile.contains(fileName) ) {
+        return 0;
+    }
+
+    const BreakpointData &data = m_breakpointsByFile[ fileName ];
+    if ( data.breakpointsByLineNumber.contains(lineNumber) ) {
+        return data.breakpointsByLineNumber[ lineNumber ];
     } else {
         return 0;
     }
@@ -315,7 +389,16 @@ Breakpoint *BreakpointModel::breakpointFromLineNumber( int lineNumber ) const
 
 Breakpoint *BreakpointModel::breakpointFromRow( int row ) const
 {
-    return m_breakpoints[ row ];
+    for ( QHash<QString, BreakpointData>::ConstIterator it = m_breakpointsByFile.constBegin();
+          it != m_breakpointsByFile.constEnd(); ++it )
+    {
+        if ( row < it->breakpoints.count() ) {
+            return it->breakpoints[ row ];
+        } else {
+            row -= it->breakpoints.count();
+        }
+    }
+    return 0;
 }
 
 Breakpoint *BreakpointModel::breakpointFromIndex( const QModelIndex &index ) const
@@ -323,18 +406,15 @@ Breakpoint *BreakpointModel::breakpointFromIndex( const QModelIndex &index ) con
     return static_cast< Breakpoint* >( index.internalPointer() );
 }
 
-QList< uint > BreakpointModel::breakpointLineNumbers() const
+QList< uint > BreakpointModel::breakpointLineNumbers( const QString &fileName ) const
 {
-    QList< uint > lineNumbers;
-    foreach ( const Breakpoint *breakpoint, m_breakpoints ) {
-        lineNumbers << breakpoint->lineNumber();
-    }
-    return lineNumbers;
+    return m_breakpointsByFile[ fileName ].breakpointsByLineNumber.keys();
 }
 
-Breakpoint *BreakpointModel::setBreakpoint( int lineNumber, bool enable )
+Breakpoint *BreakpointModel::setBreakpoint( const QString &fileName, int lineNumber, bool enable )
 {
-    kDebug() << "setBreakpoint(" << lineNumber << "," << enable << ")";
+    kDebug() << "setBreakpoint(" << QFileInfo(fileName).fileName() << ","
+             << lineNumber << "," << enable << ")";
     if ( lineNumber < 0 ) {
         return 0;
     }
@@ -343,29 +423,27 @@ Breakpoint *BreakpointModel::setBreakpoint( int lineNumber, bool enable )
 //     lineNumber = getNextBreakableLineNumber( lineNumber );
 
     Breakpoint *breakpoint = 0;
-    Breakpoint *foundBreakpoint = breakpointFromLineNumber( lineNumber );
+    Breakpoint *foundBreakpoint = breakpointFromLineNumber( fileName, lineNumber );
     if ( foundBreakpoint && !enable ) {
-        kDebug() << "Remove breakpoint at line" << lineNumber;
         removeBreakpoint( foundBreakpoint );
     } else if ( !foundBreakpoint && enable ) {
-        kDebug() << "Add breakpoint at line" << lineNumber;
-        breakpoint = new Breakpoint( lineNumber, enable );
+        breakpoint = new Breakpoint( fileName, lineNumber, enable );
         addBreakpoint( breakpoint );
     }
 
     return breakpoint;
 }
 
-Breakpoint *BreakpointModel::toggleBreakpoint( int lineNumber )
+Breakpoint *BreakpointModel::toggleBreakpoint( const QString &fileName, int lineNumber )
 {
-    kDebug() << "toggleBreakpoint(" << lineNumber << ")";
-    Breakpoint::State breakpoint = breakpointState( lineNumber );
-    return setBreakpoint( lineNumber, breakpoint == Breakpoint::NoBreakpoint );
+    kDebug() << "toggleBreakpoint(" << QFileInfo(fileName).fileName() << "," << lineNumber << ")";
+    Breakpoint::State breakpoint = breakpointState( fileName, lineNumber );
+    return setBreakpoint( fileName, lineNumber, breakpoint == Breakpoint::NoBreakpoint );
 }
 
-Breakpoint::State BreakpointModel::breakpointState( int lineNumber ) const
+Breakpoint::State BreakpointModel::breakpointState( const QString &fileName, int lineNumber ) const
 {
-    Breakpoint *foundBreakpoint = breakpointFromLineNumber( lineNumber );
+    Breakpoint *foundBreakpoint = breakpointFromLineNumber( fileName, lineNumber );
     return !foundBreakpoint ? Breakpoint::NoBreakpoint
            : ( foundBreakpoint->isEnabled() ? Breakpoint::EnabledBreakpoint
                                             : Breakpoint::DisabledBreakpoint );
@@ -373,7 +451,17 @@ Breakpoint::State BreakpointModel::breakpointState( int lineNumber ) const
 
 int BreakpointModel::rowCount( const QModelIndex &parent ) const
 {
-    return parent.isValid() ? 0 : m_breakpoints.count();
+    if ( parent.isValid() ) {
+        return 0;
+    } else {
+        int count = 0;
+        for ( QHash<QString, BreakpointData>::ConstIterator it = m_breakpointsByFile.constBegin();
+            it != m_breakpointsByFile.constEnd(); ++it )
+        {
+            count += it->breakpoints.count();
+        }
+        return count;
+    }
 }
 
 int BreakpointModel::columnCount( const QModelIndex &parent ) const

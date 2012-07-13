@@ -239,15 +239,15 @@ public:
      * @brief Checks whether script execution can be interrupted at @p lineNumber.
      * @see DebuggerAgent::canBreakAt(int)
      **/
-    inline NextEvaluatableLineHint canBreakAt( int lineNumber ) const {
-            return m_debugger->canBreakAt(lineNumber); };
+    inline NextEvaluatableLineHint canBreakAt( const QString &fileName, int lineNumber ) const {
+            return m_debugger->canBreakAt(fileName, lineNumber); };
 
     /**
      * @brief Get the first executable line number bigger than or equal to @p lineNumber.
      * @see DebuggerAgent::getNextBreakableLineNumber(int)
      **/
-    inline int getNextBreakableLineNumber( int lineNumber ) const {
-            return m_debugger->getNextBreakableLineNumber(lineNumber); };
+    inline int getNextBreakableLineNumber( const QString &fileName, int lineNumber ) const {
+            return m_debugger->getNextBreakableLineNumber(fileName, lineNumber); };
 
     /** @brief Whether or not @p program can be evaluated. */
     bool canEvaluate( const QString &program ) const;
@@ -478,8 +478,8 @@ public slots:
     inline void debugStepOut( int repeat = 0 ) { m_debugger->debugStepOut(repeat); };
 
     /** @brief Continue script execution until @p lineNumber is reached. */
-    void debugRunUntilLineNumber( int lineNumber ) {
-            m_debugger->debugRunUntilLineNumber(lineNumber); };
+    void debugRunUntilLineNumber( const QString &fileName, int lineNumber ) {
+            m_debugger->debugRunUntilLineNumber(fileName, lineNumber); };
 
     /** @brief Interrupt script execution. */
     inline void debugInterrupt() { m_debugger->debugInterrupt(); };

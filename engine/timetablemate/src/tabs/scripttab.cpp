@@ -281,14 +281,23 @@ void ScriptTab::slotSetStatusBarText( const QString &message )
 
 void ScriptTab::toggleBreakpoint( int lineNumber )
 {
+    if ( !project()->isDebuggerRunning() ) {
+        project()->debugger()->loadScript( document()->text(), project()->data() );
+    }
+
     lineNumber = lineNumber == -1
             ? document()->views().first()->cursorPosition().line() + 1 : lineNumber;
-    lineNumber = DebuggerAgent::getNextBreakableLineNumber( lineNumber, project()->scriptText() );
-    project()->debugger()->breakpointModel()->toggleBreakpoint( lineNumber );
+    Debugger::Debugger *debugger = project()->debugger();
+    lineNumber = debugger->getNextBreakableLineNumber( fileName(), lineNumber );
+    debugger->breakpointModel()->toggleBreakpoint( fileName(), lineNumber );
 }
 
 void ScriptTab::breakpointAdded( const Breakpoint &breakpoint )
 {
+    if ( breakpoint.fileName() != fileName() ) {
+        return;
+    }
+
     KTextEditor::MarkInterface *markInterface =
             qobject_cast<KTextEditor::MarkInterface*>( document() );
     if ( !markInterface ) {
@@ -305,6 +314,10 @@ void ScriptTab::breakpointAdded( const Breakpoint &breakpoint )
 
 void ScriptTab::breakpointAboutToBeRemoved( const Breakpoint &breakpoint )
 {
+    if ( breakpoint.fileName() != fileName() ) {
+        return;
+    }
+
     KTextEditor::MarkInterface *markInterface =
             qobject_cast<KTextEditor::MarkInterface*>( document() );
     if ( !markInterface ) {
@@ -323,27 +336,27 @@ void ScriptTab::markChanged( KTextEditor::Document *document, const KTextEditor:
                              KTextEditor::MarkInterface::MarkChangeAction action )
 {
     if ( mark.type == KTextEditor::MarkInterface::BreakpointActive ) {
-//         if ( !m_debugger ) {
-//             loadScript();
-//         }
+        if ( !project()->isDebuggerRunning() ) {
+            project()->debugger()->loadScript( document->text(), project()->data() );
+        }
 
         Debugger::BreakpointModel *breakpointModel = project()->debugger()->breakpointModel();
         if ( action == KTextEditor::MarkInterface::MarkAdded ) {
-            const int lineNumber = DebuggerAgent::getNextBreakableLineNumber(
-                    mark.line + 1, project()->scriptText() );
+            Debugger::Debugger *debugger = project()->debugger();
+            const int lineNumber = debugger->getNextBreakableLineNumber( fileName(), mark.line + 1 );
             if ( mark.line + 1 != lineNumber ) {
                 KTextEditor::MarkInterface *markInterface =
                         qobject_cast<KTextEditor::MarkInterface*>( document );
                 markInterface->removeMark( mark.line, mark.type );
             }
 
-            if ( breakpointModel->breakpointState(lineNumber) ==
+            if ( breakpointModel->breakpointState(fileName(), lineNumber) ==
                  Debugger::Breakpoint::NoBreakpoint )
             {
                 toggleBreakpoint( lineNumber );
             }
         } else { // Mark removed
-            if ( breakpointModel->breakpointState(mark.line + 1) !=
+            if ( breakpointModel->breakpointState(fileName(), mark.line + 1) !=
                  Debugger::Breakpoint::NoBreakpoint )
             {
                 toggleBreakpoint( mark.line + 1 );

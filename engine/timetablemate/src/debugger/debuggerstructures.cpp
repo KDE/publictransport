@@ -380,6 +380,7 @@ void Breakpoint::setMaximumHitCount( int maximumHitCount )
 
 void Breakpoint::setValuesOf( const Breakpoint &breakpoint )
 {
+    m_fileName = breakpoint.m_fileName;
     m_lineNumber = breakpoint.m_lineNumber;
     m_enabled = breakpoint.m_enabled;
     m_hitCount = breakpoint.m_hitCount;

@@ -157,7 +157,7 @@ bool DebuggerAgent::wasLastRunAborted() const
 
 NextEvaluatableLineHint DebuggerAgent::canBreakAt( int lineNumber, const QStringList &programLines )
 {
-    kDebug() << "canBreakAt(" << lineNumber << ")";
+    kDebug() << "canBreakAt(" << lineNumber << "), code lines:" << programLines.count();
     const int scriptLineCount = programLines.count();
     if ( lineNumber < 1 || lineNumber > scriptLineCount ) {
         return CannotFindNextEvaluatableLine;
@@ -166,6 +166,8 @@ NextEvaluatableLineHint DebuggerAgent::canBreakAt( int lineNumber, const QString
     QString line = programLines[ lineNumber - 1 ].trimmed();
     if ( line.isEmpty() || line.startsWith("//") ) {
         return NextEvaluatableLineBelow;
+    } else if ( line.startsWith("/**") ) {
+        return NextEvaluatableLineAbove;
     }
 
     // Test if the line can be evaluated
@@ -183,7 +185,7 @@ NextEvaluatableLineHint DebuggerAgent::canBreakAt( int lineNumber, const QString
 
 int DebuggerAgent::getNextBreakableLineNumber( int lineNumber, const QStringList &programLines )
 {
-    kDebug() << "getNextBreakableLineNumber(" << lineNumber << ")";
+    kDebug() << "getNextBreakableLineNumber(" << lineNumber << "), code lines:" << programLines.count();
     for ( int distance = 0; distance < 15; ++distance ) {
         const int lineNumber1 = lineNumber + distance;
         if ( canBreakAt(lineNumber1, programLines) == FoundEvaluatableLine ) {
@@ -201,16 +203,19 @@ int DebuggerAgent::getNextBreakableLineNumber( int lineNumber, const QStringList
     return -1;
 }
 
-NextEvaluatableLineHint DebuggerAgent::canBreakAt( int lineNumber ) const
+NextEvaluatableLineHint DebuggerAgent::canBreakAt( const QString &fileName, int lineNumber ) const
 {
+    kDebug() << "canBreakAt(" << QFileInfo(fileName).fileName() << "," << lineNumber << ")";
     QMutexLocker locker( m_mutex );
-    return canBreakAt( lineNumber, m_scriptLines );
+    return canBreakAt( lineNumber, m_scriptLines[fileName] );
 }
 
-int DebuggerAgent::getNextBreakableLineNumber( int lineNumber ) const
+int DebuggerAgent::getNextBreakableLineNumber( const QString &fileName, int lineNumber ) const
 {
+    kDebug() << "getNextBreakableLineNumber(" << QFileInfo(fileName).fileName() << ","
+             << lineNumber << ")";
     QMutexLocker locker( m_mutex );
-    return getNextBreakableLineNumber( lineNumber, m_scriptLines );
+    return getNextBreakableLineNumber( lineNumber, m_scriptLines[fileName] );
 }
 
 QString DebuggerAgent::stateToString( DebuggerState state )
@@ -272,7 +277,8 @@ bool DebuggerAgent::executeCommand( const ConsoleCommand &command, QString *retu
             return false;
         }
 
-        lineNumber = getNextBreakableLineNumber( lineNumber );
+        // TODO: Add argument to control breakpoints in external scripts
+        lineNumber = getNextBreakableLineNumber( m_mainScriptFileName, lineNumber );
         ok = lineNumber >= 0;
         if ( !ok ) {
             *returnValue = i18nc("@info", "Cannot interrupt script execution at line %1",
@@ -282,7 +288,8 @@ bool DebuggerAgent::executeCommand( const ConsoleCommand &command, QString *retu
 
         const bool breakpointExists = m_breakpoints.contains( lineNumber );
         kDebug() << "Breakpoint exists" << breakpointExists;
-        Breakpoint breakpoint( breakpointExists ? m_breakpoints[lineNumber] : lineNumber );
+        Breakpoint breakpoint = breakpointExists ? m_breakpoints[lineNumber]
+                : Breakpoint( m_mainScriptFileName, lineNumber );
         if ( command.arguments().count() == 1 ) {
             // Only ".break <lineNumber>", no command to execute
             // Return information about the breakpoint
@@ -663,7 +670,6 @@ void DebuggerAgent::cancelInjectedCodeExecution()
 
 void DebuggerAgent::addBreakpoint( const Breakpoint &breakpoint )
 {
-    kDebug() << "Insert breakpoint" << breakpoint.lineNumber() << breakpoint.hitCount();
     m_breakpoints.insert( breakpoint.lineNumber(), breakpoint );
 }
 
@@ -740,7 +746,7 @@ bool DebuggerAgent::debugControl( DebuggerAgent::ConsoleCommandExecutionControl 
         bool ok;
         int lineNumber = argument.toInt( &ok );
         m_mutex->lockInline();
-        const int scriptLineCount = m_scriptLines.count();
+        const int scriptLineCount = m_scriptLines[m_mainScriptFileName].count();
         m_mutex->unlockInline();
         if ( !argument.isValid() || !ok ) {
             if ( errorMessage ) {
@@ -756,7 +762,8 @@ bool DebuggerAgent::debugControl( DebuggerAgent::ConsoleCommandExecutionControl 
             return false;
         }
 
-        lineNumber = getNextBreakableLineNumber( lineNumber );
+        // TODO: Add argument to run until a line in an external script
+        lineNumber = getNextBreakableLineNumber( m_mainScriptFileName, lineNumber );
         if ( lineNumber < 0 ) {
             if ( errorMessage ) {
                 *errorMessage = i18nc("@info", "Cannot interrupt script execution at line %!",
@@ -765,7 +772,7 @@ bool DebuggerAgent::debugControl( DebuggerAgent::ConsoleCommandExecutionControl 
             return false;
         }
 
-        debugRunUntilLineNumber( lineNumber );
+        debugRunUntilLineNumber( m_mainScriptFileName, lineNumber );
         break;
     }
     case InvalidControlExecution:
@@ -923,15 +930,19 @@ void DebuggerAgent::debugStepOut( int repeat )
     m_interruptWaiter->wakeAll();
 }
 
-void DebuggerAgent::debugRunUntilLineNumber( int lineNumber )
+void DebuggerAgent::debugRunUntilLineNumber( const QString &fileName, int lineNumber )
 {
-    kDebug() << "debugRunUntilLineNumber(" << lineNumber << ")";
-        QMutexLocker locker( m_mutex );
-    m_runUntilLineNumber = getNextBreakableLineNumber( lineNumber );
+    kDebug() << "debugRunUntilLineNumber(" << QFileInfo(fileName).fileName() << lineNumber << ")";
+    int runUntilLineNumber = getNextBreakableLineNumber( fileName, lineNumber );
 
-    if ( m_runUntilLineNumber != -1 ) {
+    m_mutex->lockInline();
+    m_runUntilLineNumber = runUntilLineNumber;
+    if ( runUntilLineNumber != -1 ) {
         m_executionControl = ExecuteRun;
+        m_mutex->unlockInline();
         m_interruptWaiter->wakeAll();
+    } else {
+        m_mutex->unlockInline();
     }
 }
 
@@ -977,16 +988,16 @@ void DebuggerAgent::setMainScriptFileName ( const QString &mainScriptFileName )
     m_mainScriptFileName = mainScriptFileName;
 }
 
-void DebuggerAgent::setScriptText( const QString &program )
+void DebuggerAgent::setScriptText( const QString &fileName, const QString &program )
 {
     QMutexLocker locker( m_mutex );
-    m_scriptLines = program.split( '\n', QString::KeepEmptyParts );
+    m_scriptLines[ fileName ] = program.split( '\n', QString::KeepEmptyParts );
 }
 
 void DebuggerAgent::scriptLoad( qint64 id, const QString &program, const QString &fileName,
                                 int baseLineNumber )
 {
-    kDebug() << id /*<< program*/ << fileName << baseLineNumber;
+    kDebug() << id /*<< program*/ << QFileInfo(fileName).fileName() << baseLineNumber;
     if ( id != -1 ) {
         m_mutex->lockInline();
         m_scriptIdToFileName.insert( id, fileName );
@@ -997,12 +1008,11 @@ void DebuggerAgent::scriptLoad( qint64 id, const QString &program, const QString
             m_injectedScriptState = InjectedScriptEvaluating;
             m_mutex->unlockInline();
         } else if ( m_executionControl != ExecuteRunInjectedProgram &&
-                    m_executionControl != ExecuteStepIntoInjectedProgram &&
-                    (m_mainScriptFileName.isEmpty() || fileName == m_mainScriptFileName) )
+                    m_executionControl != ExecuteStepIntoInjectedProgram )
         {
             m_mutex->unlockInline();
-            kDebug() << "Load new script program" << id << fileName;
-            setScriptText( program );
+            kDebug() << "Load new script program" << id << QFileInfo(fileName).fileName();
+            setScriptText( fileName, program );
         } else {
             m_mutex->unlockInline();
         }
