@@ -237,15 +237,15 @@ CompletionItem JavaScriptCompletionModel::completionItemFromId( const QString id
 }
 
 void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
-    m_completionsGlobalFunctions.insert( "func:usedTimetableInformations()",
+    m_completionsGlobalFunctions.insert( "func:features()",
             CompletionItem( Function | GlobalScope,
-            "usedTimetableInformations()",
-            i18nc("@info The description for the 'usedTimetableInformations' function",
+            "features()",
+            i18nc("@info The description for the 'features' function",
                   "Should be implemented to tell which features the script supports.<nl/>"
                   "This function is called by the data engine."),
             "\n// This function returns a list of all features supported by this script.\n"
-            "function usedTimetableInformations() {\n"
-            "\t// These strings are currently recognized as features:\n"
+            "function features() {\n"
+            "\t// These strings are currently recognized as features:\n" // TODO PublicTransport.ProvidesDelay, ...
             "\t//   'Delay', 'DelayReason', 'Platform', 'JourneyNews', 'TypeOfVehicle',\n"
             "\t//   'StopID', 'Pricing', 'Changes', 'RouteStops', 'RoutePlatformsDeparture',\n"
             "\t//   'RoutePlatformsArrival', 'RouteTimesDeparture', 'RoutePlatformsArrival',\n"

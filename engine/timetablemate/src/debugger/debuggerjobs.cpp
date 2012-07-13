@@ -85,8 +85,8 @@ QString DebuggerJob::typeToString( DebuggerJob::Type type )
         return "ExecuteConsoleCommandJob";
     case CallScriptFunction:
         return "CallScriptFunctionJob";
-    case TestUsedTimetableInformations:
-        return "TestUsedTimetableInformationsJob";
+    case TestFeatures:
+        return "TestFeaturesJob";
     case TimetableDataRequest:
         return "TimetableDataRequestJob";
     default:

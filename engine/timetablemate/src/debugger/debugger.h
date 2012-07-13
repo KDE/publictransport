@@ -58,7 +58,7 @@ using namespace Scripting;
 /** @brief The Debugger namespace contains classes and enumerations used for debugging scripts. */
 namespace Debugger {
 
-class TestUsedTimetableInformationsJob;
+class TestFeaturesJob;
 
 class DebuggerJob;
 class EvaluateInContextJob;
@@ -314,8 +314,7 @@ public:
     CallScriptFunctionJob *createCallScriptFunctionJob( const QString &functionName,
             const QVariantList &arguments = QVariantList(), DebugFlags debugFlags = DefaultDebugFlags );
 
-    TestUsedTimetableInformationsJob *createTestUsedTimetableInformationsJob(
-            DebugFlags debugFlags = DefaultDebugFlags );
+    TestFeaturesJob *createTestFeaturesJob( DebugFlags debugFlags = DefaultDebugFlags );
 
     ThreadWeaver::WeaverInterface *weaver() const { return m_weaver; };
 
@@ -441,7 +440,7 @@ signals:
     void callScriptFunctionResult( const QString &functionName,
                                    const QScriptValue &returnValue = QScriptValue() );
 
-    void testUsedTimetableInformationsResult( const QList<Enums::TimetableInformation> timetableInformations );
+    void testFeaturesResult( const QList<Enums::ProviderFeature> features ); // TODO
 
     void scriptErrorReceived( const QString &errorMessage, const QScriptContextInfo &contextInfo,
                               const QString &failedParseText );
@@ -491,8 +490,8 @@ protected slots:
     /** @brief A CallScriptFunctionJob is done. */
     void callScriptFunctionJobDone( ThreadWeaver::Job *job );
 
-    /** @brief A TestUsedTimetableInformationsJob is done. */
-    void testUsedTimetableInformationsJobDone( ThreadWeaver::Job *job );
+    /** @brief A TestFeaturesJob is done. */
+    void testFeaturesJobDone( ThreadWeaver::Job *job );
 
     void jobStarted( ThreadWeaver::Job *job );
     void jobDestroyed( QObject *job );

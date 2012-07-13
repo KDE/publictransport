@@ -75,7 +75,7 @@ public:
     void import( const QString &import, QScriptEngine *engine );
 
     /** @brief The name of the script function to get a list of used TimetableInformation's. */
-    static const char *SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS;
+    static const char *SCRIPT_FUNCTION_FEATURES;
 
     /** @brief The name of the script function to download and parse departures/arrivals. */
     static const char *SCRIPT_FUNCTION_GETTIMETABLE;

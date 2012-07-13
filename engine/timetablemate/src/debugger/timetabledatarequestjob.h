@@ -157,18 +157,18 @@ protected:
 };
 
 /**
- * @brief Runs the usedTimetableInformation() script function and tests the return value.
+ * @brief Runs the features() script function and tests the return value.
  **/
-class TestUsedTimetableInformationsJob : public CallScriptFunctionJob {
+class TestFeaturesJob : public CallScriptFunctionJob {
     Q_OBJECT
     friend class Debugger;
 
 public:
     /** @brief Get the type of this debugger job. */
-    virtual Type type() const { return TestUsedTimetableInformations; };
+    virtual Type type() const { return TestFeatures; };
 
-    /** @brief Returns the list of valid TimetableInformation elements found in the return value. */
-    QList< Enums::TimetableInformation > timetableInformations() const;
+    /** @brief Returns a list of provider features found in the return value. */
+    QList< Enums::ProviderFeature > features() const;
 
 protected:
     /**
@@ -183,7 +183,7 @@ protected:
      * @param debugFlags Flags for the debugger.
      * @param parent The parent QObject. Default is 0.
      **/
-    explicit TestUsedTimetableInformationsJob( DebuggerAgent *debugger,
+    explicit TestFeaturesJob( DebuggerAgent *debugger,
             const ServiceProviderData &info, QMutex *engineMutex,
             DebugFlags debugFlags = DefaultDebugFlags, QObject* parent = 0 );
 
@@ -191,7 +191,7 @@ protected:
     virtual bool testResults();
 
 private:
-    QList< Enums::TimetableInformation > m_timetableInformations;
+    QList< Enums::ProviderFeature > m_features;
 };
 
 /**

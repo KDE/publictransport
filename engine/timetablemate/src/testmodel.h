@@ -126,8 +126,7 @@ public:
                 * for valid stop suggestion results. */
         JourneyTest, /**< Tests for an implemented getJourneys() function and for valid
                 * journey results. */
-        UsedTimetableInformationsTest, /**< Tests for an implemented usedTimetableInformations()
-                * function and for valid results (a list of strings naming TimetableInformation). */
+        FeaturesTest, /**< Tests for an implemented features() function and for valid results. */
 #endif
 
         TestCount, /**< @internal */

@@ -695,7 +695,7 @@ QList< TestModel::Test > TestModel::testsOfTestCase( TestModel::TestCase testCas
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptExecutionTestCase:
         tests << DepartureTest << ArrivalTest << StopSuggestionTest << JourneyTest
-              << UsedTimetableInformationsTest;
+              << FeaturesTest;
         break;
 #endif
     default:
@@ -726,7 +726,7 @@ TestModel::TestCase TestModel::testCaseOfTest( TestModel::Test test )
     case ArrivalTest:
     case StopSuggestionTest:
     case JourneyTest:
-    case UsedTimetableInformationsTest:
+    case FeaturesTest:
         return ScriptExecutionTestCase;
 #endif
 
@@ -784,8 +784,8 @@ QString TestModel::nameForTest( TestModel::Test test )
         return i18nc("@info/plain", "Stop Suggestion Test" );
     case JourneyTest:
         return i18nc("@info/plain", "Journey Test" );
-    case UsedTimetableInformationsTest:
-        return i18nc("@info/plain", "usedTimetableInformations() Test" );
+    case FeaturesTest:
+        return i18nc("@info/plain", "Features Test" );
 #endif
     default:
         kDebug() << "Unknown test" << test;
@@ -845,10 +845,10 @@ QString TestModel::descriptionForTest( TestModel::Test test )
     case JourneyTest:
         return i18nc("@info/plain", "Runs the %1() script function and tests collected journey data",
                      ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS );
-    case UsedTimetableInformationsTest:
+    case FeaturesTest:
         return i18nc("@info/plain", "Runs the %1() script function and tests the returned list of "
                      "strings, which should name TimetableInformation enumerables",
-                     ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS );
+                     ServiceProviderScript::SCRIPT_FUNCTION_FEATURES );
 #endif
 
     default:

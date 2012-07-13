@@ -69,7 +69,7 @@ public:
         EvaluateInContext, /**< A job of type EvaluateInContextJob. */
         ExecuteConsoleCommand, /**< A job of type ExecuteConsoleCommandJob. */
         CallScriptFunction, /**< A job of type CallScriptFunctionJob. */
-        TestUsedTimetableInformations, /**< A job of type TestUsedTimetableInformationsJob. */
+        TestFeatures, /**< A job of type TestFeaturesJob. */
         TimetableDataRequest /**< A job of type TimetableDataRequestJob. */
     };
 

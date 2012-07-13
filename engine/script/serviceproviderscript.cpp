@@ -47,7 +47,7 @@
 #include <QScriptProgram>
 #include <QScriptEngine>
 
-const char *ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS = "usedTimetableInformations";
+const char *ServiceProviderScript::SCRIPT_FUNCTION_FEATURES = "features";
 const char *ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE = "getTimetable";
 const char *ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS = "getJourneys";
 const char *ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS = "getStopSuggestions";
@@ -246,14 +246,15 @@ QStringList ServiceProviderScript::readScriptFeatures( const QSharedPointer<KCon
                     features << "JourneySearch";
                 }
 
-                // Test if usedTimetableInformations() script function is available
-                if ( !engine.globalObject().property(SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS).isValid() ) {
-                    kDebug() << "The script has no" << SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS << "function";
+                // Test if features() script function is available
+                if ( !engine.globalObject().property(SCRIPT_FUNCTION_FEATURES).isValid() ) {
+                    kDebug() << "The script has no" << SCRIPT_FUNCTION_FEATURES << "function";
                 } else {
-                    // Use values returned by usedTimetableInformations() script functions
+                    // Use values returned by features() script functions
                     // to get additional features of the service provider
+//                     TODO
                     QVariantList result = engine.globalObject().property(
-                            SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS ).call().toVariant().toList();
+                            SCRIPT_FUNCTION_FEATURES ).call().toVariant().toList();
                     QStringList usedTimetableInformations;
                     foreach ( const QVariant &value, result ) {
                         usedTimetableInformations << value.toString();

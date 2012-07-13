@@ -998,7 +998,7 @@ Scripts are executed using QtScript (JavaScript), which can make use of Kross if
 should be used, eg. Python or Ruby. JavaScript is tested, the other languages may also work.
 There are functions with special names that get called by the data engine when needed:
 @n
-getTimetable(), getStopSuggestions(), getJourneys() and usedTimetableInformations()
+getTimetable(), getStopSuggestions(), getJourneys() and features()
 @n
 For more information see @ref script_functions.
 

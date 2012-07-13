@@ -165,7 +165,7 @@ public:
         case Project::ScriptQtScriptTemplate:
             templateText +=
                     "\n// This function gets called to determine the features of the service provider\n"
-                    "function usedTimetableInformations() {\n"
+                    "function features() {\n" // TODO
                     "    // Return a list of TimetableInformation values, that are used by this script.\n"
                     "    // Required values like DepartureDateTime/DepartureTime or TypeOfVehicle\n"
                     "    // are not needed here\n"
@@ -1218,8 +1218,8 @@ public:
                             "<para>If you do not implement the function, journeys will not work with "
                             "the plugin.</para>", function);
             break;
-        case TestModel::UsedTimetableInformationsTest:
-            function = ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS;
+        case TestModel::FeaturesTest:
+            function = ServiceProviderScript::SCRIPT_FUNCTION_FEATURES;
             shortMessage = i18nc("@info/plain", "You should implement a '%1' script function", function);
             message = i18nc("@info", "<title>You should implement a '%1' script function</title> "
                             "<para>This function is used to know what information the plugin parses "
@@ -1252,9 +1252,9 @@ public:
             // Create job
             DebuggerJob *job;
             QString testName;
-            if ( test == TestModel::UsedTimetableInformationsTest ) {
-                job = debugger->createTestUsedTimetableInformationsJob( InterruptOnExceptions );
-                testName = "TEST_USEDTIMETABLEINFORMATIONS";
+            if ( test == TestModel::FeaturesTest ) {
+                job = debugger->createTestFeaturesJob( InterruptOnExceptions );
+                testName = "TEST_FEATURES";
             } else {
                 // The number of items to request for testing, lower values mean higher performance,
                 // higher values can mean better test results, eg. showing rare errors
@@ -2952,13 +2952,13 @@ void Project::testJobStarted( ThreadWeaver::Job *job )
                 test = TestModel::StopSuggestionTest;
             } else if ( sourceName == QLatin1String("TEST_JOURNEYS") ) {
                 test = TestModel::JourneyTest;
-            } else if ( sourceName == QLatin1String("TEST_USEDTIMETABLEINFORMATIONS") ) {
-                test = TestModel::UsedTimetableInformationsTest;
+            } else if ( sourceName == QLatin1String("TEST_FEATURES") ) {
+                test = TestModel::FeaturesTest;
             }
         } else if ( callFunctionJob->functionName() ==
-                    ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS )
+                    ServiceProviderScript::SCRIPT_FUNCTION_FEATURES )
         {
-            test = TestModel::UsedTimetableInformationsTest;
+            test = TestModel::FeaturesTest;
         }
 
         if ( test == TestModel::InvalidTest ) {
@@ -2991,16 +2991,16 @@ void Project::testJobDone( ThreadWeaver::Job *job )
                 test = TestModel::StopSuggestionTest;
             } else if ( sourceName == QLatin1String("TEST_JOURNEYS") ) {
                 test = TestModel::JourneyTest;
-            } else if ( sourceName == QLatin1String("TEST_USEDTIMETABLEINFORMATIONS") ) {
-                test = TestModel::UsedTimetableInformationsTest;
+            } else if ( sourceName == QLatin1String("TEST_FEATURES") ) {
+                test = TestModel::FeaturesTest;
             }
             if ( test != TestModel::InvalidTest ) {
                 d->pendingTests.removeOne( requestJob );
             }
         } else if ( callFunctionJob->functionName() ==
-                    ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS )
+                    ServiceProviderScript::SCRIPT_FUNCTION_FEATURES )
         {
-            test = TestModel::UsedTimetableInformationsTest;
+            test = TestModel::FeaturesTest;
             d->pendingTests.removeOne( requestJob );
         }
 
@@ -3342,7 +3342,6 @@ void Project::wokeUpFromSignal( int time )
 {
     appendOutput( i18nc("@info", "<emphasis strong='1'>Signal received, waiting time: %1</emphasis> (%2)",
                         KGlobal::locale()->formatDuration(time), QTime::currentTime().toString()) );
-
 }
 
 void Project::scriptException( int lineNumber, const QString &errorMessage )

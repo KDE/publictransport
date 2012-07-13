@@ -240,6 +240,32 @@ public:
         StopLatitude = 206 /**< The latitude of the stop. */
     };
 
+    /** @brief Features of a provider. */
+    enum ProviderFeature {
+        ProvidesDepartures, /**< Departure data is provided through the getTimetable()
+                * script function. Scripts do not need to specify this enumerable in the features()
+                * script function, it is assumed by implementing the getTimetable() script function. */
+        ProvidesArrivals, /**< Arrival data is provided through the getTimetable()
+                * script function. The argument must have a "dataType" property with the
+                * value "arrivals". */
+        ProvidesJourneys, /**< Journey data is provided through the getJourneys() script function.
+                * Scripts do not need to specify this enumerable in the features()
+                * script function, it is assumed by implementing the getJourneys() script function. */
+        ProvidesDelays, /**< Realtime delay data is provided for departures/arrivals and/or
+                * journeys. The data engine uses this information to determine how often timetable
+                * data may need to be updated. */
+        ProvidesNews, /**< News are provided for departures/arrivals and/or journeys. */
+        ProvidesPlatform, /**< Platform data is provided for departures/arrivals and/or journeys. */
+        ProvidesStopSuggestions, /**< Stop suggestions are provided through the
+                * getStopSuggestions() script function. Scripts do not need to specify this
+                * enumerable in the features() script function, it is assumed by implementing the
+                * getStopSuggestions() script function. */
+        ProvidesStopID, /**< Stop IDs are provided by the getStopSuggestions() script function. */
+        ProvidesPricing, /**< Pricing data is provided for departures/arrivals and/or journeys. */
+        ProvidesRouteInformation, /**< Route information is provided for departures/arrivals
+                * and/or journeys. */
+    };
+
     /**
     * @brief The type of a service provider.
     * @note The engine may be built without support for some of these types, but at least one type
@@ -363,6 +389,10 @@ public:
         const int index = staticMetaObject.indexOfEnumerator("ServiceProviderType");
         return QLatin1String(staticMetaObject.enumerator(index).valueToKey(providerType));
     }
+    static inline QString toString( ProviderFeature feature ) {
+        const int index = staticMetaObject.indexOfEnumerator("ProviderFeature");
+        return QLatin1String(staticMetaObject.enumerator(index).valueToKey(feature));
+    }
     static inline QString toString( VehicleType vehicleType ) {
         const int index = staticMetaObject.indexOfEnumerator("VehicleType");
         return QLatin1String(staticMetaObject.enumerator(index).valueToKey(vehicleType));
@@ -380,6 +410,11 @@ public:
         const int index = staticMetaObject.indexOfEnumerator("ServiceProviderType");
         const int value = staticMetaObject.enumerator(index).keyToValue(providerType);
         return value == -1 ? InvalidProvider : static_cast< ServiceProviderType >( value );
+    };
+    static ProviderFeature stringToFeature( const char *feature ) {
+        const int index = staticMetaObject.indexOfEnumerator("ProviderFeature");
+        const int value = staticMetaObject.enumerator(index).keyToValue(feature);
+        return static_cast< ProviderFeature >( value );
     };
     static VehicleType stringToVehicleType( const char *vehicleType ) {
         const int index = staticMetaObject.indexOfEnumerator("VehicleType");

@@ -57,11 +57,11 @@ CallScriptFunctionJob::CallScriptFunctionJob( DebuggerAgent *debugger,
 {
 }
 
-TestUsedTimetableInformationsJob::TestUsedTimetableInformationsJob( DebuggerAgent *debugger,
+TestFeaturesJob::TestFeaturesJob( DebuggerAgent *debugger,
         const ServiceProviderData &data, QMutex *engineMutex, DebugFlags debugFlags,
         QObject *parent )
         : CallScriptFunctionJob(debugger, data, engineMutex,
-                                ServiceProviderScript::SCRIPT_FUNCTION_USEDTIMETABLEINFORMATIONS,
+                                ServiceProviderScript::SCRIPT_FUNCTION_FEATURES,
                                 QVariantList(), debugFlags, parent)
 {
 }
@@ -146,9 +146,9 @@ QScriptValue CallScriptFunctionJob::returnValue() const
     return m_returnValue;
 }
 
-QList< Enums::TimetableInformation > TestUsedTimetableInformationsJob::timetableInformations() const
+QList< Enums::ProviderFeature > TestFeaturesJob::features() const
 {
-    return m_timetableInformations;
+    return m_features;
 }
 
 QList<TimetableData> TimetableDataRequestJob::timetableData() const
@@ -190,37 +190,37 @@ QString CallScriptFunctionJob::toString() const
     }
 }
 
-bool TestUsedTimetableInformationsJob::testResults()
+bool TestFeaturesJob::testResults()
 {
     const QVariant variant = m_returnValue.toVariant();
     if ( !variant.isValid() ) {
         return false;
     }
 
-    const QStringList strings = variant.toStringList();
-    if ( strings.isEmpty() ) {
+    const QVariantList items = variant.toList();
+    if ( items.isEmpty() ) {
         m_additionalMessages << TimetableDataRequestMessage(
                 i18nc("@info/plain", "No TimetableInformation string returned"),
                 TimetableDataRequestMessage::Warning );
     } else {
         int i = 1;
-        foreach ( const QString &string, strings ) {
-            const bool stringEqualsArrivals =
-                    string.compare(QLatin1String("arrivals"), Qt::CaseInsensitive) == 0;
-            const Enums::TimetableInformation info = stringEqualsArrivals
-                    ? Enums::Nothing : Global::timetableInformationFromString( string );
-            if ( info == Enums::Nothing && !stringEqualsArrivals ) {
-                m_additionalMessages << TimetableDataRequestMessage(
-                        i18nc("@info/plain", "Invalid TimetableInformation string returned: '%1'",
-                              string),
-                        TimetableDataRequestMessage::Error );
-            } else {
-                m_timetableInformations << info;
-                m_additionalMessages << TimetableDataRequestMessage(
-                        QString("%1: %2").arg(i).arg(string),
-                        TimetableDataRequestMessage::Information );
-                ++i;
-            }
+        foreach ( const QVariant &item, items ) {
+//             const bool stringEqualsArrivals =
+//                     string.compare(QLatin1String("arrivals"), Qt::CaseInsensitive) == 0;
+            const Enums::ProviderFeature feature =
+                    static_cast< Enums::ProviderFeature >( item.toInt() );
+//             if ( info == Enums::Nothing ) { //&& !stringEqualsArrivals ) {
+//                 m_additionalMessages << TimetableDataRequestMessage(
+//                         i18nc("@info/plain", "Invalid TimetableInformation string returned: '%1'",
+//                               string),
+//                         TimetableDataRequestMessage::Error );
+//             } else {
+            m_features << feature;
+            m_additionalMessages << TimetableDataRequestMessage(
+                    QString("%1: %2").arg(i).arg(Enums::toString(feature)),
+                    TimetableDataRequestMessage::Information );
+            ++i;
+//             }
         }
     }
 

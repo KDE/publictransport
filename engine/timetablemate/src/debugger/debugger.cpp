@@ -363,11 +363,10 @@ CallScriptFunctionJob *Debugger::createCallScriptFunctionJob( const QString &fun
                                       debugFlags, this );
 }
 
-TestUsedTimetableInformationsJob *Debugger::createTestUsedTimetableInformationsJob(
-        DebugFlags debugFlags )
+TestFeaturesJob *Debugger::createTestFeaturesJob( DebugFlags debugFlags )
 {
     Q_ASSERT( m_info );
-    return new TestUsedTimetableInformationsJob( m_debugger, *m_info, m_engineMutex,
+    return new TestFeaturesJob( m_debugger, *m_info, m_engineMutex,
                                                  debugFlags, this );
 }
 
@@ -415,9 +414,9 @@ void Debugger::connectJob( DebuggerJob *debuggerJob )
         connect( debuggerJob, SIGNAL(done(ThreadWeaver::Job*)),
                  this, SLOT(callScriptFunctionJobDone(ThreadWeaver::Job*)) );
         break;
-    case DebuggerJob::TestUsedTimetableInformations:
+    case DebuggerJob::TestFeatures:
         connect( debuggerJob, SIGNAL(done(ThreadWeaver::Job*)),
-                 this, SLOT(testUsedTimetableInformationsJobDone(ThreadWeaver::Job*)) );
+                 this, SLOT(testFeaturesJobDone(ThreadWeaver::Job*)) );
         break;
     default:
         kWarning() << "Unknown job type";
@@ -473,7 +472,7 @@ bool Debugger::enqueueJob( DebuggerJob *debuggerJob, bool doConnectJob )
         break;
     case DebuggerJob::TimetableDataRequest:
     case DebuggerJob::CallScriptFunction:
-    case DebuggerJob::TestUsedTimetableInformations:
+    case DebuggerJob::TestFeatures:
     default:
         // Other jobs that access the engine and need the script to be loaded
         assignDebuggerQueuePolicy( debuggerJob );
@@ -582,13 +581,12 @@ void Debugger::callScriptFunctionJobDone( ThreadWeaver::Job *job )
     delete job;
 }
 
-void Debugger::testUsedTimetableInformationsJobDone( ThreadWeaver::Job *job )
+void Debugger::testFeaturesJobDone( ThreadWeaver::Job *job )
 {
-    TestUsedTimetableInformationsJob *testJob =
-            qobject_cast< TestUsedTimetableInformationsJob* >( job );
+    TestFeaturesJob *testJob = qobject_cast< TestFeaturesJob* >( job );
     Q_ASSERT( testJob );
 
-    emit testUsedTimetableInformationsResult( testJob->timetableInformations() );
+    emit testFeaturesResult( testJob->features() );
     kDebug() << "Call script function done" << testJob->functionName()
              << testJob->returnValue().toString() << job->success();
     delete job;
