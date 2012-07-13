@@ -761,6 +761,11 @@ QString Helper::decodeHtmlEntities( const QString& html )
     return Global::decodeHtmlEntities( html );
 }
 
+QString Helper::encodeHtmlEntities( const QString &html )
+{
+    return Global::encodeHtmlEntities( html );
+}
+
 void Helper::error( const QString& message, const QString &failedParseText )
 {
     QScriptContextInfo info( context()->parentContext() );

@@ -804,6 +804,9 @@ public:
      **/
     Q_INVOKABLE static QString decodeHtmlEntities( const QString &html );
 
+    /** @brief Encodes HTML entities in @p html, e.g. "<" is replaced by "&lt;". */
+    Q_INVOKABLE static QString encodeHtmlEntities( const QString& html );
+
     /**
      * @brief Trims spaces from the beginning and the end of the given string @p str.
      *
