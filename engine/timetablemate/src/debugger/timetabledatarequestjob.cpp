@@ -33,6 +33,8 @@
 #include <threadweaver/DebuggingAids.h>
 #include <KDebug>
 #include <KLocalizedString>
+#include <KGlobal>
+#include <KLocale>
 
 // Qt includes
 #include <QEventLoop>
@@ -268,10 +270,10 @@ void CallScriptFunctionJob::debuggerRun()
     // Create new Network object in this thread, restore old object at the end
     const QScriptValue previousScriptNetwork = engine->globalObject().property("network");
     Network *scriptNetwork = new Network( m_data.fallbackCharset() );
-    connect( scriptNetwork, SIGNAL(requestFinished(NetworkRequest*)),
-             this, SLOT(requestFinished(NetworkRequest*)) );
-    connect( scriptNetwork, SIGNAL(synchronousRequestFinished(QString,QString,bool)),
-             this, SLOT(synchronousRequestFinished(QString,QString,bool)) );
+    connect( scriptNetwork, SIGNAL(requestFinished(NetworkRequest*,QString,int)),
+             this, SLOT(requestFinished(NetworkRequest*,QString,int)) );
+    connect( scriptNetwork, SIGNAL(synchronousRequestFinished(QString,QString,bool,int,int)),
+             this, SLOT(synchronousRequestFinished(QString,QString,bool,int,int)) );
     engine->globalObject().setProperty( "network", engine->newQObject(scriptNetwork) );
 
     // Get the helper object and connect to the errorReceived() signal to collect
@@ -440,16 +442,18 @@ void CallScriptFunctionJob::invalidDataReceived( Enums::TimetableInformation inf
             TimetableDataRequestMessage::Error, context.lineNumber() );
 }
 
-void CallScriptFunctionJob::requestFinished( NetworkRequest *request )
+void CallScriptFunctionJob::requestFinished( NetworkRequest *request, const QString &data, int size )
 {
     m_additionalMessages << TimetableDataRequestMessage(
-            i18nc("@info/plain", "Download finished: <link>%1</link>", request->url()),
+            i18nc("@info/plain", "Download finished: %1, <link>%2</link>",
+                  KGlobal::locale()->formatByteSize(size), request->url()),
             TimetableDataRequestMessage::Information, -1, TimetableDataRequestMessage::OpenLink,
             request->url() );
+    emit asynchronousRequestWaitFinished( size );
 }
 
 void CallScriptFunctionJob::synchronousRequestFinished( const QString &url, const QString &data,
-                                                        bool cancelled )
+                                                        bool cancelled, int waitingTime, int size )
 {
     if ( cancelled ) {
         m_additionalMessages << TimetableDataRequestMessage(
@@ -458,10 +462,12 @@ void CallScriptFunctionJob::synchronousRequestFinished( const QString &url, cons
                 url );
     } else {
         m_additionalMessages << TimetableDataRequestMessage(
-                i18nc("@info/plain", "Download finished: <link>%1</link>", url),
+                i18nc("@info/plain", "Download finished: %1, <link>%2</link>",
+                      KGlobal::locale()->formatByteSize(size), url),
                 TimetableDataRequestMessage::Information, -1, TimetableDataRequestMessage::OpenLink,
                 url );
     }
+    emit synchronousRequestWaitFinished( waitingTime, size );
 }
 
 bool TimetableDataRequestJob::testResults()

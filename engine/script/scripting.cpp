@@ -126,10 +126,11 @@ void NetworkRequest::slotFinished()
 
     m_reply->deleteLater();
     m_reply = 0;
+    const int size = m_data.size();
     m_data.clear();
 
     m_isFinished = true;
-    emit finished( string );
+    emit finished( string, size );
 }
 
 void NetworkRequest::started( QNetworkReply* reply )
@@ -285,7 +286,7 @@ NetworkRequest* Network::createRequest( const QString& url )
 {
     NetworkRequest *request = new NetworkRequest( url, this );
     connect( request, SIGNAL(started()), this, SLOT(slotRequestStarted()) );
-    connect( request, SIGNAL(finished(QString)), this, SLOT(slotRequestFinished(QString)) );
+    connect( request, SIGNAL(finished(QString,int)), this, SLOT(slotRequestFinished(QString,int)) );
     connect( request, SIGNAL(aborted()), this, SLOT(slotRequestAborted()) );
     return request;
 }
@@ -305,7 +306,7 @@ void Network::slotRequestStarted()
     emit requestStarted( request );
 }
 
-void Network::slotRequestFinished( const QString &data )
+void Network::slotRequestFinished( const QString &data, int size )
 {
     NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
     Q_ASSERT( request ); // This slot should only be connected to signals of NetworkRequest
@@ -316,7 +317,7 @@ void Network::slotRequestFinished( const QString &data )
     const bool noMoreRequests = m_runningRequests.isEmpty();
     m_mutex->unlockInline();
 
-    emit requestFinished( request, data );
+    emit requestFinished( request, data, size );
     if ( noMoreRequests ) {
         emit allRequestsFinished();
     }
@@ -465,19 +466,19 @@ QString Network::getSynchronous( const QString &url, int timeout )
     }
 
     const int time = start.msecsTo( QTime::currentTime() );
-    kDebug() << "Waited" << ( time / 1000.0 ) << "seconds for download of" << url;
+//     kDebug() << "Waited" << ( time / 1000.0 ) << "seconds for download of" << url;
 
     // Read all data, decode it and give it to the script
     QByteArray data = reply->readAll();
     reply->deleteLater();
     if ( data.isEmpty() ) {
         kDebug() << "Error downloading" << url << reply->errorString();
-        emit synchronousRequestFinished( url, QString(), true );
+        emit synchronousRequestFinished( url, QString(), true, time );
         return QString();
     } else {
         QMutexLocker locker( m_mutex );
         const QString html = Global::decodeHtml( data, m_fallbackCharset );
-        emit synchronousRequestFinished( url, html );
+        emit synchronousRequestFinished( url, html, false, time, data.size() );
         return html;
     }
 }

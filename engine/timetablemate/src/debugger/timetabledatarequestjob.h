@@ -72,6 +72,10 @@ public:
 
     QString functionName() const;
 
+signals:
+    void asynchronousRequestWaitFinished( int size = 0 );
+    void synchronousRequestWaitFinished( int waitingTime = 0, int size = 0 );
+
 protected slots:
     /**
      * @brief Collect messages sent to Helper::error() as additional messages.
@@ -89,9 +93,9 @@ protected slots:
                               const QScriptContextInfo &context,
                               int index, const QVariantMap& map );
 
-    void requestFinished( NetworkRequest *request );
+    void requestFinished( NetworkRequest *request, const QString &data = QString(), int size = 0 );
     void synchronousRequestFinished( const QString &url, const QString &data = QString(),
-                                     bool cancelled = false );
+                                     bool cancelled = false, int waitingTime = 0, int size = 0 );
 
 protected:
     /**

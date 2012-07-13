@@ -422,6 +422,17 @@ void Debugger::connectJob( DebuggerJob *debuggerJob )
         kWarning() << "Unknown job type";
         break;
     }
+
+    switch ( type ) {
+    case DebuggerJob::TimetableDataRequest:
+    case DebuggerJob::CallScriptFunction:
+    case DebuggerJob::TestFeatures:
+        connect( qobject_cast<CallScriptFunctionJob*>(debuggerJob), SIGNAL(asynchronousRequestWaitFinished(int)),
+                 this, SLOT(asynchronousRequestWaitFinished(int)) );
+        connect( qobject_cast<CallScriptFunctionJob*>(debuggerJob), SIGNAL(synchronousRequestWaitFinished(int,int)),
+                 this, SLOT(synchronousRequestWaitFinished(int,int)) );
+        break;
+    }
 }
 
 bool Debugger::enqueueJob( DebuggerJob *debuggerJob, bool doConnectJob )
@@ -590,6 +601,16 @@ void Debugger::testFeaturesJobDone( ThreadWeaver::Job *job )
     kDebug() << "Call script function done" << testJob->functionName()
              << testJob->returnValue().toString() << job->success();
     delete job;
+}
+
+void Debugger::asynchronousRequestWaitFinished( int size )
+{
+    m_runData->asynchronousDownloadFinished( size );
+}
+
+void Debugger::synchronousRequestWaitFinished( int waitingTime, int size )
+{
+    m_runData->synchronousDownloadFinished( waitingTime, size );
 }
 
 }; // namespace Debugger

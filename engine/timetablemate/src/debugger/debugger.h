@@ -76,14 +76,20 @@ class ScriptRunData {
 public:
     /** @brief The time in milliseconds spent for script execution. */
     int executionTime() const {
-        return m_executionTimer.elapsed() - m_signalWaitingTime - m_interruptTime;
+        return m_executionTimer.elapsed() - m_signalWaitingTime - m_interruptTime -
+                                            m_synchronousDownloadTime;
     };
 
     /** @brief The time in milliseconds spent waiting for signals. */
     int signalWaitingTime() const { return m_signalWaitingTime; };
 
+    int synchronousDownloadTime() const { return m_synchronousDownloadTime; };
+
     /** @brief The time in milliseconds in which the script was interrupted. */
     int interruptTime() const { return m_interruptTime; };
+
+    int asynchronousDownloadSize() const { return m_asynchronousDownloadSize; };
+    int synchronousDownloadSize() const { return m_synchronousDownloadSize; };
 
 protected:
     /** @brief Constructor, directly starts the execution timer. */
@@ -110,12 +116,24 @@ protected:
     /** @brief Call this method when script execution gets continued after being interrupted. */
     void continued() { m_interruptTime += m_interruptTimer.elapsed(); };
 
+    void asynchronousDownloadFinished( int size ) {
+        m_asynchronousDownloadSize += size;
+    };
+
+    void synchronousDownloadFinished( int waitingTime, int size ) {
+        m_synchronousDownloadTime += waitingTime;
+        m_synchronousDownloadSize += size;
+    };
+
 private:
     QTime m_executionTimer;
     QTime m_waitForSignalTimer;
     QTime m_interruptTimer;
     int m_signalWaitingTime;
     int m_interruptTime;
+    int m_synchronousDownloadTime;
+    int m_asynchronousDownloadSize;
+    int m_synchronousDownloadSize;
 };
 
 /**
@@ -501,6 +519,8 @@ protected slots:
     void slotInterrupted();
     void slotContinued( bool willInterruptAfterNextStatement = false );
     void slotAborted();
+    void asynchronousRequestWaitFinished( int size );
+    void synchronousRequestWaitFinished( int waitingTime, int size );
 
     void timeout();
 

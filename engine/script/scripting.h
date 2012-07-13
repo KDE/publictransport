@@ -142,7 +142,7 @@ class Network;
  *   @li @em city: If used, this contains the city name to get journeys for. Only some
  *     service providers need a separate city value, most are happy with a stop name/stop ID.
  *
- * @subsection script_functions_usedtimetableinformations usedTimetableInformations()
+ * @subsection script_functions_features features()
  *   Can be implemented to provide information about what information types the script can return.
  *   This can be done by simply returning a list of strings, where each string is the name of a
  *   type of information. Only optional information that the script provides needs to be returned
@@ -427,9 +427,10 @@ Q_SIGNALS:
      * @brief Emitted when this request has finished.
      *
      * @param data The complete data downloaded for this request.
+     * @param size The size in bytes of the received data.
      * @ingroup scripting
      **/
-    void finished( const QString &data = QString() );
+    void finished( const QString &data = QString(), int size = 0 );
 
     /**
      * @brief Emitted when new data is available for this request.
@@ -653,10 +654,11 @@ Q_SIGNALS:
      * This signal is @em not emitted if the network gets accessed synchronously.
      * @param request The request that has finished.
      * @param data Received data decoded to a string.
+     * @param size The size in bytes of the received data.
      * @ingroup scripting
      * @see synchronousRequestFinished()
      **/
-    void requestFinished( NetworkRequest *request, const QString &data = QString() );
+    void requestFinished( NetworkRequest *request, const QString &data = QString(), int size = 0 );
 
     /**
      * @brief Emitted when a synchronous request has been started.
@@ -675,11 +677,13 @@ Q_SIGNALS:
      * @param request The request that has finished.
      * @param data Received data decoded to a string.
      * @param cancelled Whether or not the request has been cancelled, eg. because of a timeout.
+     * @param waitTime The time spent waiting for the download to finish.
+     * @param size The size in bytes of the received data.
      * @ingroup scripting
      * @see requestFinished()
      **/
     void synchronousRequestFinished( const QString &url, const QString &data = QString(),
-                                     bool cancelled = false );
+                                     bool cancelled = false, int waitTime = 0, int size = 0 );
 
     /**
      * @brief Emitted when all requests are finished.
@@ -708,7 +712,7 @@ public Q_SLOTS:
 
 protected Q_SLOTS:
     void slotRequestStarted();
-    void slotRequestFinished( const QString &data = QString() );
+    void slotRequestFinished( const QString &data = QString(), int size = 0 );
     void slotRequestAborted();
 
 protected:

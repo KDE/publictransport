@@ -3311,15 +3311,37 @@ void Project::debugStopped( const ScriptRunData &scriptRunData )
                                                          << DebuggerActionGroup );
     kDebug() << "STOPPED" << isDebuggerRunning();
 
-    appendOutput( i18nc("@info", "<emphasis strong='1'>Execution finished</emphasis> (%1)<nl />"
-                        "- %2 spent for script execution,<nl />"
-                        "- %3 spent waiting for signals (eg. asynchronous network requests),<nl />"
-                        "- %4 interrupted",
-                        QTime::currentTime().toString(),
-                        KGlobal::locale()->formatDuration(scriptRunData.executionTime()),
-                        KGlobal::locale()->formatDuration(scriptRunData.signalWaitingTime()),
-                        KGlobal::locale()->formatDuration(scriptRunData.interruptTime()))
-                  + "<br />" );
+    QString message = i18nc("@info Shown in project output, %1: Current time",
+                            "<emphasis strong='1'>Execution finished</emphasis> (%1)",
+                            QTime::currentTime().toString());
+    if ( scriptRunData.executionTime() > 0 ) {
+        message.append( "<br />" );
+        message.append( i18nc("@info %1 is a formatted duration string",
+                              "- %1 spent for script execution",
+                              KGlobal::locale()->formatDuration(scriptRunData.executionTime())) );
+    }
+    if ( scriptRunData.signalWaitingTime() > 0 || scriptRunData.asynchronousDownloadSize() > 0 ) {
+        message.append( "<br />" );
+        message.append( i18nc("@info %1 is a formatted duration string, %2 a formateed byte size string",
+                              "- %1 spent waiting for signals (%2 downloaded in asynchronous network requests)",
+                              KGlobal::locale()->formatDuration(scriptRunData.signalWaitingTime()),
+                              KGlobal::locale()->formatByteSize(scriptRunData.asynchronousDownloadSize())) );
+    }
+    if ( scriptRunData.synchronousDownloadTime() > 0 || scriptRunData.synchronousDownloadSize() > 0 ) {
+        message.append( "<br />" );
+        message.append( i18nc("@info %1 is a formatted duration string, %2 a formateed byte size string",
+                              "- %1 spent for synchronous downloads (%2 downloaded)",
+                              KGlobal::locale()->formatDuration(scriptRunData.synchronousDownloadTime()),
+                              KGlobal::locale()->formatByteSize(scriptRunData.synchronousDownloadSize())) );
+    }
+    if ( scriptRunData.interruptTime() > 0 ) {
+        message.append( "<br />" );
+        message.append( i18nc("@info %1 is a formatted duration string",
+                              "- %1 interrupted",
+                              KGlobal::locale()->formatDuration(scriptRunData.interruptTime())) );
+    }
+    appendOutput( message );
+
     if ( d->scriptTab ) {
         d->scriptTab->slotTitleChanged();
     }
