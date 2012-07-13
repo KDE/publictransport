@@ -43,7 +43,7 @@ public:
     };
 
     void addItems() {
-        items << new VehicleTypeItem( Unknown );
+        items << new VehicleTypeItem( UnknownVehicleType );
         items << new VehicleTypeItem( Tram );
         items << new VehicleTypeItem( Bus );
         items << new VehicleTypeItem( TrolleyBus );

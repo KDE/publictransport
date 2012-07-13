@@ -308,7 +308,7 @@ public:
     /** @brief Whether or not the line number of this departure / arrival is valid. */
     bool isLineNumberValid() const {
         return m_lineNumber > 0 &&
-                m_vehicleType != Unknown && // May not been parsed correctly
+                m_vehicleType != UnknownVehicleType && // May not been parsed correctly
                 m_vehicleType < 10; // Isn't a train (bus | tram | subway | interurbantrain | metro | trolleybus). Line numbers are only valid for those. TODO: Change this?
     };
 

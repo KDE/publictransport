@@ -58,7 +58,7 @@ struct DepartureData {
     bool drawTransportLine;
 
     DepartureData() {
-        vehicleType = Unknown;
+        vehicleType = UnknownVehicleType;
     };
 
     DepartureData( const QDateTime &time, const QString &transportLine, const QString &target,

@@ -49,7 +49,7 @@ struct PUBLICTRANSPORTHELPER_EXPORT Constraint {
     Constraint() {
         type = FilterByVehicleType;
         variant = FilterIsOneOf;
-        value = QVariantList() << static_cast< int >( Unknown );
+        value = QVariantList() << static_cast< int >( UnknownVehicleType );
     };
 
     /**

@@ -430,7 +430,7 @@ void JourneyGraphicsItem::contextMenuEvent( QGraphicsSceneContextMenuEvent* even
         QString lineString = info->routeTransportLines().isEmpty()
                 ? QString() : info->routeTransportLines().first();
         VehicleType vehicleType = info->routeVehicleTypes().isEmpty()
-                ? Unknown : info->routeVehicleTypes().first();
+                ? UnknownVehicleType : info->routeVehicleTypes().first();
         if ( executedAction == addAlarmAction ) {
             emit requestAlarmCreation( info->departure(), lineString, vehicleType, QString(), this );
         } else if ( executedAction == removeAlarmAction ) {
@@ -796,7 +796,7 @@ void JourneyGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphi
 
     // Get a list of vehicles used in the journey, but without unknown vehicle type.
     QSet<VehicleType> vehicleTypeSet = journeyItem()->journeyInfo()->vehicleTypes();
-    vehicleTypeSet.remove( Unknown );
+    vehicleTypeSet.remove( UnknownVehicleType );
     QList<VehicleType> vehicleTypes = vehicleTypeSet.toList();
 
     // Calculate values for arranging vehicle type icons
@@ -1081,7 +1081,9 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
     QPixmap vehiclePixmap;
     if ( !m_pixmapCache || !m_pixmapCache->find(vehicleCacheKey, vehiclePixmap) ) {
         if ( !m_parent->svg()->hasElement(vehicleKey) ) {
-            kDebug() << "SVG element" << vehicleKey << "not found";
+            if ( !vehicleKey.isEmpty() ) {
+                kDebug() << "SVG element" << vehicleKey << "not found";
+            }
         } else {
             // Draw SVG vehicle element into pixmap
             QPixmap pixmap( (int)_vehicleRect.width(), (int)_vehicleRect.height() );

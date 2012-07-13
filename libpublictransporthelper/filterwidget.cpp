@@ -161,7 +161,7 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
         QList< VehicleType > filterVehicleTypes;
         QList< ConstraintListWidget::ListItem > values;
         filterVehicleTypes = QList< VehicleType >()
-                << Unknown << Tram << Bus << TrolleyBus << Subway << TrainInterurban
+                << UnknownVehicleType << Tram << Bus << TrolleyBus << Subway << TrainInterurban
                 << Metro << TrainRegional << TrainRegionalExpress << TrainInterregio
                 << TrainIntercityEurocity << TrainIntercityExpress << Ferry << Plane;
         foreach( VehicleType vehicleType, filterVehicleTypes ) {
@@ -223,7 +223,7 @@ ConstraintWidget* FilterWidget::createConstraint( FilterType type )
 {
     switch ( type ) {
     case FilterByVehicleType:
-        return ConstraintWidget::create( type, FilterIsOneOf, QVariantList() << Unknown, this );
+        return ConstraintWidget::create( type, FilterIsOneOf, QVariantList() << UnknownVehicleType, this );
 
     case FilterByTransportLine:
     case FilterByTarget:

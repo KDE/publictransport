@@ -200,7 +200,7 @@ enum PUBLICTRANSPORTHELPER_EXPORT GeneralVehicleType {
  * The numbers here match the ones used by the data engine.
  */
 enum PUBLICTRANSPORTHELPER_EXPORT VehicleType {
-    Unknown = 0, /**< The type of the vehicle is unknown. */
+    UnknownVehicleType = 0, /**< The type of the vehicle is unknown. */
 
     Tram = 1, /**< A tram / streetcar. */
     Bus = 2, /**< A bus. */

@@ -62,7 +62,7 @@ GeneralVehicleType Global::generalVehicleType( VehicleType vehicleType )
     case Plane:
         return AirVehicle;
 
-    case Unknown:
+    case UnknownVehicleType:
     default:
         return UnknownVehicle;
     }
@@ -148,7 +148,7 @@ KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType/*, const QString
         icon = KIcon( "vehicle_type_plane" );
         break;
 
-    case Unknown:
+    case UnknownVehicleType:
     default:
         icon = KIcon( "status_unknown" );
     }
@@ -260,7 +260,7 @@ QString Global::vehicleTypeToString( const VehicleType &vehicleType, bool plural
         return plural ? i18nc( "@info/plain airplanes", "planes" )
                : i18nc( "@info/plain an airplane", "plane" );
 
-    case Unknown:
+    case UnknownVehicleType:
     default:
         return i18nc( "@info/plain Unknown type of vehicle", "Unknown" );
     }

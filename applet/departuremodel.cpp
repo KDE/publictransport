@@ -699,7 +699,7 @@ ChildItem* JourneyItem::createRouteItem()
         KIcon icon;
         QString sTransportLine;
         if ( row < m_journeyInfo.routeVehicleTypes().count() &&
-             m_journeyInfo.routeVehicleTypes()[row] != Unknown )
+             m_journeyInfo.routeVehicleTypes()[row] != UnknownVehicleType )
         {
             icon = Global::vehicleTypeToIcon( m_journeyInfo.routeVehicleTypes()[row] );
         }
@@ -1453,7 +1453,7 @@ void JourneyModel::updateItemAlarm( JourneyItem* journeyItem )
     QString lineString = journeyInfo.routeTransportLines().isEmpty()
             ? QString() : journeyInfo.routeTransportLines().first();
     VehicleType vehicleType = journeyInfo.routeVehicleTypes().isEmpty()
-            ? Unknown : journeyInfo.routeVehicleTypes().first();
+            ? UnknownVehicleType : journeyInfo.routeVehicleTypes().first();
     DepartureInfo departureInfo( QString(), lineString, QString(), QString(),
                                  journeyInfo.departure(), vehicleType );
     AlarmStates alarmStates = NoAlarm;

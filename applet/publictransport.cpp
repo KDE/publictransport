@@ -1919,7 +1919,7 @@ void PublicTransportApplet::alarmFired( DepartureItem* item, const AlarmSettings
     QString message;
     if ( minsToDeparture > 0 ) {
         // Departure is in the future
-        if ( departureInfo->vehicleType() == Unknown ) {
+        if ( departureInfo->vehicleType() == UnknownVehicleType ) {
             // Vehicle type is unknown
             message = i18ncp( "@info/plain %5: Name of the Alarm",
                               "%5: Line %2 to '%3' departs in %1 minute at %4",
@@ -1938,7 +1938,7 @@ void PublicTransportApplet::alarmFired( DepartureItem* item, const AlarmSettings
         }
     } else if ( minsToDeparture < 0 ) {
         // Has already departed
-        if ( departureInfo->vehicleType() == Unknown ) {
+        if ( departureInfo->vehicleType() == UnknownVehicleType ) {
             // Vehicle type is unknown
             message = i18ncp( "@info/plain %5: Name of the Alarm",
                               "%5: Line %2 to '%3' has departed %1 minute ago at %4",
@@ -1957,7 +1957,7 @@ void PublicTransportApplet::alarmFired( DepartureItem* item, const AlarmSettings
         }
     } else {
         // Departs now
-        if ( departureInfo->vehicleType() == Unknown ) {
+        if ( departureInfo->vehicleType() == UnknownVehicleType ) {
             // Vehicle type is unknown
             message = i18nc( "@info/plain %4: Name of the Alarm",
                              "%4: Line %1 to '%2' departs now at %3",

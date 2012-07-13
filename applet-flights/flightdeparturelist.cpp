@@ -42,7 +42,7 @@ FlightDeparture::FlightDeparture( QGraphicsItem* parent ) : QGraphicsWidget( par
     setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
     setMinimumSize( 125, 45 );
 
-    m_icon = new Plasma::IconWidget( Timetable::Global::vehicleTypeToIcon(Timetable::Plane),
+    m_icon = new Plasma::IconWidget( PublicTransport::Global::vehicleTypeToIcon(PublicTransport::Plane),
                                      QString(), this );
     m_header = new Plasma::Label( this );
     m_info = new Plasma::Label( this );
@@ -162,7 +162,7 @@ void FlightDeparture::paint( QPainter* painter, const QStyleOptionGraphicsItem* 
     QFont headerFont = normalFont;
     headerFont.setBold( true );
 
-    QPixmap icon = Timetable::Global::vehicleTypeToIcon( Timetable::Plane )
+    QPixmap icon = PublicTransport::Global::vehicleTypeToIcon( PublicTransport::Plane )
             .pixmap( iconRect.size().toSize() );
     painter->drawPixmap( iconRect.topLeft(), icon );
 

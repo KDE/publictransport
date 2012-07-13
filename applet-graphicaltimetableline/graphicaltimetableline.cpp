@@ -150,8 +150,8 @@ void GraphicalTimetableLine::init()
 
     QVariantList vehicleTypes = config().readEntry( QLatin1String("vehicleTypes"), QVariantList() );
     if ( vehicleTypes.isEmpty() ) {
-        m_vehicleTypes << Unknown << Tram << Bus << TrolleyBus << InterurbanTrain << Subway
-                << Metro << RegionalTrain << RegionalExpressTrain << InterregionalTrain
+        m_vehicleTypes << UnknownVehicleType << Tram << Bus << TrolleyBus << InterurbanTrain
+                << Subway << Metro << RegionalTrain << RegionalExpressTrain << InterregionalTrain
                 << IntercityTrain << HighSpeedTrain << Ship << Plane << Feet;
     } else {
         foreach ( const QVariant &vehicleType, vehicleTypes ) {
@@ -419,8 +419,6 @@ void GraphicalTimetableLine::dataUpdated( const QString& sourceName,
             sequentialGroup->start( QAbstractAnimation::DeleteWhenStopped );
         }
     }
-
-    QRectF rect = contentsRect();
 
     QUrl url;
     QDateTime updated;
