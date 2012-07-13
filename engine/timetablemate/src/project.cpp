@@ -258,8 +258,8 @@ public:
                     q, SLOT(scriptOutput(QString,QScriptContextInfo)) );
         q->connect( debugger, SIGNAL(scriptErrorReceived(QString,QScriptContextInfo,QString)),
                     q, SLOT(scriptErrorReceived(QString,QScriptContextInfo,QString)) );
-        q->connect( debugger, SIGNAL(exception(int,QString)),
-                    q, SLOT(scriptException(int,QString)) );
+        q->connect( debugger, SIGNAL(exception(int,QString,QString)),
+                    q, SLOT(scriptException(int,QString,QString)) );
         q->connect( debugger, SIGNAL(evaluationResult(EvaluationResult)),
                     q, SLOT(evaluationResult(EvaluationResult)) );
         q->connect( debugger, SIGNAL(commandExecutionResult(QString)),
@@ -3261,18 +3261,18 @@ void Project::runToCursor()
 void Project::debugInterrupted()
 {
     Q_D( Project );
-    kDebug() << "Interrupted";
+    if ( !d->debugger->hasUncaughtException() ) {
+        const QString interruptFile = d->debugger->backtraceModel()->topFrame()->fileName();
 
-    const QString interruptFile = d->debugger->backtraceModel()->topFrame()->fileName();
+        // Show script tab and ask to activate the project if it's not already active
+        ScriptTab *tab = interruptFile == scriptFileName() || interruptFile.isEmpty()
+                ? showScriptTab() : showExternalScriptTab(interruptFile);
+        d->askForProjectActivation( ProjectPrivate::ActivateProjectForDebugging );
+        d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
+                                                            << DebuggerActionGroup );
 
-    // Show script tab and ask to activate the project if it's not already active
-    ScriptTab *tab = interruptFile == scriptFileName() || interruptFile.isEmpty()
-            ? showScriptTab() : showExternalScriptTab(interruptFile);
-    d->askForProjectActivation( ProjectPrivate::ActivateProjectForDebugging );
-    d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
-                                                         << DebuggerActionGroup );
-
-    tab->setExecutionLine( d->debugger->lineNumber() );
+        tab->setExecutionLine( d->debugger->lineNumber() );
+    }
 
     // Update title of all script tabs
     if ( d->scriptTab ) {
@@ -3366,12 +3366,24 @@ void Project::wokeUpFromSignal( int time )
                         KGlobal::locale()->formatDuration(time), QTime::currentTime().toString()) );
 }
 
-void Project::scriptException( int lineNumber, const QString &errorMessage )
+void Project::scriptException( int lineNumber, const QString &errorMessage, const QString &fileName )
 {
-    appendOutput( i18nc("@info For the script output dock",
-                        "<emphasis strong='1'>Uncaught exception at %1:</emphasis><message>%2</message>",
-                        lineNumber, errorMessage) );
-    showScriptTab();
+    Q_D( Project );
+    ScriptTab *tab;
+    if ( fileName == d->provider->data()->scriptFileName() || fileName.isEmpty() ) {
+        appendOutput( i18nc("@info For the script output dock",
+                            "<emphasis strong='1'>Uncaught exception at %1:</emphasis><message>%2</message>",
+                            lineNumber, errorMessage) );
+        tab = showScriptTab();
+    } else {
+        appendOutput( i18nc("@info For the script output dock",
+                            "<emphasis strong='1'>Uncaught exception in script <filename>%1</filename> "
+                            "at %2:</emphasis><message>%3</message>",
+                            QFileInfo(fileName).fileName(), lineNumber, errorMessage) );
+        tab = showExternalScriptTab( fileName );
+    }
+    tab->document()->views().first()->setCursorPosition(
+            KTextEditor::Cursor(lineNumber - 1, 0) );
 }
 #endif // BUILD_PROVIDER_TYPE_SCRIPT
 

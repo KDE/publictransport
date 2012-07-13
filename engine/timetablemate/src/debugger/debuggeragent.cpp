@@ -44,6 +44,7 @@
 #include <QTimer>
 #include <QMutex>
 #include <QWaitCondition>
+#include <QFileInfo>
 #include <QApplication>
 
 namespace Debugger {
@@ -964,6 +965,18 @@ DebuggerState DebuggerAgent::state() const
     return m_state;
 }
 
+QString DebuggerAgent::mainScriptFileName() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_mainScriptFileName;
+}
+
+void DebuggerAgent::setMainScriptFileName ( const QString &mainScriptFileName )
+{
+    QMutexLocker locker( m_mutex );
+    m_mainScriptFileName = mainScriptFileName;
+}
+
 void DebuggerAgent::setScriptText( const QString &program )
 {
     QMutexLocker locker( m_mutex );
@@ -976,6 +989,7 @@ void DebuggerAgent::scriptLoad( qint64 id, const QString &program, const QString
     kDebug() << id /*<< program*/ << fileName << baseLineNumber;
     if ( id != -1 ) {
         m_mutex->lockInline();
+        m_scriptIdToFileName.insert( id, fileName );
         if ( m_injectedScriptState == InjectedScriptInitializing ) {
             // The new script is code that should be executed in the current scripts context
             // while the main script is interrupted
@@ -983,11 +997,14 @@ void DebuggerAgent::scriptLoad( qint64 id, const QString &program, const QString
             m_injectedScriptState = InjectedScriptEvaluating;
             m_mutex->unlockInline();
         } else if ( m_executionControl != ExecuteRunInjectedProgram &&
-                    m_executionControl != ExecuteStepIntoInjectedProgram )
+                    m_executionControl != ExecuteStepIntoInjectedProgram &&
+                    (m_mainScriptFileName.isEmpty() || fileName == m_mainScriptFileName) )
         {
             m_mutex->unlockInline();
             kDebug() << "Load new script program" << id << fileName;
             setScriptText( program );
+        } else {
+            m_mutex->unlockInline();
         }
     }
 }
@@ -995,10 +1012,13 @@ void DebuggerAgent::scriptLoad( qint64 id, const QString &program, const QString
 void DebuggerAgent::scriptUnload( qint64 id )
 {
     Q_UNUSED( id );
+    m_mutex->lockInline();
     if ( m_injectedScriptState == InjectedScriptUpdateVariablesInParentContext ) {
         m_injectedScriptState = InjectedScriptNotRunning;
         QTimer::singleShot( 0, this, SLOT(wakeFromInterrupt()) );
     }
+    m_scriptIdToFileName.remove( id );
+    m_mutex->unlockInline();
 }
 
 void DebuggerAgent::wakeFromInterrupt()
@@ -1596,11 +1616,12 @@ void DebuggerAgent::exceptionThrow( qint64 scriptId, const QScriptValue &excepti
         m_uncaughtExceptionLineNumber = uncaughtExceptionLineNumber;
         m_uncaughtException = exceptionValue;
         const DebugFlags debugFlags = m_debugFlags;
+        const QString fileName = m_scriptIdToFileName[scriptId];
+        kDebug() << "Uncatched exception in" << QFileInfo(fileName).fileName()
+                 << "line" << uncaughtExceptionLineNumber << exceptionValue.toString();
         m_mutex->unlockInline();
 
-        kDebug() << "Uncatched exception in" << uncaughtExceptionLineNumber
-                 << exceptionValue.toString();
-        emit exception( uncaughtExceptionLineNumber, exceptionValue.toString() );
+        emit exception( uncaughtExceptionLineNumber, exceptionValue.toString(), fileName );
 
         if ( debugFlags.testFlag(InterruptOnExceptions) ) {
             // Interrupt at the exception

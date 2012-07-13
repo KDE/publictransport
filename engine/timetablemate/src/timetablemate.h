@@ -239,7 +239,8 @@ protected slots:
     void debugContinued();
 
     /** @brief There was an uncaught execution in the script of the currently active project. */
-    void uncaughtException( int lineNumber, const QString &errorMessage );
+    void uncaughtException( int lineNumber, const QString &errorMessage,
+                            const QString &fileName = QString() );
 
     /** @brief A @p breakpoint was reached in the currently active project. */
     void breakpointReached( const Breakpoint &breakpoint );

@@ -670,8 +670,8 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
         disconnect( debugger, SIGNAL(continued()), this, SLOT(debugContinued()) );
         disconnect( debugger, SIGNAL(started()), this, SLOT(debugStarted()) );
         disconnect( debugger, SIGNAL(stopped()), this, SLOT(debugStopped()) );
-        disconnect( debugger, SIGNAL(exception(int,QString)),
-                    this, SLOT(uncaughtException(int,QString)) );
+        disconnect( debugger, SIGNAL(exception(int,QString,QString)),
+                    this, SLOT(uncaughtException(int,QString,QString)) );
         disconnect( debugger, SIGNAL(breakpointReached(Breakpoint)),
                     this, SLOT(breakpointReached(Breakpoint)) );
 
@@ -705,8 +705,8 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
         connect( debugger, SIGNAL(continued(bool)), this, SLOT(debugContinued()) );
         connect( debugger, SIGNAL(started()), this, SLOT(debugStarted()) );
         connect( debugger, SIGNAL(stopped()), this, SLOT(debugStopped()) );
-        connect( debugger, SIGNAL(exception(int,QString)),
-                 this, SLOT(uncaughtException(int,QString)) );
+        connect( debugger, SIGNAL(exception(int,QString,QString)),
+                 this, SLOT(uncaughtException(int,QString,QString)) );
         connect( debugger, SIGNAL(breakpointReached(Breakpoint)),
                  this, SLOT(breakpointReached(Breakpoint)) );
         if ( m_backtraceDock ) {
@@ -1377,10 +1377,13 @@ void TimetableMate::debugStopped()
     updateWindowTitle();
 }
 
-void TimetableMate::uncaughtException( int lineNumber, const QString &errorMessage )
+void TimetableMate::uncaughtException( int lineNumber, const QString &errorMessage,
+                                       const QString &fileName )
 {
-    infoMessage( i18nc("@info", "Uncaught exception at %1: <message>%2</message>",
-                       lineNumber, errorMessage), KMessageWidget::Error, -1 );
+    infoMessage( i18nc("@info", "Uncaught exception in <filename>%1</filename> at %2: "
+                       "<message>%3</message>",
+                       QFileInfo(fileName).fileName(), lineNumber, errorMessage),
+                 KMessageWidget::Error, -1 );
 }
 #endif // BUILD_PROVIDER_TYPE_SCRIPT
 

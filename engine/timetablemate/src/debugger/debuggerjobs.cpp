@@ -156,6 +156,8 @@ void LoadScriptJob::debuggerRun()
     QScriptProgram script = *m_script;
     m_mutex->unlockInline();
 
+    debugger->setMainScriptFileName( m_data.scriptFileName() );
+
     // Initialize the script
 //     kDebug() << "Reload script text" << info.scriptFileName();
 //     m_script = new QScriptProgram( program, info.scriptFileName() );

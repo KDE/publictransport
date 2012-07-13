@@ -385,7 +385,8 @@ signals:
     void breakpointReached( const Breakpoint &breakpoint );
 
     /** @brief An uncaught exception occured at @p lineNumber. */
-    void exception( int lineNumber, const QString &errorMessage );
+    void exception( int lineNumber, const QString &errorMessage,
+                    const QString &fileName = QString() );
 
     /** @brief Script execution was just interrupted. */
     void interrupted();

@@ -957,7 +957,8 @@ protected slots:
     void wokeUpFromSignal( int time );
 
     /** @brief An uncaught exception occured in the script at @p lineNumber. */
-    void scriptException( int lineNumber, const QString &errorMessage );
+    void scriptException( int lineNumber, const QString &errorMessage,
+                          const QString &fileName = QString() );
 
     void scriptTabDestroyed();
     void externalScriptTabDestroyed( QObject *tab );

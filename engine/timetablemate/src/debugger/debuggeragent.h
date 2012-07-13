@@ -110,6 +110,9 @@ public:
     /** @brief Whether or not the script currently gets aborted. */
     bool isAborting() const;
 
+    QString mainScriptFileName() const;
+    void setMainScriptFileName( const QString &mainScriptFileName );
+
     /**
      * @brief Whether or not the last script execution was aborted.
      * Returns only true, if the debugger currently is @em not running and refers to the last
@@ -199,7 +202,8 @@ signals:
     void breakpointReached( const Breakpoint &breakpoint );
 
     /** @brief An uncaught exception occured at @p lineNumber. */
-    void exception( int lineNumber, const QString &errorMessage );
+    void exception( int lineNumber, const QString &errorMessage,
+                    const QString &fileName = QString() );
 
     /** @brief Script execution was just interrupted. */
     void interrupted();
@@ -382,6 +386,8 @@ private:
     int m_interruptFunctionLevel;
     int m_functionDepth;
 
+    QHash< qint64, QString > m_scriptIdToFileName;
+    QString m_mainScriptFileName;
     QStringList m_scriptLines;
 };
 

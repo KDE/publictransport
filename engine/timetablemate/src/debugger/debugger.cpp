@@ -83,8 +83,8 @@ Debugger::Debugger( QObject *parent )
     connect( m_debugger, SIGNAL(continued(bool)), this, SLOT(slotContinued(bool)) );
     connect( m_debugger, SIGNAL(started()), this, SLOT(slotStarted()), Qt::QueuedConnection );
     connect( m_debugger, SIGNAL(stopped()), this, SLOT(slotStopped()), Qt::QueuedConnection );
-    connect( m_debugger, SIGNAL(exception(int,QString)),
-             this, SIGNAL(exception(int,QString)) );
+    connect( m_debugger, SIGNAL(exception(int,QString,QString)),
+             this, SIGNAL(exception(int,QString,QString)) );
     connect( m_debugger, SIGNAL(output(QString,QScriptContextInfo)),
              this, SIGNAL(output(QString,QScriptContextInfo)) );
     connect( m_debugger, SIGNAL(informationMessage(QString)),
