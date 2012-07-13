@@ -274,8 +274,8 @@ public:
     * @endcode
     **/
     enum VehicleType {
-        Invalid = -1, /**< Invalid vehicle type. */
-        Unknown = 0, /**< The type of the vehicle is unknown. */
+        InvalidVehicleType = -1, /**< Invalid vehicle type. */
+        UnknownVehicleType = 0, /**< The type of the vehicle is unknown. */
 
         Tram = 1, /**< @image html hi16-app-vehicle_type_tram.png A tram / streetcar. */
         Bus = 2, /**< @image html hi16-app-vehicle_type_bus.png A bus. */
@@ -384,7 +384,7 @@ public:
     static VehicleType stringToVehicleType( const char *vehicleType ) {
         const int index = staticMetaObject.indexOfEnumerator("VehicleType");
         const int value = staticMetaObject.enumerator(index).keyToValue(vehicleType);
-        return value == -1 ? Invalid : static_cast< VehicleType >( value );
+        return value == -1 ? InvalidVehicleType : static_cast< VehicleType >( value );
     };
     static LineService stringToLineService( const char *lineService ) {
         const int index = staticMetaObject.indexOfEnumerator("LineService");

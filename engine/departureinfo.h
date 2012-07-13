@@ -288,7 +288,7 @@ public:
 
     /** @brief Gets the type of the departing / arriving vehicle. */
     Enums::VehicleType vehicleType() const { return contains(Enums::TypeOfVehicle)
-        ? static_cast<Enums::VehicleType>( value(Enums::TypeOfVehicle).toInt() ) : Enums::Unknown; };
+        ? static_cast<Enums::VehicleType>( value(Enums::TypeOfVehicle).toInt() ) : Enums::UnknownVehicleType; };
 
     /** @brief Wheather or not the departing / arriving vehicle is a night line. */
     bool isNightLine() const { return m_lineServices.testFlag( Enums::NightLine ); };

@@ -972,10 +972,10 @@ Enums::VehicleType ServiceProviderGtfs::vehicleTypeFromGtfsRouteType(
     case 5: // Cable car. Used for street-level cable cars where the cable runs beneath the car.
         return Enums::TrolleyBus;
     case 6: // Gondola, Suspended cable car. Typically used for aerial cable cars where the car is suspended from the cable.
-        return Enums::Unknown; // TODO Add new type to VehicleType: eg. Gondola
+        return Enums::UnknownVehicleType; // TODO Add new type to VehicleType: eg. Gondola
     case 7: // Funicular. Any rail system designed for steep inclines.
-        return Enums::Unknown; // TODO Add new type to VehicleType: eg. Funicular
+        return Enums::UnknownVehicleType; // TODO Add new type to VehicleType: eg. Funicular
     default:
-        return Enums::Unknown;
+        return Enums::UnknownVehicleType;
     }
 }

@@ -116,7 +116,7 @@ bool ServiceProviderDataWriter::write( QIODevice *device, const ServiceProvider 
     if( !data->credit().isEmpty() ) {
         writeTextElement( "credit", data->credit() );
     }
-    if( data->defaultVehicleType() != Enums::Unknown ) {
+    if( data->defaultVehicleType() != Enums::UnknownVehicleType ) {
         writeTextElement( "defaultVehicleType",
                           Global::vehicleTypeToString(data->defaultVehicleType()) );
     }

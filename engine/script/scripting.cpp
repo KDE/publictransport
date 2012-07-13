@@ -837,8 +837,8 @@ void ResultObject::addData( const QVariantMap& map )
                                       m_timetableData.count(), map );
             continue;
         } else if ( info == Enums::TypeOfVehicle &&
-                    static_cast<Enums::VehicleType>(value.toInt()) == Enums::Invalid &&
-                    Global::vehicleTypeFromString(value.toString()) == Enums::Invalid )
+                    static_cast<Enums::VehicleType>(value.toInt()) == Enums::InvalidVehicleType &&
+                    Global::vehicleTypeFromString(value.toString()) == Enums::InvalidVehicleType )
         {
             kDebug() << "Invalid type of vehicle value" << value;
             const QString message = i18nc("@info/plain",
@@ -848,8 +848,8 @@ void ResultObject::addData( const QVariantMap& map )
         } else if ( info == Enums::TypesOfVehicleInJourney || info == Enums::RouteTypesOfVehicles ) {
             const QVariantList types = value.toList();
             foreach ( const QVariant &type, types ) {
-                if ( static_cast<Enums::VehicleType>(type.toInt()) == Enums::Invalid &&
-                     Global::vehicleTypeFromString(type.toString()) == Enums::Invalid )
+                if ( static_cast<Enums::VehicleType>(type.toInt()) == Enums::InvalidVehicleType &&
+                     Global::vehicleTypeFromString(type.toString()) == Enums::InvalidVehicleType )
                 {
                     kDebug() << "Invalid type of vehicle value in"
                              << Global::timetableInformationToString(info) << value;

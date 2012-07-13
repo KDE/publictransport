@@ -33,7 +33,7 @@ Enums::VehicleType Global::vehicleTypeFromString( QString sVehicleType )
     return Enums::stringToVehicleType( sVehicleType.toAscii().data() );
     QString sLower = sVehicleType.toLower();
     if ( sLower == QLatin1String("unknown") ) {
-        return Enums::Unknown;
+        return Enums::UnknownVehicleType;
     } else if ( sLower == QLatin1String("tram") ) {
         return Enums::Tram;
     } else if ( sLower == QLatin1String("bus") ) {
@@ -65,7 +65,7 @@ Enums::VehicleType Global::vehicleTypeFromString( QString sVehicleType )
     } else if ( sLower == QLatin1String("plane") ) {
         return Enums::Plane;
     } else {
-        return Enums::Invalid;
+        return Enums::InvalidVehicleType;
     }
 }
 
@@ -120,7 +120,7 @@ QString Global::vehicleTypeToString( const Enums::VehicleType& vehicleType, bool
         return plural ? i18nc( "@info/plain airplanes", "planes" )
                : i18nc( "@info/plain an airplane", "plane" );
 
-    case Enums::Unknown:
+    case Enums::UnknownVehicleType:
     default:
         return i18nc( "@info/plain Unknown type of vehicle", "Unknown" );
     }
@@ -159,7 +159,7 @@ QString Global::vehicleTypeToIcon( const Enums::VehicleType& vehicleType )
     case Enums::Plane:
         return "vehicle_type_plane";
 
-    case Enums::Unknown:
+    case Enums::UnknownVehicleType:
     default:
         return "status_unknown";
     }
@@ -290,7 +290,7 @@ bool Global::checkTimetableInformation( Enums::TimetableInformation info, const 
     case Enums::ArrivalTime:
         return value.toTime().isValid();
     case Enums::TypeOfVehicle:
-        return vehicleTypeFromString( value.toString() ) != Enums::Unknown;
+        return vehicleTypeFromString( value.toString() ) != Enums::UnknownVehicleType;
     case Enums::TransportLine:
     case Enums::Target:
     case Enums::TargetShortened:

@@ -54,7 +54,7 @@ ServiceProviderData::ServiceProviderData( const Enums::ServiceProviderType& type
     m_fileFormatVersion = "1.1";
     m_useSeparateCityValue = false;
     m_onlyUseCitiesInList = false;
-    m_defaultVehicleType = Enums::Unknown;
+    m_defaultVehicleType = Enums::UnknownVehicleType;
     m_minFetchWait = 0;
 
     qRegisterMetaType< Enums::ServiceProviderType >( "Enums::ServiceProviderType" );
