@@ -36,6 +36,34 @@ JavaScriptModel::~JavaScriptModel()
     clear();
 }
 
+QString JavaScriptModel::nodeTypeName( NodeType nodeType )
+{
+    switch ( nodeType ) {
+    case NoNodeType:
+    case UnknownNodeType:
+        return i18nc("info", "Unknown code element");
+    case Block:
+        return i18nc("info", "Code block");
+    case Function:
+        return i18nc("info", "Function");
+    case Argument:
+        return i18nc("info", "Argument");
+    case Statement:
+        return i18nc("info", "Statement");
+    case Comment:
+        return i18nc("info", "Comment");
+    case String:
+        return i18nc("info", "String");
+    case FunctionCall:
+        return i18nc("info", "Function call");
+    case Bracketed:
+        return i18nc("info", "Bracketed region");
+    default:
+        kWarning() << "Unknown NodeType" << nodeType;
+        return "- not implemented -";
+    }
+}
+
 void JavaScriptModel::needTextHint( const KTextEditor::Cursor &position, QString &text )
 {
     if ( !m_javaScriptCompletionModel ) {
@@ -51,6 +79,31 @@ void JavaScriptModel::needTextHint( const KTextEditor::Cursor &position, QString
     CompletionItem item = m_javaScriptCompletionModel->completionItemFromId( node->id() );
     if ( !item.isValid() || item.description.isEmpty() ) {
         kDebug() << "No completion item found for" << node->id();
+
+        // Show what information is available for the code node
+        text.clear();
+        CodeNode *currentNode = node.data();
+        int level = 0;
+        while ( currentNode ) {
+            if ( text.isEmpty() ) {
+                text.append( "<nobr>" );
+            } else {
+                text.append( "<br /><nobr>" + i18nc("@info", "Parent %1 (line %2): ",
+                                                    level, currentNode->line()) );
+            }
+            text.append( "<b>" + nodeTypeName(currentNode->type()) + "</b>" );
+            if ( !currentNode->text().isEmpty() && currentNode->text().length() < 60 ) {
+                text.append( " (<tt>" + currentNode->text() + "</tt>)" );
+            }
+            if ( !currentNode->children().isEmpty() ) {
+                text.append( ", " + i18ncp("@info", "%1 child element", "%1 child elements",
+                                           currentNode->children().count()) );
+            }
+            text.append( "</nobr>" );
+            currentNode = currentNode->parent();
+            ++level;
+        }
+        emit showTextHint( position, text );
         return;
     }
 

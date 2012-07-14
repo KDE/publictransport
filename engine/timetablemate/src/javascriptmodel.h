@@ -47,6 +47,8 @@ public:
     JavaScriptModel( QObject *parent = 0 );
     ~JavaScriptModel();
 
+    static QString nodeTypeName( NodeType nodeType );
+
     void setJavaScriptCompletionModel( JavaScriptCompletionModel *javaScriptCompletionModel ) {
         m_javaScriptCompletionModel = javaScriptCompletionModel;
     };
