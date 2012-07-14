@@ -69,13 +69,12 @@ ScriptTab::ScriptTab( Project *project, KTextEditor::Document *document, QWidget
     connect( project->debugger(), SIGNAL(stopped()), this, SLOT(removeExecutionMarker()) );
 }
 
-void ScriptTab::setExecutionLine( int executionLine )
+void ScriptTab::setExecutionPosition( int executionLine, int column )
 {
     KTextEditor::View *view = document()->activeView();
     view->blockSignals( true );
     Debugger::Debugger *debugger = project()->debugger();
-    view->setCursorPosition( KTextEditor::Cursor(debugger->lineNumber() - 1,
-                                                 debugger->columnNumber()) );
+    view->setCursorPosition( KTextEditor::Cursor(executionLine - 1, column) );
     view->blockSignals( false );
 
     // Move execution mark
@@ -83,12 +82,12 @@ void ScriptTab::setExecutionLine( int executionLine )
             qobject_cast<KTextEditor::MarkInterface*>( document() );
     if ( !markInterface ) {
         kDebug() << "Cannot mark current execution line, no KTextEditor::MarkInterface";
-    } else if ( m_executionLine != debugger->lineNumber() - 1 ) {
+    } else if ( m_executionLine != executionLine - 1 ) {
         if ( m_executionLine != -1 ) {
             markInterface->removeMark( m_executionLine, KTextEditor::MarkInterface::Execution );
         }
-        if ( debugger->lineNumber() != -1 ) {
-            m_executionLine = debugger->lineNumber() - 1;
+        m_executionLine = executionLine - 1;
+        if ( executionLine != -1 ) {
             markInterface->addMark( m_executionLine, KTextEditor::MarkInterface::Execution );
         }
     }

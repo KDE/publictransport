@@ -307,7 +307,7 @@ public:
         unsavedScriptContents.clear();
         if ( scriptTab ) {
             scriptTab->document()->closeUrl( false );
-            scriptTab->setExecutionLine( -1 );
+            scriptTab->setExecutionPosition( -1 );
         }
         debugger->abortDebugger();
 #endif
@@ -3435,7 +3435,7 @@ void Project::debugInterrupted()
         d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
                                                             << DebuggerActionGroup );
 
-        tab->setExecutionLine( d->debugger->lineNumber() );
+        tab->setExecutionPosition( d->debugger->lineNumber(), d->debugger->columnNumber() );
     }
 
     // Update title of all script tabs

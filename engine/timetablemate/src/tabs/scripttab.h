@@ -75,7 +75,7 @@ public slots:
     void goToPreviousFunction();
     void goToNextFunction();
     void toggleBreakpoint( int lineNumber = -1 );
-    void setExecutionLine( int executionLine = -1 );
+    void setExecutionPosition( int executionLine = -1, int column = 0 );
     void removeExecutionMarker();
 
 protected slots:
