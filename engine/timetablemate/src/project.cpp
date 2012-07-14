@@ -2365,16 +2365,16 @@ QString Project::projectActionText( Project::ProjectAction actionType, const QVa
         return i18nc("@action", "Show &Web Page");
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ShowScript:
-        return i18nc("@action", "Show &Script");
+        return i18nc("@action", "Open &Script");
     case ShowExternalScript: {
         const QString filePath = data.toString();
-        return filePath.isEmpty() ? i18nc("@action", "Show External Script")
-                                  : i18nc("@action", "Show External Script <filename>%1</filename>",
+        return filePath.isEmpty() ? i18nc("@action", "Open External Script...")
+                                  : i18nc("@action", "Open External Script <filename>%1</filename>",
                                           QFileInfo(filePath).fileName());
     }
 #endif
     case ShowProjectSource:
-        return i18nc("@action", "Show Project &Source");
+        return i18nc("@action", "Open Project &Source");
     case ShowPlasmaPreview:
         return i18nc("@action", "Show &Plasma Preview");
 
@@ -2506,17 +2506,16 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         break;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ShowScript:
-        action = new KAction( KIcon("application-javascript"), text, parent );
+        action = new KAction( KIcon("document-open"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Opens the main <emphasis>script</emphasis> in a tab.") );
         break;
     case ShowExternalScript:
-        action = new KAction( KIcon("application-javascript"), text, parent );
+        action = new KAction( KIcon("document-open"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Opens an external <emphasis>script</emphasis> in a tab.") );
         break;
 #endif
     case ShowProjectSource:
-        action = new KAction( KIcon("application-x-publictransport-serviceprovider"),
-                              text, parent );
+        action = new KAction( KIcon("document-open"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Opens the <emphasis>project source</emphasis> "
                                   "document in a tab.") );
         break;

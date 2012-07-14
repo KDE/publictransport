@@ -198,15 +198,18 @@ public:
         ShowDashboard, /**< Show the dashboard tab. */
         ShowHomepage, /**< Show the web tab. */
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        ShowScript, /**< Show the main script tab. */
-        ShowExternalScript, /**< Show a script tab with an external script (included into the
+        ShowScript, /**< Show/open the main script in a tab. */
+        ShowExternalScript, /**< Show/open a script tab with an external script (included into the
                                * main script). The file path to the external script gets specified
                                * as data of type QString in calls to projectAction() or
                                * createProjectAction(). If no file path is given an open file
                                * dialog gets shown to select the file to open. That file could
                                * later be included into the main script. */
+        OpenScript = ShowScript,
+        OpenExternalScript = ShowExternalScript,
 #endif
         ShowProjectSource, /**< Show the project source XML document tab. */
+        OpenProjectSource = ShowProjectSource,
         ShowPlasmaPreview, /**< Show the plasma preview tab. */
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
