@@ -62,7 +62,6 @@ ProjectsDockWidget::ProjectsDockWidget( ProjectModel *model, KActionMenu *showDo
 
     QWidget *container = new QWidget( this );
     container->setMinimumSize( 150, 150 );
-    QLabel *label = new QLabel( i18nc("@info", "Active Project:"), container );
     m_projectsWidget = new QTreeView( container );
     m_projectsWidget->setModel( model );
     m_projectsWidget->setHeaderHidden( true );
@@ -141,7 +140,6 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
         QAction *openInTabAction = 0;
         QAction *closeTabAction = 0;
         QAction *documentSaveAction = 0;
-        QAction *openExternalAction = 0;
         ProjectSourceTab *projectSourceTab = projectItem->project()->projectSourceTab();
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         ScriptTab *scriptTab = projectItem->project()->scriptTab();
