@@ -92,11 +92,12 @@ class ProjectPrivate
 public:
     enum ConnectProjectActionFlag {
         NoConnectionFlags       = 0x0000,
-        AutoUpdateEnabledState  = 0x0001  /**< If this flag is set, the enabled state of the
+        AutoUpdateEnabledState  = 0x0001,  /**< If this flag is set, the enabled state of the
                 * connected project action gets updated in updateProjectActions().
                 * Do not use this flag, if the action is always enabled or if its enabled state
                 * gets updated in another way, eg. by connecting to its setEnabled()/setDisabled()
                 * slots. */
+        UseQueuedConnection     = 0x0002
     };
     Q_DECLARE_FLAGS( ConnectProjectActionFlags, ConnectProjectActionFlag );
 
@@ -901,10 +902,12 @@ public:
                                ConnectProjectActionFlags flags = NoConnectionFlags )
     {
         Q_Q( Project );
-        if ( doConnect ) {
+       if ( doConnect ) {
             action->setEnabled( isActionEnabled(actionType) );
             if ( receiver ) {
-                q->connect( action, SIGNAL(triggered(bool)), receiver, slot );
+                q->connect( action, SIGNAL(triggered(bool)), receiver, slot,
+                            flags.testFlag(UseQueuedConnection)
+                            ? Qt::QueuedConnection : Qt::AutoConnection );
             }
             if ( flags.testFlag(ProjectPrivate::AutoUpdateEnabledState) &&
                 !(externProjectActions.contains(actionType) &&
@@ -1964,6 +1967,19 @@ Project::ProjectActionData Project::projectActionData( QAction *action )
     return action->data().value< ProjectActionData >();
 }
 
+void Project::setProjectActionData( QAction *projectAction, const QVariant &data )
+{
+    ProjectActionData actionData = projectActionData( projectAction );
+    actionData.data = data;
+    projectAction->setData( QVariant::fromValue(actionData) );
+    projectAction->setText( projectActionText(actionData.actionType, data) );
+}
+
+bool Project::isProjectAction( QAction *action )
+{
+    return projectActionData( action ).isValid();
+}
+
 void Project::showProjectContextMenu( const QPoint &globalPos )
 {
     Q_D( Project );
@@ -2009,6 +2025,7 @@ QPointer< KActionMenu > Project::debuggerSubMenuAction( QWidget *parent )
     // Create a KActionMenu containing debug actions
     QPointer<KActionMenu> debuggerMenuAction( new KActionMenu(KIcon("debugger"),
                                               i18nc("@action", "Run"), parent) );
+    debuggerMenuAction->setObjectName( "debuggerMenuAction" );
     debuggerMenuAction->addAction( projectAction(RunMenuAction)  );
     debuggerMenuAction->addAction( projectAction(DebugMenuAction)  );
     debuggerMenuAction->addAction( projectAction(RunToCursor)  );
@@ -2031,6 +2048,7 @@ QPointer< KActionMenu > Project::testSubMenuAction( QWidget *parent )
     // Create a KActionMenu containing test actions
     QPointer<KActionMenu> testMenuAction( new KActionMenu(KIcon("task-complete"),
                                           i18nc("@action", "Test"), parent) );
+    testMenuAction->setObjectName( "testMenuAction" );
     testMenuAction->addAction( projectAction(RunAllTests) );
     testMenuAction->addAction( projectAction(AbortRunningTests) );
     testMenuAction->addAction( projectAction(ClearTestResults) );
@@ -2053,6 +2071,7 @@ QPointer< KActionMenu > Project::projectSubMenuAction( QWidget *parent )
     // Create a KActionMenu containing all context menu actions for the project
     QPointer<KActionMenu> projectMenuAction( new KActionMenu(KIcon("project-development"),
                                        i18nc("@action", "Project"), parent) );
+    projectMenuAction->setObjectName( "projectMenuAction" );
     QList< QAction* > projectActions = contextMenuActions( parent );
     foreach ( QAction *projectAction, projectActions ) {
         projectMenuAction->addAction( projectAction );
@@ -2063,14 +2082,14 @@ QPointer< KActionMenu > Project::projectSubMenuAction( QWidget *parent )
 void Project::testActionTriggered()
 {
     QAction *action = qobject_cast< QAction* >( sender() );
-    const ProjectActionData data = action->data().value< ProjectActionData >();
+    const ProjectActionData data = projectActionData( action );
     startTest( static_cast<TestModel::Test>(data.data.toInt()) );
 }
 
 void Project::testCaseActionTriggered()
 {
     QAction *action = qobject_cast< QAction* >( sender() );
-    const ProjectActionData data = action->data().value< ProjectActionData >();
+    const ProjectActionData data = projectActionData( action );
     startTestCase( static_cast<TestModel::TestCase>(data.data.toInt()) );
 }
 
@@ -2105,11 +2124,12 @@ QAction *Project::projectAction( Project::ProjectAction actionType, const QVaria
         // Find action in d->projectActions
         QList< QAction* > actions = d->projectActions.values( actionType );
         foreach ( QAction *currentAction, actions ) {
-            if ( !currentAction->data().isValid() && !data.isValid() ) {
+            const ProjectActionData actionData = projectActionData( currentAction );
+            if ( !actionData.data.isValid() && !data.isValid() ) {
                 // No data wanted and an action without data was found
                 action = currentAction;
                 break;
-            } else if ( currentAction->data() == data ) {
+            } else if ( actionData.data == data ) {
                 // An action with the given data was found
                 action = currentAction;
                 break;
@@ -2119,20 +2139,21 @@ QAction *Project::projectAction( Project::ProjectAction actionType, const QVaria
 
     if ( !action ) {
         // Create and connect action and store it in d->projectActions
-        action = createProjectAction( actionType, data, this );
-        connectProjectAction( actionType, action );
+        action = createAndConnectProjectAction( actionType, data, this );
         d->projectActions.insert( actionType, action );
     }
     return action;
 }
 
 void Project::connectProjectAction( Project::ProjectAction actionType, QAction *action,
-                                    bool doConnect )
+                                    bool doConnect, bool useQueuedConnection )
 {
     Q_D( Project );
+    ProjectPrivate::ConnectProjectActionFlags flags = useQueuedConnection
+            ? ProjectPrivate::UseQueuedConnection : ProjectPrivate::NoConnectionFlags;
     switch ( actionType ) {
     case Save:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(save()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(save()), flags );
         if ( doConnect ) {
             connect( this, SIGNAL(modifiedStateChanged(bool)), action, SLOT(setEnabled(bool)) );
         } else {
@@ -2140,71 +2161,71 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
         }
         break;
     case SaveAs:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(saveAs()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(saveAs()), flags );
         break;
     case Install:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(installLocally()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(installLocally()), flags );
         break;
     case Uninstall:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(uninstallLocally()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(uninstallLocally()), flags );
         break;
     case InstallGlobally:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(installGlobally()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(installGlobally()), flags );
         break;
     case UninstallGlobally:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(uninstallGlobally()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(uninstallGlobally()), flags );
         break;
     case Close:
-        d->connectProjectAction( actionType, action, doConnect, this, SIGNAL(closeRequest()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SIGNAL(closeRequest()), flags );
         break;
     case ShowProjectSettings:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showSettingsDialog()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showSettingsDialog()), flags );
         break;
     case ShowDashboard:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showDashboardTab()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showDashboardTab()), flags );
         break;
     case ShowHomepage:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showWebTab()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showWebTab()), flags );
         break;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ShowScript:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showScriptTab()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showScriptTab()), flags );
         break;
     case ShowExternalScript:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showExternalScriptActionTriggered()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showExternalScriptActionTriggered()), flags );
         break;
 #endif
     case ShowProjectSource:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showProjectSourceTab()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showProjectSourceTab()), flags );
         break;
     case ShowPlasmaPreview:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showPlasmaPreviewTab()) );
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showPlasmaPreviewTab()), flags );
         break;
 
     case RunAllTests:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(testProject()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case AbortRunningTests:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(abortTests()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case ClearTestResults:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(clearTestResults()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case RunSpecificTest:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(testActionTriggered()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case RunSpecificTestCase:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(testCaseActionTriggered()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
 
     case SetAsActiveProject:
         d->connectProjectAction( actionType, action, doConnect,
-                                 this, SIGNAL(setAsActiveProjectRequest()) );
+                                 this, SIGNAL(setAsActiveProjectRequest()), flags );
         if ( doConnect ) {
             connect( this, SIGNAL(activeProjectStateChanged(bool)), action, SLOT(setDisabled(bool)) );
             connect( this, SIGNAL(activeProjectStateChanged(bool)), action, SLOT(setChecked(bool)) );
@@ -2217,35 +2238,35 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case StepInto:
         d->connectProjectAction( actionType, action, doConnect, d->debugger, SLOT(debugStepInto()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case StepOver:
         d->connectProjectAction( actionType, action, doConnect, d->debugger, SLOT(debugStepOver()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case StepOut:
         d->connectProjectAction( actionType, action, doConnect, d->debugger, SLOT(debugStepOut()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case Interrupt:
         d->connectProjectAction( actionType, action, doConnect, d->debugger, SLOT(debugInterrupt()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case Continue:
         d->connectProjectAction( actionType, action, doConnect, d->debugger, SLOT(debugContinue()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case AbortDebugger:
         d->connectProjectAction( actionType, action, doConnect, d->debugger, SLOT(abortDebugger()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case ToggleBreakpoint:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(toggleBreakpoint()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case RemoveAllBreakpoints:
         d->connectProjectAction( actionType, action, doConnect,
-                                 d->debugger, SLOT(removeAllBreakpoints()) );
+                                 d->debugger, SLOT(removeAllBreakpoints()), flags );
         if ( doConnect ) {
             connect( d->debugger->breakpointModel(), SIGNAL(emptinessChanged(bool)),
                      action, SLOT(setDisabled(bool)) );
@@ -2256,7 +2277,7 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
         break;
     case RunToCursor:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(runToCursor()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
 
     case SpecificTestCaseMenuAction:
@@ -2271,36 +2292,36 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
             if ( action->isSeparator() ) {
                 continue;
             }
-            const ProjectActionData data = action->data().value< ProjectActionData >();
-            connectProjectAction( data.actionType, action, doConnect );
+            connectProjectAction( projectActionData(action).actionType, action, doConnect );
         }
-        d->connectProjectAction( actionType, action, doConnect, 0, "", ProjectPrivate::AutoUpdateEnabledState );
+        d->connectProjectAction( actionType, action, doConnect, 0, "",
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
     } break;
 
     case RunGetTimetable:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(runGetTimetable()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case RunGetStopSuggestions:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(runGetStopSuggestions()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case RunGetJourneys:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(runGetJourneys()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
 
     case DebugGetTimetable:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(debugGetTimetable()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case DebugGetStopSuggestions:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(debugGetStopSuggestions()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case DebugGetJourneys:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(debugGetJourneys()),
-                                 ProjectPrivate::AutoUpdateEnabledState );
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
 #endif
 
@@ -2310,100 +2331,203 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
     }
 }
 
+QString Project::projectActionText( Project::ProjectAction actionType, const QVariant &data )
+{
+    switch ( actionType ) {
+    case Save:
+        return i18nc("@action", "Save Project");
+    case SaveAs:
+        return i18nc("@action", "Save Project As...");
+    case Install:
+        return i18nc("@action", "&Install");
+    case Uninstall:
+        return i18nc("@action", "&Uninstall");
+    case InstallGlobally:
+        return i18nc("@action", "Install &Globally");
+    case UninstallGlobally:
+        return i18nc("@action", "Uninstall &Globally");
+    case Close:
+        return i18nc("@action", "Close Project");
+    case ShowProjectSettings:
+        return i18nc("@action", "Project Settings...");
+    case ShowDashboard:
+        return i18nc("@action", "Show &Dashboard");
+    case ShowHomepage:
+        return i18nc("@action", "Show &Web Page");
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    case ShowScript:
+        return i18nc("@action", "Show &Script");
+    case ShowExternalScript: {
+        const QString filePath = data.toString();
+        return filePath.isEmpty() ? i18nc("@action", "Show External Script")
+                                  : i18nc("@action", "Show External Script <filename>%1</filename>",
+                                          QFileInfo(filePath).fileName());
+    }
+#endif
+    case ShowProjectSource:
+        return i18nc("@action", "Show Project &Source");
+    case ShowPlasmaPreview:
+        return i18nc("@action", "Show &Plasma Preview");
+
+    case RunAllTests:
+        return i18nc("@action", "&Run All Tests");
+    case AbortRunningTests:
+        return i18nc("@action", "&Abort Running Tests");
+    case ClearTestResults:
+        return i18nc("@action", "&Clear All Test Results");
+    case RunSpecificTest: {
+        TestModel::Test test = static_cast< TestModel::Test >( data.toInt() );
+        if ( test == TestModel::InvalidTest ) {
+            kWarning() << "No test specified for project action RunSpecificTest";
+            return QString();
+        }
+        return i18nc("@action", "Run %1", TestModel::nameForTest(test));
+    }
+    case RunSpecificTestCase:
+        return i18nc("@action", "&Run Complete Test Case");
+    case SpecificTestCaseMenuAction: {
+        TestModel::TestCase testCase = static_cast< TestModel::TestCase >( data.toInt() );
+        if ( testCase == TestModel::InvalidTestCase ) {
+            kWarning() << "No test case specified for project action SpecificTestCaseMenuAction";
+            return QString();
+        }
+
+        // Create menu action
+        return TestModel::nameForTestCase( testCase );
+    }
+    case SetAsActiveProject:
+        return i18nc("@action", "Set as Active Project");
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    case StepInto:
+        return i18nc("@action", "Step &Into");
+    case StepOver:
+        return i18nc("@action", "Step &Over");
+    case StepOut:
+        return i18nc("@action", "Step Ou&t");
+    case Interrupt:
+        return i18nc("@action", "&Interrupt");
+    case RunToCursor:
+        return i18nc("@action", "Run to &Cursor");
+    case Continue:
+        return i18nc("@action", "&Continue");
+    case AbortDebugger:
+        return i18nc("@action", "&Abort Debugger");
+    case ToggleBreakpoint:
+        return i18nc("@action", "Toggle &Breakpoint");
+    case RemoveAllBreakpoints:
+        return i18nc("@action", "&Remove all Breakpoints");
+
+    case RunMenuAction:
+        return i18nc("@action", "&Run");
+    case RunGetTimetable:
+        return i18nc("@action", "Run get&Timetable()");
+    case RunGetStopSuggestions:
+        return i18nc("@action", "Run get&StopSuggestions()");
+    case RunGetJourneys:
+        return i18nc("@action", "Run get&Journeys()");
+
+    case DebugMenuAction:
+        return i18nc("@action", "&Debug");
+    case DebugGetTimetable:
+        return i18nc("@action", "Debug get&Timetable()");
+    case DebugGetStopSuggestions:
+        return i18nc("@action", "Debug get&StopSuggestions()");
+    case DebugGetJourneys:
+        return i18nc("@action", "Debug get&Journeys()");
+#endif
+
+    default:
+        kDebug() << "Unknown project action" << actionType;
+        return QString();
+    }
+}
+
 QAction *Project::createProjectAction( Project::ProjectAction actionType, const QVariant &data,
                                        QObject *parent )
 {
     KAction *action = 0;
+    const QString text = projectActionText( actionType, data );
     switch ( actionType ) {
     case Save:
-        action = new KAction( KIcon("document-save"),
-                              i18nc("@item:inmenu", "Save Project"), parent );
+        action = new KAction( KIcon("document-save"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Save changes in the project") );
         action->setEnabled( false );
         break;
     case SaveAs:
-        action = new KAction( KIcon("document-save-as"),
-                              i18nc("@action", "Save Project As..."), parent );
+        action = new KAction( KIcon("document-save-as"), text, parent );
         action->setToolTip( i18nc("@info:tooltip",
                 "Save changes in the project under a new file name") );
         break;
     case Install:
-        action = new KAction( KIcon("run-build-install"), i18nc("@action", "&Install"), parent );
+        action = new KAction( KIcon("run-build-install"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Install the project locally") );
         break;
     case Uninstall:
-        action = new KAction( KIcon("edit-delete"), i18nc("@action", "&Uninstall"), parent );
+        action = new KAction( KIcon("edit-delete"), text, parent );
         action->setToolTip( i18nc("@info:tooltip",
                                   "Uninstall a locally installed version of the project") );
         break;
     case InstallGlobally:
-        action = new KAction( KIcon("run-build-install-root"),
-                              i18nc("@action", "Install &Globally"), parent );
+        action = new KAction( KIcon("run-build-install-root"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Install the project globally") );
         break;
     case UninstallGlobally:
-        action = new KAction( KIcon("edit-delete"),
-                              i18nc("@action", "Uninstall &Globally"), parent );
+        action = new KAction( KIcon("edit-delete"), text, parent );
         action->setToolTip( i18nc("@info:tooltip",
                                   "Uninstall a globally installed version of the project") );
         break;
     case Close:
-        action = new KAction( KIcon("project-development-close"),
-                              i18nc("@action", "Close Project"), parent );
+        action = new KAction( KIcon("project-development-close"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Close this project") );
         break;
     case ShowProjectSettings:
-        action = new KAction( KIcon("configure"), i18nc("@action", "Project Settings..."), parent );
+        action = new KAction( KIcon("configure"), text, parent );
         action->setToolTip( i18nc("@info:tooltip",
                 "Opens a dialog to modify the projects settings") );
         break;
     case ShowDashboard:
-        action = new KAction( KIcon("dashboard-show"), i18nc("@action", "Show &Dashboard"), parent );
+        action = new KAction( KIcon("dashboard-show"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Shows the dashboard tab of the project.") );
         break;
     case ShowHomepage:
-        action = new KAction( KIcon("document-open-remote"),
-                              i18nc("@action", "Show &Web Page"), parent );
+        action = new KAction( KIcon("document-open-remote"), text, parent );
         action->setToolTip( i18nc("@info:tooltip",
                 "Opens the <emphasis>home page</emphasis> of the service provider in a tab.") );
         break;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ShowScript:
-        action = new KAction( KIcon("application-javascript"),
-                              i18nc("@action", "Show &Script"), parent );
+        action = new KAction( KIcon("application-javascript"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Opens the main <emphasis>script</emphasis> in a tab.") );
         break;
-    case ShowExternalScript: {
-        const QString filePath = data.toString();
-        action = new KAction( KIcon("application-javascript"),
-                              i18nc("@action", "Show External Script <filename>%1</filename>",
-                                    QFileInfo(filePath).fileName()), parent );
+    case ShowExternalScript:
+        action = new KAction( KIcon("application-javascript"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Opens an external <emphasis>script</emphasis> in a tab.") );
-    } break;
+        break;
 #endif
     case ShowProjectSource:
         action = new KAction( KIcon("application-x-publictransport-serviceprovider"),
-                              i18nc("@action", "Show Project &Source"), parent );
+                              text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Opens the <emphasis>project source</emphasis> "
                                   "document in a tab.") );
         break;
     case ShowPlasmaPreview:
-        action = new KAction( KIcon("plasma"), i18nc("@action", "Show &Plasma Preview"), parent );
+        action = new KAction( KIcon("plasma"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Opens the project in a PublicTransport applet "
                                   "in a <emphasis>Plasma preview</emphasis> tab.") );
         break;
 
     case RunAllTests:
-        action = new KAction( KIcon("task-complete"), i18nc("@action", "&Run All Tests"), parent );
+        action = new KAction( KIcon("task-complete"), text, parent );
         action->setToolTip( i18nc("@info:tooltip",
                 "Runs all tests for the active project, eg. syntax errors, correct results.") );
         break;
     case AbortRunningTests:
-        action = new KAction( KIcon("dialog-cancel"), i18nc("@action", "&Abort Running Tests"), parent );
+        action = new KAction( KIcon("dialog-cancel"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Aborts all currently running tests.") );
         break;
     case ClearTestResults:
-        action = new KAction( KIcon("edit-clear"), i18nc("@action", "&Clear All Test Results"), parent );
+        action = new KAction( KIcon("edit-clear"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Clears all results of a previous test run.") );
         break;
     case RunSpecificTest: {
@@ -2450,8 +2574,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
     } break;
 
     case SetAsActiveProject:
-        action = new KAction( KIcon("edit-select"),
-                              i18nc("@action", "Set as Active Project"), parent );
+        action = new KAction( KIcon("edit-select"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Use this project as the active project") );
         action->setCheckable( true );
         action->setEnabled( false );
@@ -2459,72 +2582,66 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case StepInto:
-        action = new KAction( KIcon("debug-step-into"), i18nc("@action", "Step &Into"), parent );
+        action = new KAction( KIcon("debug-step-into"), text, parent );
         action->setToolTip( i18nc("@info:tooltip",
                 "Continue script execution until the next statement") );
         action->setEnabled( false );
         action->setPriority( QAction::LowPriority );
         break;
     case StepOver:
-        action = new KAction( KIcon("debug-step-over"), i18nc("@action", "Step &Over"), parent );
+        action = new KAction( KIcon("debug-step-over"), text, parent );
         action->setToolTip( i18nc("@info:tooltip",
                 "Continue script execution until the next statement in the same context.") );
         action->setEnabled( false );
         action->setPriority( QAction::LowPriority );
         break;
     case StepOut:
-        action = new KAction( KIcon("debug-step-out"), i18nc("@action", "Step Ou&t"), parent );
+        action = new KAction( KIcon("debug-step-out"), text, parent );
         action->setToolTip( i18nc("@info:tooltip",
                 "Continue script execution until the current function gets left.") );
         action->setEnabled( false );
         action->setPriority( QAction::LowPriority );
         break;
     case Interrupt:
-        action = new KAction( KIcon("media-playback-pause"),
-                              i18nc("@action", "&Interrupt"), parent );
+        action = new KAction( KIcon("media-playback-pause"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Interrupt script execution.") );
         action->setEnabled( false );
         action->setEnabled( false );
         action->setPriority( QAction::LowPriority );
         break;
     case RunToCursor:
-        action = new KAction( KIcon("debug-execute-to-cursor"),
-                              i18nc("@action", "Run to &Cursor"), parent );
+        action = new KAction( KIcon("debug-execute-to-cursor"), text, parent );
         action->setToolTip( i18nc("@info:tooltip",
                 "Continue script execution until the current cursor position is reached") );
         action->setEnabled( false );
         action->setPriority( QAction::LowPriority );
         break;
     case Continue:
-        action = new KAction( KIcon("media-playback-start"),
-                              i18nc("@action", "&Continue"), parent );
+        action = new KAction( KIcon("media-playback-start"), text, parent );
         action->setToolTip( i18nc("@info:tooltip",
                 "Continue script execution, only interrupt on breakpoints or uncaught exceptions.") );
         action->setEnabled( false );
         action->setPriority( QAction::LowPriority );
         break;
     case AbortDebugger:
-        action = new KAction( KIcon("process-stop"), i18nc("@action", "&Abort Debugger"), parent );
+        action = new KAction( KIcon("process-stop"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Abort script execution") );
         action->setEnabled( false );
         action->setPriority( QAction::LowPriority );
         break;
     case ToggleBreakpoint:
-        action = new KAction( KIcon("tools-report-bug"),
-                i18nc("@action", "Toggle &Breakpoint"), parent );
+        action = new KAction( KIcon("tools-report-bug"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Toggle breakpoint for the current line") );
         action->setEnabled( false );
         break;
     case RemoveAllBreakpoints:
-        action = new KAction( KIcon("tools-report-bug"),
-                i18nc("@action", "&Remove all Breakpoints"), parent );
+        action = new KAction( KIcon("tools-report-bug"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Removes all breakpoints") );
         action->setEnabled( false );
         break;
 
     case RunMenuAction: {
-        KActionMenu *debugScript = new KActionMenu( KIcon("system-run"),
-                i18nc("@action", "&Run"), parent );
+        KActionMenu *debugScript = new KActionMenu( KIcon("system-run"), text, parent );
         debugScript->setToolTip( i18nc("@info:tooltip", "Runs a function of the script.") );
         debugScript->setDelayed( false );
         debugScript->addAction( createProjectAction(Project::RunGetTimetable, parent) );
@@ -2533,24 +2650,23 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         action = debugScript;
     } break;
     case RunGetTimetable:
-        action = new KAction( KIcon("system-run"), i18nc("@action", "Run get&Timetable()"), parent );
+        action = new KAction( KIcon("system-run"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getTimetable()'") );
         action->setEnabled( false );
         break;
     case RunGetStopSuggestions:
-        action = new KAction( KIcon("system-run"), i18nc("@action", "Run get&StopSuggestions()"), parent );
+        action = new KAction( KIcon("system-run"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getStopSuggestions()'") );
         action->setEnabled( false );
         break;
     case RunGetJourneys:
-        action = new KAction( KIcon("system-run"), i18nc("@action", "Run get&Journeys()"), parent );
+        action = new KAction( KIcon("system-run"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getJourneys()'") );
         action->setEnabled( false );
         break;
 
     case DebugMenuAction: {
-        KActionMenu *debugScript = new KActionMenu( KIcon("debug-run"),
-                i18nc("@action", "&Debug"), parent );
+        KActionMenu *debugScript = new KActionMenu( KIcon("debug-run"), text, parent );
         debugScript->setToolTip( i18nc("@info:tooltip", "Runs a function of the script in a debugger.") );
         debugScript->setDelayed( false );
         debugScript->addAction( createProjectAction(Project::DebugGetTimetable, parent) );
@@ -2559,19 +2675,19 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         action = debugScript;
     } break;
     case DebugGetTimetable:
-        action = new KAction( KIcon("debug-run"), i18nc("@action", "Debug get&Timetable()"), parent );
+        action = new KAction( KIcon("debug-run"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getTimetable()' "
                                                    "in a debugger") );
         action->setEnabled( false );
         break;
     case DebugGetStopSuggestions:
-        action = new KAction( KIcon("debug-run"), i18nc("@action", "Debug get&StopSuggestions()"), parent );
+        action = new KAction( KIcon("debug-run"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getStopSuggestions()' "
                                                    "in a debugger") );
         action->setEnabled( false );
         break;
     case DebugGetJourneys:
-        action = new KAction( KIcon("debug-run"), i18nc("@action", "Debug get&Journeys()"), parent );
+        action = new KAction( KIcon("debug-run"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getJourneys()' "
                                                    "in a debugger") );
         action->setEnabled( false );
@@ -2631,10 +2747,23 @@ ScriptTab *Project::showScriptTab( QWidget *parent )
     return d->scriptTab;
 }
 
-ScriptTab *Project::showExternalScriptTab( const QString &filePath, QWidget *parent )
+ScriptTab *Project::showExternalScriptTab( const QString &_filePath, QWidget *parent )
 {
     Q_D( Project );
-    Q_ASSERT( !filePath.isEmpty() );
+    QString filePath = _filePath;
+    if ( filePath.isEmpty() ) {
+        // Get external script file name (from the same directory)
+        QScopedPointer<KFileDialog> dialog( new KFileDialog(path(), QString(), parent) );
+        dialog->setMimeFilter( QStringList() << "application/javascript" );
+        if ( dialog->exec() == KFileDialog::Accepted ) {
+            filePath = dialog->selectedFile();
+        } else {
+            return 0;
+        }
+    } else if ( !filePath.contains('/') ) {
+        filePath.prepend( path() + '/' );
+    }
+    kDebug() << filePath;
 
     ScriptTab *tab = externalScriptTab( filePath );
     if ( tab ) {
@@ -2652,7 +2781,7 @@ ScriptTab *Project::showExternalScriptTab( const QString &filePath, QWidget *par
 ScriptTab *Project::showExternalScriptActionTriggered( QWidget *parent )
 {
     QAction *action = qobject_cast< QAction* >( sender() );
-    const QString filePath = action->data().toString();
+    const QString filePath = projectActionData(action).data.toString();
     return showExternalScriptTab( filePath, parent );
 }
 #endif
@@ -3728,7 +3857,6 @@ ScriptTab *Project::createScriptTab( QWidget *parent )
 ScriptTab *Project::createExternalScriptTab( const QString &filePath, QWidget *parent )
 {
     Q_D( Project );
-
     foreach ( ScriptTab *externalScriptTab, d->externalScriptTabs ) {
         if ( externalScriptTab->fileName() == filePath ) {
             kWarning() << "Script tab already created";

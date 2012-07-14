@@ -171,8 +171,9 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
 
         // Add an action to open external script files for the script item
         if ( projectItem->isScriptItem() ) {
-            openExternalAction = projectMenu->addAction( KIcon("document-open"),
-                    i18nc("@item:inmenu", "Open External Script") );
+            QAction *openExternalAction =
+                    projectItem->project()->projectAction( Project::ShowExternalScript );
+            projectMenu->addAction( openExternalAction );
         }
 
         // Add a save action for document items
@@ -213,17 +214,6 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
             } else if ( projectItem->isScriptItem() && scriptTab ) {
                 scriptTab->save();
             }
-        } else if ( triggeredAction == openExternalAction ) {
-            // Open external script file (from the same directory)
-            QPointer<KFileDialog> dialog( new KFileDialog(projectItem->project()->path(),
-                                                          QString(), this) );
-            dialog->setMimeFilter( QStringList() << "application/javascript" );
-            if ( dialog->exec() == KFileDialog::Accepted ) {
-                const QString filePath = dialog->selectedFile();
-                // TODO Check if the directory was changed
-                projectItem->project()->showExternalScriptTab( filePath );
-            }
-            delete dialog.data();
         }
     } else {
         // A project item was clicked, open the project context menu

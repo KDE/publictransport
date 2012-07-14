@@ -404,6 +404,12 @@ public:
     Q_INVOKABLE static const char *projectActionName( ProjectAction actionType );
 
     /**
+     * @brief Get the text for project actions of the given @p actionType with @p data.
+     **/
+    Q_INVOKABLE static QString projectActionText( ProjectAction actionType,
+                                                  const QVariant &data = QVariant() );
+
+    /**
      * @brief Get the project action of the given @p actionType.
      *
      * Creates the action if not done already using createProjectAction().
@@ -451,16 +457,40 @@ public:
     Q_INVOKABLE static ProjectActionGroup actionGroupFromType( ProjectAction actionType );
 
     /**
+     * @brief Convenience method wich calls createProjectAction() and connectProjectAction().
+     **/
+    Q_INVOKABLE inline QAction* createAndConnectProjectAction(
+            ProjectAction actionType, const QVariant &data, QObject *parent = 0,
+            bool useQueuedConnection = false )
+    {
+        QAction *action = createProjectAction( actionType, data, parent );
+        connectProjectAction( actionType, action, true, useQueuedConnection );
+        return action;
+    };
+
+    /**
+     * @brief Convenience method wich calls createProjectAction() and connectProjectAction().
+     **/
+    Q_INVOKABLE inline QAction* createAndConnectProjectAction(
+            ProjectAction actionType, QObject *parent = 0, bool useQueuedConnection = false )
+    {
+        QAction *action = createProjectAction( actionType, parent );
+        connectProjectAction( actionType, action, true, useQueuedConnection );
+        return action;
+    };
+
+    /**
      * @brief Connects/disconnects an @p action according to the given @p actionType.
      *
      * @param actionType The type of the @p action, controls which connections to make.
      * @param action The action to connect/disconnect.
      * @param doConnect If true, the @p action gets connected.
      *   Otherwise, the @p action gets disconnected.
+     * @param useQueuedConnection Whether or not to use a queued connection, ie. Qt::QueuedConnection.
      * @see createProjectAction
      **/
     Q_INVOKABLE void connectProjectAction( ProjectAction actionType, QAction *action,
-                                           bool doConnect = true );
+                                           bool doConnect = true, bool useQueuedConnection = false );
 
     /** @brief Calls connectProjectAction() with the @em doConnect argument set to false. */
     Q_INVOKABLE inline void disconnectProjectAction( ProjectAction actionType, QAction *action ) {
@@ -471,7 +501,13 @@ public:
     static QList< Project::ProjectAction > actionsFromGroup( ProjectActionGroup group );
 
     /** @brief Get data stored for @p projectAction. */
-    ProjectActionData projectActionData( QAction *projectAction );
+    static ProjectActionData projectActionData( QAction *projectAction );
+
+    /** @brief Get data stored for @p projectAction. */
+    static void setProjectActionData( QAction *projectAction, const QVariant &data );
+
+    /** @brief Whether or not @p action is a valid project action. */
+    static bool isProjectAction( QAction *action );
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Uses KInputDialog to let the user choose a script template type. */
