@@ -101,11 +101,15 @@ void CallScriptFunctionJob::requestAbort()
 {
     DebuggerJob::requestAbort();
 
-    QMutexLocker locker( m_mutex );
+    m_mutex->lockInline();
     if ( m_currentLoop ) {
         QEventLoop *loop = m_currentLoop;
         m_currentLoop = 0;
+        m_mutex->unlockInline();
+
         loop->quit();
+    } else {
+        m_mutex->unlockInline();
     }
 }
 

@@ -242,14 +242,18 @@ void Debugger::startTimeout( int milliseconds )
 
 void Debugger::stopTimeout()
 {
-    m_timeout->deleteLater();
-    m_timeout = 0;
+    if ( m_timeout ) {
+        m_timeout->deleteLater();
+        m_timeout = 0;
+    }
 }
 
 void Debugger::timeout()
 {
-    m_timeout->deleteLater();
-    m_timeout = 0;
+    if ( m_timeout ) {
+        m_timeout->deleteLater();
+        m_timeout = 0;
+    }
     abortDebugger();
 }
 
