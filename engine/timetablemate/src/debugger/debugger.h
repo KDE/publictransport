@@ -211,6 +211,9 @@ public:
     /** @brief Get a descriptive string for the last script error, if scriptState() returns ScriptError. */
     inline QString lastScriptErrorString() const { return m_lastScriptErrorString; };
 
+    /** @brief The name of the currently executed source file. */
+    inline QString currentSourceFile() const { return m_debugger->currentSourceFile(); };
+
     /** @brief Get the current execution line number. */
     inline int lineNumber() const { return m_debugger->lineNumber(); };
 

@@ -156,6 +156,9 @@ public:
         return getNextBreakableLineNumber(lineNumber, program.split('\n', QString::KeepEmptyParts));
     };
 
+    /** @brief The name of the currently executed source file. */
+    QString currentSourceFile() const;
+
     /** @brief The current line number. */
     int lineNumber() const;
 
@@ -359,6 +362,13 @@ private:
 
     static ConsoleCommandExecutionControl consoleCommandExecutionControlFromString( const QString &str );
 
+    inline QHash< uint, Breakpoint > &currentBreakpoints() {
+        return breakpointsForFile( m_scriptIdToFileName[m_currentScriptId] );
+    };
+    inline QHash< uint, Breakpoint > &breakpointsForFile( const QString &fileName ) {
+        return m_breakpoints[ fileName ];
+    };
+
     QMutex *const m_mutex; // Protect member variables, make Debugger class thread safe
     QWaitCondition *const m_interruptWaiter; // Waits on interrupts, wake up to continue script execution based on m_executionType
     QMutex *const m_interruptMutex;
@@ -372,9 +382,8 @@ private:
     int m_uncaughtExceptionLineNumber;
     QScriptValue m_uncaughtException;
     QScriptValue m_globalObject;
-    QHash< uint, Breakpoint > m_breakpoints;
+    QHash< QString, QHash< uint, Breakpoint > > m_breakpoints; // Outer key: filename, inner key: line number
     int m_runUntilLineNumber; // -1 => "run until line number" not active
-    FrameStack m_lastBacktrace;
 
     DebuggerState m_state;
     DebugFlags m_debugFlags;
@@ -386,6 +395,7 @@ private:
     QScriptContext *m_interruptContext;
     bool m_backtraceCleanedup;
     qint64 m_injectedScriptId;
+    qint64 m_currentScriptId;
 
     int m_interruptFunctionLevel;
     int m_functionDepth;

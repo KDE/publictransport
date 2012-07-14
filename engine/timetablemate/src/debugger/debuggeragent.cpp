@@ -85,6 +85,7 @@ DebuggerAgent::DebuggerAgent( QScriptEngine *engine, QMutex *engineMutex )
     m_backtraceCleanedup = true;
     m_lineNumber = -1;
     m_columnNumber = -1;
+    m_currentScriptId = -1;
     m_state = NotRunning;
     m_injectedScriptState = InjectedScriptNotRunning;
     m_injectedScriptId = -1;
@@ -286,9 +287,11 @@ bool DebuggerAgent::executeCommand( const ConsoleCommand &command, QString *retu
             return false;
         }
 
-        const bool breakpointExists = m_breakpoints.contains( lineNumber );
+        // TODO Use filename from a new argument
+        const QHash< uint, Breakpoint > &breakpoints = breakpointsForFile( m_mainScriptFileName );
+        const bool breakpointExists = breakpoints.contains( lineNumber );
         kDebug() << "Breakpoint exists" << breakpointExists;
-        Breakpoint breakpoint = breakpointExists ? m_breakpoints[lineNumber]
+        Breakpoint breakpoint = breakpointExists ? breakpoints[lineNumber]
                 : Breakpoint( m_mainScriptFileName, lineNumber );
         if ( command.arguments().count() == 1 ) {
             // Only ".break <lineNumber>", no command to execute
@@ -670,12 +673,14 @@ void DebuggerAgent::cancelInjectedCodeExecution()
 
 void DebuggerAgent::addBreakpoint( const Breakpoint &breakpoint )
 {
-    m_breakpoints.insert( breakpoint.lineNumber(), breakpoint );
+    QHash< uint, Breakpoint > &breakpoints = breakpointsForFile( breakpoint.fileName() );
+    breakpoints.insert( breakpoint.lineNumber(), breakpoint );
 }
 
 void DebuggerAgent::removeBreakpoint( const Breakpoint &breakpoint )
 {
-    m_breakpoints.remove( breakpoint.lineNumber() );
+    QHash< uint, Breakpoint > &breakpoints = breakpointsForFile( breakpoint.fileName() );
+    breakpoints.remove( breakpoint.lineNumber() );
 }
 
 bool DebuggerAgent::debugControl( DebuggerAgent::ConsoleCommandExecutionControl controlType,
@@ -1001,6 +1006,7 @@ void DebuggerAgent::scriptLoad( qint64 id, const QString &program, const QString
     if ( id != -1 ) {
         m_mutex->lockInline();
         m_scriptIdToFileName.insert( id, fileName );
+        m_currentScriptId = id;
         if ( m_injectedScriptState == InjectedScriptInitializing ) {
             // The new script is code that should be executed in the current scripts context
             // while the main script is interrupted
@@ -1027,7 +1033,11 @@ void DebuggerAgent::scriptUnload( qint64 id )
         m_injectedScriptState = InjectedScriptNotRunning;
         QTimer::singleShot( 0, this, SLOT(wakeFromInterrupt()) );
     }
+    kDebug() << "Unload" << id << m_scriptIdToFileName[id];
     m_scriptIdToFileName.remove( id );
+    if ( m_currentScriptId == id ) {
+        m_currentScriptId = -1;
+    }
     m_mutex->unlockInline();
 }
 
@@ -1227,6 +1237,7 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
     if ( !injectedProgram ) {
         // Update current execution position,
         // before emitting breakpointReached() and positionChanged()
+        m_currentScriptId = scriptId;
         m_lineNumber = lineNumber;
         m_columnNumber = columnNumber;
 
@@ -1338,15 +1349,24 @@ bool DebuggerAgent::findActiveBreakpoint( int lineNumber, Breakpoint *&foundBrea
 {
     // m_mutex is locked
 
+    if ( m_currentScriptId == -1 ) {
+        kDebug() << "scriptId == -1";
+        return false;
+    }
+
     // Test for a breakpoint at the new line number
-    if ( !m_breakpoints.contains(lineNumber) ) {
+    QHash< uint, Breakpoint > &breakpoints = currentBreakpoints();
+    if ( !breakpoints.contains(lineNumber) ) {
         // No breakpoint at the current execution position
         return false;
     }
 
-    Breakpoint &breakpoint = m_breakpoints[ lineNumber ];
-    // Found a breakpoint
-    if ( breakpoint.isEnabled() ) {
+    Breakpoint &breakpoint = breakpoints[ lineNumber ];
+    if ( !breakpoint.isValid() ) {
+        // No breakpoint for the current file found
+        return false;
+    } else if ( breakpoint.isEnabled() ) {
+        // Found a breakpoint
         // Test breakpoint condition if any,
         // unlock m_mutex while m_engineMutex could be locked longer
         if ( !breakpoint.condition().isEmpty() ) {
@@ -1648,6 +1668,12 @@ QVariant DebuggerAgent::extension( QScriptEngineAgent::Extension extension, cons
 {
     kDebug() << extension << argument.toString();
     return QScriptEngineAgent::extension( extension, argument );
+}
+
+QString DebuggerAgent::currentSourceFile() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_currentScriptId == -1 ? QString() : m_scriptIdToFileName[m_currentScriptId];
 }
 
 int DebuggerAgent::lineNumber() const
