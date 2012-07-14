@@ -26,6 +26,7 @@
 // Qt includes
 #include <QList>
 #include <QSharedPointer>
+#include <KDebug>
 
 class ChildListNode;
 class FunctionNode;
@@ -37,8 +38,10 @@ class QStringList;
 
 /** @brief Base class of all code nodes. */
 class CodeNode {
-    friend class ChildListNode; // Friends, to set m_parent
-    friend class FunctionNode; // Friends, to set m_parent
+    // Friends, to set m_parent
+    friend class ChildListNode;
+    friend class FunctionNode;
+    friend class FunctionCallNode;
 public:
     typedef QSharedPointer<CodeNode> Ptr;
 
@@ -76,6 +79,21 @@ public:
 
     /** @returns the parent node of this node, if any. Otherwise NULL is returned. */
     virtual CodeNode *parent() const { return m_parent; };
+
+    /**
+     * @brief Searches up the hierarchy for a code node of the template type, if any.
+     * The returned code node can be this code node, it's direct parent or a parent further up
+     * in the hierarchy.
+     * @see searchDown
+     **/
+    template< class T >
+    T *searchUp( int maxLevels = -1 ) const {
+        CodeNode *node = const_cast<CodeNode*>( this );
+        T *castedNode = dynamic_cast< T* >( node );
+        return castedNode ? castedNode
+                : (parent() && maxLevels != 0
+                   ? parent()->searchUp<T>(maxLevels == -1 ? -1 : --maxLevels) : 0);
+    };
 
     /** @returns the top level parent node of this node. If this node has no parent it is
      * returned itself. */
@@ -263,10 +281,12 @@ private:
 
 /** @brief A function call in this form: "object.function(...)". */
 class FunctionCallNode : public CodeNode {
+    friend class CodeNode; // Friends, to set m_parent
 public:
+    typedef QSharedPointer<FunctionCallNode> Ptr;
+
     FunctionCallNode( const QString &object, const QString &function,
                       int line, int colStart, int colEnd, const BracketedNode::Ptr &arguments );
-
     virtual NodeType type() const { return FunctionCall; };
     virtual QString id() const { return "call:" + m_text; };
     virtual QString toString( bool shortString = false ) const {

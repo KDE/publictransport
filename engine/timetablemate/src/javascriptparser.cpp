@@ -410,29 +410,36 @@ CodeNode::Ptr JavaScriptParser::parseStatement()
         } else if ( (node = parseBracketed()) ) {
             text += node->toString();
             BracketedNode::Ptr bracketedNode = node.dynamicCast<BracketedNode>();
-            if ( bracketedNode->openingBracketChar() != '('
-                || lastTokenList.count() != 3 || !lastTokenList.at(0)->isName
-                || !lastTokenList.at(1)->isChar('.') || !lastTokenList.at(2)->isName )
-            {
-                children << node;
-            } else {
-                // Is a member function call "object.function(...)"
-                Token *objectToken = lastTokenList.at(0);
-                Token *pointToken = lastTokenList.at(1);
-                Token *functionToken = lastTokenList.at(2);
+            if ( bracketedNode->openingBracketChar() == '(' ) {
+                if ( lastTokenList.count() == 1 && lastTokenList.at(0)->isName ) {
+                    // Is a function call "function(...)"
+                    Token *functionToken = lastTokenList.at(0);
+                    QString function = functionToken->text;
+                    node = CodeNode::Ptr( new FunctionCallNode(QString(), function, functionToken->line,
+                            functionToken->posStart, currentToken()->posStart, bracketedNode) );
+                    children << node;
+                } else if ( lastTokenList.count() == 3 && lastTokenList.at(0)->isName &&
+                            lastTokenList.at(1)->isChar('.') && lastTokenList.at(2)->isName )
+                {
+                    // Is a member function call "object.function(...)"
+                    Token *objectToken = lastTokenList.at(0);
+                    Token *pointToken = lastTokenList.at(1);
+                    Token *functionToken = lastTokenList.at(2);
 
-                QString object = objectToken->text;
-                QString function = functionToken->text;
-                checkFunctionCall( object, function, bracketedNode,
-                        objectToken->line, objectToken->posStart );
-                // TODO This UnknownNode could get an ObjectNode or VariableNode
-                CodeNode::Ptr objectNode( new UnknownNode(object + ".",
-                    objectToken->line, objectToken->posStart, pointToken->posEnd) );
-                children << objectNode;
-                node = CodeNode::Ptr( new FunctionCallNode(object, function, functionToken->line,
-                        functionToken->posStart, currentToken()->posStart, bracketedNode) );
-                children << node;
+                    QString object = objectToken->text;
+                    QString function = functionToken->text;
+                    checkFunctionCall( object, function, bracketedNode,
+                            objectToken->line, objectToken->posStart );
+                    // TODO This UnknownNode could be replaced by an ObjectNode or VariableNode
+                    CodeNode::Ptr objectNode( new UnknownNode(object + ".",
+                        objectToken->line, objectToken->posStart, pointToken->posEnd) );
+                    children << objectNode;
+                    node = CodeNode::Ptr( new FunctionCallNode(object, function, functionToken->line,
+                            functionToken->posStart, currentToken()->posStart, bracketedNode) );
+                    children << node;
+                }
             }
+            children << node;
             lastTokenList << m_lastToken;
         } else if ( (node = parseBlock()) || (node = parseFunction()) ) {
             text += node->toString();
@@ -785,11 +792,12 @@ QList< CodeNode::Ptr > BracketedNode::commaSeparated( int pos ) const
 
 FunctionCallNode::FunctionCallNode( const QString &object, const QString &function, int line,
                                     int colStart, int colEnd, const BracketedNode::Ptr &arguments )
-        : CodeNode( object + '.' + function, line, colStart, colEnd )
+        : CodeNode( object.isEmpty() ? function : object + '.' + function, line, colStart, colEnd )
 {
     m_object = object;
     m_function = function;
     m_arguments = arguments;
+    arguments->m_parent = this;
 }
 
 FunctionNode::FunctionNode( const QString& text, int line, int colStart, int colEnd,
