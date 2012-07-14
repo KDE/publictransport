@@ -44,6 +44,7 @@
 #include <QReadLocker>
 #include <QWriteLocker>
 #include <QMutex>
+#include <QFileInfo>
 
 namespace Scripting {
 
@@ -780,8 +781,11 @@ void Helper::error( const QString& message, const QString &failedParseText )
     shortParseText = shortParseText.replace('\n', "\n    "); // Indent
 
 #ifdef QT_DEBUG
-    kDebug() << QString("Error in %1-script, function %2(), line %3")
-            .arg(m_serviceProviderId).arg(info.functionName()).arg(info.lineNumber());
+    kDebug() << QString("Error in %1-script, function %2(), file %3, line %4")
+            .arg(m_serviceProviderId)
+            .arg(info.functionName().isEmpty() ? "[anonymous]" : info.functionName())
+            .arg(QFileInfo(info.fileName()).fileName())
+            .arg(info.lineNumber());
     kDebug() << message;
     if ( !shortParseText.isEmpty() ) {
         kDebug() << QString("The text of the document where parsing failed is: \"%1\"")
@@ -808,10 +812,14 @@ void Helper::error( const QString& message, const QString &failedParseText )
             return;
         }
 
-        logFile.write( QString("%1 (%2, in function %3(), line %4):\n   \"%5\"\n   Failed while reading this text: \"%6\"\n-------------------------------------\n\n")
-                .arg(m_serviceProviderId).arg(QDateTime::currentDateTime().toString())
-                .arg(info.functionName()).arg(info.lineNumber())
-                .arg(message).arg(failedParseText.trimmed()).toUtf8() );
+        logFile.write( QString("%1 (%2, in function %3(), file %4, line %5):\n   \"%6\"\n   Failed while reading this text: \"%7\"\n-------------------------------------\n\n")
+                .arg(m_serviceProviderId)
+                .arg(QDateTime::currentDateTime().toString())
+                .arg(info.functionName().isEmpty() ? "[anonymous]" : info.functionName())
+                .arg(QFileInfo(info.fileName()).fileName())
+                .arg(info.lineNumber())
+                .arg(message)
+                .arg(failedParseText.trimmed()).toUtf8() );
         logFile.close();
     }
 }
