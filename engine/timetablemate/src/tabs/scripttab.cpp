@@ -55,6 +55,7 @@
 #include <QVBoxLayout>
 #include <QToolButton>
 #include <QToolTip>
+#include <QApplication>
 #include <QTimer>
 #include <QFileInfo>
 #include <QDir>
@@ -350,7 +351,7 @@ void ScriptTab::slotSetStatusBarText( const QString &message )
 void ScriptTab::toggleBreakpoint( int lineNumber )
 {
     if ( !project()->isDebuggerRunning() ) {
-        project()->debugger()->loadScript( document()->text(), project()->data() );
+        project()->debugger()->loadScript( project()->scriptText(), project()->data() );
     }
 
     lineNumber = lineNumber == -1
@@ -405,7 +406,8 @@ void ScriptTab::markChanged( KTextEditor::Document *document, const KTextEditor:
 {
     if ( mark.type == KTextEditor::MarkInterface::BreakpointActive ) {
         if ( !project()->isDebuggerRunning() ) {
-            project()->debugger()->loadScript( document->text(), project()->data() );
+            project()->debugger()->loadScript( project()->scriptText(), project()->data() );
+            QApplication::processEvents( QEventLoop::AllEvents, 1000 );
         }
 
         Debugger::BreakpointModel *breakpointModel = project()->debugger()->breakpointModel();
