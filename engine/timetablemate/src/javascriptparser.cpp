@@ -351,6 +351,13 @@ void JavaScriptParser::checkFunctionCall( const QString &object, const QString &
     }
 }
 
+bool JavaScriptParser::isKeyword( const QString &text )
+{
+    return QRegExp("(?:null|true|false|case|catch|default|finally|for|instanceof|new|var|continue|"
+                   "function|return|void|delete|if|this|do|while|else|in|switch|throw|try|typeof|"
+                   "with)").exactMatch(text.toLower());
+}
+
 CodeNode::Ptr JavaScriptParser::parseStatement()
 {
     if ( atEnd() ) {
@@ -411,7 +418,9 @@ CodeNode::Ptr JavaScriptParser::parseStatement()
             text += node->toString();
             BracketedNode::Ptr bracketedNode = node.dynamicCast<BracketedNode>();
             if ( bracketedNode->openingBracketChar() == '(' ) {
-                if ( lastTokenList.count() == 1 && lastTokenList.at(0)->isName ) {
+                if ( lastTokenList.count() == 1 && lastTokenList.at(0)->isName &&
+                     !isKeyword(lastTokenList.at(0)->text) )
+                {
                     // Is a function call "function(...)"
                     Token *functionToken = lastTokenList.at(0);
                     QString function = functionToken->text;

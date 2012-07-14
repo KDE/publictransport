@@ -393,6 +393,9 @@ public:
      * @see hasError */
     int errorColumn() const { return m_errorColumn; };
 
+    /** @brief Whether or not @p text names a java script keyword. */
+    bool isKeyword( const QString &text );
+
 private:
     struct Token {
         // Constructs an invalid Token
