@@ -228,6 +228,8 @@ QString DebuggerAgent::stateToString( DebuggerState state )
         return i18nc("@info/plain Debugger state", "Running");
     case Interrupted:
         return i18nc("@info/plain Debugger state", "Interrupted");
+    case Aborting:
+        return i18nc("@info/plain Debugger state", "Aborting");
     default:
         return "Unknown";
     }
