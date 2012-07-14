@@ -377,6 +377,11 @@ public:
 
     bool isModified() const
     {
+        foreach ( ScriptTab *tab, externalScriptTabs ) {
+            if ( tab->isModified() ) {
+                return true;
+            }
+        }
         return isScriptModified() || isProjectSourceModified() ||
             (plasmaPreviewTab && plasmaPreviewTab->isModified()) ||
             (webTab && webTab->isModified());
@@ -1351,6 +1356,10 @@ public:
 
             file.write( q->scriptText().toUtf8() );
             file.close();
+        }
+
+        foreach ( ScriptTab *tab, externalScriptTabs ) {
+            tab->save();
         }
 #endif
 
