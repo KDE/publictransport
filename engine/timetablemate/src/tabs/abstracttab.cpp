@@ -237,8 +237,8 @@ QString AbstractTab::title() const
 
         Debugger::Debugger *debugger = project()->debugger();
         if ( debugger->isRunning() ) {
-            const bool isDebuggerInTab =
-                    debugger->backtraceModel()->topFrame()->fileName() == scriptFileName;
+            const bool isDebuggerInTab = debugger->backtraceModel()->isEmpty() ? false
+                    : debugger->backtraceModel()->topFrame()->fileName() == scriptFileName;
             if ( isDebuggerInTab ) {
                 if ( debugger->hasUncaughtException() ) { //m_engine->hasUncaughtException() ) {
                     title += " - " + i18nc("@info/plain", "Exception in Line %1",
