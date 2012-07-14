@@ -89,6 +89,7 @@ protected slots:
                       KTextEditor::MarkInterface::MarkChangeAction action );
     void informationMessage( KTextEditor::View*, const QString &message );
     void slotSetStatusBarText( const QString &message );
+    void contextMenuAboutToShow( KTextEditor::View *view, QMenu* menu );
 
 private:
     ScriptTab( Project *project, KTextEditor::Document *document, QWidget *parent = 0 );

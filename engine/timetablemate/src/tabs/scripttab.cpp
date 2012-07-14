@@ -38,6 +38,7 @@
 // KDE includes
 #include <KLocalizedString>
 #include <KAction>
+#include <KActionMenu>
 #include <KComboBox>
 #include <KTextEditor/Document>
 #include <KTextEditor/View>
@@ -46,6 +47,7 @@
 #include <KTextEditor/TextHintInterface>
 #include <KTextEditor/ConfigInterface>
 #include <KMessageBox>
+#include <KMenu>
 
 // Qt includes
 #include <QWidget>
@@ -229,6 +231,8 @@ ScriptTab *ScriptTab::create( Project *project, QWidget *parent )
         textHintInterface->enableTextHints( 250 );
         connect( document->activeView(), SIGNAL(needTextHint(KTextEditor::Cursor,QString&)),
                  scriptModel, SLOT(needTextHint(KTextEditor::Cursor,QString&)) );
+        connect( document->activeView(), SIGNAL(contextMenuAboutToShow(KTextEditor::View*,QMenu*)),
+                 tab, SLOT(contextMenuAboutToShow(KTextEditor::View*,QMenu*)) );
         scriptModel->setJavaScriptCompletionModel( tab->completionModel() );
     }
 
@@ -267,6 +271,71 @@ ScriptTab *ScriptTab::create( Project *project, QWidget *parent )
              tab, SLOT(scriptCursorPositionChanged(KTextEditor::View*,KTextEditor::Cursor)) );
 
     return tab;
+}
+
+void ScriptTab::contextMenuAboutToShow( KTextEditor::View *view, QMenu *menu )
+{
+    // Get the code node at the current cursor position
+    const KTextEditor::Cursor &position = view->cursorPosition();
+    CodeNode::Ptr node = m_scriptModel->nodeFromLineNumber( position.line() + 1, position.column(),
+                                                            JavaScriptModel::MatchChildren );
+
+    // Remove project actions added previously
+    while ( !menu->isEmpty() && (Project::isProjectAction(menu->actions().first()) ||
+                                 menu->actions().first()->objectName() == QLatin1String("projectMenuAction") ||
+                                 menu->actions().first()->isSeparator()) )
+    {
+        QAction *oldAction = menu->actions().first();
+        menu->removeAction( oldAction );
+    }
+
+    // Prepend a separator, additional actions get added to the top of the menu
+    QAction *separator = menu->insertSeparator(
+            menu->actions().isEmpty() ? 0 : menu->actions().first() );
+
+    // Add an action for "include()" function calls to open the included script file
+    if ( node && node->line() == position.line() + 1 ) {
+        FunctionCallNode *functionCallNode = node->searchUp<FunctionCallNode>();
+        if ( functionCallNode && functionCallNode->function() == QLatin1String("include") ) {
+            // Get the argument given to the include() function call
+            QString fileName = functionCallNode->arguments()->children().first()->text();
+
+            // Create action and make a queued connection (last parameter).
+            // The queued connection is needed, because otherwise the action causes the view
+            // to be hidden (opening the new tab), while the menu was not closed already,
+            // which leads to a crash
+            QAction *openExternalAction = project()->createAndConnectProjectAction(
+                    Project::ShowExternalScript, fileName, 0, true );
+            menu->insertAction( separator, openExternalAction );
+        } else {
+            FunctionNode *functionNode = node->searchUp<FunctionNode>();
+            if ( functionNode ) {
+                if ( functionNode->name() == ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE ) {
+                    QAction *runDeparturesTestAction = project()->createAndConnectProjectAction(
+                            Project::RunSpecificTest, TestModel::DepartureTest, 0, true );
+                    QAction *runArrivalsTestAction = project()->createAndConnectProjectAction(
+                            Project::RunSpecificTest, TestModel::ArrivalTest, 0, true );
+                    menu->insertAction( separator, runDeparturesTestAction );
+                    menu->insertAction( separator, runArrivalsTestAction );
+                } else if ( functionNode->name() == ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS ) {
+                    QAction *runJounreysTestAction = project()->createAndConnectProjectAction(
+                            Project::RunSpecificTest, TestModel::JourneyTest, 0, true );
+                    menu->insertAction( separator, runJounreysTestAction );
+                } else if ( functionNode->name() == ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS ) {
+                    QAction *runStopSuggestionsTestAction = project()->createAndConnectProjectAction(
+                            Project::RunSpecificTest, TestModel::StopSuggestionTest, 0, true );
+                    menu->insertAction( separator, runStopSuggestionsTestAction );
+                } else if ( functionNode->name() == ServiceProviderScript::SCRIPT_FUNCTION_FEATURES ) {
+                    QAction *runFeaturesTestAction = project()->createAndConnectProjectAction(
+                            Project::RunSpecificTest, TestModel::FeaturesTest, 0, true );
+                    menu->insertAction( separator, runFeaturesTestAction );
+                }
+            }
+        }
+    }
+
+    // Add project menu
+    menu->insertAction( separator, project()->projectSubMenuAction().data() );
 }
 
 void ScriptTab::informationMessage( KTextEditor::View*, const QString &message )
