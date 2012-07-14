@@ -266,6 +266,11 @@ public:
 
     void setValuesOf( const Breakpoint &breakpoint );
 
+    /** @brief Compares line number and file name, which unambiguously identify a breakpoint. */
+    inline bool operator ==( const Breakpoint &other ) const {
+        return m_lineNumber == other.m_lineNumber && m_fileName == other.m_fileName;
+    };
+
 protected:
     /** @brief Gets called by Debugger if this breakpoint was reached. */
     void reached();
