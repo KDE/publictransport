@@ -828,6 +828,9 @@ public slots:
     /** @brief Emit a request to make this project active. */
     void setAsActiveProject() { emit setAsActiveProjectRequest(); };
 
+    /** @brief Aborts the debugger if it is running or updates the UI state to the debugger state. */
+    void abortDebugger();
+
     /**
      * @brief Test the project, eg. for syntax errors in the script, correct results.
      * @see RunAllTests

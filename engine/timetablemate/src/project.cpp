@@ -2266,7 +2266,7 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
                                  flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case AbortDebugger:
-        d->connectProjectAction( actionType, action, doConnect, d->debugger, SLOT(abortDebugger()),
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(abortDebugger()),
                                  flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case ToggleBreakpoint:
@@ -3396,6 +3396,20 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
 }
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+void Project::abortDebugger()
+{
+    Q_D( Project );
+    if ( !d->debugger->isRunning() ) {
+        // The abort action should have been disabled,
+        // no stopped signal received? Update UI state to debugger state
+        kDebug() << "Internal error, debugger not running, update UI state";
+        d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
+                                                            << DebuggerActionGroup );
+    } else {
+        d->debugger->abortDebugger();
+    }
+}
+
 void Project::toggleBreakpoint( int lineNumber )
 {
     Q_D( Project );
