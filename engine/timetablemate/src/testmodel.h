@@ -47,13 +47,14 @@ struct TimetableDataRequestMessage {
     Q_DECLARE_FLAGS( Features, Feature );
 
     TimetableDataRequestMessage( const QString &message, Type type = Information,
-                                 int lineNumber = -1, Features features = NoFeature,
-                                 const QVariant &data = QVariant() )
-            : message(message), type(type), lineNumber(lineNumber),
+                                 const QString &fileName = QString(), int lineNumber = -1,
+                                 Features features = NoFeature, const QVariant &data = QVariant() )
+            : message(message), type(type), fileName(fileName), lineNumber(lineNumber),
               features(features), data(data) {};
 
     QString message;
     Type type;
+    QString fileName;
     int lineNumber;
     Features features;
     QVariant data;
