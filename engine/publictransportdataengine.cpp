@@ -340,34 +340,22 @@ PublicTransportEngine::ProviderPointer PublicTransportEngine::providerFromId(
     }
 }
 
-bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString& name )
+bool PublicTransportEngine::updateServiceProviderForCountrySource( const SourceData &data )
 {
     QString providerId;
-    if ( name.contains('_') ) {
+    if ( data.defaultParameter.contains('_') ) {
         // Seems that a service provider ID is given
-        QStringList s = name.split( ' ', QString::SkipEmptyParts );
-        if ( s.count() < 2 ) {
-            return false;
-        }
-
-        providerId = s[1];
+        providerId = data.defaultParameter;
     } else {
         // Assume a country code in name
         if ( !updateServiceProviderSource() || !updateLocationSource() ) {
             return false;
         }
 
-        // name is expected to contain two words, the first is the ServiceProvider keyword, the
-        // second is the location (ie. "international" or a two letter country code).
-        QStringList s = name.split( ' ', QString::SkipEmptyParts );
-        if ( s.count() < 2 ) {
-            // No location found in name
-            return false;
-        }
-
-        QString countryCode = s[1];
+        // The defaultParameter stored in data is a location code
+        // (ie. "international" or a two letter country code)
         QVariantHash locations = m_dataSources[ sourceTypeKeyword(LocationsSource) ].toHash();
-        QVariantHash locationCountry = locations[ countryCode.toLower() ].toHash();
+        QVariantHash locationCountry = locations[ data.defaultParameter.toLower() ].toHash();
         QString defaultProvider = locationCountry[ "defaultProvider" ].toString();
         if ( defaultProvider.isEmpty() ) {
             return false;
@@ -379,11 +367,11 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const QString
     QVariantHash providerData;
     QString errorMessage;
     if ( testServiceProvider(providerId, &providerData, &errorMessage) ) {
-        setData( name, providerData );
-        setData( name, "error", false );
+        setData( data.name, providerData );
+        setData( data.name, "error", false );
     } else {
-        setData( name, "error", true );
-        setData( name, "errorMessage", errorMessage );
+        setData( data.name, "error", true );
+        setData( data.name, "errorMessage", errorMessage );
     }
     return true;
 }
@@ -580,7 +568,7 @@ bool PublicTransportEngine::updateLocationSource()
     return true;
 }
 
-QString PublicTransportEngine::providerIdFromSourceName( const QString &sourceName ) const
+QString PublicTransportEngine::providerIdFromSourceName( const QString &sourceName )
 {
     const int pos = sourceName.indexOf( ' ' );
     if ( pos == -1 ) { //|| pos = sourceName.length() - 1 ) {
@@ -591,134 +579,65 @@ QString PublicTransportEngine::providerIdFromSourceName( const QString &sourceNa
     return sourceName.mid( pos + 1, endPos - pos - 1 ).trimmed();
 }
 
-bool PublicTransportEngine::updateTimetableDataSource( const QString &name )
+ParseDocumentMode PublicTransportEngine::parseModeFromSourceType(
+        PublicTransportEngine::SourceType type )
 {
-    const QString nonAmbiguousName = name.toLower();
+    switch ( type ) {
+    case DeparturesSource:
+        return ParseForDepartures;
+    case ArrivalsSource:
+        return ParseForArrivals;
+    case StopsSource:
+        return ParseForStopSuggestions;
+    case JourneysDepSource:
+        return ParseForJourneysByDepartureTime;
+    case JourneysArrSource:
+        return ParseForJourneysByArrivalTime;
+    case JourneysSource:
+        return ParseForJourneysByDepartureTime;
+    default:
+        return ParseInvalid;
+    }
+}
+
+bool PublicTransportEngine::updateTimetableDataSource( const SourceData &data )
+{
+    const QString nonAmbiguousName = data.name.toLower();
     bool containsDataSource = m_dataSources.contains( nonAmbiguousName );
     if ( containsDataSource && isSourceUpToDate(nonAmbiguousName) ) { // Data is stored in the map and up to date
-        kDebug() << "Data source" << name << "is up to date";
+        kDebug() << "Data source" << data.name << "is up to date";
         QVariantHash dataSource = m_dataSources[nonAmbiguousName].toHash();
         for ( QVariantHash::const_iterator it = dataSource.constBegin();
-                it != dataSource.constEnd(); ++it ) {
-            setData( name, it.key(), it.value() );
+              it != dataSource.constEnd(); ++it )
+        {
+            setData( data.name, it.key(), it.value() );
         }
     } else if ( m_runningSources.contains(nonAmbiguousName) ) {
         // Source gets already processed
-        kDebug() << "Source already gets processed, please wait" << name;
+        kDebug() << "Source already gets processed, please wait" << data.name;
     } else { // Request new data
         if ( containsDataSource ) {
             m_dataSources.remove( nonAmbiguousName ); // Clear old data
         }
-
-        ParseDocumentMode parseDocumentMode;
-        QString serviceProviderId, city, stop, targetStop, originStop;
-        QDateTime dateTime;
-        // Get 100 items by default to limit server requests (data is cached).
-        // For fast results that are only needed once small numbers should be used.
-        int maxCount = 100;
-
-        SourceType sourceType = sourceTypeFromName( name );
-        switch ( sourceType ) {
-        case DeparturesSource:
-            parseDocumentMode = ParseForDepartures;
-            break;
-        case ArrivalsSource:
-            parseDocumentMode = ParseForArrivals;
-            break;
-        case StopsSource:
-            parseDocumentMode = ParseForStopSuggestions;
-            break;
-        case JourneysDepSource:
-            parseDocumentMode = ParseForJourneysByDepartureTime;
-            break;
-        case JourneysArrSource:
-            parseDocumentMode = ParseForJourneysByArrivalTime;
-            break;
-        case JourneysSource:
-            parseDocumentMode = ParseForJourneysByDepartureTime;
-            break;
-        default:
-            kDebug() << "Unknown source type" << sourceType;
+        if ( data.parseMode == ParseInvalid || !data.request ) {
             return false;
         }
 
-        // Extract parameters, which follow after the source type keyword in name
-        // and are delimited with '|'
-        QStringList parameters = name.mid( QString(sourceTypeKeyword(sourceType)).length() )
-                .trimmed().split( '|', QString::SkipEmptyParts );
-
-        // Read parameters
-        for ( int i = 0; i < parameters.length(); ++i ) {
-            QString s = parameters.at( i );
-            if ( s.startsWith(QLatin1String("city="), Qt::CaseInsensitive) ) {
-                city = s.mid( QString("city=").length() ).trimmed();
-            } else if ( s.startsWith(QLatin1String("stop="), Qt::CaseInsensitive) ) {
-                stop = s.mid( QString("stop=").length() ).trimmed();
-            } else if ( s.startsWith(QLatin1String("targetStop="), Qt::CaseInsensitive) ) {
-                targetStop = s.mid( QString("targetStop=").length() ).trimmed();
-            } else if ( s.startsWith(QLatin1String("originStop="), Qt::CaseInsensitive) ) {
-                originStop = s.mid( QString("originStop=").length() ).trimmed();
-            } else if ( s.startsWith(QLatin1String("timeoffset="), Qt::CaseInsensitive) ) {
-                s = s.mid( QString("timeoffset=").length() ).trimmed();
-                dateTime = QDateTime::currentDateTime().addSecs( s.toInt() * 60 );
-            } else if ( s.startsWith(QLatin1String("time="), Qt::CaseInsensitive) ) {
-                s = s.mid( QString("time=").length() ).trimmed();
-                dateTime = QDateTime( QDate::currentDate(), QTime::fromString(s, "hh:mm") );
-            } else if ( s.startsWith(QLatin1String("datetime="), Qt::CaseInsensitive) ) {
-                s = s.mid( QString("datetime=").length() ).trimmed();
-                dateTime = QDateTime::fromString( s );
-            } else if ( s.startsWith(QLatin1String("maxCount="), Qt::CaseInsensitive) ) {
-                bool ok;
-                maxCount = s.mid( QString("maxCount=").length() ).trimmed().toInt( &ok );
-                if ( !ok ) {
-                    kDebug() << "Bad value for 'maxCount' in source name:" << s;
-                    maxCount = 100;
-                }
-            } else if ( !s.isEmpty() && s.indexOf( '=' ) == -1 ) {
-                // No parameter name given, assume the service provider ID
-                serviceProviderId = s.trimmed();
-            } else {
-                kDebug() << "Unknown argument" << s;
-            }
-        }
-
-        if ( dateTime.isNull() ) {
-            // No date/time value given, use default offset from now
-            dateTime = QDateTime::currentDateTime().addSecs( DEFAULT_TIME_OFFSET * 60 );
-        }
-
-        if ( parseDocumentMode == ParseForDepartures ||
-             parseDocumentMode == ParseForArrivals ||
-             parseDocumentMode == ParseForStopSuggestions )
-        {
-            // Check if the stop name is missing
-            if ( stop.isEmpty() ) {
-                kDebug() << "Stop name is missing in data source name" << name;
-                return false;
-            }
-        } else { // if ( parseDocumentMode == ParseForJourneys )
-            if ( originStop.isEmpty() && !targetStop.isEmpty() ) {
-                originStop = stop;
-            } else if ( targetStop.isEmpty() && !originStop.isEmpty() ) {
-                targetStop = stop;
-            }
-        }
-
         // Try to get the specific provider from m_providers (if it's not in there it is created)
-        const ProviderPointer provider = providerFromId( serviceProviderId );
+        const ProviderPointer provider = providerFromId( data.defaultParameter );
         if ( provider.isNull() ) {
             return false; // Service provider couldn't be created
-        } else if ( provider->useSeparateCityValue() && city.isEmpty() ) {
+        } else if ( provider->useSeparateCityValue() && data.request->city.isEmpty() ) {
             kDebug() << QString( "Service provider %1 needs a separate city value. Add to "
                                  "source name '|city=X', where X stands for the city "
-                                 "name." ).arg( serviceProviderId );
+                                 "name." ).arg( data.defaultParameter );
             return false; // Service provider needs a separate city value
         } else if ( !provider->features().contains("JourneySearch") &&
-                    (parseDocumentMode == ParseForJourneysByDepartureTime ||
-                     parseDocumentMode == ParseForJourneysByArrivalTime) )
+                    (data.parseMode == ParseForJourneysByDepartureTime ||
+                     data.parseMode == ParseForJourneysByArrivalTime) )
         {
             kDebug() << QString( "Service provider %1 doesn't support journey searches." )
-                        .arg( serviceProviderId );
+                        .arg( data.defaultParameter );
             return false; // Service provider doesn't support journey searches
         }
 
@@ -726,20 +645,7 @@ bool PublicTransportEngine::updateTimetableDataSource( const QString &name )
         // request if there is already a running one
         m_runningSources << nonAmbiguousName;
 
-        if ( parseDocumentMode == ParseForDepartures ) {
-            provider->requestDepartures( DepartureRequest(name, stop, dateTime, maxCount,
-                                                          city, parseDocumentMode) );
-        } else if ( parseDocumentMode == ParseForArrivals ) {
-            provider->requestArrivals( ArrivalRequest(name, stop, dateTime, maxCount,
-                                                      city, parseDocumentMode) );
-        } else if ( parseDocumentMode == ParseForStopSuggestions ) {
-            provider->requestStopSuggestions( StopSuggestionRequest(name, stop, maxCount,
-                                                                    city, parseDocumentMode) );
-        } else { // if ( parseDocumentMode == ParseForJourneysByDepartureTime or ...ByArrivalTime )
-            provider->requestJourneys( JourneyRequest(name, originStop, targetStop, dateTime,
-                                                      maxCount, QString(), QString(),
-                                                      parseDocumentMode) );
-        }
+        provider->request( data.request );
     }
 
     return true;
@@ -840,7 +746,7 @@ const QLatin1String PublicTransportEngine::sourceTypeKeyword( SourceType sourceT
 }
 
 PublicTransportEngine::SourceType PublicTransportEngine::sourceTypeFromName(
-    const QString& sourceName ) const
+        const QString &sourceName )
 {
     if ( sourceName.startsWith(sourceTypeKeyword(ServiceProviderSource) + ' ', Qt::CaseInsensitive) ) {
         return ServiceProviderSource;
@@ -868,12 +774,161 @@ PublicTransportEngine::SourceType PublicTransportEngine::sourceTypeFromName(
     }
 }
 
+PublicTransportEngine::SourceData::SourceData( const QString &name )
+        : name(name), type(sourceTypeFromName(name)), parseMode(parseModeFromSourceType(type)),
+          request(0)
+{
+    if ( isDataRequestingSourceType(type) ) {
+        switch ( parseMode ) {
+        case ParseForDepartures:
+            request = new DepartureRequest( name, parseMode );
+            break;
+        case ParseForArrivals:
+            request = new ArrivalRequest( name, parseMode );
+            break;
+        case ParseForStopSuggestions:
+            request = new StopSuggestionRequest( name, parseMode );
+            break;
+        case ParseForJourneysByDepartureTime:
+        case ParseForJourneysByArrivalTime:
+            request = new JourneyRequest( name, parseMode );
+            break;
+        default:
+            kWarning() << "Cannot create a request for parse mode" << parseMode;
+            return;
+        }
+
+        // Extract parameters, which follow after the source type keyword in name
+        // and are delimited with '|'
+        QStringList parameters = name.mid( QString(sourceTypeKeyword(type)).length() )
+                .trimmed().split( '|', QString::SkipEmptyParts );
+
+        // Read parameters
+        for ( int i = 0; i < parameters.length(); ++i ) {
+            const QString parameter = parameters.at( i ).trimmed();
+            const int pos = parameter.indexOf( '=' );
+            if ( pos == -1 ) {
+                if ( !defaultParameter.isEmpty() ) {
+                    kWarning() << "More than one parameters without name given:"
+                               << defaultParameter << parameter;
+                }
+
+                // No parameter name given, assume the service provider ID
+                defaultParameter = parameter;
+            } else {
+                const QString parameterName = parameter.left( pos ).toLower();
+                const QString parameterValue = parameter.mid( pos + 1 ).trimmed();
+                if ( parameterValue.isEmpty() ) {
+                    kWarning() << "Empty parameter value for parameter" << parameterName;
+                } else if ( parameterName == QLatin1String("city") ) {
+                    request->city = parameterValue;
+                } else if ( parameterName == QLatin1String("stop") ) {
+                    request->stop = parameterValue;
+                } else if ( parameterName == QLatin1String("targetStop") ) {
+                    JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
+                    if ( !journeyRequest ) {
+                        kWarning() << "The \"targetStop\" parameter is only used for journey requests";
+                    }
+                    journeyRequest->targetStop = parameterValue;
+                } else if ( parameterName == QLatin1String("originStop") ) {
+                    JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
+                    if ( !journeyRequest ) {
+                        kWarning() << "The \"originStop\" parameter is only used for journey requests";
+                    }
+                    journeyRequest->stop = parameterValue;
+                } else if ( parameterName == QLatin1String("timeoffset") ) {
+                    request->dateTime =
+                            QDateTime::currentDateTime().addSecs( parameterValue.toInt() * 60 );
+                } else if ( parameterName == QLatin1String("time") ) {
+                    request->dateTime = QDateTime( QDate::currentDate(),
+                                                     QTime::fromString(parameterValue, "hh:mm") );
+                } else if ( parameterName == QLatin1String("datetime") ) {
+                    request->dateTime = QDateTime::fromString( parameterValue );
+                } else if ( parameterName == QLatin1String("maxCount") ) {
+                    bool ok;
+                    request->maxCount = parameterValue.toInt( &ok );
+                    if ( !ok ) {
+                        kDebug() << "Bad value for 'maxCount' in source name:" << parameterValue;
+                        request->maxCount = -1;
+                    }
+                } else {
+                    kDebug() << "Unknown argument" << parameterName;
+                }
+            }
+        }
+
+        if ( !request->dateTime.isValid() ) {
+            // No date/time value given, use default offset from now
+            request->dateTime = QDateTime::currentDateTime().addSecs( DEFAULT_TIME_OFFSET * 60 );
+        }
+
+        if ( parseMode == ParseForJourneysByArrivalTime ||
+             parseMode == ParseForJourneysByDepartureTime )
+        {
+            // Use "stop" parameter as "originStop"/"targetStop" if it is not set
+            JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
+            if ( !journeyRequest->stop.isEmpty() ) {
+                journeyRequest->stop = journeyRequest->stop;
+            } else if ( !journeyRequest->targetStop.isEmpty() ) {
+                journeyRequest->targetStop = journeyRequest->stop;
+            }
+        }
+    } else if ( type == ServiceProviderSource ) {
+        // Extract provider ID or country code, which follow after the source type keyword in name
+        defaultParameter = name.mid( QString(sourceTypeKeyword(type)).length() ).trimmed();
+    }
+}
+
+PublicTransportEngine::SourceData::~SourceData()
+{
+    delete request;
+}
+
+bool PublicTransportEngine::SourceData::isValid() const
+{
+    if ( type == InvalidSourceName ) {
+        return false;
+    }
+
+    if ( isDataRequestingSourceType(type) ) {
+        if ( defaultParameter.isEmpty() ) {
+            kWarning() << "No provider ID given in source name" << name;
+            return false;
+        } else if ( parseMode == ParseForDepartures || parseMode == ParseForArrivals ||
+                    parseMode == ParseForStopSuggestions )
+        {
+            // Check if the stop name is missing
+            if ( !request || request->stop.isEmpty() ) {
+                kWarning() << "Stop name is missing in data source name" << name;
+                return false;
+            }
+        } else if ( parseMode == ParseForJourneysByArrivalTime ||
+                    parseMode == ParseForJourneysByDepartureTime )
+        {
+            // Make sure non empty originStop and targetStop parameters are filled
+            JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
+            if ( !journeyRequest || journeyRequest->stop.isEmpty() ||
+                 journeyRequest->targetStop.isEmpty() )
+            {
+                kWarning() << "Origin and/or target stop names are missing in data source name" << name;
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 bool PublicTransportEngine::updateSourceEvent( const QString &name )
 {
-    SourceType sourceType = sourceTypeFromName( name );
-    switch ( sourceType ) {
+    SourceData sourceData( name );
+    if ( !sourceData.isValid() ) {
+        return false;
+    }
+
+    switch ( sourceData.type ) {
     case ServiceProviderSource:
-        return updateServiceProviderForCountrySource( name );
+        return updateServiceProviderForCountrySource( sourceData );
     case ServiceProvidersSource:
         return updateServiceProviderSource();
     case ErroneousServiceProvidersSource:
@@ -886,7 +941,7 @@ bool PublicTransportEngine::updateSourceEvent( const QString &name )
     case JourneysSource:
     case JourneysArrSource:
     case JourneysDepSource:
-        return updateTimetableDataSource( name );
+        return updateTimetableDataSource( sourceData );
     case InvalidSourceName:
     default:
         kDebug() << "Source name incorrect" << name;

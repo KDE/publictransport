@@ -154,6 +154,15 @@ public:
     const ServiceProviderData *data() const { return m_data; };
 
     /**
+     * @brief Checks the type of @p request and calls the associated request function.
+     *
+     * Calls requestDepartures() if @p request is of type DepartureRequest, requestArrivals()
+     * if @p request is of type ArrivalRequest and so on. The request object being pointed to
+     * by @p request can be deleted after calling this function.
+     **/
+    void request( AbstractRequest *request );
+
+    /**
      * @brief Requests a list of departures.
      *
      * When the departure list is completely received @ref departureListReceived gets emitted.

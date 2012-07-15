@@ -70,6 +70,7 @@ public:
         InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName, if
                 * the source name is invalid. */
 
+        // Data sources providing information about the engine, available providers
         ServiceProviderSource = 1, /**< The source contains information about available
                 * service providers for a given country. */
         ServiceProvidersSource = 2, /**< The source contains information about available
@@ -79,6 +80,7 @@ public:
         LocationsSource = 4, /**< The source contains information about locations
                 * for which supported service providers exist. */
 
+        // Data sources providing timetable data
         DeparturesSource = 10, /**< The source contains timetable data for departures. */
         ArrivalsSource, /**< The source contains timetable data for arrivals. */
         StopsSource, /**< The source contains a list of stop suggestions. */
@@ -95,20 +97,42 @@ public:
     /** @brief Destructor. */
     ~PublicTransportEngine();
 
-    /** @brief Gets the keyword used in source names associated with the given @p sourceType. */
+    /** @brief Contains data read from a data source name. */
+    struct SourceData {
+        /** @brief Reads the given data source @p name and fills member variables. */
+        SourceData( const QString &name );
+
+        /** @brief Deletes the request object if it was created. */
+        ~SourceData();
+
+        /** @brief Whether or not the source name is valid. */
+        bool isValid() const;
+
+        QString name; /**< The complete data source name. */
+        QString defaultParameter; /**< A parameter without name read from the source name.
+                * This can be a provider ID or a location code. */
+        SourceType type; /**< The type of the data source. */
+        ParseDocumentMode parseMode; /**< Parse mode for requesting data sources. */
+        AbstractRequest *request; /**< A request object created for requesting data sources. */
+    };
+
+    /** @brief Get the keyword used in source names associated with the given @p sourceType. */
     static const QLatin1String sourceTypeKeyword( SourceType sourceType );
 
-    /** @brief Gets the source type associated with the given @p sourceName. */
-    SourceType sourceTypeFromName( const QString &sourceName ) const;
+    /** @brief Get ParseDocumentMode associated with the given @p sourceType. */
+    static ParseDocumentMode parseModeFromSourceType( SourceType sourceType );
+
+    /** @brief Get the SourceType associated with the given @p sourceName. */
+    static SourceType sourceTypeFromName( const QString &sourceName );
+
+    /** @brief Whether or not a data source of the given @p sourceType may request data from a server. */
+    static bool isDataRequestingSourceType( SourceType sourceType ) {
+        return static_cast< int >( sourceType ) >= 10; };
+
+    static QString providerIdFromSourceName( const QString &sourceName );
 
     /** @brief Reimplemented to add some always visible default sources. */
     virtual QStringList sources() const;
-
-    /** @brief Whether or not a data source of the given @p sourceType may request data from a server. */
-    bool isDataRequestingSourceType( SourceType sourceType ) const {
-        return static_cast< int >( sourceType ) >= 10; };
-
-    QString providerIdFromSourceName( const QString &sourceName ) const;
 
     /**
      * @brief Minimum timeout in seconds to request new data.
@@ -129,7 +153,8 @@ public:
     /**
      * @brief The default time offset from now for the first departure/arrival/journey in results.
      *
-     * This is used if it wasn't specified in the source name.
+     * This is used if no time was specified in the source name with the parameter @c time,
+     * @c dateTime or @c timeOffset.
      **/
     static const int DEFAULT_TIME_OFFSET;
 
@@ -178,7 +203,7 @@ protected:
      *   "ServiceProvider de_db".
      * @return True, if the data source could be updated successfully. False, otherwise.
      **/
-    bool updateServiceProviderForCountrySource( const QString &name );
+    bool updateServiceProviderForCountrySource( const SourceData &sourceData );
 
     /**
      * @brief Updates the ErrornousServiceProviders data source.
@@ -199,10 +224,8 @@ protected:
      **/
     bool updateLocationSource();
 
-    bool updateTimetableDataSource( const QString &name );
-
     /**
-     * @brief Updates the timetable data source with the given @p name.
+     * @brief Updates the timetable data source with the given @p data.
      *
      * Timetable data may be one of these here: Departure, arrivals, journeys (to or from the home
      * stop) or stop suggestions.
@@ -214,7 +237,7 @@ protected:
      *
      * @return True, if the data source could be updated successfully. False, otherwise.
      **/
-    bool updateTimetableSource( const QString &name );
+    bool updateTimetableDataSource( const SourceData &data );
 
     /**
      * @brief Wheather or not the data source with the given @p name is up to date.

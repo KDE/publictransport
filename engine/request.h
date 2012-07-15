@@ -65,11 +65,10 @@ struct AbstractRequest {
 
     static QString parseModeName( ParseDocumentMode parseMode );
 
-    AbstractRequest( ParseDocumentMode parseMode = ParseInvalid )
+    AbstractRequest( const QString &sourceName = QString(),
+                     ParseDocumentMode parseMode = ParseInvalid )
+            : sourceName(sourceName), maxCount(-1), parseMode(parseMode)
     {
-        this->parseMode = parseMode;
-        this->maxCount = -1;
-        this->parseMode = ParseForStopSuggestions;
     };
 
     AbstractRequest( const QString &sourceName, const QString &stop, const QDateTime &dateTime,
@@ -99,8 +98,9 @@ struct AbstractRequest {
 };
 
 struct StopSuggestionRequest : public AbstractRequest {
-    StopSuggestionRequest()
-        : AbstractRequest(ParseForStopSuggestions) {};
+    StopSuggestionRequest( const QString &sourceName = QString(),
+                           ParseDocumentMode parseMode = ParseForStopSuggestions )
+        : AbstractRequest(sourceName, parseMode) {};
     StopSuggestionRequest( const QString &sourceName, const QString &stop,
                            int maxCount, const QString &city = QString(),
                            ParseDocumentMode parseMode = ParseForStopSuggestions )
@@ -121,8 +121,9 @@ struct StopSuggestionRequest : public AbstractRequest {
 };
 
 struct DepartureRequest : public AbstractRequest {
-    DepartureRequest( ParseDocumentMode parseMode = ParseForDepartures )
-        : AbstractRequest(parseMode) {};
+    DepartureRequest( const QString &sourceName = QString(),
+                      ParseDocumentMode parseMode = ParseForDepartures )
+        : AbstractRequest(sourceName, parseMode) {};
     DepartureRequest( const QString &sourceName, const QString &stop,
                       const QDateTime &dateTime, int maxCount,
                       const QString &city = QString(),
@@ -144,8 +145,9 @@ struct DepartureRequest : public AbstractRequest {
 };
 
 struct ArrivalRequest : public DepartureRequest {
-    ArrivalRequest( ParseDocumentMode parseMode = ParseForArrivals )
-        : DepartureRequest(parseMode) {};
+    ArrivalRequest( const QString &sourceName = QString(),
+                    ParseDocumentMode parseMode = ParseForArrivals )
+        : DepartureRequest(sourceName, parseMode) {};
     ArrivalRequest( const QString &sourceName, const QString &stop,
                     const QDateTime &dateTime, int maxCount,
                     const QString &city = QString(),
@@ -179,9 +181,10 @@ struct JourneyRequest : public AbstractRequest {
     /** @brief Current number of round trips used to fulfil the journey request. */
     int roundTrips;
 
-    JourneyRequest() : AbstractRequest(ParseForJourneysByDepartureTime)
+    JourneyRequest( const QString &sourceName = QString(),
+                    ParseDocumentMode parseMode = ParseForJourneysByDepartureTime )
+            : AbstractRequest(sourceName, parseMode), roundTrips(0)
     {
-        this->roundTrips = 0;
     };
 
     JourneyRequest( const QString &sourceName, const QString &startStop,

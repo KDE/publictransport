@@ -105,6 +105,33 @@ QStringList ServiceProvider::featuresLocalized() const
     return ServiceProviderGlobal::localizeFeatures( features() );
 }
 
+void ServiceProvider::request( AbstractRequest *request )
+{
+    StopSuggestionRequest *stopSuggestionRequest = dynamic_cast< StopSuggestionRequest* >( request );
+    if ( stopSuggestionRequest ) {
+        requestStopSuggestions( *stopSuggestionRequest );
+        return;
+    }
+
+    DepartureRequest *departureRequest = dynamic_cast< DepartureRequest* >( request );
+    if ( departureRequest ) {
+        requestDepartures( *departureRequest );
+        return;
+    }
+
+    ArrivalRequest *arrivalRequest = dynamic_cast< ArrivalRequest* >( request );
+    if ( arrivalRequest ) {
+        requestArrivals( *arrivalRequest );
+        return;
+    }
+
+    JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
+    if ( journeyRequest ) {
+        requestJourneys( *journeyRequest );
+        return;
+    }
+}
+
 void ServiceProvider::requestDepartures( const DepartureRequest &request )
 {
     Q_UNUSED( request );
