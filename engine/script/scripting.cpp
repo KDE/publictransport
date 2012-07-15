@@ -767,10 +767,10 @@ QString Helper::encodeHtmlEntities( const QString &html )
     return Global::encodeHtmlEntities( html );
 }
 
-void Helper::error( const QString& message, const QString &failedParseText )
+void Helper::error( const QString& message, const QString &failedParseText, ErrorSeverity severity )
 {
     QScriptContextInfo info( context()->parentContext() );
-    emit errorReceived( message, info, failedParseText );
+    emit errorReceived( message, info, failedParseText, severity );
 
     // Output debug message and a maximum count of 200 characters of the text where the parsing failed
     QString shortParseText = failedParseText.trimmed().left(350);

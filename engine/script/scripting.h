@@ -756,8 +756,15 @@ private:
  **/
 class Helper : public QObject, protected QScriptable {
     Q_OBJECT
+    Q_ENUMS( ErrorSeverity )
 
 public:
+    enum ErrorSeverity {
+        Information,
+        Warning,
+        Fatal
+    };
+
     /**
      * @brief Creates a new helper object.
      *
@@ -777,8 +784,10 @@ public:
      *
      * @param message The error message.
      * @param failedParseText The text in the source document where parsing failed.
+     * @param severity The severity of the error.
      **/
-    Q_INVOKABLE void error( const QString &message, const QString &failedParseText = QString() );
+    Q_INVOKABLE void error( const QString &message, const QString &failedParseText = QString(),
+                            Helper::ErrorSeverity severity = Warning );
 
 //     /** TODO Implement decode() function for scripts, eg. for version 0.3.1
 //      * @brief Decodes HTML entities in @p html.
@@ -1161,9 +1170,11 @@ signals:
      *
      * @param message The error message.
      * @param failedParseText The text in the source document where parsing failed.
+     * @param severity The severity of the error.
      **/
     void errorReceived( const QString &message, const QScriptContextInfo &contextInfo,
-                        const QString &failedParseText = QString() );
+                        const QString &failedParseText = QString(),
+                        Helper::ErrorSeverity severity = Warning );
 
 private:
     static QString getTagName( const QVariantMap &searchResult, const QString &type = "contents",

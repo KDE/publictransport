@@ -32,6 +32,9 @@
 // Own includes
 #include "../testmodel.h" // For TestModel::TimetableDataRequestMessage
 
+// Includes form the PublicTransport engine
+#include <engine/script/scripting.h>
+
 class QEventLoop;
 namespace Scripting
 {
@@ -82,7 +85,7 @@ protected slots:
      * This slot gets connected to the errorReceived() signal of the scripts Helper object.
      **/
     void scriptErrorReceived( const QString &message, const QScriptContextInfo &context,
-                              const QString &failedParseText );
+                              const QString &failedParseText, Helper::ErrorSeverity severity );
 
     /**
      * @brief Collect error messages generated in ResultObject::addData() as additional messages.
@@ -150,7 +153,7 @@ protected:
     TimetableDataRequestMessage message( MessageType messageType, Enums::TimetableInformation info1,
             Enums::TimetableInformation info2, int count1, int count2,
             TimetableDataRequestMessage::Type type = TimetableDataRequestMessage::Warning,
-            int lineNumber = -1 );
+            const QString &fileName = QString(), int lineNumber = -1 );
 
     const DebugFlags m_debugFlags;
     QString m_functionName;

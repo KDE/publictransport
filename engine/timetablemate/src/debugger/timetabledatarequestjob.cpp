@@ -39,6 +39,7 @@
 // Qt includes
 #include <QEventLoop>
 #include <QTimer>
+#include <QFileInfo>
 
 namespace Debugger {
 
@@ -284,8 +285,8 @@ void CallScriptFunctionJob::debuggerRun()
     // messages sent to "helper.error()" from a script
     Helper *scriptHelper = qobject_cast< Helper* >(
             engine->globalObject().property("helper").toQObject() );
-    connect( scriptHelper, SIGNAL(errorReceived(QString,QScriptContextInfo,QString)),
-             this, SLOT(scriptErrorReceived(QString,QScriptContextInfo,QString)) );
+    connect( scriptHelper, SIGNAL(errorReceived(QString,QScriptContextInfo,QString,Helper::ErrorSeverity)),
+             this, SLOT(scriptErrorReceived(QString,QScriptContextInfo,QString,Helper::ErrorSeverity)) );
 
     connect( scriptResult, SIGNAL(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)),
              this, SLOT(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)) );
@@ -424,13 +425,27 @@ void CallScriptFunctionJob::debuggerRun()
 
 void CallScriptFunctionJob::scriptErrorReceived( const QString &message,
                                                  const QScriptContextInfo &context,
-                                                 const QString &failedParseText )
+                                                 const QString &failedParseText,
+                                                 Helper::ErrorSeverity severity )
 {
     Q_UNUSED( failedParseText );
+    TimetableDataRequestMessage::Type type;
+    switch ( severity ) {
+    case Helper::Information:
+        type = TimetableDataRequestMessage::Information;
+        break;
+    case Helper::Warning:
+        type = TimetableDataRequestMessage::Warning;
+        break;
+    case Helper::Fatal:
+        type = TimetableDataRequestMessage::Error;
+        break;
+    }
     m_additionalMessages << TimetableDataRequestMessage(
-            i18nc("@info/plain", "Error in line %1: <message>%2</message>",
-                  context.lineNumber(), message),
-            TimetableDataRequestMessage::Warning, context.lineNumber() );
+            i18nc("@info/plain", "Error in file <filename>%1</filename>, line %2: "
+                  "<message>%3</message>",
+                  QFileInfo(context.fileName()).fileName(), context.lineNumber(), message),
+            type, context.fileName(), context.lineNumber() );
 }
 
 void CallScriptFunctionJob::invalidDataReceived( Enums::TimetableInformation information,
@@ -443,7 +458,7 @@ void CallScriptFunctionJob::invalidDataReceived( Enums::TimetableInformation inf
     m_additionalMessages << TimetableDataRequestMessage(
             i18nc("@info/plain", "Invalid data in result %1, line %2: <message>%3</message>",
                   index + 1, context.lineNumber(), message),
-            TimetableDataRequestMessage::Error, context.lineNumber() );
+            TimetableDataRequestMessage::Error, context.fileName(), context.lineNumber() );
 }
 
 void CallScriptFunctionJob::requestFinished( NetworkRequest *request, const QString &data, int size )
@@ -451,8 +466,8 @@ void CallScriptFunctionJob::requestFinished( NetworkRequest *request, const QStr
     m_additionalMessages << TimetableDataRequestMessage(
             i18nc("@info/plain", "Download finished: %1, <link>%2</link>",
                   KGlobal::locale()->formatByteSize(size), request->url()),
-            TimetableDataRequestMessage::Information, -1, TimetableDataRequestMessage::OpenLink,
-            request->url() );
+            TimetableDataRequestMessage::Information, QString(), -1,
+            TimetableDataRequestMessage::OpenLink, request->url() );
     emit asynchronousRequestWaitFinished( size );
 }
 
@@ -462,14 +477,14 @@ void CallScriptFunctionJob::synchronousRequestFinished( const QString &url, cons
     if ( cancelled ) {
         m_additionalMessages << TimetableDataRequestMessage(
                 i18nc("@info/plain", "Download cancelled/failed: <link>%1</link>", url),
-                TimetableDataRequestMessage::Warning, -1, TimetableDataRequestMessage::OpenLink,
-                url );
+                TimetableDataRequestMessage::Warning, QString(), -1,
+                TimetableDataRequestMessage::OpenLink, url );
     } else {
         m_additionalMessages << TimetableDataRequestMessage(
                 i18nc("@info/plain", "Download finished: %1, <link>%2</link>",
                       KGlobal::locale()->formatByteSize(size), url),
-                TimetableDataRequestMessage::Information, -1, TimetableDataRequestMessage::OpenLink,
-                url );
+                TimetableDataRequestMessage::Information, QString(), -1,
+                TimetableDataRequestMessage::OpenLink, url );
     }
     emit synchronousRequestWaitFinished( waitingTime, size );
 }
@@ -499,7 +514,7 @@ bool TimetableDataRequestJob::testResults()
 
 TimetableDataRequestMessage CallScriptFunctionJob::message( MessageType messageType,
         Enums::TimetableInformation info1, Enums::TimetableInformation info2, int count1, int count2,
-        TimetableDataRequestMessage::Type type, int lineNumber )
+        TimetableDataRequestMessage::Type type, const QString &fileName, int lineNumber )
 {
     QString msg;
     switch ( messageType ) {
@@ -520,7 +535,7 @@ TimetableDataRequestMessage CallScriptFunctionJob::message( MessageType messageT
         break;
     }
 
-    return TimetableDataRequestMessage( msg, type, lineNumber );
+    return TimetableDataRequestMessage( msg, type, fileName, lineNumber );
 }
 
 bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request )
