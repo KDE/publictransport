@@ -93,7 +93,8 @@ public:
 
 protected:
     /** @brief Constructor, directly starts the execution timer. */
-    ScriptRunData() : m_signalWaitingTime(0), m_interruptTime(0) {
+    ScriptRunData() : m_signalWaitingTime(0), m_interruptTime(0), m_synchronousDownloadTime(0),
+                      m_asynchronousDownloadSize(0), m_synchronousDownloadSize(0) {
         m_executionTimer.start();
     };
 
