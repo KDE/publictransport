@@ -654,10 +654,10 @@ void PublicTransportApplet::dataUpdated( const QString& sourceName,
     if ( data["error"].toBool() ) {
         // Error while parsing the data or no connection to server
         handleDataError( sourceName, data );
-    } else if ( data["receivedPossibleStopList"].toBool() ) {
+    } else if ( data.contains("stops") ) {
         // Stop suggestion list received
         processStopSuggestions( sourceName, data );
-    } else if ( data["parseMode"].toString() == QLatin1String("journeys") ) {
+    } else if ( data.contains("journeys") ) {
         // List of journeys received
         emit validJourneyDataReceived();
         if ( d->isStateActive("journeyView") ) {
@@ -665,9 +665,7 @@ void PublicTransportApplet::dataUpdated( const QString& sourceName,
         } else {
             kDebug() << "Received journey data, but journey list is hidden.";
         }
-    } else if ( data["parseMode"].toString() == QLatin1String("departures") ||
-                data["parseMode"].toString() == QLatin1String("arrivals") )
-    {
+    } else if ( data.contains("departures") || data.contains("arrivals") ) {
         // List of departures / arrivals received
         emit validDepartureDataReceived();
         d->departureProcessor->processDepartures( sourceName, data );

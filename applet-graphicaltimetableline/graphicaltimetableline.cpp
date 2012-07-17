@@ -424,30 +424,24 @@ void GraphicalTimetableLine::dataUpdated( const QString& sourceName,
     QDateTime updated;
     url = data["requestUrl"].toUrl();
     updated = data["updated"].toDateTime();
-    int count = data["count"].toInt();
-    kDebug() << "  - " << count << "departures to be processed";
-    for ( int i = 0; i < count; ++i ) {
-        QVariant dataItem = data.value( QString::number(i) );
-        // Don't process invalid data
-        if ( !dataItem.isValid() ) {
-            kDebug() << "Departure data for departure" << i << "is invalid" << data;
-            continue;
-        }
-
-        QVariantHash dataMap = dataItem.toHash();
-        VehicleType vehicleType = static_cast<VehicleType>( dataMap["vehicleType"].toInt() );
+    QVariantList departuresData = data.contains("departures") ? data["departures"].toList()
+                                                              : data["arrivals"].toList();
+    kDebug() << "  - " << departuresData.count() << "departures to be processed";
+    foreach ( const QVariant departure, departuresData ) {
+        QVariantHash departureHash = departure.toHash();
+        VehicleType vehicleType = static_cast<VehicleType>( departureHash["TypeOfVehicle"].toInt() );
         if ( !m_vehicleTypes.contains(vehicleType) ) {
             continue; // Fitlered
         }
 
-        QDateTime dateTime = dataMap["departure"].toDateTime();
+        QDateTime dateTime = departureHash["DepartureDateTime"].toDateTime();
         if ( QDateTime::currentDateTime().secsTo(dateTime) < -60 ) {
             kDebug() << "Got an old departure" << dateTime;
             continue;
         }
 
-        DepartureData departureData( dateTime, dataMap["line"].toString(),
-                                     dataMap["target"].toString(), vehicleType );
+        DepartureData departureData( dateTime, departureHash["TransportLine"].toString(),
+                                     departureHash["Target"].toString(), vehicleType );
 
         bool departureIsOld = false;
         foreach ( Departure *departure, m_departures ) {

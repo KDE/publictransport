@@ -68,9 +68,6 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
     // We ignore any arguments - data engines do not have much use for them
     Q_UNUSED( args )
 
-    m_lastJourneyCount = 0;
-    m_lastStopNameCount = 0;
-
     // This prevents applets from setting an unnecessarily high update interval
     // and using too much CPU.
     // 60 seconds should be enough, departure / arrival times have minute precision (except for GTFS).
@@ -422,11 +419,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
 
     // Remove all old data, some service providers may have been updated and are now erroneous
     removeAllData( name );
-    for ( QVariantHash::const_iterator it = dataSource.constBegin();
-          it != dataSource.constEnd(); ++it )
-    {
-        setData( name, it.key(), it.value() );
-    }
+    setData( name, dataSource );
     return true;
 }
 
@@ -551,20 +544,10 @@ bool PublicTransportEngine::updateErroneousServiceProviderSource()
 bool PublicTransportEngine::updateLocationSource()
 {
     const QLatin1String name = sourceTypeKeyword( LocationsSource );
-    QVariantHash dataSource;
-    if ( m_dataSources.keys().contains(name) ) {
-        dataSource = m_dataSources[name].toHash(); // locations already loaded
-    } else {
-        dataSource = locations();
-    }
+    QVariantHash dataSource = m_dataSources.contains(name)
+            ? m_dataSources[name].toHash() : locations();
     m_dataSources.insert( name, dataSource );
-
-    for ( QVariantHash::const_iterator it = dataSource.constBegin();
-          it != dataSource.constEnd(); ++it )
-    {
-        setData( name, it.key(), it.value() );
-    }
-
+    setData( name, dataSource );
     return true;
 }
 
@@ -606,12 +589,7 @@ bool PublicTransportEngine::updateTimetableDataSource( const SourceData &data )
     bool containsDataSource = m_dataSources.contains( nonAmbiguousName );
     if ( containsDataSource && isSourceUpToDate(nonAmbiguousName) ) { // Data is stored in the map and up to date
         kDebug() << "Data source" << data.name << "is up to date";
-        QVariantHash dataSource = m_dataSources[nonAmbiguousName].toHash();
-        for ( QVariantHash::const_iterator it = dataSource.constBegin();
-              it != dataSource.constEnd(); ++it )
-        {
-            setData( data.name, it.key(), it.value() );
-        }
+        setData( data.name, m_dataSources[nonAmbiguousName].toHash() );
     } else if ( m_runningSources.contains(nonAmbiguousName) ) {
         // Source gets already processed
         kDebug() << "Source already gets processed, please wait" << data.name;
@@ -949,94 +927,52 @@ bool PublicTransportEngine::updateSourceEvent( const QString &name )
     }
 }
 
-void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
-        const QUrl &requestUrl, const DepartureInfoList &departures,
+void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
+        const QUrl &requestUrl, const DepartureInfoList &items,
         const GlobalTimetableInfo &globalInfo, const DepartureRequest &request,
-        bool deleteDepartureInfos )
+        bool deleteDepartureInfos, bool isDepartureData )
 {
     const QString sourceName = request.sourceName;
-    kDebug() << departures.count() << "departures received" << sourceName;
+    kDebug() << items.count() << (isDepartureData ? "departures" : "arrivals")
+             << "received" << sourceName;
 
-    int i = 0;
     const QString nonAmbiguousName = sourceName.toLower();
     m_dataSources.remove( nonAmbiguousName );
     m_runningSources.removeOne( nonAmbiguousName );
     QVariantHash dataSource;
-    foreach( const DepartureInfoPtr &departureInfo, departures ) {
-        QVariantHash data;
-        data.insert( "line", departureInfo->line() );
-        data.insert( "target", departureInfo->target() );
-        data.insert( "targetShortened",
-                     departureInfo->target(PublicTransportInfo::UseShortenedStopNames) );
-        data.insert( "departure", departureInfo->departure() );
-        data.insert( "vehicleType", static_cast<int>(departureInfo->vehicleType()) );
-        data.insert( "vehicleIconName", Global::vehicleTypeToIcon(departureInfo->vehicleType()) );
-        data.insert( "vehicleName", Global::vehicleTypeToString(departureInfo->vehicleType()) );
-        data.insert( "vehicleNamePlural", Global::vehicleTypeToString(departureInfo->vehicleType(), true) );
-        data.insert( "nightline", departureInfo->isNightLine() );
-        data.insert( "expressline", departureInfo->isExpressLine() );
-        data.insert( "delay", departureInfo->delay() );
-        data.insert( "routeExactStops", departureInfo->routeExactStops() );
-        if ( !departureInfo->platform().isEmpty() ) {
-            data.insert( "platform", departureInfo->platform() );
+    QVariantList departuresData;
+    int id = 0;
+    foreach( const DepartureInfoPtr &departureInfo, items ) {
+        QVariantHash departureData;
+        TimetableData departure = departureInfo->data();
+        for ( TimetableData::ConstIterator it = departure.constBegin();
+              it != departure.constEnd(); ++it )
+        {
+            if ( it.value().isValid() ) {
+                departureData.insert( Global::timetableInformationToString(it.key()), it.value() );
+            }
         }
-        if ( !departureInfo->delayReason().isEmpty() ) {
-            data.insert( "delayReason", departureInfo->delayReason() );
-        }
-        if ( !departureInfo->journeyNews().isEmpty() ) {
-            data.insert( "journeyNews", departureInfo->journeyNews() );
-        }
-        if ( !departureInfo->operatorName().isEmpty() ) {
-            data.insert( "operator", departureInfo->operatorName() );
-        }
-        if ( !departureInfo->routeStops().isEmpty() ) {
-            data.insert( "routeStops", departureInfo->routeStops() );
-        }
-        if ( !departureInfo->routeTimesVariant().isEmpty() ) {
-            data.insert( "routeTimes", departureInfo->routeTimesVariant() );
-        }
-        if ( !departureInfo->pricing().isEmpty() ) {
-            data.insert( "pricing", departureInfo->pricing() );
-        }
-        if ( !departureInfo->status().isEmpty() ) {
-            data.insert( "status", departureInfo->status() );
-        }
-        data.insert( "journeyNews", departureInfo->journeyNews() );
-        data.insert( "operator", departureInfo->operatorName() );
-        data.insert( "routeStops", departureInfo->routeStops() );
-        data.insert( "routeStopsShortened",
-                     departureInfo->routeStops(PublicTransportInfo::UseShortenedStopNames) );
-        data.insert( "routeTimes", departureInfo->routeTimesVariant() );
-        data.insert( "routeExactStops", departureInfo->routeExactStops() );
 
-        QString sKey = QString( "%1" ).arg( i );
-        setData( sourceName, sKey, data );
-        dataSource.insert( sKey, data );
-        ++i;
+        Enums::VehicleType vehicleType =
+                static_cast< Enums::VehicleType >( departure[Enums::TypeOfVehicle].toInt() );
+        departureData.insert( "VehicleIconName", Global::vehicleTypeToIcon(vehicleType) );
+        departureData.insert( "VehicleName", Global::vehicleTypeToString(vehicleType) );
+        departureData.insert( "VehicleNamePlural", Global::vehicleTypeToString(vehicleType, true) );
+        departureData.insert( "Nightline", departureInfo->isNightLine() );
+        departureData.insert( "Expressline", departureInfo->isExpressLine() );
+
+        departuresData << departureData;
     }
-    int departureCount = departures.count();
-    QDateTime last;
-    if ( departureCount > 0 ) {
-        last = departures.last()->departure();
-    } else {
-        last = QDateTime::currentDateTime();
-    }
+
+    const QString itemKey = isDepartureData ? "departures" : "arrivals";
+    dataSource.insert( itemKey, departuresData );
+
+    QDateTime last = items.isEmpty() ? QDateTime::currentDateTime()
+            : items.last()->value(Enums::DepartureDateTime).toDateTime();
     if ( deleteDepartureInfos ) {
-        kDebug() << "Delete" << departures.count() << "departures";
+        kDebug() << "Delete" << items.count() << "departures/arrivals";
 //         qDeleteAll( departures );
     }
-
-    // Remove old jouneys
-    for ( ; i < m_lastJourneyCount; ++i ) {
-        removeData( sourceName, QString("%1").arg(i) );
-    }
-    m_lastJourneyCount = departures.count();
-
-    // Remove old stop suggestions
-    for ( i = 0 ; i < m_lastStopNameCount; ++i ) {
-        removeData( sourceName, QString("stopName %1").arg(i) );
-    }
-    m_lastStopNameCount = 0;
 
     // Store a proposal for the next download time
     int secs = QDateTime::currentDateTime().secsTo( last ) / 3;
@@ -1044,35 +980,33 @@ void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
     m_nextDownloadTimeProposals[ stripDateAndTimeValues( sourceName )] = downloadTime;
 //     kDebug() << "Set next download time proposal:" << downloadTime;
 
-    setData( sourceName, "serviceProvider", provider->id() );
-    setData( sourceName, "count", departureCount );
-    setData( sourceName, "delayInfoAvailable", globalInfo.delayInfoAvailable );
-    setData( sourceName, "requestUrl", requestUrl );
-    setData( sourceName, "parseMode", request.parseModeName() );
-    setData( sourceName, "receivedData", "departures" ); // TODO remove
-    setData( sourceName, "receivedPossibleStopList", false ); // TODO remove
-    setData( sourceName, "error", false );
-    setData( sourceName, "updated", QDateTime::currentDateTime() );
-
     // Store received data in the data source map
     dataSource.insert( "serviceProvider", provider->id() );
-    dataSource.insert( "count", departureCount );
     dataSource.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
     dataSource.insert( "requestUrl", requestUrl );
     dataSource.insert( "parseMode", request.parseModeName() );
-    dataSource.insert( "receivedData", "departures" ); // TODO remove
-    dataSource.insert( "receivedPossibleStopList", false ); // TODO remove
     dataSource.insert( "error", false );
     dataSource.insert( "updated", QDateTime::currentDateTime() );
+    setData( sourceName, dataSource );
     m_dataSources.insert( sourceName.toLower(), dataSource );
+}
+
+void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
+        const QUrl &requestUrl, const DepartureInfoList &departures,
+        const GlobalTimetableInfo &globalInfo, const DepartureRequest &request,
+        bool deleteDepartureInfos )
+{
+    timetableDataReceived( provider, requestUrl, departures, globalInfo, request,
+                           deleteDepartureInfos, true );
 }
 
 void PublicTransportEngine::arrivalListReceived( ServiceProvider *provider, const QUrl &requestUrl,
         const ArrivalInfoList &arrivals, const GlobalTimetableInfo &globalInfo,
         const ArrivalRequest &request, bool deleteDepartureInfos )
 {
-    departureListReceived( provider, requestUrl, arrivals, globalInfo, request,
-                           deleteDepartureInfos );
+    kDebug() << "TEST" << arrivals.count();
+    timetableDataReceived( provider, requestUrl, arrivals, globalInfo, request,
+                           deleteDepartureInfos, false );
 }
 
 void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
@@ -1085,74 +1019,40 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
     const QString sourceName = request.sourceName;
     kDebug() << journeys.count() << "journeys received" << sourceName;
 
-    int i = 0;
     const QString nonAmbiguousName = sourceName.toLower();
     m_dataSources.remove( nonAmbiguousName );
     m_runningSources.removeOne( nonAmbiguousName );
     QVariantHash dataSource;
+    QVariantList journeysData;
+    int id = 0;
     foreach( const JourneyInfoPtr &journeyInfo, journeys ) {
         if ( !journeyInfo->isValid() ) {
             continue;
         }
 
-        QVariantHash data;
-        data.insert( "vehicleTypes", journeyInfo->vehicleTypesVariant() );
-        data.insert( "vehicleIconNames", journeyInfo->vehicleIconNames() );
-        data.insert( "vehicleNames", journeyInfo->vehicleNames() );
-        data.insert( "vehicleNamesPlural", journeyInfo->vehicleNames( true ) );
-        data.insert( "arrival", journeyInfo->arrival() );
-        data.insert( "departure", journeyInfo->departure() );
-        data.insert( "duration", journeyInfo->duration() );
-        data.insert( "changes", journeyInfo->changes() );
-        data.insert( "pricing", journeyInfo->pricing() );
-        data.insert( "journeyNews", journeyInfo->journeyNews() );
-        data.insert( "startStopName", journeyInfo->startStopName() );
-        data.insert( "targetStopName", journeyInfo->targetStopName() );
-        data.insert( "operator", journeyInfo->operatorName() );
-        data.insert( "routeStops", journeyInfo->routeStops() );
-        data.insert( "routeStopsShortened",
-                     journeyInfo->routeStops(PublicTransportInfo::UseShortenedStopNames) );
-        data.insert( "routeTimesDeparture", journeyInfo->routeTimesDepartureVariant() );
-        data.insert( "routeTimesArrival", journeyInfo->routeTimesArrivalVariant() );
-        data.insert( "routeExactStops", journeyInfo->routeExactStops() );
-        if ( !journeyInfo->routeStops().isEmpty() ) {
-            data.insert( "routeStops", journeyInfo->routeStops() );
+        QVariantHash journeyData;
+        TimetableData journey = journeyInfo->data();
+        for ( TimetableData::ConstIterator it = journey.constBegin();
+              it != journey.constEnd(); ++it )
+        {
+            if ( it.value().isValid() ) {
+                journeyData.insert( Global::timetableInformationToString(it.key()), it.value() );
+            }
         }
-        if ( !journeyInfo->routeTimesDepartureVariant().isEmpty() ) {
-            data.insert( "routeTimesDeparture", journeyInfo->routeTimesDepartureVariant() );
-        }
-        if ( !journeyInfo->routeTimesArrivalVariant().isEmpty() ) {
-            data.insert( "routeTimesArrival", journeyInfo->routeTimesArrivalVariant() );
-        }
-        if ( !journeyInfo->routeVehicleTypesVariant().isEmpty() ) {
-            data.insert( "routeVehicleTypes", journeyInfo->routeVehicleTypesVariant() );
-        }
-        if ( !journeyInfo->routeTransportLines().isEmpty() ) {
-            data.insert( "routeTransportLines", journeyInfo->routeTransportLines() );
-        }
-        if ( !journeyInfo->routePlatformsDeparture().isEmpty() ) {
-            data.insert( "routePlatformsDeparture", journeyInfo->routePlatformsDeparture() );
-        }
-        if ( !journeyInfo->routePlatformsArrival().isEmpty() ) {
-            data.insert( "routePlatformsArrival", journeyInfo->routePlatformsArrival() );
-        }
-        if ( !journeyInfo->routeTimesDepartureDelay().isEmpty() ) {
-            data.insert( "routeTimesDepartureDelay", journeyInfo->routeTimesDepartureDelay() );
-        }
-        if ( !journeyInfo->routeTimesArrivalDelay().isEmpty() ) {
-            data.insert( "routeTimesArrivalDelay", journeyInfo->routeTimesArrivalDelay() );
-        }
+        journeyData.insert( "VehicleIconNames", journeyInfo->vehicleIconNames() );
+        journeyData.insert( "VehicleNames", journeyInfo->vehicleNames() );
+        journeyData.insert( "VehicleNamesPlural", journeyInfo->vehicleNames( true ) );
 
-        QString sKey = QString( "%1" ).arg( i++ );
-        setData( sourceName, sKey, data );
-        dataSource.insert( sKey, data );
-        //     kDebug() << "setData" << sourceName << data;
+        journeysData << journeyData;
     }
+
+    dataSource.insert( "journeys", journeysData );
+
     int journeyCount = journeys.count();
     QDateTime first, last;
     if ( journeyCount > 0 ) {
-        first = journeys.first()->departure();
-        last = journeys.last()->departure();
+        first = journeys.first()->value(Enums::DepartureDateTime).toDateTime();
+        last = journeys.last()->value(Enums::DepartureDateTime).toDateTime();
     } else {
         first = last = QDateTime::currentDateTime();
     }
@@ -1160,43 +1060,19 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
 //         qDeleteAll( journeys ); TODO
     }
 
-    // Remove old journeys
-    for ( ; i < m_lastJourneyCount; ++i ) {
-        removeData( sourceName, QString("%1").arg(i) );
-    }
-    m_lastJourneyCount = journeys.count();
-
-    // Remove old stop suggestions
-    for ( i = 0 ; i < m_lastStopNameCount; ++i ) {
-        removeData( sourceName, QString("stopName %1").arg(i) );
-    }
-    m_lastStopNameCount = 0;
-
     // Store a proposal for the next download time
     int secs = ( journeyCount / 3 ) * first.secsTo( last );
     QDateTime downloadTime = QDateTime::currentDateTime().addSecs( secs );
     m_nextDownloadTimeProposals[ stripDateAndTimeValues(sourceName) ] = downloadTime;
 
-    setData( sourceName, "serviceProvider", provider->id() );
-    setData( sourceName, "count", journeyCount );
-    setData( sourceName, "delayInfoAvailable", globalInfo.delayInfoAvailable );
-    setData( sourceName, "requestUrl", requestUrl );
-    setData( sourceName, "parseMode", request.parseModeName() );
-    setData( sourceName, "receivedData", "journeys" );
-    setData( sourceName, "receivedPossibleStopList", false );
-    setData( sourceName, "error", false );
-    setData( sourceName, "updated", QDateTime::currentDateTime() );
-
     // Store received data in the data source map
     dataSource.insert( "serviceProvider", provider->id() );
-    dataSource.insert( "count", journeyCount );
     dataSource.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
     dataSource.insert( "requestUrl", requestUrl );
     dataSource.insert( "parseMode", request.parseModeName() );
-    dataSource.insert( "receivedData", "journeys" );
-    dataSource.insert( "receivedPossibleStopList", false );
     dataSource.insert( "error", false );
     dataSource.insert( "updated", QDateTime::currentDateTime() );
+    setData( sourceName, dataSource );
     m_dataSources.insert( sourceName.toLower(), dataSource );
 }
 
@@ -1210,49 +1086,23 @@ void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
     const QString sourceName = request.sourceName;
     m_runningSources.removeOne( sourceName );
 
-    int i = 0;
+    QVariantList stopsData;
     foreach( const StopInfoPtr &stopInfo, stops ) {
-        QVariantHash data;
-        data.insert( "stopName", stopInfo->name() );
-        if ( stopInfo->contains(Enums::StopID) ) {
-            data.insert( "stopID", stopInfo->id() );
+        QVariantHash stopData;
+        TimetableData stop = stopInfo->data();
+        for ( TimetableData::ConstIterator it = stop.constBegin();
+              it != stop.constEnd(); ++it )
+        {
+            if ( it.value().isValid() ) {
+                stopData.insert( Global::timetableInformationToString(it.key()), it.value() );
+            }
         }
-
-        if ( stopInfo->contains(Enums::StopWeight) ) {
-            data.insert( "stopWeight", stopInfo->weight() );
-        }
-
-        if ( stopInfo->contains(Enums::StopCity) ) {
-            data.insert( "stopCity", stopInfo->city() );
-        }
-
-        if ( stopInfo->contains(Enums::StopCountryCode) ) {
-            data.insert( "stopCountryCode", stopInfo->countryCode() );
-        }
-
-        if ( stopInfo->contains(Enums::StopLongitude) ) {
-            data.insert( "stopLongitude", stopInfo->longitude() );
-        }
-
-        if ( stopInfo->contains(Enums::StopLatitude) ) {
-            data.insert( "stopLatitude", stopInfo->latitude() );
-        }
-
-        setData( sourceName, QString("stopName %1").arg(i++), data );
+        stopsData << stopData;
     }
-
-    // Remove values from an old possible stop list
-    for ( i = stops.count(); i < m_lastStopNameCount; ++i ) {
-        removeData( sourceName, QString("stopName %1").arg(i) );
-    }
-    m_lastStopNameCount = stops.count();
-
+    setData( sourceName, "stops", stopsData );
     setData( sourceName, "serviceProvider", provider->id() );
-    setData( sourceName, "count", stops.count() );
     setData( sourceName, "requestUrl", requestUrl );
     setData( sourceName, "parseMode", request.parseModeName() );
-    setData( sourceName, "receivedData", "stopList" );
-    setData( sourceName, "receivedPossibleStopList", true );
     setData( sourceName, "error", false );
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 
@@ -1279,7 +1129,6 @@ void PublicTransportEngine::errorParsing( ServiceProvider *provider,
 
     const QString sourceName = request->sourceName;
     setData( sourceName, "serviceProvider", provider->id() );
-    setData( sourceName, "count", 0 );
     setData( sourceName, "requestUrl", requestUrl );
     setData( sourceName, "parseMode", request->parseModeName() );
     setData( sourceName, "receivedData", "nothing" );
@@ -1294,7 +1143,6 @@ void PublicTransportEngine::progress( ServiceProvider *provider, qreal progress,
 {
     const QString sourceName = request->sourceName;
     setData( sourceName, "serviceProvider", provider->id() );
-    setData( sourceName, "count", 0 );
     setData( sourceName, "progress", progress );
     setData( sourceName, "jobDescription", jobDescription );
     setData( sourceName, "requestUrl", requestUrl );

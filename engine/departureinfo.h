@@ -87,6 +87,9 @@ public:
     };
     void remove( Enums::TimetableInformation info ) { m_data.remove(info); };
 
+    /** @brief Returns the TimetableData object for this item. */
+    TimetableData data() const { return m_data; };
+
     /**
      * @brief Wheather or not this PublicTransportInfo object is valid.
      *
@@ -94,35 +97,6 @@ public:
      * @return false if the PublicTransportInfo object is invalid.
      **/
     virtual bool isValid() const { return m_isValid; };
-
-    /** @brief Gets the date and time of the departure or arrival. */
-    QDateTime departure() const;
-
-    /** @brief Get the company that is responsible for this departure / arrival. */
-    QString operatorName() const;
-
-    /**
-     * @brief Gets a list of stops of the departure/arrival to it's destination
-     *   stop or a list of stops of the journey from it's start to it's
-     *   destination stop.
-     *
-     * @note If data for both @ref RouteStops and @ref RouteTimes is set,
-     *   they contain the same number of elements. And elements with equal
-     *   indices are associated (the times at which the vehicle is at the stops).
-     *
-     * @see routeTimes
-     * @see routeTimesVariant
-     **/
-    QStringList routeStops( StopNameOptions stopNameOptions = UseFullStopNames ) const;
-
-    /**
-     * @brief The number of exact route stops. The route stop list isn't complete
-     *   from the last exact route stop. */
-    int routeExactStops() const;
-
-    /** @brief Gets information about the pricing of the departure/arrival/journey. */
-    QString pricing() const {
-            return contains(Enums::Pricing) ? value(Enums::Pricing).toString() : QString(); };
 
 protected:
     bool m_isValid;
@@ -148,113 +122,8 @@ public:
     explicit JourneyInfo( const TimetableData &data, Corrections corrections = CorrectEverything,
                           QObject *parent = 0 );
 
-    /** @brief Gets information about the pricing of the journey. */
-    QString pricing() const {
-            return contains(Enums::Pricing) ? value(Enums::Pricing).toString() : QString(); };
-
-    /** @brief Gets news for the journey, such as "platform changed". */
-    QString journeyNews() const {
-            return contains(Enums::JourneyNews) ? value(Enums::JourneyNews).toString() : QString(); };
-
-    /** @brief Gets the stop name at which the journey starts */
-    QString startStopName() const {
-            return contains(Enums::StartStopName) ? value(Enums::StartStopName).toString() : QString(); };
-
-    /** @brief Gets the stop name of the target of the journey */
-    QString targetStopName() const {
-            return contains(Enums::TargetStopName) ? value(Enums::TargetStopName).toString() : QString(); };
-
-    /** @brief Gets the date and time of the arrival at the journey target */
-    QDateTime arrival() const;
-
-    /** @brief Gets the duration in minutes of the journey. */
-    int duration() const { return contains(Enums::Duration) ? value(Enums::Duration).toInt() : -1; };
-
-    /** @brief Gets the types of vehicle used in the journey. */
-    QList<Enums::VehicleType> vehicleTypes() const;
-
     QStringList vehicleIconNames() const;
-
     QStringList vehicleNames( bool plural = false ) const;
-
-    /**
-     * @brief Gets the types of vehicle used in the journey as QVariantList to be stored
-     *   in a Plasma::DataEngine::Data object.
-     **/
-    QVariantList vehicleTypesVariant() const;
-
-    /**
-     * @brief Gets the types of vehicle used for each "sub-journey" in the journey as
-     *   QVariantList to be stored in a Plasma::DataEngine::Data object. */
-    QVariantList routeVehicleTypesVariant() const;
-
-    /** @brief Gets the transport line used for each "sub-journey" in the journey. */
-    QStringList routeTransportLines() const;
-
-    /** @brief Gets the platform of the departure used for each stop in the journey. */
-    QStringList routePlatformsDeparture() const;
-
-    /** @brief Gets the platform of the arrival used for each stop in the journey. */
-    QStringList routePlatformsArrival() const;
-
-    /** @brief Gets how many changes between different vehicles are needed */
-    int changes() const;
-
-    /**
-     * @brief Gets a list of departure times of the journey. Use QVariant::toTime()
-     *   to convert the QVariants in the list to QTime objects or just use
-     *
-     * @ref routeTimesDeparture to get a list with values converted to QTime.
-     * @note: If @ref routeStops and @ref routeTimesDeparture are both set,
-     *   the latter contains one element less (because the last stop has no
-     *   departure, only an arrival time). Elements with equal indices are
-     *   associated (the times at which the vehicle departs from the stops).
-     * @see routeTimesDeparture
-     * @see routeStops
-     **/
-    QVariantList routeTimesDepartureVariant() const;
-
-    /**
-     * @brief Gets a list of times of the journey to it's destination stop.
-     *
-     * @note: If @ref routeStops and @ref routeTimesDeparture are both set,
-     *   the latter contains one element less (because the last stop has no
-     *   departure, only an arrival time). Elements with equal indices are
-     *   associated (the times at which the vehicle departs from the stops).
-     * @see routeTimesDepartureVariant
-     * @see routeStops
-     **/
-    QList<QTime> routeTimesDeparture() const;
-
-    /**
-     * @brief Gets a list of arrival times of the journey. Use QVariant::toTime()
-     *   to convert the QVariants in the list to QTime objects or just use
-     *   @ref routeTimesArrival to get a list with values converted to QTime.
-     *
-     * @note: If @ref routeStops and @ref routeTimesArrival are both set,
-     *   the latter contains one element less (because the first stop has no
-     *   arrival, only a departure time). Elements with equal indices should
-     *   be associated (the times at which the vehicle arrives at the stops).
-     * @see routeTimesArrival
-     * @see routeStops
-     **/
-    QVariantList routeTimesArrivalVariant() const;
-
-    /**
-     * @brief Gets a list of arrival times of the journey.
-     *
-     * @note: If @ref routeStops and @ref routeTimesArrival are both set,
-     *   the latter contains one element less (because the first stop has no
-     *   arrival, only a departure time). Elements with equal indices should
-     *   be associated (the times at which the vehicle arrives at the stops).
-     * @see routeTimesArrivalVariant
-     * @see routeStops
-     **/
-    QList<QTime> routeTimesArrival() const;
-
-    QVariantList routeTimesDepartureDelay() const;
-
-    QVariantList routeTimesArrivalDelay() const;
 };
 
 /**
@@ -279,69 +148,11 @@ public:
     explicit DepartureInfo( const TimetableData &data, Corrections corrections = CorrectEverything,
                             QObject *parent = 0 );
 
-    /** @brief Gets the target / origin of the departing / arriving vehicle. */
-    QString target( StopNameOptions stopNameOptions = UseFullStopNames ) const;
-
-    /** @brief Gets the line name of the departing / arriving vehicle. */
-    QString line() const { return contains(Enums::TransportLine)
-        ? value(Enums::TransportLine).toString() : QString(); };
-
-    /** @brief Gets the type of the departing / arriving vehicle. */
-    Enums::VehicleType vehicleType() const { return contains(Enums::TypeOfVehicle)
-        ? static_cast<Enums::VehicleType>( value(Enums::TypeOfVehicle).toInt() ) : Enums::UnknownVehicleType; };
-
     /** @brief Wheather or not the departing / arriving vehicle is a night line. */
     bool isNightLine() const { return m_lineServices.testFlag( Enums::NightLine ); };
 
     /** @brief Wheather or not the departing / arriving vehicle is an express line. */
     bool isExpressLine() const { return m_lineServices.testFlag( Enums::ExpressLine ); };
-
-    /** @brief Gets the platform from/at which the vehicle departs/arrives. */
-    QString platform() const { return contains(Enums::Platform)
-        ? value(Enums::Platform).toString() : QString(); };
-
-    /** @brief Gets the delay in minutes of the vehicle. -1 means that no delay information is available. */
-    int delay() const { return contains(Enums::Delay)
-        ? value(Enums::Delay).toInt() : -1; };
-
-    /** @brief Gets the delay reason. */
-    QString delayReason() const { return contains(Enums::DelayReason)
-        ? value(Enums::DelayReason).toString() : QString(); };
-
-    /** @brief Gets news for the departure/arrival, such as "platform changed". */
-    QString journeyNews() const { return contains(Enums::JourneyNews)
-        ? value(Enums::JourneyNews).toString() : QString(); };
-
-    /** @brief Gets the status of the departure/arrival, such as "departing". */
-    QString status() const { return contains(Enums::Status)
-        ? value(Enums::Status).toString() : QString(); };
-
-    /**
-     * @brief Gets a list of times of the departure / arrival to it's destination
-     *   stop. Use QVariant::toTime() to convert the QVariants in the list to
-     *   QTime objects or just use @ref routeTimes to get a list with values
-     *   converted to QTime.
-     *
-     * @note: If @ref routeStops and @ref routeTimes are both set,
-     *   they contain the same number of elements. And elements with equal
-     *   indices are associated (the times at which the vehicle is at the stops).
-     * @see routeTimes
-     * @see routeStops
-     **/
-    QVariantList routeTimesVariant() const { return contains(Enums::RouteTimes)
-        ? value(Enums::RouteTimes).toList() : QVariantList(); };
-
-    /**
-     * @brief Gets a list of times of the departure / arrival to it's destination stop.
-     *
-     * @note: If @ref routeStops and @ref routeTimes are both set,
-     *   they contain the same number of elements. And elements with equal
-     *   indices are associated (the times at which the vehicle is at the
-     *   stops).
-     * @see routeTimesVariant
-     * @see routeStops
-     **/
-    QList<QTime> routeTimes() const;
 
 private:
     LineServices m_lineServices;
@@ -378,27 +189,6 @@ public:
     StopInfo( const QString &name, const QString &id = QString(), int weight = -1,
               const QString &city = QString(), const QString &countryCode = QString(),
               QObject *parent = 0 );
-
-    /** @brief Gets the name of the stop. */
-    QString name() const { return value(Enums::StopName).toString(); };
-
-    /** @brief Gets the ID for the stop, if available. */
-    QString id() const { return value(Enums::StopID).toString(); };
-
-    /** @brief Gets the weight of the stop. */
-    QString weight() const { return value(Enums::StopWeight).toString(); };
-
-    /** @brief Gets the city in which the stop is. */
-    QString city() const { return value(Enums::StopCity).toString(); };
-
-    /** @brief Gets the code of the country in which the stop is. */
-    QString countryCode() const { return value(Enums::StopCountryCode).toString(); };
-
-    /** @brief Get the longitude of the stop. */
-    qreal longitude() const { return value(Enums::StopLongitude).toReal(); };
-
-    /** @brief Get the latitude of the stop. */
-    qreal latitude() const { return value(Enums::StopLatitude).toReal(); };
 };
 
 typedef DepartureInfo ArrivalInfo;
@@ -412,6 +202,5 @@ typedef QList< DepartureInfoPtr > DepartureInfoList;
 typedef QList< ArrivalInfoPtr > ArrivalInfoList;
 typedef QList< JourneyInfoPtr > JourneyInfoList;
 typedef QList< StopInfoPtr > StopInfoList;
-
 
 #endif // DEPARTUREINFO_HEADER

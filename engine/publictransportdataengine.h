@@ -382,6 +382,13 @@ public slots:
     void reloadChangedProviders();
 
 private:
+    /** Handler for departureListReceived() (@p isDepartureData true) and arrivalListReceived() */
+    void timetableDataReceived( ServiceProvider *provider,
+            const QUrl &requestUrl, const DepartureInfoList &items,
+            const GlobalTimetableInfo &globalInfo,
+            const DepartureRequest &request,
+            bool deleteDepartureInfos = true, bool isDepartureData = true );
+
     /**
      * @brief Gets information about @p provider for a service provider data source.
      *
@@ -436,7 +443,6 @@ private:
     QVariantHash m_erroneousProviders; // List of erroneous service providers as keys
                                        // and error messages as values
     QFileSystemWatcher *m_fileSystemWatcher; // Watch the service provider directory
-    int m_lastStopNameCount, m_lastJourneyCount;
 
     // The next times at which new downloads will have sufficient changes
     // (enough departures in past or maybe changed delays, estimated),
@@ -648,17 +654,19 @@ public slots:
     void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data ) {
         if ( data.value("error").toBool() ) {
             // Handle errors
-        } else if ( data.value("receivedPossibleStopList").toBool() ) {
+        } else if ( data.contains("stops") ) {
             // Possible stop list received, because the given stop name is ambiguous
             // See section "Receiving Stop Lists"
         } else {
             // Departures / arrivals received.
-            int count = data["count"].toInt(); // The number of received departures / arrivals
-            for (int i = 0; i < count; ++i) {
-                QHash<QString, QVariant> departureData = data.value( QString("%1").arg(i) ).toHash();
-                QString line = departureData["line"].toString();
-                QString target = departureData["target"].toString(); // For arrival lists this is the origin
-                QDateTime departure = departureData["departure"].toDateTime();
+            QVariantList departures = data.contains("departures")
+                    ? data["departures"].toList() : data["arrivals"].toList();
+
+            foreach ( const QVariant &departureData, departures ) {
+                QHash<QString, QVariant> departure = departureData.toHash();
+                QString line = departure["TransportLine"].toString();
+                QString target = departure["Target"].toString(); // For arrival lists this is the origin
+                QDateTime departure = departure["DepartureDateTime"].toDateTime();
             }
         }
     };
@@ -761,24 +769,24 @@ public slots:
     void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data ) {
         if ( data.value("error").toBool() ) {
             // Handle errors
-        } else if ( data.value("receivedPossibleStopList").toBool() ) {
+        } else if ( data.contains("stops") ) {
             // Possible stop list received, because the given stop name is ambiguous
             // See section "Receiving Stop Lists"
         } else {
             // Journeys received.
-            int count = data["count"].toInt(); // The number of received journeys
-            for (int i = 0; i < count; ++i) {
-                QHash<QString, QVariant> journeyData = data.value( QString("%1").arg(i) ).toHash();
+            QVariantList journeysData = data["journeys"].toList();
+            foreach ( const QVariant &journeyData, journeysData ) {
+                QHash<QString, QVariant> journey = journeyData.toHash();
 
                 // Get vehicle type list
-                QVariantList = journeyData["vehicleTypes"].toList();
+                QVariantList = journey["TypesOfVehicleInJourney"].toList();
                 QList<VehicleType> vehicleTypes;
                 foreach( QVariant vehicleType, vehicleTypesVariant )
                 vehicleTypes.append( static_cast<VehicleType>(vehicleType.toInt()) );
 
-                QString target = journeyData["startStopName"].toString();
-                QDateTime departure = journeyData["departure"].toDateTime();
-                int duration = journeyData["duration"].toInt(); // Duration in minutes
+                QString target = journey["StartStopName"].toString();
+                QDateTime departure = journey["DepartureDateTime"].toDateTime();
+                int duration = journey["Duration"].toInt(); // Duration in minutes
             }
         }
     };
@@ -794,14 +802,10 @@ The data received from the data engine always contains these keys:<br />
     Error code 2 means, that parsing a source file failed.
     Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
     Use the @ref PublicTransportService to start and monitor the import.</td></tr>
-<tr><td><i>receivedPossibleStopList</i></td> <td>bool</td> <td>True, if the given stop name is ambiguous and
-a list of possible stops was received, see @ref usage_stopList_sec .</td></tr>
 <tr><td><i>count</i></td> <td>int</td> <td>The number of received journeys / stops or 0 if there was
 an error.</td></tr>
-<tr><td><i>receivedData</i></td> <td>QString</td> <td>"departures", "journeys", "stopList" or "nothing" if
-there was an error.</td></tr>
 <tr><td><i>updated</i></td> <td>QDateTime</td> <td>The date and time when the data source was last updated.</td></tr>
-<tr><td><i>[NUMBER]</i></td> <td>QVariantHash</td> <td>The key names are numbers from 0 to count - 1,
+<tr><td><i>journeys</i></td> <td>QVariantHash</td> <td>The key names are numbers from 0 to count - 1,
 each contains information about one journey.</td></tr>
 </table>
 <br />
@@ -809,25 +813,25 @@ Each journey in the data received from the data engine (journeyData in the code
 example) has the following keys:<br />
 <i>vehicleTypes</i>: A QVariantList containing a list of vehicle types used in the journey. You can cast the list to QList<VehicleType> as seen in the code example (QVariantList).<br />
 <table>
-<tr><td><i>arrival</i></td> <td>QDateTime</td> <td>The date and time of the arrival at the target stop.</td></tr>
-<tr><td><i>departure</i></td> <td>QDateTime</td> <td>The date and time of the departure from the origin stop.</td></tr>
-<tr><td><i>duration</i></td> <td>int</td> <td>The duration in minutes of the journey.</td></tr>
-<tr><td><i>changes</i></td> <td>int</td> <td>The changes between vehicles needed for the journey.</td></tr>
-<tr><td><i>pricing</i></td> <td>QString</td> <td>Information about the pricing of the journey.</td></tr>
-<tr><td><i>journeyNews</i></td> <td>QString</td> <td>News for the journey.</td></tr>
-<tr><td><i>startStopName</i></td> <td>QString</td> <td>The name or ID of the origin stop.</td></tr>
-<tr><td><i>targetStopName</i></td> <td>QString</td> <td>The name or ID of the target stop (QString).</td></tr>
-<tr><td><i>operator</i></td> <td>QString</td> <td>The company that is responsible for the journey.</td></tr>
-<tr><td><i>routeStops</i></td> <td>QStringList</td> <td>A list of stops of the journey from it's start to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
-<tr><td><i>routeTimesDeparture</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of departure times of the journey to it's destination stop. If 'routeStops' and 'routeTimesDeparture' are both set, the latter contains one element less (because the last stop has no departure, only an arrival time). Elements with equal indices are associated (the times at which the vehicle departs from the stops).</td></tr>
-<tr><td><i>routeTimesArrival</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of arrival times of the journey to it's destination stop. If 'routeStops' and 'routeTimesArrival' are both set, the latter contains one element less (because the last stop has no departure, only an arrival time). Elements with equal indices are associated (the times at which the vehicle departs from the stops).</td></tr>
-<tr><td><i>routeExactStops</i></td> <td>int</td> <td>The number of exact route stops. The route stop list isn't complete from the last exact route stop.</td></tr>
-<tr><td><i>routeVehicleTypes</i></td> <td>QList< int > (stored as QVariantList)</td> <td>A list of vehicle types used for each "sub-journey" in the journey. The vehicle types are described by integers (see @ref pageUsage).</td></tr>
-<tr><td><i>routeTransportLines</i></td> <td>QStringList</td> <td>A list of transport lines used for each "sub-journey" in the journey.</td></tr>
-<tr><td><i>routePlatformsDeparture</i></td> <td>QStringList</td> <td>A list of platforms of the departure used for each stop in the journey.</td></tr>
-<tr><td><i>routePlatformsArrival</i></td> <td>QStringList</td> <td>A list of platforms of the arrival used for each stop in the journey.</td></tr>
-<tr><td><i>routeTimesDepartureDelay</i></td> <td>QList< int > (stored as QVariantList)</td> <td>A list of delays in minutes of the departures at each stop in the journey. A value of 0 means, that the vehicle is on schedule, -1 means, that there's no information about delays.</td></tr>
-<tr><td><i>routeTimesArrivalDelay</i></td> <td>QList< int > (stored as QVariantList)</td> <td>A list of delays in minutes of the arrivals at each stop in the journey. A value of 0 means, that the vehicle is on schedule, -1 means, that there's no information about delays.</td></tr>
+<tr><td><i>ArrivalDateTime</i></td> <td>QDateTime</td> <td>The date and time of the arrival at the target stop.</td></tr>
+<tr><td><i>DepartureDateTime</i></td> <td>QDateTime</td> <td>The date and time of the departure from the origin stop.</td></tr>
+<tr><td><i>Duration</i></td> <td>int</td> <td>The duration in minutes of the journey.</td></tr>
+<tr><td><i>Changes</i></td> <td>int</td> <td>The changes between vehicles needed for the journey.</td></tr>
+<tr><td><i>Pricing</i></td> <td>QString</td> <td>Information about the pricing of the journey.</td></tr>
+<tr><td><i>JourneyNews</i></td> <td>QString</td> <td>News for the journey.</td></tr>
+<tr><td><i>StartStopName</i></td> <td>QString</td> <td>The name or ID of the origin stop.</td></tr>
+<tr><td><i>TargetStopName</i></td> <td>QString</td> <td>The name or ID of the target stop (QString).</td></tr>
+<tr><td><i>Operator</i></td> <td>QString</td> <td>The company that is responsible for the journey.</td></tr>
+<tr><td><i>RouteStops</i></td> <td>QStringList</td> <td>A list of stops of the journey from it's start to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
+<tr><td><i>RouteTimesDeparture</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of departure times of the journey to it's destination stop. If 'routeStops' and 'routeTimesDeparture' are both set, the latter contains one element less (because the last stop has no departure, only an arrival time). Elements with equal indices are associated (the times at which the vehicle departs from the stops).</td></tr>
+<tr><td><i>RouteTimesArrival</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of arrival times of the journey to it's destination stop. If 'routeStops' and 'routeTimesArrival' are both set, the latter contains one element less (because the last stop has no departure, only an arrival time). Elements with equal indices are associated (the times at which the vehicle departs from the stops).</td></tr>
+<tr><td><i>RouteExactStops</i></td> <td>int</td> <td>The number of exact route stops. The route stop list isn't complete from the last exact route stop.</td></tr>
+<tr><td><i>RouteVehicleTypes</i></td> <td>QList< int > (stored as QVariantList)</td> <td>A list of vehicle types used for each "sub-journey" in the journey. The vehicle types are described by integers (see @ref pageUsage).</td></tr>
+<tr><td><i>RouteTransportLines</i></td> <td>QStringList</td> <td>A list of transport lines used for each "sub-journey" in the journey.</td></tr>
+<tr><td><i>RoutePlatformsDeparture</i></td> <td>QStringList</td> <td>A list of platforms of the departure used for each stop in the journey.</td></tr>
+<tr><td><i>RoutePlatformsArrival</i></td> <td>QStringList</td> <td>A list of platforms of the arrival used for each stop in the journey.</td></tr>
+<tr><td><i>RouteTimesDepartureDelay</i></td> <td>QList< int > (stored as QVariantList)</td> <td>A list of delays in minutes of the departures at each stop in the journey. A value of 0 means, that the vehicle is on schedule, -1 means, that there's no information about delays.</td></tr>
+<tr><td><i>RouteTimesArrivalDelay</i></td> <td>QList< int > (stored as QVariantList)</td> <td>A list of delays in minutes of the arrivals at each stop in the journey. A value of 0 means, that the vehicle is on schedule, -1 means, that there's no information about delays.</td></tr>
 </table>
 
 <br />
@@ -836,32 +840,31 @@ When you have requested departures, arrivals or journeys from the data engine, i
 list of stops, if the given stop name is ambiguous. To force getting a list of stop suggestions
 use the data source <em>"Stops \<service-provider-id\>|stop=\<stop-name-part\>"</em>.
 
-In your dataUpdated-slot you should first check, if a stop list was received by checking the value
-of the key "receivedPossibleStopList" in the data object from the data engine. Then you get the
-number of stops received, which is stored in the key "count". For each received stop there is a
-key "stopName \<i\>", where i is the number of the stop, beginning with 0, ending with count - 1.
-In these keys, there are QHash's with at least a <i>stopName</i> key (containing the stop name). It
-<b>may</b> additionally contain a <i>stopID</i> (a non-ambiguous ID for the stop, if available,
-otherwise it is empty), a <i>stopCity</i> (the city the stop is in) and a <i>stopCountryCode</i>
-(the code of the country in with the stop is).
+In your dataUpdated-slot you should first check, if a stop list was received by checking if a
+key "stops" exists in the data object from the data engine. Then you get the stop data, which is
+stored in the key "stops" and contains a list of data sets, one for each stop. They have at least
+a <i>StopName</i> key (containing the stop name). It <b>may</b> additionally contain a
+<i>StopID</i> (a non-ambiguous ID for the stop, if available, otherwise it is empty), a
+<i>StopCity</i> (the city the stop is in) and a <i>StopCountryCode</i> (the code of the country
+in with the stop is).
 
 @code
 void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data ) {
     if ( data.value("receivedPossibleStopList").toBool() ) {
     QStringList possibleStops;
-    int count = data["count"].toInt();
-    for( int i = 0; i < count; ++i ) {
-        QHash<QString, QVariant> stopData = data.value( QString("stopName %1").arg(i) ).toHash();
+    QVariantList stops = data["stops"].toList();
+    foreach ( const QVariant &stopData, stops ) {
+        QVariantHash stop = stopData.toHash();
 
         // Get the name
-        QString stopName = dataMap["stopName"].toString();
+        QString stopName = stop["StopName"].toString();
 
         // Get other values
-        if ( dataMap.contains("stopID") ) {
-            QString stopID = dataMap["stopID"].toString();
+        if ( stopData.contains("StopID") ) {
+            QString stopID = stop["StopID"].toString();
         }
-        QString stopCity = dataMap["stopCity"].toString();
-        QString stopCityCode = dataMap["stopCountryCode"].toString();
+        QString stopCity = stop["StopCity"].toString();
+        QString stopCityCode = stop["StopCountryCode"].toString();
     }
     }
 }
@@ -1009,6 +1012,7 @@ The email address of the author of the service provider plugin.</td></tr>
 @subsection accessor_infos_xml_post Request Data Using POST Method
 If the service provider requires the POST method to be used to send data in requests (instead of GET), some additional attributes are needed for the raw URL tags. You can also use eg. POST for departures and GET for stop suggestions.
 
+TODO DEPRECATED
 To use POST for departures, add the following attributes to the \<departures\> tag (for journeys/stop suggestions use the associated rawUrls tags):@n
   @li <em>method="post"</em> If this attribute is not found, method is "get".
   @li <em>data='{"stopName":"{stop}"}'</em> Template for data to be POSTed to the server in requests. Can contain the same placeholders like the raw URL used for the GET method (see above). If you are unsure what data is expected by the server, you can use eg. <em>Wireshark</em> to see what data gets sent to the server when using the web site.

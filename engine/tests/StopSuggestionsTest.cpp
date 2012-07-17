@@ -111,44 +111,34 @@ void StopSuggestionsTest::stopSuggestionTest()
 
     // Test main keys
     QVERIFY( !testVisualization.data["error"].toBool() );
-    QCOMPARE( testVisualization.data["receivedData"].toString(), QLatin1String("stopList") );
-    QCOMPARE( testVisualization.data["parseMode"].toString(), QLatin1String("stopSuggestions") );
+    QVERIFY( !testVisualization.data.contains("stops") );
     QVERIFY( testVisualization.data["receivedPossibleStopList"].toBool() );
     QVERIFY( testVisualization.data["updated"].canConvert(QVariant::DateTime) );
 //     QVERIFY( !testVisualization.data["serviceProvider"].toString().isEmpty() ); TODO
 //     QVERIFY( !testVisualization.data["requestUrl"].toString().isEmpty() ); TODO
 //     QVERIFY( QUrl(testVisualization.data["requestUrl"].toString()).isValid() ); TODO
 
-    int count = testVisualization.data["count"].toInt();
-    QVERIFY( count > 0 );
+    QVariantList stops = testVisualization.data["stops"].toList();
+    QVERIFY( stops.count() > 0 );
 
-    for ( int i = 0; i < count; ++i )
-    {
-        // Ensure that the key exists
-        QString key = QString("stopName %1").arg(i);
-        QVERIFY2( testVisualization.data.contains(key),
-                  QString("The key \"stopName %1\" is missing from the data structure returned "
-                  "for source \"Stops ...\", there should be \"count\" (ie. %2) stop names "
-                  "beginning at 0")
-                  .arg(i).arg(count).toLatin1().data() );
-
-        QVariantHash stopData = testVisualization.data[key].toHash();
+    foreach ( const QVariant &stop, stops ) {
+        QVariantHash stopData = stop.toHash();
 
         // Each stop object should contain some elements
         QVERIFY( !stopData.isEmpty() );
 
         // Ensure that these keys are in the hash and test it's data types
-        QVERIFY( stopData.contains("stopName") );
-        QVERIFY( stopData["stopName"].canConvert(QVariant::String) );
+        QVERIFY( stopData.contains("StopName") );
+        QVERIFY( stopData["StopName"].canConvert(QVariant::String) );
 
         if ( containsIDs ) {
-            QVERIFY( stopData.contains("stopID") );
-            QVERIFY( stopData["stopID"].canConvert(QVariant::String) );
+            QVERIFY( stopData.contains("StopID") );
+            QVERIFY( stopData["StopID"].canConvert(QVariant::String) );
         }
 
         if ( containsWeights ) {
-            QVERIFY( stopData.contains("stopWeight") );
-            QVERIFY( stopData["stopWeight"].canConvert(QVariant::Int) );
+            QVERIFY( stopData.contains("StopWeight") );
+            QVERIFY( stopData["StopWeight"].canConvert(QVariant::Int) );
         }
     }
 

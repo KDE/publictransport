@@ -877,21 +877,13 @@ void JourneySearchSuggestionWidget::updateStopSuggestionItems(const QVariantHash
     QStringList stopSuggestions, weightedStops;
 
     // Get all stop names, IDs, weights
-    int count = stopSuggestionData["count"].toInt(); // The number of received stop suggestions
     bool hasAtLeastOneWeight = false;
-    for ( int i = 0; i < count; ++i ) {
-        if ( !stopSuggestionData.contains(QString("stopName %1").arg(i)) ) {
-            kDebug() << "doesn't contain 'stopName" << i << "'! count ="
-                    << count << "data =" << stopSuggestionData;
-            break;
-        }
-
-        // Each stop suggestion is stored as a hash in a key named "stopName X",
-        // where X is the index of the stop suggestion
-        QVariantHash dataMap = stopSuggestionData.value( QString("stopName %1").arg(i) ).toHash();
-        QString sStopName = dataMap["stopName"].toString();
-        QString sStopID = dataMap["stopID"].toString();
-        int stopWeight = dataMap["stopWeight"].toInt();
+    QVariantList stops = stopSuggestionData["stops"].toList();
+    foreach ( const QVariant &stopData, stops ) {
+        QVariantHash stop = stopData.toHash();
+        QString sStopName = stop["StopName"].toString();
+        QString sStopID = stop["StopID"].toString();
+        int stopWeight = stop["StopWeight"].toInt();
         stopSuggestions << sStopName;
         if ( stopWeight <= 0 ) {
             stopWeight = 0;

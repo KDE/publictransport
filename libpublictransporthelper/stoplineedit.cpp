@@ -303,7 +303,7 @@ void StopLineEdit::importGtfsFeed()
     Q_D( StopLineEdit );
 
     kDebug() << "GTFS accessor whithout imported feed data, use service to import using the GTFS feed";
-    Plasma::Service *service = d->publicTransportEngine->serviceForSource( QString() );
+    Plasma::Service *service = d->publicTransportEngine->serviceForSource("GTFS");
     KConfigGroup op = service->operationDescription("importGtfsFeed");
     op.writeEntry( "serviceProviderId", d->serviceProvider );
 
@@ -752,21 +752,16 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
 
     QStringList weightedStops;
     QHash<Stop, QVariant> stopToStopWeight;
-    int count = data["count"].toInt();
-    for ( int i = 0; i < count; ++i ) {
-        const QVariant stopData = data.value( QString("stopName %1").arg(i) );
-        if ( !stopData.isValid() ) {
-            continue;
-        }
+    QVariantList stops = data["stops"].toList();
+    foreach ( const QVariant &stopData, stops ) {
+        QVariantHash stop = stopData.toHash();
+        const QString stopName = stop["StopName"].toString();
+        const QString stopID = stop["StopID"].toString();
+        const int stopWeight = stop["StopWeight"].toInt();
 
-        const QHash<QString, QVariant> dataMap = stopData.toHash();
-        const QString stopName = dataMap["stopName"].toString();
-        const QString stopID = dataMap["stopID"].toString();
-        const int stopWeight = dataMap["stopWeight"].toInt();
-
-        const Stop stop( stopName, stopID );
-        stopToStopWeight.insert( stop, stopWeight );
-        d->stops << stop;
+        const Stop stopItem( stopName, stopID );
+        stopToStopWeight.insert( stopItem, stopWeight );
+        d->stops << stopItem;
     }
 
     // Construct weighted stop list for KCompletion

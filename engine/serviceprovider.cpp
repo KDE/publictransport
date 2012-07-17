@@ -113,15 +113,16 @@ void ServiceProvider::request( AbstractRequest *request )
         return;
     }
 
-    DepartureRequest *departureRequest = dynamic_cast< DepartureRequest* >( request );
-    if ( departureRequest ) {
-        requestDepartures( *departureRequest );
-        return;
-    }
-
+    // ArrivalRequest is a derivate of DepartureRequest, therefore this test needs to be done before
     ArrivalRequest *arrivalRequest = dynamic_cast< ArrivalRequest* >( request );
     if ( arrivalRequest ) {
         requestArrivals( *arrivalRequest );
+        return;
+    }
+
+    DepartureRequest *departureRequest = dynamic_cast< DepartureRequest* >( request );
+    if ( departureRequest ) {
+        requestDepartures( *departureRequest );
         return;
     }
 

@@ -256,35 +256,31 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     QList< DepartureInfo > departureInfos/*, alarmDepartures*/;
     url = data["requestUrl"].toUrl();
     updated = data["updated"].toDateTime();
-    int count = data["count"].toInt();
-//     Q_ASSERT( departureJob->alreadyProcessed <= count );
-    kDebug() << "  - " << count << "departures to be processed";
-    for ( int i = departureJob->alreadyProcessed; i < count; ++i ) {
-        QVariant departureData = data.value( QString::number( i ) );
-        // Don't process invalid data
-        if ( !departureData.isValid() ) {
-            kDebug() << "Departure data for departure" << i << "is invalid" << data;
-            continue;
-        }
+    QVariantList departuresData = data.contains("departures") ? data["departures"].toList()
+                                                              : data["arrivals"].toList();
 
-        QVariantHash dataMap = departureData.toHash();
+//     Q_ASSERT( departureJob->alreadyProcessed <= count );
+    kDebug() << "  - " << departuresData.count() << "departures to be processed";
+    for ( int i = departureJob->alreadyProcessed; i < departuresData.count(); ++i ) {
+        QVariantHash departureData = departuresData[ i ].toHash();
         QList< QTime > routeTimes;
-        if ( dataMap.contains("routeTimes") ) {
-            QVariantList times = dataMap[ "routeTimes" ].toList();
+        if ( departureData.contains("RouteTimes") ) {
+            QVariantList times = departureData[ "RouteTimes" ].toList();
             foreach( const QVariant &time, times ) {
                 routeTimes << time.toTime();
             }
         }
-        DepartureInfo departureInfo( dataMap["operator"].toString(), dataMap["line"].toString(),
-                dataMap["target"].toString(), dataMap["targetShortened"].toString(),
-                dataMap["departure"].toDateTime(),
-                static_cast<VehicleType>( dataMap["vehicleType"].toInt() ),
-                dataMap["nightline"].toBool(), dataMap["expressline"].toBool(),
-                dataMap["platform"].toString(), dataMap["delay"].toInt(),
-                dataMap["delayReason"].toString(), dataMap["journeyNews"].toString(),
-                dataMap["routeStops"].toStringList(),
-                dataMap["routeStopsShortened"].toStringList(),
-                routeTimes, dataMap["routeExactStops"].toInt(), isArrival );
+        DepartureInfo departureInfo( departureData["Operator"].toString(),
+                departureData["TransportLine"].toString(),
+                departureData["Target"].toString(), departureData["TargetShortened"].toString(),
+                departureData["DepartureDateTime"].toDateTime(),
+                static_cast<VehicleType>( departureData["TypeOfVehicle"].toInt() ),
+                departureData["Nightline"].toBool(), departureData["Expressline"].toBool(),
+                departureData["Platform"].toString(), departureData["Delay"].toInt(),
+                departureData["DelayReason"].toString(), departureData["JourneyNews"].toString(),
+                departureData["RouteStops"].toStringList(),
+                departureData["RouteStopsShortened"].toStringList(),
+                routeTimes, departureData["RouteExactStops"].toInt(), isArrival );
 
         // Update the list of alarms that match the current departure
         departureInfo.matchedAlarms().clear();
@@ -316,7 +312,8 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
             if ( m_abortCurrentJob ) {
                 break;
             } else {
-                emit departuresProcessed( sourceName, departureInfos, url, updated, count - i - 1 );
+                emit departuresProcessed( sourceName, departureInfos, url, updated,
+                                          departuresData.count() - i - 1 );
                 departureInfos.clear();
 //                 alarmDepartures.clear();
             }
@@ -351,65 +348,68 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
     QList< JourneyInfo > journeyInfos;
     QUrl url = data["requestUrl"].toUrl();
     QDateTime updated = data["updated"].toDateTime();
-    int count = data["count"].toInt();
-    if ( journeyJob->alreadyProcessed > count ) {
+    QVariantList journeysData = data["journeys"].toList();
+    if ( journeyJob->alreadyProcessed > journeysData.count() ) {
         kDebug() << "There was an error with the journey data source (journeyJob->alreadyProcessed > count)";
     }
-    kDebug() << "  - " << count << "journeys to be processed";
-    for ( int i = journeyJob->alreadyProcessed; i < count; ++i ) {
-        QVariant journeyData = data.value( QString::number( i ) );
-        if ( !journeyData.isValid() ) {
-            kDebug() << "Journey data invalid";
-            break;
-        }
-
-        QVariantHash dataMap = journeyData.toHash();
+    kDebug() << "  - " << journeysData.count() << "journeys to be processed";
+    for ( int i = journeyJob->alreadyProcessed; i < journeysData.count(); ++i ) {
+        QVariantHash journeyData = journeysData[i].toHash();
         QList<QTime> routeTimesDeparture, routeTimesArrival;
-        if ( dataMap.contains( "routeTimesDeparture" ) ) {
-            QVariantList times = dataMap[ "routeTimesDeparture" ].toList();
+        if ( journeyData.contains( "RouteTimesDeparture" ) ) {
+            QVariantList times = journeyData[ "RouteTimesDeparture" ].toList();
             foreach( const QVariant &time, times )
             routeTimesDeparture << time.toTime();
         }
-        if ( dataMap.contains( "routeTimesArrival" ) ) {
-            QVariantList times = dataMap[ "routeTimesArrival" ].toList();
+        if ( journeyData.contains( "RouteTimesArrival" ) ) {
+            QVariantList times = journeyData[ "RouteTimesArrival" ].toList();
             foreach( const QVariant &time, times )
             routeTimesArrival << time.toTime();
         }
         QStringList routeTransportLines,
         routePlatformsDeparture, routePlatformsArrival;
-        if ( dataMap.contains( "routeTransportLines" ) ) {
-            routeTransportLines = dataMap[ "routeTransportLines" ].toStringList();
+        if ( journeyData.contains( "RouteTransportLines" ) ) {
+            routeTransportLines = journeyData[ "RouteTransportLines" ].toStringList();
         }
-        if ( dataMap.contains( "routePlatformsDeparture" ) ) {
-            routePlatformsDeparture = dataMap[ "routePlatformsDeparture" ].toStringList();
+        if ( journeyData.contains( "RoutePlatformsDeparture" ) ) {
+            routePlatformsDeparture = journeyData[ "RoutePlatformsDeparture" ].toStringList();
         }
-        if ( dataMap.contains( "routePlatformsArrival" ) ) {
-            routePlatformsArrival = dataMap[ "routePlatformsArrival" ].toStringList();
+        if ( journeyData.contains( "RoutePlatformsArrival" ) ) {
+            routePlatformsArrival = journeyData[ "RoutePlatformsArrival" ].toStringList();
         }
 
         QList<int> routeTimesDepartureDelay, routeTimesArrivalDelay;
-        if ( dataMap.contains( "routeTimesDepartureDelay" ) ) {
-            QVariantList list = dataMap[ "routeTimesDepartureDelay" ].toList();
+        if ( journeyData.contains( "RouteTimesDepartureDelay" ) ) {
+            QVariantList list = journeyData[ "RouteTimesDepartureDelay" ].toList();
             foreach( const QVariant &var, list ) {
                 routeTimesDepartureDelay << var.toInt();
             }
         }
-        if ( dataMap.contains( "routeTimesArrivalDelay" ) ) {
-            QVariantList list = dataMap[ "routeTimesArrivalDelay" ].toList();
+        if ( journeyData.contains( "RouteTimesArrivalDelay" ) ) {
+            QVariantList list = journeyData[ "RouteTimesArrivalDelay" ].toList();
             foreach( const QVariant &var, list ) {
                 routeTimesArrivalDelay << var.toInt();
             }
         }
 
-        JourneyInfo journeyInfo( dataMap["operator"].toString(), dataMap["vehicleTypes"].toList(),
-                dataMap["departure"].toDateTime(), dataMap["arrival"].toDateTime(),
-                dataMap["pricing"].toString(), dataMap["startStopName"].toString(),
-                dataMap["targetStopName"].toString(), dataMap["duration"].toInt(),
-                dataMap["changes"].toInt(), dataMap["journeyNews"].toString(),
-                dataMap["routeStops"].toStringList(), dataMap["routeStopsShortened"].toStringList(),
-                routeTransportLines, routePlatformsDeparture, routePlatformsArrival,
-                dataMap["routeVehicleTypes"].toList(), routeTimesDeparture, routeTimesArrival,
-                routeTimesDepartureDelay, routeTimesArrivalDelay );
+//         TODO
+        JourneyInfo journeyInfo( journeyData["Operator"].toString(),
+                                 journeyData["TypesOfVehicleInJourney"].toList(),
+                                 journeyData["DepartureDateTime"].toDateTime(),
+                                 journeyData["ArrivalDateTime"].toDateTime(),
+                                 journeyData["Pricing"].toString(),
+                                 journeyData["StartStopName"].toString(),
+                                 journeyData["TargetStopName"].toString(),
+                                 journeyData["Duration"].toInt(),
+                                 journeyData["Changes"].toInt(),
+                                 journeyData["JourneyNews"].toString(),
+                                 journeyData["RouteStops"].toStringList(),
+                                 journeyData["RouteStopsShortened"].toStringList(),
+                                 routeTransportLines, routePlatformsDeparture,
+                                 routePlatformsArrival,
+                                 journeyData["RouteVehicleTypes"].toList(),
+                                 routeTimesDeparture, routeTimesArrival,
+                                 routeTimesDepartureDelay, routeTimesArrivalDelay );
 
         // TODO Use a dummy DepartureInfo that "mimics" the first journey part of the current journey
 //         QString lineString = journeyInfo.routeTransportLines().isEmpty()
@@ -444,7 +444,7 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
                 break;
             }
         }
-    } // for ( int i = 0; i < count; ++i )
+    }
 
     // Emit remaining journeys
     m_mutex->lock();

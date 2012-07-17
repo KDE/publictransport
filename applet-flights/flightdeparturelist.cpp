@@ -234,23 +234,23 @@ void FlightDepartureList::setTimetableData( const Plasma::DataEngine::Data& data
     QDateTime updated;
     url = data["requestUrl"].toUrl();
     updated = data["updated"].toDateTime();
-    int count = qMin( 10, data["count"].toInt() );
-    kDebug() << "  - " << count << "departures to be processed";
-    for ( int i = 0; i < count; ++i ) {
-        QVariant departureData = data.value( QString::number(i) );
-        // Don't process invalid data
-        if ( !departureData.isValid() ) {
-            kDebug() << "Departure data for departure" << i << "is invalid" << data;
-            continue;
+    QVariantList departuresData = data.contains("departures") ? data["departures"].toList()
+                                                              : data["arrivals"].toList();
+    kDebug() << "  - " << departuresData.count() << "departures to be processed";
+    int i = 0;
+    foreach ( const QVariant &departureVariant, departuresData ) {
+        if ( i >= 10 ) {
+            break;
         }
+        ++i;
 
-        QVariantHash dataMap = departureData.toHash();
+        const QVariantHash departureData = departureVariant.toHash();
         FlightDeparture *flightDeparture = new FlightDeparture( this );
-        flightDeparture->setDeparture( dataMap["departure"].toDateTime() );
-        flightDeparture->setAirline( dataMap["operator"].toString() );
-        flightDeparture->setTarget( dataMap["target"].toString() );
-        flightDeparture->setFlightNumber( dataMap["line"].toString() );
-        flightDeparture->setStatus( dataMap["status"].toString().replace(QRegExp("&nbsp;|\n"), QString()) );
+        flightDeparture->setDeparture( departureData["DepartureDateTime"].toDateTime() );
+        flightDeparture->setAirline( departureData["Operator"].toString() );
+        flightDeparture->setTarget( departureData["Target"].toString() );
+        flightDeparture->setFlightNumber( departureData["TransportLine"].toString() );
+        flightDeparture->setStatus( departureData["Status"].toString().replace(QRegExp("&nbsp;|\n"), QString()) );
         m_departures << flightDeparture;
 
         contentLayout->addItem( flightDeparture );
@@ -269,7 +269,7 @@ void FlightDepartureList::setTimetableData( const Plasma::DataEngine::Data& data
 //                 dataMap["delayReason"].toString(), dataMap["journeyNews"].toString(),
 //                 dataMap["routeStops"].toStringList(), routeTimes,
 //                 dataMap["routeExactStops"].toInt() );
-    } // for ( int i = 0; i < count; ++i )
+    }
 
     update();
 }

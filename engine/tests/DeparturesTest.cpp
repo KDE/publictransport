@@ -50,78 +50,69 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
     // Test main keys
     QVERIFY( !testVisualization.data["error"].toBool() );
     QVERIFY( !testVisualization.data["receivedPossibleStopList"].toBool() );
-    QCOMPARE( testVisualization.data["receivedData"].toString(), QLatin1String("departures") );
-    QCOMPARE( testVisualization.data["parseMode"].toString(), QLatin1String("departures") );
+    QVERIFY( testVisualization.data.contains("departures") );
     QVERIFY( testVisualization.data["updated"].canConvert(QVariant::DateTime) );
     QCOMPARE( testVisualization.data["serviceProvider"].toString(), serviceProvider );
     QVERIFY( !testVisualization.data["requestUrl"].toString().isEmpty() );
     QVERIFY( QUrl(testVisualization.data["requestUrl"].toString()).isValid() );
 
-    int count = testVisualization.data["count"].toInt();
-    QVERIFY( count > 0 );
+    QVariantList departuresData = testVisualization.data["departures"].toList();
+    QVERIFY( departuresData.count() > 0 );
 
-    for ( int i = 0; i < count; ++i ) {
-        // Ensure that the key exists
-        QString key = QString::number(i);
-        QVERIFY2( testVisualization.data.contains(key),
-                    QString("The key \"%1\" is missing from the data structure returned "
-                    "for source \"Departures ...\", there should be \"count\" (ie. %2) "
-                    "departures beginning at 0")
-                    .arg(i).arg(count).toLatin1().data() );
-
-        QVariantHash departureData = testVisualization.data[key].toHash();
+    foreach ( const QVariant &departureData, departuresData ) {
+        QHash<QString, QVariant> departure = departureData.toHash();
 
         // Each stop object should contain some elements
-        QVERIFY( !departureData.isEmpty() );
+        QVERIFY( !departure.isEmpty() );
 
         // Ensure that these keys are in the hash
-        QVERIFY( departureData.contains("departure") );
-        QVERIFY( departureData.contains("target") );
-        QVERIFY( departureData.contains("line") );
-        QVERIFY( departureData.contains("vehicleType") );
-        QVERIFY( departureData.contains("vehicleName") );
-        QVERIFY( departureData.contains("vehicleNamePlural") );
-        QVERIFY( departureData.contains("vehicleIconName") );
+        QVERIFY( departure.contains("DepartureDateTime") );
+        QVERIFY( departure.contains("Target") );
+        QVERIFY( departure.contains("TransportLine") );
+        QVERIFY( departure.contains("TypeOfVehicle") );
+        QVERIFY( departure.contains("vehicleName") );
+        QVERIFY( departure.contains("vehicleNamePlural") );
+        QVERIFY( departure.contains("vehicleIconName") );
     // 		QVERIFY( departureData.contains("journeyNews") ); // NOTE These values are only given if they are not empty
     // 		QVERIFY( departureData.contains("platform") );
     // 		QVERIFY( departureData.contains("operator") );
-        QVERIFY( departureData.contains("delay") );
+        QVERIFY( departure.contains("Delay") );
     // 		QVERIFY( departureData.contains("delayReason") );
     // 		QVERIFY( departureData.contains("routeStops") );
     // 		QVERIFY( departureData.contains("routeTimes") );
-        QVERIFY( departureData.contains("routeExactStops") );
+        QVERIFY( departure.contains("RouteExactStops") );
 
         // Test data types
-        QVERIFY( departureData["departure"].canConvert(QVariant::DateTime) );
-        QVERIFY( departureData["target"].canConvert(QVariant::String) );
-        QVERIFY( departureData["line"].canConvert(QVariant::String) );
-        QVERIFY( departureData["vehicleType"].canConvert(QVariant::Int) );
-        QVERIFY( departureData["vehicleName"].canConvert(QVariant::String) );
-        QVERIFY( departureData["vehicleNamePlural"].canConvert(QVariant::String) );
-        QVERIFY( departureData["vehicleIconName"].canConvert(QVariant::String) );
-        QVERIFY( departureData["delay"].canConvert(QVariant::Int) );
-        QVERIFY( departureData["routeExactStops"].canConvert(QVariant::Int) );
-        if ( departureData.contains("journeyNews") ) {
-            QVERIFY( departureData["journeyNews"].canConvert(QVariant::String) );
+        QVERIFY( departure["DepartureDateTime"].canConvert(QVariant::DateTime) );
+        QVERIFY( departure["Target"].canConvert(QVariant::String) );
+        QVERIFY( departure["TransportLine"].canConvert(QVariant::String) );
+        QVERIFY( departure["TypeOfVehicle"].canConvert(QVariant::Int) );
+        QVERIFY( departure["VehicleName"].canConvert(QVariant::String) );
+        QVERIFY( departure["VehicleNamePlural"].canConvert(QVariant::String) );
+        QVERIFY( departure["VehicleIconName"].canConvert(QVariant::String) );
+        QVERIFY( departure["Delay"].canConvert(QVariant::Int) );
+        QVERIFY( departure["RouteExactStops"].canConvert(QVariant::Int) );
+        if ( departure.contains("JourneyNews") ) {
+            QVERIFY( departure["JourneyNews"].canConvert(QVariant::String) );
         }
-        if ( departureData.contains("platform") ) {
-            QVERIFY( departureData["platform"].canConvert(QVariant::String) );
+        if ( departure.contains("Platform") ) {
+            QVERIFY( departure["Platform"].canConvert(QVariant::String) );
         }
-        if ( departureData.contains("operator") ) {
-            QVERIFY( departureData["operator"].canConvert(QVariant::String) );
+        if ( departure.contains("Operator") ) {
+            QVERIFY( departure["Operator"].canConvert(QVariant::String) );
         }
-        if ( departureData.contains("delayReason") ) {
-            QVERIFY( departureData["delayReason"].canConvert(QVariant::String) );
+        if ( departure.contains("DelayReason") ) {
+            QVERIFY( departure["DelayReason"].canConvert(QVariant::String) );
         }
-        if ( departureData.contains("routeStops") ) {
-            QVERIFY( departureData["routeStops"].canConvert(QVariant::StringList) );
+        if ( departure.contains("RouteStops") ) {
+            QVERIFY( departure["RouteStops"].canConvert(QVariant::StringList) );
         }
-        if ( departureData.contains("routeTimes") ) {
-            QVERIFY( departureData["routeTimes"].canConvert(QVariant::List) );
+        if ( departure.contains("RouteTimes") ) {
+            QVERIFY( departure["RouteTimes"].canConvert(QVariant::List) );
         }
 
         // Check routeTimes list for data types
-        QVariantList times = departureData[ "routeTimes" ].toList();
+        QVariantList times = departure[ "RouteTimes" ].toList();
         foreach( const QVariant &time, times ) {
             QVERIFY( time.canConvert(QVariant::Time) );
         }
@@ -137,14 +128,15 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
 void testDepartureTimes( const TestVisualization &testVisualization, const QDateTime &testDateTime,
                          int maxDifference = 120 ) {
     // Test time values
-    int count = testVisualization.data["count"].toInt();
-    for ( int i = 0; i < count; ++i )
-    {
-        QString key = QString::number(i);
-        QVariantHash departureData = testVisualization.data[key].toHash();
+    QVariantList departuresData = testVisualization.data.contains("departures")
+            ? testVisualization.data["departures"].toList()
+            : testVisualization.data["arrivals"].toList();
+
+    foreach ( const QVariant &departure, departuresData ) {
+        QHash<QString, QVariant> departureData = departure.toHash();
 
         // Check routeTimes list for data types
-        QDateTime dateTimeValue = departureData[ "departure" ].toDateTime();
+        QDateTime dateTimeValue = departureData[ "DepartureDateTime" ].toDateTime();
 
         // Get seconds from actual departure time until the testTime
         int difference = dateTimeValue.secsTo( testDateTime );

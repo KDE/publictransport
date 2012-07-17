@@ -75,24 +75,22 @@ void StopSuggester::dataUpdated( const QString& sourceName, const Plasma::DataEn
             return;
         }
 
-        QStringList stops;
+        QStringList stopNames;
         QVariantHash stopToStopID;
-        QHash< QString, int > stopToStopWeight;
-        int count = data["count"].toInt();
-        for ( int i = 0; i < count; ++i ) {
-            QVariant stopData = data.value( QString( "stopName %1" ).arg( i ) );
-            if ( stopData.isValid() ) {
-                QVariantHash stopHash = stopData.toHash();
-                QString stop = stopHash["stopName"].toString();
-                QString stopID = stopHash["stopID"].toString();
-                int stopWeight = stopHash["stopWeight"].toInt();
-                if ( stopWeight <= 0 ) {
-                    stopWeight = 0;
-                }
-            }
+        QHash<QString, int> stopToStopWeight;
+        QVariantList stops = data["stops"].toList();
+        foreach ( const QVariant &stopData, stops ) {
+            QVariantHash stop = stopData.toHash();
+            QString stopName = stop["StopName"].toString();
+            QString stopID = stop["StopID"].toString();
+            int stopWeight = stop["StopWeight"].toInt();
+            stopNames.append( stopName );
+            stopToStopID.insert( stopName, stopID );
+            stopToStopWeight.insert( stopName, stopWeight );
         }
-        if ( !stops.isEmpty() ) {
-            emit stopSuggestionsReceived( stops, stopToStopID, stopToStopWeight );
+
+        if ( !stopNames.isEmpty() ) {
+            emit stopSuggestionsReceived( stopNames, stopToStopID, stopToStopWeight );
         } else {
             kDebug() << "nothing found";
         }
@@ -235,15 +233,12 @@ public:
         Q_Q( StopFinder );
 
         QString stop, stopID;
-        int count = data["count"].toInt();
-        for ( int i = 0; i < count; ++i ) {
-            QVariant stopData = data.value( QString( "stopName %1" ).arg( i ) );
-            if ( stopData.isValid() ) {
-                QHash< QString, QVariant > stopHash = stopData.toHash();
-                stop = stopHash["stopName"].toString();
-                stopID = stopHash["stopID"].toString();
-                break;
-            }
+        QVariantList stops = data["stops"].toList();
+        foreach ( const QVariant &stopData, stops ) {
+            QVariantHash stopHash = stopData.toHash();
+            stop = stopHash["StopName"].toString();
+            stopID = stopHash["StopID"].toString();
+            break;
         }
         if ( !stop.isEmpty() ) {
             foundStops << stop;

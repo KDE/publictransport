@@ -66,7 +66,7 @@ void DataSourceTester::dataUpdated( const QString& sourceName, const Plasma::Dat
         emit testResult( Error, i18nc( "@info/plain", "The stop name is invalid." ), QVariant(), QVariant() );
     } else {
         // Check if we got a possible stop list or a journey list
-        if ( data.value( "receivedPossibleStopList" ).toBool() ) {
+        if ( data.contains("stops") ) {
             processTestSourcePossibleStopList( data );
         } else {
             // List of journeys received
@@ -80,25 +80,20 @@ void DataSourceTester::processTestSourcePossibleStopList( const Plasma::DataEngi
 {
     disconnectTestSource();
 
-    QStringList stops;
-    QHash<QString, QVariant> stopToStopID;
-    QHash<QString, QVariant> stopToStopWeight;
-    int count = data["count"].toInt();
-    for ( int i = 0; i < count; ++i ) {
-        QVariant stopData = data.value( QString( "stopName %1" ).arg( i ) );
-        if ( !stopData.isValid() ) {
-            continue;
-        }
-
-        QHash<QString, QVariant> dataMap = stopData.toHash();
-        QString sStopName = dataMap["stopName"].toString();
-        QString sStopID = dataMap["stopID"].toString();
-        int stopWeight = dataMap["stopWeight"].toInt();
-        stops.append( sStopName );
+    QStringList stopNames;
+    QVariantHash stopToStopID;
+    QVariantHash stopToStopWeight;
+    QVariantList stops = data["stops"].toList();
+    foreach ( const QVariant &stopData, stops ) {
+        QVariantHash stop = stopData.toHash();
+        QString sStopName = stop["StopName"].toString();
+        QString sStopID = stop["StopID"].toString();
+        int stopWeight = stop["StopWeight"].toInt();
+        stopNames.append( sStopName );
         stopToStopID.insert( sStopName, sStopID );
         stopToStopWeight.insert( sStopName, stopWeight );
 
         m_mapStopToStopID.insert( sStopName, sStopID );
     }
-    emit testResult( PossibleStopsReceived, stops, stopToStopID, stopToStopWeight );
+    emit testResult( PossibleStopsReceived, stopNames, stopToStopID, stopToStopWeight );
 }

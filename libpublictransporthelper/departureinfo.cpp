@@ -94,7 +94,7 @@ void JourneyInfo::init( const QString &operatorName, const QSet< VehicleType > &
     m_changes = changes;
     m_journeyNews = journeyNews;
     m_routeStops = routeStops;
-    m_routeStopsShortened = routeStopsShortened;
+    m_routeStopsShortened = routeStopsShortened.isEmpty() ? routeStops : routeStopsShortened;
     m_routeTransportLines = routeTransportLines;
     m_routePlatformsDeparture = routePlatformsDeparture;
     m_routePlatformsArrival = routePlatformsArrival;
@@ -271,7 +271,7 @@ void DepartureInfo::init( const QString &operatorName, const QString &line,
     m_operator = operatorName;
     m_lineString = line;
     m_target = target;
-    m_targetShortened = targetShortened;
+    m_targetShortened = targetShortened.isEmpty() ? target : targetShortened;
     m_departure = departure;
     m_vehicleType = lineType;
     m_lineServices = lineServices;
@@ -281,7 +281,7 @@ void DepartureInfo::init( const QString &operatorName, const QString &line,
     m_journeyNews = journeyNews;
 
     m_routeStops = routeStops;
-    m_routeStopsShortened = routeStopsShortened;
+    m_routeStopsShortened = routeStopsShortened.isEmpty() ? routeStops : routeStopsShortened;
     m_routeTimes = routeTimes;
     m_routeExactStops = routeExactStops;
 

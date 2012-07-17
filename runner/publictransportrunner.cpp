@@ -417,49 +417,44 @@ void AsyncDataEngineUpdater::dataUpdated( const QString& sourceName, const Plasm
     emit finished( true );
 }
 
-void AsyncDataEngineUpdater::processDepartures( const QString &sourceName, const Plasma::DataEngine::Data &data )
+void AsyncDataEngineUpdater::processDepartures( const QString &sourceName,
+                                                const Plasma::DataEngine::Data &data )
 {
     QUrl url = data["requestUrl"].toUrl();
     QDateTime updated = data["updated"].toDateTime();
-    int count = qMin( data["count"].toInt(), m_settings.resultCount );
     qreal min = INT_MAX, max = 0;
-
     int filtered = 0;
-    kDebug() << count << "departures to be processed";
-    for ( int i = 0; i < count; ++i ) {
-        QVariant departureData = data.value( QString::number( i ) );
 
-        // Don't process invalid data
-        if ( !departureData.isValid() ) {
-            kDebug() << "Departure data for departure" << i << "is invalid" << data;
-            continue;
-        }
-
-        QVariantHash dataMap = departureData.toHash();
+    QVariantList departuresData = data.contains("departures")
+            ? data["departures"].toList() : data["arrivals"].toList();
+    kDebug() << departuresData.count() << "departures to be processed";
+    int i = 0;
+    foreach ( const QVariant &departure, departuresData ) {
+        QVariantHash departureData = departure.toHash();
 
         QList< QTime > routeTimes;
-        if ( dataMap.contains( "routeTimes" ) ) {
-            QVariantList times = dataMap[ "routeTimes" ].toList();
+        if ( departureData.contains( "RouteTimes" ) ) {
+            QVariantList times = departureData[ "RouteTimes" ].toList();
             foreach( const QVariant &time, times )
             routeTimes << time.toTime();
         }
-        QString operatorName = dataMap["operator"].toString();
-        QString line = dataMap["line"].toString();
-        QString target = dataMap["target"].toString();
-        QDateTime departure = dataMap["departure"].toDateTime();
-        QString vehicle = dataMap["vehicleName"].toString();
-        QString vehicleIconName = dataMap["vehicleIconName"].toString();
+        QString operatorName = departureData["Operator"].toString();
+        QString line = departureData["TransportLine"].toString();
+        QString target = departureData["Target"].toString();
+        QDateTime departure = departureData["DepartureDateTime"].toDateTime();
+        QString vehicle = departureData["VehicleName"].toString();
+        QString vehicleIconName = departureData["VehicleIconName"].toString();
         KIcon vehicleIcon = KIcon( vehicleIconName.isEmpty()
                                    ? "public-transport-stop" : vehicleIconName );
-        VehicleType vehicleType = static_cast<VehicleType>( dataMap["vehicleType"].toInt() );
+        VehicleType vehicleType = static_cast<VehicleType>( departureData["TypeOfVehicle"].toInt() );
 //     QString nightline = dataMap["nightline"].toBool();
 //     QString expressline = dataMap["expressline"].toBool();
-        QString platform = dataMap["platform"].toString();
-        int delay = dataMap["delay"].toInt();
-        QString delayReason = dataMap["delayReason"].toString();
-        QString journeyNews = dataMap["journeyNews"].toString();
-        QStringList routeStops = dataMap["routeStops"].toStringList();
-        int routeExactStops = dataMap["routeExactStops"].toInt();
+        QString platform = departureData["Platform"].toString();
+        int delay = departureData["Delay"].toInt();
+        QString delayReason = departureData["DelayReason"].toString();
+        QString journeyNews = departureData["JourneyNews"].toString();
+        QStringList routeStops = departureData["RouteStops"].toStringList();
+        int routeExactStops = departureData["RouteExactStops"].toInt();
         if ( routeExactStops < 3 ) {
             routeExactStops = 3;
         }
@@ -604,19 +599,11 @@ void AsyncDataEngineUpdater::processJourneys( const QString& sourceName, const P
     int count = data["count"].toInt();
     qreal min = INT_MAX, max = 0;
 
-    kDebug() << "  - " << count << "journeys to be processed";
+    QVariantList journeysData = data["journeys"].toList();
+    kDebug() << "  - " << journeysData.count() << "journeys to be processed";
     int filtered = 0;
-    for ( int i = 0; i < count; ++i ) {
-        QVariant journeyData = data.value( QString::number( i ) );
-        kDebug() << "Journey nr" << i;
-
-        // Don't process invalid data
-        if ( !journeyData.isValid() ) {
-            kDebug() << "Journey data for journey" << i << "invalid" << data;
-            break;
-        }
-
-        QVariantHash dataMap = journeyData.toHash();
+    foreach ( const QVariant &journey, journeysData ) {
+        QVariantHash journeyData = journey.toHash();
 
 //     QList<QTime> routeTimesDeparture, routeTimesArrival;
 //     if ( dataMap.contains("routeTimesDeparture") ) {
@@ -631,11 +618,11 @@ void AsyncDataEngineUpdater::processJourneys( const QString& sourceName, const P
 //     }
         QStringList routeStops, routeTransportLines;
 //             routePlatformsDeparture, routePlatformsArrival;
-        if ( dataMap.contains( "routeStops" ) ) {
-            routeStops = dataMap[ "routeStops" ].toStringList();
+        if ( journeyData.contains( "RouteStops" ) ) {
+            routeStops = journeyData[ "RouteStops" ].toStringList();
         }
-        if ( dataMap.contains( "routeTransportLines" ) ) {
-            routeTransportLines = dataMap[ "routeTransportLines" ].toStringList();
+        if ( journeyData.contains( "RouteTransportLines" ) ) {
+            routeTransportLines = journeyData[ "RouteTransportLines" ].toStringList();
         }
 //     if ( dataMap.contains("routePlatformsDeparture") ) {
 //         routePlatformsDeparture = dataMap[ "routePlatformsDeparture" ].toStringList();
@@ -656,19 +643,19 @@ void AsyncDataEngineUpdater::processJourneys( const QString& sourceName, const P
 //         routeTimesArrivalDelay << var.toInt();
 //     }
 
-        QString operatorName = dataMap["operator"].toString();
+        QString operatorName = journeyData["Operator"].toString();
 //     QList<QVariant> vehicleTypes = dataMap["vehicleTypes"].toList();
-        QStringList vehicles = dataMap["vehicleNames"].toStringList();
-        QStringList vehicleIconNames = dataMap["vehicleIconNames"].toStringList();
+        QStringList vehicles = journeyData["VehicleNames"].toStringList();
+        QStringList vehicleIconNames = journeyData["VehicleIconNames"].toStringList();
         KIcon icon = KIcon( vehicleIconNames.isEmpty() ? "public-transport-stop" : vehicleIconNames.first() );
-        QDateTime departure = dataMap["departure"].toDateTime();
-        QDateTime arrival = dataMap["arrival"].toDateTime();
-        QString pricing = dataMap["pricing"].toString();
-        QString startStop = dataMap["startStopName"].toString();
-        QString targetStop = dataMap["targetStopName"].toString();
-        int journeyDuration = dataMap["duration"].toInt();
-        int changes = dataMap["changes"].toInt();
-        QString journeyNews = dataMap["journeyNews"].toString();
+        QDateTime departure = journeyData["DepartureDateTime"].toDateTime();
+        QDateTime arrival = journeyData["ArrivalDateTime"].toDateTime();
+        QString pricing = journeyData["Pricing"].toString();
+        QString startStop = journeyData["StartStopName"].toString();
+        QString targetStop = journeyData["TargetStopName"].toString();
+        int journeyDuration = journeyData["Duration"].toInt();
+        int changes = journeyData["Changes"].toInt();
+        QString journeyNews = journeyData["JourneyNews"].toString();
 //     dataMap["routeVehicleTypes"].toList()
 
         QDateTime predictedDeparture = departure;
@@ -754,7 +741,7 @@ void AsyncDataEngineUpdater::processJourneys( const QString& sourceName, const P
         res.url = url;
         res.relevance = -predictedDeparture.toTime_t() / 60;
         m_results << res;
-        kDebug() << i << text;
+        kDebug() << text;
 
         min = qMin( min, res.relevance );
         max = qMax( max, res.relevance );
@@ -799,21 +786,13 @@ void AsyncDataEngineUpdater::processStopSuggestions( const QString& sourceName,
 
     // Get all stop names, IDs, weights
     QUrl url = data["requestUrl"].toUrl();
-    int count = data["count"].toInt(); // The number of received stop suggestions
     qreal min = INT_MAX, max = 0;
-    for ( int i = 0; i < count; ++i ) {
-        if ( !data.contains( QString( "stopName %1" ).arg( i ) ) ) {
-            kDebug() << "doesn't contain 'stopName" << i << "'! count ="
-            << count << "data =" << data;
-            break;
-        }
-
-        // Each stop suggestion is stored as a hash in a key named "stopName X",
-        // where X is the index of the stop suggestion
-        QVariantHash dataMap = data.value( QString( "stopName %1" ).arg( i ) ).toHash();
-        QString stopName = dataMap["stopName"].toString();
-        QString stopID = dataMap["stopID"].toString();
-        int stopWeight = dataMap["stopWeight"].toInt();
+    QVariantList stops = data["stops"].toList();
+    foreach ( const QVariant &stopData, stops ) {
+        QVariantHash stop = stopData.toHash();
+        QString stopName = stop["StopName"].toString();
+        QString stopID = stop["StopID"].toString();
+        int stopWeight = stop["StopWeight"].toInt();
         if ( stopWeight <= 0 ) {
             stopWeight = 0;
         }

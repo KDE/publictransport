@@ -31,6 +31,7 @@
 #include <Plasma/Service>
 #include <Plasma/ServiceJob>
 #include <Plasma/DataEngine>
+#include <Plasma/DataEngineManager>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
@@ -38,9 +39,9 @@ namespace PublicTransport {
 class ServiceProviderDataDialogPrivate {
 public:
     ServiceProviderDataDialogPrivate( const QVariantHash &_serviceProviderData,
-                               ServiceProviderDataDialog::Options _options ) {
-        serviceProviderData = _serviceProviderData;
-        options = _options;
+                                      ServiceProviderDataDialog::Options _options )
+            : serviceProviderData(_serviceProviderData), options(_options)
+    {
     };
 
     Ui::providerData uiProviderData;
@@ -211,15 +212,13 @@ void ServiceProviderDataDialog::deleteGtfsDatabase()
             "<para>By deleting the database %1 disk space get freed.</para>",
             KGlobal::locale()->formatByteSize(feedSizeInBytes))) == KMessageBox::Continue )
     {
-//         TODO TODO TODO
-//         if ( !d->service ) {
-//             d->service = d->publicTransportEngine->serviceForSource( QString() );
-//             d->service->setParent( this );
-//         }
-//         KConfigGroup op = d->service->operationDescription("deleteGtfsDatabase");
-//         op.writeEntry( "serviceProviderId", d->serviceProviderData["id"] );
-//         Plasma::ServiceJob *deleteJob = d->service->startOperationCall( op );
-//         connect( deleteJob, SIGNAL(result(KJob*)), this, SLOT(deletionFinished(KJob*)) );
+        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("Publictransport");
+        Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
+        KConfigGroup op = gtfsService->operationDescription("deleteGtfsDatabase");
+        op.writeEntry( "serviceProviderId", d->serviceProviderData["id"] );
+        Plasma::ServiceJob *deleteJob = gtfsService->startOperationCall( op );
+        connect( deleteJob, SIGNAL(result(KJob*)), this, SLOT(deletionFinished(KJob*)) );
+        connect( deleteJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
     }
 }
 
