@@ -918,6 +918,12 @@ QString Helper::trim( const QString& str )
                        .trimmed();
 }
 
+QString Helper::simplify( const QString &str )
+{
+    return QString(str).replace( QRegExp("(&nbsp;)+", Qt::CaseInsensitive), QString() )
+                       .simplified();
+}
+
 QString Helper::stripTags( const QString& str )
 {
     const QString attributePattern = "\\w+(?:\\s*=\\s*(?:\"[^\"]*\"|'[^']*'|[^\"'>\\s]+))?";

@@ -827,6 +827,16 @@ public:
     Q_INVOKABLE static QString trim( const QString &str );
 
     /**
+     * @brief Like trim(), additionally removes double whitespace in the middle of @p str.
+     *
+     * @note All occurrences of the HTML entitiy <em>&nbsp;</em> are also removes.
+     *
+     * @param str The string to be simplified.
+     * @return @p str without whitespace in the middle, at the beginning or end.
+     **/
+    Q_INVOKABLE static QString simplify( const QString &str );
+
+    /**
      * @brief Removes all HTML tags from str.
      *
      * This function works with attributes which contain a closing tab as strings.
