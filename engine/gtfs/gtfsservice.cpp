@@ -451,7 +451,6 @@ GtfsService::GtfsService( const QString &name, QObject *parent )
 Plasma::ServiceJob* GtfsService::createJob(
         const QString &operation, QMap< QString, QVariant > &parameters )
 {
-#ifdef BUILD_PROVIDER_TYPE_GTFS
     if ( operation == "updateGtfsFeed" ) {
         return new UpdateGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
     } else if ( operation == "importGtfsFeed" ) {
@@ -463,8 +462,8 @@ Plasma::ServiceJob* GtfsService::createJob(
         return importJob;
     } else if ( operation == "deleteGtfsDatabase" ) {
         return new DeleteGtfsDatabaseJob( "PublicTransport", operation, parameters, this );
+    } else {
+        kWarning() << "Operation" << operation << "not supported";
+        return 0;
     }
-#endif
-    kWarning() << "Operation" << operation << "not supported";
-    return 0;
 }

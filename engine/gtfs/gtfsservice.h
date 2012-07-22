@@ -18,7 +18,7 @@
  */
 
 /** @file
-* @brief This file contains the public transport data engine.
+* @brief This file contains the GTFS service.
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
 #ifndef GTFSSERVICE_HEADER
