@@ -40,8 +40,9 @@
 struct AbstractRequest;
 struct DepartureRequest;
 struct ArrivalRequest;
-struct StopSuggestionRequest;
 struct JourneyRequest;
+struct StopSuggestionRequest;
+struct AdditionalDataRequest;
 
 class ServiceProviderData;
 namespace Scripting {
@@ -53,6 +54,7 @@ namespace Scripting {
 
 class QScriptProgram;
 class QScriptEngine;
+class QEventLoop;
 
 using namespace Scripting;
 
@@ -163,8 +165,16 @@ signals:
     void stopSuggestionsReady( const QList<TimetableData> &stops,
                                ResultObject::Features features, ResultObject::Hints hints,
                                const QString &url, const GlobalTimetableInfo &globalInfo,
-                               const StopSuggestionRequest &info,
+                               const StopSuggestionRequest &request,
                                bool couldNeedForcedUpdate = false );
+
+    /** @brief Signals ready additional data for a TimetableData item. */
+    void additionalDataReady( const TimetableData &data,
+                              ResultObject::Features features, ResultObject::Hints hints,
+                              const QString &url, const GlobalTimetableInfo &globalInfo,
+                              const AdditionalDataRequest &request,
+                              bool couldNeedForcedUpdate = false );
+
 
 protected slots:
     /** @brief Handle the ResultObject::publish() signal by emitting dataReady(). */
@@ -185,6 +195,7 @@ protected:
     Storage *m_scriptStorage;
     QSharedPointer<Network> m_scriptNetwork;
     QSharedPointer<ResultObject> m_scriptResult;
+    QEventLoop *m_eventLoop;
 
     int m_published;
     bool m_success;
@@ -260,6 +271,22 @@ public:
 
 private:
     const StopSuggestionsJobPrivate *d;
+};
+
+class AdditionalDataJobPrivate;
+class AdditionalDataJob : public ScriptJob {
+    Q_OBJECT
+
+public:
+    explicit AdditionalDataJob( QScriptProgram* script, const ServiceProviderData* info,
+                                Storage* scriptStorage, const AdditionalDataRequest& request,
+                                QObject* parent = 0);
+    virtual ~AdditionalDataJob();
+
+    virtual const AbstractRequest* request() const;
+
+private:
+    const AdditionalDataJobPrivate *d;
 };
 
 #endif // Multiple inclusion guard

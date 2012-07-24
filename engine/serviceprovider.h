@@ -45,6 +45,7 @@ class AbstractRequest;
 class DepartureRequest;
 class ArrivalRequest;
 class StopSuggestionRequest;
+class AdditionalDataRequest;
 class JourneyRequest;
 
 class StopInfo;
@@ -198,6 +199,15 @@ public:
      **/
     virtual void requestStopSuggestions( const StopSuggestionRequest &request );
 
+    /**
+     * @brief Requests additional data for a valid timetable item in the engine.
+     *
+     * When the additional data is completely received @ref additionalDataReceived gets emitted.
+     * The default implementation does nothing.
+     * @param request Information about the additional data request.
+     **/
+    virtual void requestAdditionalData( const AdditionalDataRequest &request );
+
     /** @brief Whether or not the city should be put into the "raw" url. */
     virtual bool useSeparateCityValue() const;
 
@@ -306,6 +316,18 @@ signals:
      **/
     void stopListReceived( ServiceProvider *provider, const QUrl &requestUrl,
             const StopInfoList &stops, const StopSuggestionRequest &request );
+
+    /**
+     * @brief Emitted when additional data has been received.
+     *
+     * @param provider The provider that was used to get additional data.
+     * @param requestUrl The url used to request the information.
+     * @param data A TimetableData object containing the additional data.
+     * @param request Information about the request for the just received additional data.
+     * @see ServiceProvider::useSeperateCityValue()
+     **/
+    void additionalDataReceived( ServiceProvider *provider, const QUrl &requestUrl,
+                                 const TimetableData &data, const AdditionalDataRequest &request );
 
     /**
      * @brief Emitted when an error occurred while parsing.

@@ -161,6 +161,13 @@ void ServiceProvider::requestJourneys( const JourneyRequest &request )
     return;
 }
 
+void ServiceProvider::requestAdditionalData( const AdditionalDataRequest &request )
+{
+    Q_UNUSED( request );
+    kDebug() << "Not implemented";
+    return;
+}
+
 QString ServiceProvider::gethex( ushort decimal )
 {
     QString hexchars = "0123456789ABCDEFabcdef";

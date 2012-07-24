@@ -44,6 +44,8 @@
 #include <QFileInfo>
 #include <QPointer>
 #include <QMutex>
+#include <QTimer>
+#include <QEventLoop>
 #include <QScriptProgram>
 #include <QScriptEngine>
 
@@ -51,6 +53,7 @@ const char *ServiceProviderScript::SCRIPT_FUNCTION_FEATURES = "features";
 const char *ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE = "getTimetable";
 const char *ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS = "getJourneys";
 const char *ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS = "getStopSuggestions";
+const char *ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA = "getAdditionalData";
 
 ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, QObject *parent,
                                               const QSharedPointer<KConfig> &cache )
@@ -62,6 +65,7 @@ ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, Q
     m_scriptFeatures = readScriptFeatures( cache.isNull() ? ServiceProviderGlobal::cache() : cache );
 
     qRegisterMetaType< QList<ChangelogEntry> >( "QList<ChangelogEntry>" );
+    qRegisterMetaType< TimetableData >( "TimetableData" );
     qRegisterMetaType< QList<TimetableData> >( "QList<TimetableData>" );
     qRegisterMetaType< GlobalTimetableInfo >( "GlobalTimetableInfo" );
     qRegisterMetaType< ParseDocumentMode >( "ParseDocumentMode" );
@@ -440,6 +444,30 @@ void ServiceProviderScript::stopSuggestionsReady( const QList<TimetableData> &da
     }
 }
 
+void ServiceProviderScript::additionDataReady( const TimetableData &data,
+        ResultObject::Features features, ResultObject::Hints hints, const QString &url,
+        const GlobalTimetableInfo &globalInfo, const AdditionalDataRequest &request,
+        bool couldNeedForcedUpdate )
+{
+    Q_UNUSED( couldNeedForcedUpdate );
+    if ( data.isEmpty() ) {
+        kDebug() << "The script didn't find any new data" << request.sourceName;
+        emit errorParsing( this, ErrorParsingFailed,
+                           i18nc("@info/plain", "No additional data found."),
+                           url, &request );
+    } else {
+        // Create PublicTransportInfo objects for new data and combine with already published data
+//         PublicTransportInfoList newResults;
+//         ResultObject::dataList( data, &newResults, request.parseMode,
+//                                 m_data->defaultVehicleType(), &globalInfo, features, hints );
+//         PublicTransportInfoList results =
+//                 (m_publishedData[request.sourceName] << newResults);
+
+        kDebug() << "Additional data is ready:" << data;
+        emit additionalDataReceived( this, url, data, request );
+    }
+}
+
 void ServiceProviderScript::jobStarted( ThreadWeaver::Job* job )
 {
     ScriptJob *scriptJob = qobject_cast< ScriptJob* >( job );
@@ -544,6 +572,22 @@ void ServiceProviderScript::requestStopSuggestions( const StopSuggestionRequest 
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)),
              this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)) );
+    ThreadWeaver::Weaver::instance()->enqueue( job );
+    return;
+}
+
+void ServiceProviderScript::requestAdditionalData( const AdditionalDataRequest &request )
+{
+    if ( !lazyLoadScript() ) {
+        kDebug() << "Failed to load script!";
+        return;
+    }
+
+    AdditionalDataJob *job = new AdditionalDataJob( m_script, m_data, m_scriptStorage,
+                                                    request, this );
+    connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
+    connect( job, SIGNAL(additionalDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)),
+             this, SLOT(additionDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)) );
     ThreadWeaver::Weaver::instance()->enqueue( job );
     return;
 }

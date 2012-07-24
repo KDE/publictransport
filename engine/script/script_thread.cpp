@@ -48,21 +48,25 @@ ScriptJob::ScriptJob( QScriptProgram *script, const ServiceProviderData* data,
     : ThreadWeaver::Job( parent ),
       m_engine(0), m_script(script),
       m_scriptStorage(scriptStorage), m_scriptNetwork(0), m_scriptResult(0),
-      m_published(0), m_success(true),
-      m_data( *data )
+      m_eventLoop(0), m_published(0), m_success(true), m_data(*data)
 {
-    ++thread_count; kDebug() << "Thread count:" << thread_count;
+    kDebug() << "Thread count:" << ++thread_count;
     qRegisterMetaType<DepartureRequest>( "DepartureRequest" );
     qRegisterMetaType<ArrivalRequest>( "ArrivalRequest" );
     qRegisterMetaType<JourneyRequest>( "JourneyRequest" );
     qRegisterMetaType<StopSuggestionRequest>( "StopSuggestionRequest" );
+    qRegisterMetaType<AdditionalDataRequest>( "AdditionalDataRequest" );
 }
 
 ScriptJob::~ScriptJob()
 {
-    --thread_count; kDebug() << "Thread count:" << thread_count;
+    kDebug() << "Thread count:" << --thread_count;
     if ( !m_engine ) {
         return;
+    }
+
+    if ( m_eventLoop ) {
+        m_eventLoop->quit();
     }
 
     m_scriptNetwork->abortAllRequests();
@@ -140,11 +144,14 @@ void ScriptJob::run()
         functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
         break;
     case ParseForJourneysByDepartureTime:
-    case ParseForJourneysByArrivalTime: {
+    case ParseForJourneysByArrivalTime:
         functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS;
         break;
-    } case ParseForStopSuggestions:
+    case ParseForStopSuggestions:
         functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
+        break;
+    case ParseForAdditionalData:
+        functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA;
         break;
     default:
         kDebug() << "Parse mode unsupported:" << request()->parseMode;
@@ -204,16 +211,19 @@ void ScriptJob::run()
 
         while ( m_scriptNetwork->hasRunningRequests() || m_engine->isEvaluating() ) {
             // Wait for running requests to finish
-            QEventLoop eventLoop;
+            m_eventLoop = new QEventLoop();
             ScriptAgent agent( m_engine );
-            QTimer::singleShot( 30000, &eventLoop, SLOT(quit()) );
-            connect( this, SIGNAL(destroyed(QObject*)), &eventLoop, SLOT(quit()) );
-            connect( &agent, SIGNAL(scriptFinished()), &eventLoop, SLOT(quit()) );
+            QTimer::singleShot( 30000, m_eventLoop, SLOT(quit()) );
+            connect( this, SIGNAL(destroyed(QObject*)), m_eventLoop, SLOT(quit()) );
+            connect( &agent, SIGNAL(scriptFinished()), m_eventLoop, SLOT(quit()) );
             connect( m_scriptNetwork.data(), SIGNAL(allRequestsFinished()),
-                     &eventLoop, SLOT(quit()) );
+                     m_eventLoop, SLOT(quit()) );
 
-            kDebug() << "Waiting for script to finish..." << thread();
-            eventLoop.exec();
+            kDebug() << "Waiting for script to finish..." << m_scriptNetwork->hasRunningRequests()
+                     << m_engine->isEvaluating() << thread();
+            m_eventLoop->exec( QEventLoop::ExcludeUserInputEvents );
+            delete m_eventLoop;
+            m_eventLoop = 0;
         }
 
         // Inform about script run time
@@ -255,6 +265,24 @@ void ScriptJob::run()
                         *dynamic_cast<const StopSuggestionRequest*>(request()),
                         couldNeedForcedUpdate );
                 break;
+
+            case ParseForAdditionalData: {
+                const QList< TimetableData > data = m_scriptResult->data();
+                if ( data.isEmpty() ) {
+                    kDebug() << "The script didn't find any new data" << request()->sourceName;
+                    m_errorString = i18nc("@info/plain",
+                                          "Error while parsing the additional data document.");
+                    m_success = false;
+                    return;
+                } else if ( data.count() > 1 ) {
+                    kWarning() << "The script added more than one result set, only the first gets used";
+                }
+                emit additionalDataReady( data.first(), m_scriptResult->features(),
+                        m_scriptResult->hints(), m_scriptNetwork->lastUrl(), globalInfo,
+                        *dynamic_cast<const AdditionalDataRequest*>(request()),
+                        couldNeedForcedUpdate );
+                break;
+            }
 
             default:
                 kDebug() << "Parse mode unsupported:" << request()->parseMode;
@@ -428,7 +456,7 @@ bool ScriptJob::loadScript( QScriptProgram *script )
 {
     // Create script engine
     kDebug() << "Create QScriptEngine";
-    m_engine = new QScriptEngine( thread() );
+    m_engine = new QScriptEngine( /*thread()*/ );
 //     m_scriptStorage->mutex.lock();
 //     kDebug() << "LOAD qt.core" << thread() << m_parseMode;
 //     m_engine->importExtension("qt.core");
@@ -462,8 +490,8 @@ bool ScriptJob::loadScript( QScriptProgram *script )
 
     // Create objects for the script
     Helper *scriptHelper = new Helper( m_data.id(), m_engine );
-    m_scriptNetwork = QSharedPointer<Network>( new Network(m_data.fallbackCharset(), thread()) );
-    m_scriptResult = QSharedPointer<ResultObject>( new ResultObject(thread()) );
+    m_scriptNetwork = QSharedPointer<Network>( new Network(m_data.fallbackCharset(), m_engine) );
+    m_scriptResult = QSharedPointer<ResultObject>( new ResultObject(m_engine) );
     connect( m_scriptResult.data(), SIGNAL(publish()), this, SLOT(publish()) );
 
     // Make the objects available to the script
@@ -634,6 +662,28 @@ StopSuggestionsJob::~StopSuggestionsJob()
 }
 
 const AbstractRequest *StopSuggestionsJob::request() const
+{
+    return &d->request;
+}
+
+class AdditionalDataJobPrivate {
+public:
+    AdditionalDataJobPrivate( const AdditionalDataRequest &request ) : request(request) {};
+    AdditionalDataRequest request;
+};
+
+AdditionalDataJob::AdditionalDataJob( QScriptProgram *script, const ServiceProviderData *info,
+        Storage *scriptStorage, const AdditionalDataRequest &request, QObject *parent )
+        : ScriptJob(script, info, scriptStorage, parent), d(new AdditionalDataJobPrivate(request))
+{
+}
+
+AdditionalDataJob::~AdditionalDataJob()
+{
+    delete d;
+}
+
+const AbstractRequest *AdditionalDataJob::request() const
 {
     return &d->request;
 }

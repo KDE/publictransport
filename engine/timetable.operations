@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE kcfg SYSTEM
+    "http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
+<kcfg>
+    <group name="requestAdditionalData">
+        <entry name="itemnumber" type="int">
+            <label>The number in the data source, under which the item to update is stored.
+                   The first item has the number 0.</label>
+        </entry>
+    </group>
+</kcfg>

@@ -57,6 +57,7 @@ endif ( INSTALL_TIMETABLEMATE )
 qt4_wrap_cpp( publictransport_engine_MOC_SRCS enums.h )
 set( publictransport_engine_SRCS
     publictransportdataengine.cpp
+    timetableservice.cpp
     global.cpp
     departureinfo.cpp
     request.cpp
@@ -126,3 +127,8 @@ install( FILES plasma-engine-publictransport.desktop
 # In TimetableMate they are also used as project files, without additional data
 install( FILES serviceproviderplugin.xml DESTINATION ${XDG_MIME_INSTALL_DIR} )
 update_xdg_mimetypes( ${XDG_MIME_INSTALL_DIR} )
+
+# Install .operations-file describing the "Timetable" service
+# for timetable data sources
+install( FILES timetable.operations
+         DESTINATION ${DATA_INSTALL_DIR}/plasma/services )

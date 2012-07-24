@@ -62,7 +62,6 @@ struct AbstractRequest {
     ParseDocumentMode parseMode;
 
     QString parseModeName() const;
-
     static QString parseModeName( ParseDocumentMode parseMode );
 
     AbstractRequest( const QString &sourceName = QString(),
@@ -208,6 +207,35 @@ struct JourneyRequest : public AbstractRequest {
         return new JourneyRequest( sourceName, stop, targetStop, dateTime, maxCount, urlToUse,
                                    city, parseMode );
     };
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
+
+    /** @brief Get the name of the script function that is associated with this request. */
+    virtual QString functionName() const;
+#endif
+};
+
+// TODO Add another abstraction without unneded values in AbstractRequest
+struct AdditionalDataRequest : public AbstractRequest {
+    int itemNumber;
+    QString transportLine;
+    QString target;
+
+    AdditionalDataRequest( const QString &sourceName = QString(),
+                           ParseDocumentMode parseMode = ParseForAdditionalData )
+        : AbstractRequest(sourceName, parseMode) {};
+    AdditionalDataRequest( const QString &sourceName, int itemNumber, const QString &stop,
+                           const QDateTime &dateTime, const QString &transportLine,
+                           const QString &target, const QString &city = QString(),
+                           ParseDocumentMode parseMode = ParseForAdditionalData )
+        : AbstractRequest(sourceName, stop, dateTime, 1, city, parseMode),
+          itemNumber(itemNumber), transportLine(transportLine), target(target) {};
+    AdditionalDataRequest( const AdditionalDataRequest &other )
+        : AbstractRequest(other), itemNumber(other.itemNumber),
+          transportLine(other.transportLine), target(other.target) {};
+
+    virtual AbstractRequest *clone() const { return new AdditionalDataRequest(*this); };
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;

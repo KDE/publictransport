@@ -438,7 +438,8 @@ enum ParseDocumentMode {
     ParseForArrivals, /**< Parsing for arrivals. */
     ParseForJourneysByDepartureTime, /**< Parsing for journeys departing at a given time. */
     ParseForJourneysByArrivalTime, /**< Parsing for journeys arriving at a given time. */
-    ParseForStopSuggestions /**< Parsing for stop suggestions. */
+    ParseForStopSuggestions, /**< Parsing for stop suggestions. */
+    ParseForAdditionalData /**< Parsing for additional data. */
 };
 
 /* Functions for nicer debug output */
@@ -455,6 +456,8 @@ inline QDebug &operator <<( QDebug debug, ParseDocumentMode parseDocumentMode )
         return debug << "ParseForJourneysByArrivalTime";
     case ParseForStopSuggestions:
         return debug << "ParseForStopSuggestions";
+    case ParseForAdditionalData:
+        return debug << "ParseForAdditionalData";
 
     default:
         return debug << "ParseDocumentMode unknown" << static_cast<int>(parseDocumentMode);

@@ -36,6 +36,7 @@ struct StopSuggestionRequest;
 struct DepartureRequest;
 struct ArrivalRequest;
 struct JourneyRequest;
+struct AdditionalDataRequest;
 
 class ServiceProvider;
 class ServiceProviderData;
@@ -158,6 +159,158 @@ public:
      **/
     static const int DEFAULT_TIME_OFFSET;
 
+signals:
+    /**
+     * @brief Emitted when a request for additional data has been finished.
+     *
+     * This signal gets used by the "timetable" service to get notified when a job has finsihed
+     * and whether it was successful or not.
+     *
+     * @param newData The new contents (including additional data) in the data source for the item.
+     * @param success Whether or not the additional data job was successful.
+     * @param errorMessage Contains an error message if @p success is false.
+     **/
+    void additionalDataRequestFinished( const QVariantHash &newData, bool success = true,
+                                        const QString &errorMessage = QString() );
+
+public slots:
+    void requestAdditionalData( const QString &sourceName, int updateItem );
+
+protected slots:
+    void slotSourceRemoved( const QString &name );
+
+    void forceUpdate();
+    void updateTimeout();
+
+    /**
+     * @brief A list of departures was received.
+     *
+     * @param provider The provider that was used to download and parse the departures.
+     * @param requestUrl The url used to request the information.
+     * @param departures A list of departures that were received.
+     * @param globalInfo Global information that affects all departures.
+     * @param request Information about the request for the here received @p departures.
+     *
+     * @see ServiceProvider::useSeparateCityValue()
+     **/
+    void departureListReceived( ServiceProvider *provider,
+            const QUrl &requestUrl, const DepartureInfoList &departures,
+            const GlobalTimetableInfo &globalInfo,
+            const DepartureRequest &request,
+            bool deleteDepartureInfos = true );
+
+    /**
+     * @brief A list of arrivals was received.
+     *
+     * @param provider The provider that was used to download and parse the arrivals.
+     * @param requestUrl The url used to request the information.
+     * @param arrivals A list of arrivals that were received.
+     * @param globalInfo Global information that affects all arrivals.
+     * @param request Information about the request for the here received @p arrivals.
+     *
+     * @see ServiceProvider::useSeparateCityValue()
+     **/
+    void arrivalListReceived( ServiceProvider *provider,
+            const QUrl &requestUrl, const ArrivalInfoList &arrivals,
+            const GlobalTimetableInfo &globalInfo,
+            const ArrivalRequest &request,
+            bool deleteDepartureInfos = true );
+
+    /**
+     * @brief A list of journeys was received.
+     *
+     * @param provider The provider that was used to download and parse the journeys.
+     * @param requestUrl The url used to request the information.
+     * @param journeys A list of journeys that were received.
+     * @param globalInfo Global information that affects all journeys.
+     * @param request Information about the request for the here received @p journeys.
+     *
+     * @see ServiceProvider::useSeparateCityValue()
+     **/
+    void journeyListReceived( ServiceProvider *provider,
+            const QUrl &requestUrl, const JourneyInfoList &journeys,
+            const GlobalTimetableInfo &globalInfo,
+            const JourneyRequest &request,
+            bool deleteJourneyInfos = true );
+
+    /**
+     * @brief A list of stop suggestions was received.
+     *
+     * @param provider The service provider that was used to download and parse the stops.
+     * @param requestUrl The url used to request the information.
+     * @param stops A pointer to a list of @ref StopInfo objects.
+     * @param request Information about the request for the here received @p stops.
+     *
+     * @see ServiceProvider::useSeparateCityValue()
+     **/
+    void stopListReceived( ServiceProvider *provider,
+            const QUrl &requestUrl, const StopInfoList &stops,
+            const StopSuggestionRequest &request,
+            bool deleteStopInfos = true );
+
+    /** TODO
+     * @brief A list of stop suggestions was received.
+     *
+     * @param provider The service provider that was used to download and parse the stops.
+     * @param requestUrl The url used to request the information.
+     * @param stops A pointer to a list of @ref StopInfo objects. TODO
+     * @param request Information about the request for the here received @p stops.
+     *
+     * @see ServiceProvider::useSeparateCityValue()
+     **/
+    void additionalDataReceived( ServiceProvider *provider,
+            const QUrl &requestUrl, const TimetableData &data,
+            const AdditionalDataRequest &request );
+
+    /**
+     * @brief An error was received.
+     *
+     * @param provider The provider that was used to download and parse information
+     *   from the service provider.
+     * @param errorCode The error code or NoError if there was no error.
+     * @param errorString If @p errorCode isn't NoError this contains a description of the error.
+     * @param requestUrl The url used to request the information.
+     * @param request Information about the request that failed with @p errorType.
+     *
+     * @see ServiceProvider::useSeparateCityValue()
+     **/
+    void errorParsing( ServiceProvider *provider, ErrorCode errorCode, const QString &errorString,
+            const QUrl &requestUrl, const AbstractRequest *request );
+
+    void progress( ServiceProvider *provider, qreal progress, const QString &jobDescription,
+            const QUrl &requestUrl, const AbstractRequest *request );
+
+    /**
+     * @brief A global or local directory with service provider XML files was changed.
+     *
+     * This slot uses reloadChangedProviders() to actually update the loaded service providers. Because
+     * a change in multiple files in one or more directories causes a call to this slot for each
+     * file, this would cause all providers to be reloaded for each changed file. Especially when
+     * installing a new version, while running an old one, this can take some time.
+     * Therefore this slot uses a short timeout. If a new call to this slot happens within that
+     * timeout, the timeout gets simply restarted. Otherwise after the timeout reloadChangedProviders()
+     * gets called.
+     *
+     * @param path The changed directory.
+     * @see reloadChangedProviders()
+     */
+    void serviceProviderDirChanged( const QString &path );
+
+    /**
+     * @brief Deletes all currently created providers and associated data and recreates them.
+     *
+     * This slot gets called by serviceProviderDirChanged() if a global or local directory
+     * containing service provider XML files has changed. It does not call this function on every
+     * directory change, but only if there are no further changes in a short timespan.
+     * The provider cache (ServiceProviderGlobal::cache()) gets updated for all changed provider
+     * plugins.
+     * @note Deleted data sources only get filled again when new requests are made,
+     *   they are not updated.
+     *
+     * @see serviceProviderDirChanged()
+     **/
+    void reloadChangedProviders();
+
 protected:
     /**
      * @brief This function gets called when a new data source gets requested.
@@ -261,126 +414,6 @@ protected:
     bool testServiceProvider( const QString &providerId, QVariantHash *providerData,
                               QString *errorMessage );
 
-public slots:
-    void slotSourceRemoved( const QString &name );
-
-    void forceUpdate();
-
-    /**
-     * @brief A list of departures was received.
-     *
-     * @param provider The provider that was used to download and parse the departures.
-     * @param requestUrl The url used to request the information.
-     * @param departures A list of departures that were received.
-     * @param globalInfo Global information that affects all departures.
-     * @param request Information about the request for the here received @p departures.
-     *
-     * @see ServiceProvider::useSeparateCityValue()
-     **/
-    void departureListReceived( ServiceProvider *provider,
-            const QUrl &requestUrl, const DepartureInfoList &departures,
-            const GlobalTimetableInfo &globalInfo,
-            const DepartureRequest &request,
-            bool deleteDepartureInfos = true );
-
-    /**
-     * @brief A list of arrivals was received.
-     *
-     * @param provider The provider that was used to download and parse the arrivals.
-     * @param requestUrl The url used to request the information.
-     * @param arrivals A list of arrivals that were received.
-     * @param globalInfo Global information that affects all arrivals.
-     * @param request Information about the request for the here received @p arrivals.
-     *
-     * @see ServiceProvider::useSeparateCityValue()
-     **/
-    void arrivalListReceived( ServiceProvider *provider,
-            const QUrl &requestUrl, const ArrivalInfoList &arrivals,
-            const GlobalTimetableInfo &globalInfo,
-            const ArrivalRequest &request,
-            bool deleteDepartureInfos = true );
-
-    /**
-     * @brief A list of journeys was received.
-     *
-     * @param provider The provider that was used to download and parse the journeys.
-     * @param requestUrl The url used to request the information.
-     * @param journeys A list of journeys that were received.
-     * @param globalInfo Global information that affects all journeys.
-     * @param request Information about the request for the here received @p journeys.
-     *
-     * @see ServiceProvider::useSeparateCityValue()
-     **/
-    void journeyListReceived( ServiceProvider *provider,
-            const QUrl &requestUrl, const JourneyInfoList &journeys,
-            const GlobalTimetableInfo &globalInfo,
-            const JourneyRequest &request,
-            bool deleteJourneyInfos = true );
-
-    /**
-     * @brief A list of stop suggestions was received.
-     *
-     * @param provider The service provider that was used to download and parse the stops.
-     * @param requestUrl The url used to request the information.
-     * @param stops A pointer to a list of @ref StopInfo objects.
-     * @param request Information about the request for the here received @p stops.
-     *
-     * @see ServiceProvider::useSeparateCityValue()
-     **/
-    void stopListReceived( ServiceProvider *provider,
-            const QUrl &requestUrl, const StopInfoList &stops,
-            const StopSuggestionRequest &request,
-            bool deleteStopInfos = true );
-
-    /**
-     * @brief An error was received.
-     *
-     * @param provider The provider that was used to download and parse information
-     *   from the service provider.
-     * @param errorCode The error code or NoError if there was no error.
-     * @param errorString If @p errorCode isn't NoError this contains a description of the error.
-     * @param requestUrl The url used to request the information.
-     * @param request Information about the request that failed with @p errorType.
-     *
-     * @see ServiceProvider::useSeparateCityValue()
-     **/
-    void errorParsing( ServiceProvider *provider, ErrorCode errorCode, const QString &errorString,
-            const QUrl &requestUrl, const AbstractRequest *request );
-
-    void progress( ServiceProvider *provider, qreal progress, const QString &jobDescription,
-            const QUrl &requestUrl, const AbstractRequest *request );
-
-    /**
-     * @brief A global or local directory with service provider XML files was changed.
-     *
-     * This slot uses reloadChangedProviders() to actually update the loaded service providers. Because
-     * a change in multiple files in one or more directories causes a call to this slot for each
-     * file, this would cause all providers to be reloaded for each changed file. Especially when
-     * installing a new version, while running an old one, this can take some time.
-     * Therefore this slot uses a short timeout. If a new call to this slot happens within that
-     * timeout, the timeout gets simply restarted. Otherwise after the timeout reloadChangedProviders()
-     * gets called.
-     *
-     * @param path The changed directory.
-     * @see reloadChangedProviders()
-     */
-    void serviceProviderDirChanged( const QString &path );
-
-    /**
-     * @brief Deletes all currently created providers and associated data and recreates them.
-     *
-     * This slot gets called by serviceProviderDirChanged() if a global or local directory
-     * containing service provider XML files has changed. It does not call this function on every
-     * directory change, but only if there are no further changes in a short timespan.
-     * The provider cache (ServiceProviderGlobal::cache()) gets updated for all changed provider
-     * plugins.
-     * @note Deleted data sources only get filled again when new requests are made,
-     *   they are not updated.
-     *
-     * @see serviceProviderDirChanged()
-     **/
-    void reloadChangedProviders();
-
 private:
     /** Handler for departureListReceived() (@p isDepartureData true) and arrivalListReceived() */
     void timetableDataReceived( ServiceProvider *provider,
@@ -442,6 +475,7 @@ private:
     QVariantHash m_dataSources; // List of already used data sources TODO also store original data source name, to be able to update data with different capitalization
     QVariantHash m_erroneousProviders; // List of erroneous service providers as keys
                                        // and error messages as values
+    QHash< QString, QTimer* > m_updateTimers; // List of timers to update data sources periodically
     QFileSystemWatcher *m_fileSystemWatcher; // Watch the service provider directory
 
     // The next times at which new downloads will have sufficient changes

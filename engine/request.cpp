@@ -66,6 +66,11 @@ QString JourneyRequest::functionName() const
     return ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS;
 }
 
+QString AdditionalDataRequest::functionName() const
+{
+    return ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA;
+}
+
 QScriptValue StopSuggestionRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();
@@ -101,6 +106,20 @@ QScriptValue JourneyRequest::toScriptValue( QScriptEngine *engine ) const
     value.setProperty( QLatin1String("maxCount"), maxCount );
     value.setProperty( QLatin1String("originStop"), stop ); // Already in argument as "stop"
     value.setProperty( QLatin1String("targetStop"), targetStop );
+    value.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
+    return value;
+}
+
+QScriptValue AdditionalDataRequest::toScriptValue( QScriptEngine *engine ) const
+{
+    QScriptValue value = engine->newObject();
+    value.setProperty( QLatin1String("stop"), stop );
+    value.setProperty( QLatin1String("city"), city );
+    value.setProperty( QLatin1String("dataType"),
+            sourceName.startsWith(QLatin1String("Arrivals"), Qt::CaseInsensitive)
+            ? parseModeName(ParseForArrivals) : parseModeName(ParseForDepartures));
+    value.setProperty( QLatin1String("transportLine"), transportLine );
+    value.setProperty( QLatin1String("target"), target );
     value.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
     return value;
 }

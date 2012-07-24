@@ -451,7 +451,7 @@ QString Network::getSynchronous( const QString &url, int timeout )
     if ( timeout > 0 ) {
         QTimer::singleShot( timeout, &eventLoop, SLOT(quit()) );
     }
-    eventLoop.exec();
+    eventLoop.exec( QEventLoop::ExcludeUserInputEvents );
 
     m_mutex->lock();
     const bool quit = reply->isRunning() || m_quit || m_lastDownloadAborted;

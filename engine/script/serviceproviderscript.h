@@ -86,6 +86,9 @@ public:
     /** @brief The name of the script function to download and parse stop suggestions. */
     static const char *SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
 
+    /** @brief The name of the script function to download and parse additional timetable data. */
+    static const char *SCRIPT_FUNCTION_GETADDITIONALDATA;
+
     /** @brief Gets a list of extensions that are allowed to be imported by scripts. */
     static QStringList allowedExtensions();
 
@@ -135,6 +138,8 @@ public:
 
     virtual void requestStopSuggestions( const StopSuggestionRequest &request );
 
+    virtual void requestAdditionalData( const AdditionalDataRequest &request );
+
 protected slots:
     void departuresReady( const QList<TimetableData> &data,
                           ResultObject::Features features, ResultObject::Hints hints,
@@ -156,6 +161,12 @@ protected slots:
                                const GlobalTimetableInfo &globalInfo,
                                const StopSuggestionRequest &request,
                                bool couldNeedForcedUpdate = false );
+
+    void additionDataReady( const TimetableData &data,
+                            ResultObject::Features features, ResultObject::Hints hints,
+                            const QString &url, const GlobalTimetableInfo &globalInfo,
+                            const AdditionalDataRequest &request,
+                            bool couldNeedForcedUpdate = false );
 
     void jobStarted( ThreadWeaver::Job *job );
     void jobDone( ThreadWeaver::Job *job );
