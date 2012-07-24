@@ -440,7 +440,7 @@ void AsyncDataEngineUpdater::processDepartures( const QString &sourceName,
         QString operatorName = departureData["Operator"].toString();
         QString line = departureData["TransportLine"].toString();
         QString target = departureData["Target"].toString();
-        QDateTime departure = departureData["DepartureDateTime"].toDateTime();
+        QDateTime departureTime = departureData["DepartureDateTime"].toDateTime();
         QString vehicle = departureData["VehicleName"].toString();
         QString vehicleIconName = departureData["VehicleIconName"].toString();
         KIcon vehicleIcon = KIcon( vehicleIconName.isEmpty()
@@ -460,7 +460,7 @@ void AsyncDataEngineUpdater::processDepartures( const QString &sourceName,
 
         // Mark departures/arrivals as filtered out that are either filtered out
         // or shouldn't be shown because of the first departure settings
-        QDateTime predictedDeparture = delay > 0 ? departure.addSecs( delay * 60 ) : departure;
+        QDateTime predictedDeparture = delay > 0 ? departureTime.addSecs( delay * 60 ) : departureTime;
         if ( !isTimeShown( predictedDeparture, 0 ) ||
                 ( m_data.keywords.testFlag( PublicTransportRunner::OnlyBuses ) &&
                     vehicleType != Bus ) ||
@@ -511,7 +511,7 @@ void AsyncDataEngineUpdater::processDepartures( const QString &sourceName,
         }
         if ( delay >= 1 ) {
             subtexts << i18n( "Original Departure: %1",
-                              KGlobal::locale()->formatTime( departure.time() ) );
+                              KGlobal::locale()->formatTime( departureTime.time() ) );
         }
         if ( !delayReason.isEmpty() ) {
             subtexts << i18n( "Delay Reason: %1", delayReason );
