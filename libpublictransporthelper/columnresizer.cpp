@@ -1,5 +1,5 @@
 /*
- * Copyright 2011 Aurélien Gâteau <agateau@kde.org>
+ * Copyright 2012 Aurélien Gâteau <agateau@kde.org>
  * License: LGPL v2.1 or later (see COPYING)
  */
 #include <columnresizer.h>

@@ -74,7 +74,6 @@ void ScriptTab::setExecutionPosition( int executionLine, int column )
 {
     KTextEditor::View *view = document()->activeView();
     view->blockSignals( true );
-    Debugger::Debugger *debugger = project()->debugger();
     view->setCursorPosition( KTextEditor::Cursor(executionLine - 1, column) );
     view->blockSignals( false );
 

@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -428,7 +428,6 @@ void AsyncDataEngineUpdater::processDepartures( const QString &sourceName,
     QVariantList departuresData = data.contains("departures")
             ? data["departures"].toList() : data["arrivals"].toList();
     kDebug() << departuresData.count() << "departures to be processed";
-    int i = 0;
     foreach ( const QVariant &departure, departuresData ) {
         QVariantHash departureData = departure.toHash();
 
@@ -596,7 +595,6 @@ void AsyncDataEngineUpdater::processJourneys( const QString& sourceName, const P
 {
     QUrl url = data["requestUrl"].toUrl();
     QDateTime updated = data["updated"].toDateTime();
-    int count = data["count"].toInt();
     qreal min = INT_MAX, max = 0;
 
     QVariantList journeysData = data["journeys"].toList();
