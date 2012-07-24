@@ -1044,12 +1044,12 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
     kDebug() << "Update data source in" << secs << "seconds";
     if ( m_updateTimers.contains(nonAmbiguousName) ) {
         // Restart the timer
-        m_updateTimers[nonAmbiguousName]->start();
+        m_updateTimers[nonAmbiguousName]->timer->start( (secs + 1) * 1000 );
     } else {
         QTimer *timer = new QTimer( this );
-        timer->setInterval( secs * 1000 );
+        timer->setInterval( (secs + 1) * 1000 );
         connect( timer, SIGNAL(timeout()), this, SLOT(updateTimeout()) );
-        m_updateTimers.insert( nonAmbiguousName, timer );
+        m_updateTimers.insert( nonAmbiguousName, new TimerData(sourceName, timer) );
         timer->start();
     }
 //     kDebug() << "Set next download time proposal:" << downloadTime;
@@ -1065,25 +1065,29 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
     m_dataSources.insert( sourceName.toLower(), dataSource );
 }
 
+PublicTransportEngine::TimerData::~TimerData()
+{
+    delete timer;
+}
+
 void PublicTransportEngine::updateTimeout()
 {
     // Get the name of the source to update
     QString sourceName;
     QTimer *timer = qobject_cast< QTimer* >( sender() );
     kDebug() << "TIMEOUT" << timer->interval();
-    for ( QHash<QString,QTimer*>::ConstIterator it = m_updateTimers.constBegin();
+    for ( QHash<QString,TimerData*>::ConstIterator it = m_updateTimers.constBegin();
           it != m_updateTimers.constEnd(); ++it )
     {
-        if ( it.value() == timer ) {
-            sourceName = it.key();
+        if ( it.value()->timer == timer ) {
+            sourceName = it.value()->dataSource;
             break;
         }
     }
-    if ( sourceName.isEmpty() ) {
-        return;
-    }
 
-    updateTimetableDataSource( SourceData(sourceName) );
+    if ( !sourceName.isEmpty() ) {
+        updateTimetableDataSource( SourceData(sourceName) );
+    }
 }
 
 void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,

@@ -471,11 +471,20 @@ private:
     static ServiceProvider *createProviderForData( const ServiceProviderData *data,
             QObject *parent = 0, const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
 
+    /** @brief Data for a timer to update a data source. */
+    struct TimerData {
+        TimerData( const QString &dataSource = QString(), QTimer *timer = 0 )
+                : dataSource(dataSource), timer(timer) {};
+        ~TimerData();
+        QString dataSource;
+        QTimer *timer;
+    };
+
     QHash< QString, ProviderPointer > m_providers; // List of already loaded service providers
     QVariantHash m_dataSources; // List of already used data sources TODO also store original data source name, to be able to update data with different capitalization
     QVariantHash m_erroneousProviders; // List of erroneous service providers as keys
                                        // and error messages as values
-    QHash< QString, QTimer* > m_updateTimers; // List of timers to update data sources periodically
+    QHash< QString, TimerData* > m_updateTimers; // List of timers to update data sources periodically
     QFileSystemWatcher *m_fileSystemWatcher; // Watch the service provider directory
 
     // The next times at which new downloads will have sufficient changes
