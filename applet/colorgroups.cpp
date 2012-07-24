@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -23,47 +23,30 @@
 // Qt includes
 #include <QColor>
 
-struct RoutePartCount {
-    QString lastCommonStop;
+struct TargetCounter {
+    QString target;
     QString displayText;
-    int usedCount; // used by [usedCount] transport lines (each line and target counts as one)
-};
-
-class RoutePartCountGreaterThan
-{
-public:
-    inline RoutePartCountGreaterThan() {};
-
-    inline bool operator()( const RoutePartCount &l, const RoutePartCount &r ) const {
-        return l.usedCount > r.usedCount;
-    };
-};
-
-struct RoutePartInfo {
     int usedCount;
-    QString displayText;
 
-    RoutePartInfo() {};
+    TargetCounter() {};
+    TargetCounter( const QString &target, const QString &displayText, int occurenceCount = 1 )
+            : target(target), displayText(displayText), usedCount(occurenceCount) {};
+    TargetCounter &operator ++() { ++usedCount; return *this; };
+};
 
-    RoutePartInfo( int occurenceCount, const QString &displayText ) {
-        this->usedCount = occurenceCount;
-        this->displayText = displayText;
-    };
-
-    RoutePartInfo &operator ++() {
-        ++usedCount;
-        return *this;
+class TargetCounterGreaterThan {
+public:
+    inline TargetCounterGreaterThan() {};
+    inline bool operator()( const TargetCounter &l, const TargetCounter &r ) const {
+        return l.usedCount > r.usedCount;
     };
 };
 
 ColorGroupSettingsList ColorGroups::generateColorGroupSettingsFrom(
         const QList< DepartureInfo >& infoList, DepartureArrivalListType departureArrivalListType )
 {
-    // Only test routes of up to 1 stops (the first 1 of the actual route)
-    const int maxTestRouteLength = 1;
-
     // Maximal number of groups
-    const int maxGroupCount = 8;
+    const int maxGroupCount = 10;
 
     const int opacity = 128;
     const int colors = 82;
@@ -196,59 +179,31 @@ ColorGroupSettingsList ColorGroups::generateColorGroupSettingsFrom(
 //         QColor(238, 238, 238, opacity)  // gray1
     };
 
-    // Map route parts to lists of concatenated strings,
-    // ie. transport line and target
-    QHash< QStringList, RoutePartInfo > routePartsToLines;
-    for ( int stopCount = 1; stopCount <= maxTestRouteLength; ++stopCount ) {
-        foreach ( const DepartureInfo &info, infoList ) {
-            const int startIndex = departureArrivalListType == ArrivalList
-                    ? info.routeStops().count() - stopCount - 1 : 1;
-            const bool useRouteStops = info.routeStops().count() > startIndex && startIndex >= 0;
-            const QStringList routePart = useRouteStops
-                    ? info.routeStops().mid(startIndex, stopCount)
-                    : (QStringList() << info.target());
-            const QString displayText = useRouteStops
-                    ? info.routeStopsShortened().at(startIndex) : info.targetShortened();
-            if ( routePart.isEmpty() ) {
-                kDebug() << "Route part is empty";
-                continue;
-            }
+    // Count target usages
+    QHash< QString, TargetCounter > targetUsedInformation;
+    foreach ( const DepartureInfo &info, infoList ) {
+        const QString target = info.target();
+        const QString displayText = info.targetShortened();
 
-            // Check if the route part was already counted
-            if ( routePartsToLines.contains(routePart) ) {
-                // Increment the count of the route part by one
-                ++routePartsToLines[routePart];
-            } else {
-                // Add new route part with count 1
-                routePartsToLines.insert( routePart, RoutePartInfo(1, displayText) );
-            }
+        // Check if the target was already counted
+        if ( targetUsedInformation.contains(target) ) {
+            // Increment the used count of the target by one
+            ++targetUsedInformation[target];
+        } else {
+            // Add new target with count 1
+            targetUsedInformation.insert( target, TargetCounter(target, displayText) );
         }
     }
 
-    // Create list with the last stop of each route part and it's count (wrapped in RoutePartCount)
-    QList< RoutePartCount > routePartCount;
-    for ( QHash< QStringList, RoutePartInfo >::const_iterator it = routePartsToLines.constBegin();
-          it != routePartsToLines.constEnd(); ++it )
-    {
-        // it.value() contains the number of departures with the same route part (in it.key())
-        RoutePartInfo info = it.value();
-        if ( info.usedCount > 0 ) {
-            RoutePartCount routeCount;
-            routeCount.lastCommonStop = it.key().last();
-            routeCount.displayText = info.displayText;
-            routeCount.usedCount = info.usedCount;
-            routePartCount << routeCount;
-        }
-    }
-
-    // Sort by used count
-    qStableSort( routePartCount.begin(), routePartCount.end(), RoutePartCountGreaterThan() );
+    // Sort list of targets by used count
+    QList< TargetCounter > targetCount = targetUsedInformation.values();
+    qStableSort( targetCount.begin(), targetCount.end(), TargetCounterGreaterThan() );
 
     // Create the color groups
     ColorGroupSettingsList colorGroups;
-    for ( int i = 0; i < maxGroupCount && i < routePartCount.count(); ++i ) {
-        RoutePartCount routeCount = routePartCount[i];
-        QString hashString = routeCount.lastCommonStop;
+    for ( int i = 0; i < maxGroupCount && i < targetCount.count(); ++i ) {
+        const TargetCounter &routeCount = targetCount[i];
+        QString hashString = routeCount.target;
         while ( hashString.length() < 3 ) {
             hashString += 'z';
         }
@@ -256,13 +211,13 @@ ColorGroupSettingsList ColorGroups::generateColorGroupSettingsFrom(
 
         // Create filter for the new color group
         Filter groupFilter;
-        groupFilter << Constraint( FilterByNextStop, FilterEquals, routeCount.lastCommonStop );
+        groupFilter << Constraint( FilterByTarget, FilterEquals, routeCount.target );
 
         // Create the new color group
         ColorGroupSettings group;
         group.filters << groupFilter;
         group.color = oxygenColors[color];
-        group.lastCommonStopName = routeCount.lastCommonStop;
+        group.target = routeCount.target;
         group.displayText = routeCount.displayText;
 
         colorGroups << group;
