@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -250,7 +250,8 @@ void ItemBase::appendChild( ChildItem* child )
     child->m_model = m_model;
 }
 
-TopLevelItem::TopLevelItem( const Info* info ) : QObject(0), ItemBase( info )
+TopLevelItem::TopLevelItem( const Info* info )
+        : QObject(0), ItemBase(info)
 {
 }
 
@@ -1454,7 +1455,8 @@ void JourneyModel::updateItemAlarm( JourneyItem* journeyItem )
             ? QString() : journeyInfo.routeTransportLines().first();
     VehicleType vehicleType = journeyInfo.routeVehicleTypes().isEmpty()
             ? UnknownVehicleType : journeyInfo.routeVehicleTypes().first();
-    DepartureInfo departureInfo( QString(), lineString, QString(), QString(),
+    DepartureInfo departureInfo( /* Data source: */ QString(), /* index: */ -1,
+                                 QString(), lineString, QString(), QString(),
                                  journeyInfo.departure(), vehicleType );
     AlarmStates alarmStates = NoAlarm;
     for ( int a = 0; a < m_info.alarm.count(); ++a ) {

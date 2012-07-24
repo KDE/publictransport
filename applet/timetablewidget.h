@@ -268,6 +268,8 @@ public:
     virtual QColor backgroundColor() const;
 
 signals:
+    void expandedStateChanged( PublicTransportGraphicsItem *item, bool expanded );
+
     void requestAlarmCreation( const QDateTime &departure, const QString &lineString,
                                VehicleType vehicleType, const QString &target,
                                QGraphicsWidget *item );
@@ -640,6 +642,7 @@ public:
 
 signals:
     void contextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
+    void expandedStateChanged( PublicTransportGraphicsItem *item, bool expanded );
 
     /**
      * @brief Emitted, if a stop action was triggered from a route stop's context menu.

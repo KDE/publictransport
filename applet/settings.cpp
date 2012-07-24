@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -159,7 +159,7 @@ bool operator ==( const AlarmSettings &l, const AlarmSettings &r )
 bool operator==( const ColorGroupSettings &l, const ColorGroupSettings &r )
 {
     return l.color == r.color && l.filters == r.filters && l.filterOut == r.filterOut
-        && l.lastCommonStopName == r.lastCommonStopName;
+        && l.target == r.target;
 }
 
 ColorGroupSettings ColorGroupSettingsList::byColor( const QColor &color ) {

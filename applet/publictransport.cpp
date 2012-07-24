@@ -41,6 +41,7 @@
 #include <Plasma/PushButton>
 #include <Plasma/Theme>
 #include <Plasma/Animation>
+#include <Plasma/ServiceJob>
 
 // Qt includes
 #include <QPainter>
@@ -1265,6 +1266,33 @@ void PublicTransportApplet::oldItemAnimationFinished()
 {
     Q_D( PublicTransportApplet );
     d->onOldItemAnimationFinished();
+}
+
+void PublicTransportApplet::expandedStateChanged( PublicTransportGraphicsItem *item, bool expanded )
+{
+    // When an item gets expanded for the first time, try to load additional data
+    // using the timetable service of the PublicTransport engine
+    DepartureGraphicsItem *departureItem = qobject_cast< DepartureGraphicsItem* >( item );
+    if ( expanded && departureItem ) {
+        const QString dataSource = departureItem->departureItem()->dataSource();
+        Plasma::Service *service = dataEngine("publictransport")->serviceForSource( dataSource );
+        if ( service ) {
+            KConfigGroup op = service->operationDescription("requestAdditionalData");
+            op.writeEntry( "itemnumber", departureItem->departureItem()->dataSourceIndex() );
+            Plasma::ServiceJob *additionDataJob = service->startOperationCall( op );
+            connect( additionDataJob, SIGNAL(result(KJob*)), this, SLOT(additionalDataResult(KJob*)) );
+            connect( additionDataJob, SIGNAL(finished(KJob*)), service, SLOT(deleteLater()) );
+        }
+    }
+}
+
+// TODO Remove again?
+void PublicTransportApplet::additionalDataResult( KJob *job )
+{
+    Q_D( PublicTransportApplet );
+    if ( !job->error() ) {
+//         d->reconnectSource();
+    }
 }
 
 void PublicTransportApplet::processJourneyRequest( const QString& stop, bool stopIsTarget )

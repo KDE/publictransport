@@ -871,13 +871,9 @@ void PublicTransportAppletPrivate::reconnectSource()
         kDebug() << "Connect data source" << currentSource
                  << "Autoupdate" << settings.autoUpdate();
         currentSources << currentSource;
-        if ( settings.autoUpdate() ) {
-            // Update once a minute
-            q->dataEngine( "publictransport" )->connectSource( currentSource, q,
-                    60000, Plasma::AlignToMinute );
-        } else {
-            q->dataEngine( "publictransport" )->connectSource( currentSource, q );
-        }
+        // TODO Remove "auto update" setting, the data engine pushes new data when available
+        // and now additionaly updates timetable data periodically
+        q->dataEngine( "publictransport" )->connectSource( currentSource, q );
     }
 }
 

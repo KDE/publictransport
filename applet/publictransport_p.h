@@ -580,6 +580,8 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
                 mainGraphicsWidget );
         timetable->setModel( model );
         timetable->setSvg( &vehiclesSvg );
+        q->connect( timetable, SIGNAL(expandedStateChanged(PublicTransportGraphicsItem*,bool)),
+                    q, SLOT(expandedStateChanged(PublicTransportGraphicsItem*,bool)) );
         q->connect( timetable, SIGNAL(contextMenuRequested(PublicTransportGraphicsItem*,QPointF)),
                     q, SLOT(departureContextMenuRequested(PublicTransportGraphicsItem*,QPointF)) );
         q->connect( timetable, SIGNAL(requestStopAction(StopAction::Type,QString,QString)),

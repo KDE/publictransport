@@ -45,6 +45,7 @@
 #include <QGraphicsSceneHoverEvent>
 #include <QGraphicsScene>
 #include <QPropertyAnimation>
+#include <QParallelAnimationGroup>
 #include <QStyleOption>
 #include <qmath.h>
 
@@ -90,6 +91,10 @@ void JourneyGraphicsItem::updateSettings()
 
 void PublicTransportGraphicsItem::setExpanded( bool expand )
 {
+    if ( m_expanded == expand ) {
+        return; // Unchanged
+    }
+
     m_expanded = expand;
     if ( expand ) {
         QGraphicsWidget *route = routeItem();
@@ -110,6 +115,8 @@ void PublicTransportGraphicsItem::setExpanded( bool expand )
     m_resizeAnimation->setEndValue( expand ? 1.0 : 0.0 );
     m_resizeAnimation->start( QAbstractAnimation::KeepWhenStopped );
     updateGeometry();
+
+    emit expandedStateChanged( this, expand );
 }
 
 void PublicTransportGraphicsItem::resizeAnimationFinished()
@@ -653,7 +660,13 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
             m_routeItem = new RouteGraphicsItem( this, item, m_copyStopToClipboardAction,
                     m_showInMapAction, m_showDeparturesAction, m_highlightStopAction,
                     m_newFilterViaStopAction );
-            m_routeItem->setVisible( false );
+            m_routeItem->setVisible( isVisible() );
+            if ( isVisible() ) {
+                Plasma::Animation *animation =
+                        Plasma::Animator::create( Plasma::Animator::FadeAnimation, m_routeItem );
+                animation->setTargetWidget( m_routeItem );
+                animation->start( QAbstractAnimation::DeleteWhenStopped );
+            }
 
             QRectF _infoRect = infoRect( rect(), 0 );
             m_routeItem->setZoomFactor( m_parent->zoomFactor() );
@@ -1628,6 +1641,8 @@ void JourneyTimetableWidget::rowsInserted( const QModelIndex& parent, int first,
                  this, SIGNAL(requestAlarmCreation(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)) );
         connect( item, SIGNAL(requestAlarmDeletion(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)),
                  this, SIGNAL(requestAlarmDeletion(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)) );
+        connect( item, SIGNAL(expandedStateChanged(PublicTransportGraphicsItem*,bool)),
+                 this, SIGNAL(expandedStateChanged(PublicTransportGraphicsItem*,bool)) );
         m_items.insert( row, item );
 
         // Fade new items in
@@ -1655,6 +1670,8 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
                 m_copyStopToClipboardAction, m_showInMapAction, m_showDeparturesAction,
                 m_highlightStopAction, m_newFilterViaStopAction, m_pixmapCache );
         item->updateData( static_cast<DepartureItem*>(m_model->item(row)) );
+        connect( item, SIGNAL(expandedStateChanged(PublicTransportGraphicsItem*,bool)),
+                 this, SIGNAL(expandedStateChanged(PublicTransportGraphicsItem*,bool)) );
         m_items.insert( row, item );
 
         // Fade new items in

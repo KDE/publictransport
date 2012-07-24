@@ -42,6 +42,7 @@ class ItemBase;
 class PublicTransportGraphicsItem;
 class DepartureItem;
 
+class KJob;
 class KSelectAction;
 class QGraphicsSceneWheelEvent;
 class QPersistentModelIndex;
@@ -388,6 +389,9 @@ protected slots:
     /** @brief There was an error in the 'marble' process. */
     void errorMarble( QProcess::ProcessError processError );
 
+    /** @brief The expanded state of @p item changed to @p expanded. */
+    void expandedStateChanged( PublicTransportGraphicsItem *item, bool expanded );
+
     /** @brief A recent journey @p action was triggered from the "quickJourneys" action. */
     void journeyActionTriggered( QAction *action );
 
@@ -547,6 +551,8 @@ protected slots:
 
     /** @brief Opens a configuration dialog for recent/favorite journey searches. */
     void configureJourneySearches();
+
+    void additionalDataResult( KJob *job );
 
 protected:
     /**

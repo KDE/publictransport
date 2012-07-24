@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -248,7 +248,8 @@ QString DepartureInfo::durationString( bool showDelay ) const
     return showDelay ? sDuration + delayString() : sDuration;
 }
 
-void DepartureInfo::init( const QString &operatorName, const QString &line,
+void DepartureInfo::init( const QString &dataSource, int index, const QString &operatorName,
+                          const QString &line,
                           const QString &target, const QString &targetShortened,
                           const QDateTime &departure,
                           VehicleType lineType, LineServices lineServices,
@@ -259,6 +260,8 @@ void DepartureInfo::init( const QString &operatorName, const QString &line,
                           int routeExactStops, bool arrival )
 {
     m_filteredOut = false;
+    m_dataSource = dataSource;
+    m_index = index;
 
     QRegExp rx( "[0-9]*$" );
     rx.indexIn( line );

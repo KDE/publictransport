@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -127,7 +127,7 @@ struct ColorGroupSettings {
     /**< @brief Whether or not departures in this color group should be filtered out. */
     bool filterOut;
 
-    QString lastCommonStopName;
+    QString target;
     QString displayText;
 
     ColorGroupSettings( const QColor &color = Qt::transparent ) {

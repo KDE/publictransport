@@ -1,5 +1,5 @@
 /*
-*   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -244,6 +244,13 @@ public:
     /** @brief Set the data in @p column to @p data for the given @p role. */
     virtual void setData( Columns column, const QVariant &data, int role = Qt::UserRole );
 
+    /**
+     * @brief Get the name of the data source in which this item is included.
+     * This is only useful if there are multiple stops combined into one timetable.
+     * The default implementation returns a default constructed QString.
+     **/
+    virtual QString dataSource() const { return QString(); };
+
     /** @brief Gets the text of the given @p column. */
     inline QString text( Columns column = ColumnLineString ) const {
         return m_columnData.value( column )[ Qt::DisplayRole ].toString(); };
@@ -421,6 +428,9 @@ public:
 
     /** @brief Gets the data for the given @p role in @p column. */
     virtual QVariant data( int role = Qt::DisplayRole, int column = 0 ) const;
+
+    virtual QString dataSource() const { return m_departureInfo.dataSource(); };
+    int dataSourceIndex() const { return m_departureInfo.index(); };
 
     bool isLeavingSoon() const { return m_leavingSoon; };
     void setLeavingSoon( bool leavingSoon = true );

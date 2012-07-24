@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -270,7 +270,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
                 routeTimes << time.toTime();
             }
         }
-        DepartureInfo departureInfo( departureData["Operator"].toString(),
+        DepartureInfo departureInfo( sourceName, i, departureData["Operator"].toString(),
                 departureData["TransportLine"].toString(),
                 departureData["Target"].toString(), departureData["TargetShortened"].toString(),
                 departureData["DepartureDateTime"].toDateTime(),

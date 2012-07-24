@@ -1,5 +1,5 @@
 /*
- *   Copyright 2011 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -234,21 +234,21 @@ public:
     DepartureInfo() : PublicTransportInfo() {
     };
 
-    DepartureInfo( const QString &operatorName, const QString &line,
-                   const QString &target, const QString &targetShortened,
+    DepartureInfo( const QString &dataSource, int index, const QString &operatorName,
+                   const QString &line, const QString &target, const QString &targetShortened,
                    const QDateTime &departure, VehicleType lineType,
                    const QStringList &routeStops = QStringList(),
                    const QStringList &routeStopsShortened = QStringList(),
                    const QList<QTime> &routeTimes = QList<QTime>(),
                    int routeExactStops = 0, bool arrival = false ) : PublicTransportInfo()
     {
-        init( operatorName, line, target, targetShortened, departure, lineType, NoLineService,
-              QString(), -1, QString(), QString(), routeStops, routeStopsShortened, routeTimes,
-              routeExactStops, arrival );
+        init( dataSource, index, operatorName, line, target, targetShortened, departure, lineType,
+              NoLineService, QString(), -1, QString(), QString(), routeStops, routeStopsShortened,
+              routeTimes, routeExactStops, arrival );
     };
 
-    DepartureInfo( const QString &operatorName, const QString &line,
-                   const QString &target, const QString &targetShortened,
+    DepartureInfo( const QString &dataSource, int index, const QString &operatorName,
+                   const QString &line, const QString &target, const QString &targetShortened,
                    const QDateTime &departure, VehicleType lineType, bool nightLine,
                    bool expressLine, const QString &platform = QString(), int delay = -1,
                    const QString &delayReason = QString(), const QString &journeyNews = QString(),
@@ -263,13 +263,13 @@ public:
         if ( expressLine ) {
             lineServices |= ExpressLine;
         }
-        init( operatorName, line, target, targetShortened, departure, lineType, lineServices,
-              platform, delay, delayReason, journeyNews, routeStops, routeStopsShortened,
-              routeTimes, routeExactStops, arrival );
+        init( dataSource, index, operatorName, line, target, targetShortened, departure, lineType,
+              lineServices, platform, delay, delayReason, journeyNews, routeStops,
+              routeStopsShortened, routeTimes, routeExactStops, arrival );
     };
 
-    DepartureInfo( const QString &operatorName, const QString &line,
-                   const QString &target, const QString &targetShortened,
+    DepartureInfo( const QString &dataSource, int index, const QString &operatorName,
+                   const QString &line, const QString &target, const QString &targetShortened,
                    const QDateTime &departure, VehicleType lineType, LineServices lineServices,
                    const QString &platform = QString(), int delay = -1,
                    const QString &delayReason = QString(), const QString &journeyNews = QString(),
@@ -277,7 +277,7 @@ public:
                    const QStringList &routeStopsShortened = QStringList(),
                    const QList<QTime> &routeTimes = QList<QTime>(),
                    int routeExactStops = 0, bool arrival = false ) : PublicTransportInfo() {
-        init( operatorName, line, target, targetShortened, departure, lineType, lineServices,
+        init( dataSource, index, operatorName, line, target, targetShortened, departure, lineType, lineServices,
               platform, delay, delayReason, journeyNews, routeStops, routeStopsShortened,
               routeTimes, routeExactStops, arrival );
     };
@@ -399,10 +399,12 @@ public:
 
     QList< int > matchedAlarms() const { return m_matchedAlarms; };
     QList< int > &matchedAlarms() { return m_matchedAlarms; };
+    QString dataSource() const { return m_dataSource; };
+    int index() const { return m_index; };
 
 private:
-    void init( const QString &operatorName, const QString &line,
-               const QString &target, const QString &targetShortened,
+    void init( const QString &dataSource, int index, const QString &operatorName,
+               const QString &line, const QString &target, const QString &targetShortened,
                const QDateTime &departure, VehicleType lineType,
                LineServices lineServices = NoLineService, const QString &platform = QString(),
                int delay = -1, const QString &delayReason = QString(),
@@ -428,6 +430,8 @@ private:
     bool m_arrival;
     bool m_filteredOut;
     QList< int > m_matchedAlarms;
+    QString m_dataSource;
+    int m_index;
 };
 
 uint PUBLICTRANSPORTHELPER_EXPORT qHash( const DepartureInfo &departureInfo );
