@@ -657,7 +657,7 @@ void StopLineEdit::importFinished( KJob *job )
 
     kDebug() << "Finished GTFS feed import" << job->errorString();
     d->importJob = 0;
-    const bool hasError = job->error() < 0;
+    const bool hasError = job->error() < 0 && job->error() != -2; // -2 => Not a GTFS provider
     d->state = hasError ? StopLineEditPrivate::Error : StopLineEditPrivate::Ready;
     d->errorString = job->errorString(); // TODO needed?
     setToolTip( job->errorString() );
@@ -735,7 +735,7 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
     if ( data.value("error").toBool() ) {
         kDebug() << "Stop suggestions error" << sourceName;
         d->state = StopLineEditPrivate::Error;
-    } else if ( !data.value("receivedPossibleStopList").toBool() ) {
+    } else if ( !data.contains("stops") ) {
         kDebug() << "No stop suggestions received" << sourceName;
         d->state = StopLineEditPrivate::Error;
     } else {

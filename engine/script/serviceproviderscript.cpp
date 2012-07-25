@@ -420,28 +420,20 @@ void ServiceProviderScript::stopSuggestionsReady( const QList<TimetableData> &da
     Q_UNUSED( couldNeedForcedUpdate );
 //     TODO use hints
     kDebug() << "***** Received" << data.count() << "items";
-    if ( data.isEmpty() ) {
-        kDebug() << "The script didn't find anything" << request.sourceName;
-        emit errorParsing( this, ErrorParsingFailed,
-                           i18n("Error while parsing the stop suggestions document."),
-                           url, &request );
-    } else {
-        // Create PublicTransportInfo objects for new data and combine with already published data
-        PublicTransportInfoList newResults;
-        ResultObject::dataList( data, &newResults, request.parseMode,
-                                m_data->defaultVehicleType(), &globalInfo, features, hints );
-        PublicTransportInfoList results =
-                (m_publishedData[request.sourceName] << newResults);
-        kDebug() << "RESULTS:" << results;
 
-        StopInfoList stops;
-        foreach( const PublicTransportInfoPtr &info, results ) {
-//             stops << dynamic_cast< StopInfo* >( info.data() );
-            stops << info.dynamicCast<StopInfo>();
-        }
+    // Create PublicTransportInfo objects for new data and combine with already published data
+    PublicTransportInfoList newResults;
+    ResultObject::dataList( data, &newResults, request.parseMode,
+                            m_data->defaultVehicleType(), &globalInfo, features, hints );
+    PublicTransportInfoList results( m_publishedData[request.sourceName] << newResults );
+    kDebug() << "RESULTS:" << results;
 
-        emit stopListReceived( this, url, stops, request );
+    StopInfoList stops;
+    foreach( const PublicTransportInfoPtr &info, results ) {
+        stops << info.dynamicCast<StopInfo>();
     }
+
+    emit stopListReceived( this, url, stops, request );
 }
 
 void ServiceProviderScript::additionDataReady( const TimetableData &data,
