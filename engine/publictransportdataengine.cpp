@@ -863,13 +863,13 @@ PublicTransportEngine::SourceData::SourceData( const QString &name )
                     request->city = parameterValue;
                 } else if ( parameterName == QLatin1String("stop") ) {
                     request->stop = parameterValue;
-                } else if ( parameterName == QLatin1String("targetStop") ) {
+                } else if ( parameterName == QLatin1String("targetstop") ) {
                     JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
                     if ( !journeyRequest ) {
                         kWarning() << "The \"targetStop\" parameter is only used for journey requests";
                     }
                     journeyRequest->targetStop = parameterValue;
-                } else if ( parameterName == QLatin1String("originStop") ) {
+                } else if ( parameterName == QLatin1String("originstop") ) {
                     JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
                     if ( !journeyRequest ) {
                         kWarning() << "The \"originStop\" parameter is only used for journey requests";
@@ -883,15 +883,15 @@ PublicTransportEngine::SourceData::SourceData( const QString &name )
                                                      QTime::fromString(parameterValue, "hh:mm") );
                 } else if ( parameterName == QLatin1String("datetime") ) {
                     request->dateTime = QDateTime::fromString( parameterValue );
-                } else if ( parameterName == QLatin1String("maxCount") ) {
+                } else if ( parameterName == QLatin1String("maxcount") ) {
                     bool ok;
                     request->maxCount = parameterValue.toInt( &ok );
                     if ( !ok ) {
-                        kDebug() << "Bad value for 'maxCount' in source name:" << parameterValue;
-                        request->maxCount = -1;
+                        kWarning() << "Bad value for 'maxCount' in source name:" << parameterValue;
+                        request->maxCount = 20;
                     }
                 } else {
-                    kDebug() << "Unknown argument" << parameterName;
+                    kWarning() << "Unknown argument" << parameterName;
                 }
             }
         }
@@ -1039,7 +1039,7 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
     // Store a proposal for the next download time
     int secs = QDateTime::currentDateTime().secsTo( last ) / 3;
     QDateTime downloadTime = QDateTime::currentDateTime().addSecs( secs );
-    m_nextDownloadTimeProposals[ stripDateAndTimeValues( sourceName )] = downloadTime;
+    m_nextDownloadTimeProposals[ stripDateAndTimeValues(sourceName) ] = downloadTime;
 
     kDebug() << "Update data source in" << secs << "seconds";
     if ( m_updateTimers.contains(nonAmbiguousName) ) {

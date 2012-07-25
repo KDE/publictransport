@@ -66,7 +66,7 @@ struct AbstractRequest {
 
     AbstractRequest( const QString &sourceName = QString(),
                      ParseDocumentMode parseMode = ParseInvalid )
-            : sourceName(sourceName), maxCount(-1), parseMode(parseMode)
+            : sourceName(sourceName), maxCount(20), parseMode(parseMode)
     {
     };
 

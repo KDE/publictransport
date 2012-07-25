@@ -844,11 +844,11 @@ void PublicTransportAppletPrivate::reconnectSource()
     stopIndexToSourceName.clear();
     for( int i = 0; i < stops.count(); ++i ) {
         QString stopValue = stopIDs[i].isEmpty() ? stops[i] : stopIDs[i];
-        QString currentSource = QString( "%4 %1|stop=%2" )
-                                .arg( settings.currentStop().get<QString>( ServiceProviderSetting ) )
-                                .arg( stopValue )
-                                .arg( settings.departureArrivalListType() == ArrivalList
-                                      ? "Arrivals" : "Departures" );
+        QString currentSource = QString( "%4 %1|stop=%2|maxCount=%3" )
+                .arg( settings.currentStop().get<QString>(ServiceProviderSetting) )
+                .arg( stopValue ).arg( settings.maximalNumberOfDepartures() )
+                .arg( settings.departureArrivalListType() == ArrivalList
+                        ? "Arrivals" : "Departures" );
         if ( static_cast<FirstDepartureConfigMode>( curStopSettings.get<int>(
                     FirstDepartureConfigModeSetting ) ) == RelativeToCurrentTime ) {
             currentSource += QString( "|timeOffset=%1" ).arg(
@@ -931,12 +931,11 @@ void PublicTransportAppletPrivate::reconnectJourneySource( const QString &target
                                .arg( _targetStopName );
     } else {
         currentJourneySource = QString( stopIsTarget
-                                        ? "%6 %1|originStop=%2|targetStop=%3|maxCount=%4|datetime=%5"
-                                        : "%6 %1|originStop=%3|targetStop=%2|maxCount=%4|datetime=%5" )
+                                        ? "%5 %1|originStop=%2|targetStop=%3|datetime=%4"
+                                        : "%5 %1|originStop=%3|targetStop=%2|datetime=%4" )
                                .arg( settings.currentStop().get<QString>(ServiceProviderSetting) )
                                .arg( settings.currentStop().stop(0).nameOrId() )
                                .arg( _targetStopName )
-                               .arg( settings.maximalNumberOfDepartures() )
                                .arg( _dateTime.toString() )
                                .arg( timeIsDeparture ? "Journeys" : "JourneysArr" );
         QString currentStop = settings.currentStop().stops().first();
