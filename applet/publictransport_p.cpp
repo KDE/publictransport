@@ -65,7 +65,7 @@ PublicTransportAppletPrivate::PublicTransportAppletPrivate( PublicTransportApple
         popupIcon(0), titleToggleAnimation(0), modelJourneys(0), originalStopIndex(-1),
         filtersGroup(0), colorFiltersGroup(0), departureProcessor(0), departurePainter(0),
         stateMachine(0), journeySearchTransition1(0), journeySearchTransition2(0),
-        journeySearchTransition3(0), marble(0), q_ptr( q )
+        journeySearchTransition3(0), marble(0), longitude(0), latitude(0), q_ptr( q )
 {
 }
 
@@ -1193,4 +1193,35 @@ void PublicTransportAppletPrivate::onJourneyDataStateChanged()
         journeyTimetable->setNoItemsText( noItemsText );
         q->setBusy( busy );
     }
+}
+
+StopDataConnection::StopDataConnection( Plasma::DataEngine *engine, const QString &providerId,
+                                        const QString &stopName, QObject *parent )
+        : QObject(parent)
+{
+    const QString sourceName = QString( "Stops %1|stop=%2" ).arg( providerId, stopName );
+    engine->connectSource( sourceName, this );
+}
+
+void StopDataConnection::dataUpdated( const QString &sourceName,
+                                      const Plasma::DataEngine::Data &data )
+{
+    if ( !data.contains("stops") ) {
+        kWarning() << "Stop coordinates not found";
+    } else {
+        const QVariantHash stop = data[ "stops" ].toList().first().toHash(); // TODO Error handling
+        const QString stopName = stop[ "StopName" ].toString();
+        if ( stop.contains("StopLongitude") && stop.contains("StopLatitude") ) {
+            const bool coordinatesAreValid = stop.contains("StopLongitude") &&
+                                             stop.contains("StopLatitude");
+            const qreal longitude = coordinatesAreValid ? stop["StopLongitude"].toReal() : 0.0;
+            const qreal latitude = coordinatesAreValid ? stop["StopLatitude"].toReal() : 0.0;
+            emit stopDataReceived( stopName, coordinatesAreValid, longitude, latitude );
+        }
+
+        emit stopDataReceived( stop );
+    }
+
+    // Automatically delete after data was received
+    deleteLater();
 }

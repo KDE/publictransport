@@ -678,11 +678,26 @@ protected:
     QAbstractTransition *journeySearchTransition3;
 
     KProcess *marble;
-    qreal longitude, latitude; // Coordinates from openstreetmap for a given stop
+    qreal longitude, latitude; // Coordinates for a given stop
 
 private:
     PublicTransportApplet *q_ptr;
     Q_DECLARE_PUBLIC( PublicTransportApplet )
+};
+
+class StopDataConnection : public QObject {
+    Q_OBJECT
+public:
+    StopDataConnection( Plasma::DataEngine *engine, const QString &providerId,
+                        const QString &stopName, QObject *parent = 0 );
+
+signals:
+    void stopDataReceived( const QVariantHash &stopData );
+    void stopDataReceived( const QString &stopName, bool coordinatesAreValid, qreal lon, qreal lat );
+
+public slots:
+    /** @brief New @p data arrived from the data engine for source @p sourceName. */
+    void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 };
 
 #endif // Multiple inclusion guard

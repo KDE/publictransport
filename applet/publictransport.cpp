@@ -566,85 +566,10 @@ void PublicTransportApplet::processStopSuggestions( const QString &/*sourceName*
     }
 }
 
-void PublicTransportApplet::processOsmData( const QString& sourceName,
-                                      const Plasma::DataEngine::Data& data )
-{
-    Q_D( PublicTransportApplet );
-
-    qreal longitude = -1.0, latitude = -1.0;
-    QString name;
-    for ( Plasma::DataEngine::Data::const_iterator it = data.constBegin();
-        it != data.constEnd(); ++it )
-    {
-        QHash< QString, QVariant > item = it.value().toHash();
-        if ( item.contains("longitude") && item.contains("latitude") ) {
-            longitude = item[ "longitude" ].toReal();
-            latitude = item[ "latitude" ].toReal();
-            if ( item.contains("name") ) {
-                name = item[ "name" ].toString();
-            }
-            break; // Only use the first coordinates found TODO offer more coordinates if they aren't too equal
-        }
-    }
-
-    if ( !qFuzzyCompare(longitude, -1.0) && !qFuzzyCompare(latitude, -1.0) ) {
-        kDebug() << "Coords:" << longitude << latitude << data["finished"].toBool() << name;
-        d->longitude = longitude;
-        d->latitude = latitude;
-
-        // Start marble
-        if ( d->marble ) {
-            // Marble already started
-            QString destination = QString("org.kde.marble-%1").arg(d->marble->pid());
-
-            // Set new window title
-            QDBusMessage m1 = QDBusMessage::createMethodCall(destination,
-                    "/marble/MainWindow_1", "org.kde.marble.KMainWindow", "setPlainCaption");
-            m1 << i18nc("@title:window Caption for marble windows started to show a stops "
-                    "position in a map. %1 is the stop name.", "\"PublicTransport: %1\"",
-                    name);
-            if ( !QDBusConnection::sessionBus().send(m1) ) {
-                kDebug() << "Couldn't set marble title with dbus" << m1.errorMessage();
-            }
-
-            showStopInMarble( d->longitude, d->latitude );
-        } else {
-            QString command = "marble --caption " + i18nc("@title:window Caption for "
-                    "marble windows started to show a stops position in a map. %1 is the "
-                    "stop name.", "\"PublicTransport: %1\"", name);
-            kDebug() << "Use this command to start marble:" << command;
-            d->marble = new KProcess( this );
-            d->marble->setProgram( "marble", QStringList() << "--caption"
-                    << i18nc("@title:window Caption for "
-                    "marble windows started to show a stops position in a map. %1 is the "
-                    "stop name.", "\"PublicTransport: %1\"", name) );
-            connect( d->marble, SIGNAL(error(QProcess::ProcessError)),
-                    this, SLOT(errorMarble(QProcess::ProcessError)) );
-            connect( d->marble, SIGNAL(started()), this, SLOT(marbleHasStarted()) );
-            connect( d->marble, SIGNAL(finished(int)), this, SLOT(marbleFinished(int)) );
-            d->marble->start();
-        }
-        dataEngine("openstreetmap")->disconnectSource( sourceName, this );
-    } else if ( data.contains("finished") && data["finished"].toBool() ) {
-        kDebug() << "Couldn't find coordinates for the stop.";
-        showMessage( KIcon("dialog-warning"),
-                        i18nc("@info", "Couldn't find coordinates for the stop."),
-                        Plasma::ButtonOk );
-
-        dataEngine("openstreetmap")->disconnectSource( sourceName, this );
-    }
-}
-
 void PublicTransportApplet::dataUpdated( const QString& sourceName,
                                    const Plasma::DataEngine::Data& data )
 {
     Q_D( PublicTransportApplet );
-
-    if ( sourceName.startsWith(QLatin1String("getCoords"), Qt::CaseInsensitive) ) {
-        processOsmData( sourceName, data );
-        return;
-    }
-
     if ( data.isEmpty() || (!d->currentSources.contains(sourceName)
                             && sourceName != d->currentJourneySource) ) {
         // Source isn't used anymore
@@ -1599,17 +1524,18 @@ void PublicTransportApplet::requestStopAction( StopAction::Type stopAction,
             setSettings( settings );
             break;
         } case StopAction::ShowStopInMap: {
-            // Request coordinates from openstreetmap data engine
-            QString osmStopName = stopName;
-            int pos = osmStopName.lastIndexOf(',');
-            if ( pos != -1 ) {
-                osmStopName = osmStopName.left( pos );
+            // Start marble and center the map on the current stop
+            startMarble( stopName );
+            const Stop stop = settings.currentStop().stop( 0 );
+            if ( stop.hasValidCoordinates ) {
+                showStopInMarble( stop.name, true, stop.longitude, stop.latitude );
+            } else {
+                const QString providerId = settings.currentStop().get<QString>( ServiceProviderSetting );
+                StopDataConnection *connection = new StopDataConnection(
+                        dataEngine("publictransport"), providerId, stopName, this );
+                connect( connection, SIGNAL(stopDataReceived(QString,bool,qreal,qreal)),
+                         this, SLOT(showStopInMarble(QString,bool,qreal,qreal)) );
             }
-
-            osmStopName.remove( QRegExp("\\([^\\)]*\\)$") );
-
-            QString sourceName = QString( "getCoords publictransportstops %1" ).arg( osmStopName );
-            dataEngine("openstreetmap")->connectSource( sourceName, this );
             break;
         } case StopAction::ShowDeparturesForStop: {
             // Remove intermediate stop settings
@@ -1699,22 +1625,65 @@ void PublicTransportApplet::marbleFinished( int /*exitCode*/ )
     d->marble = 0;
 }
 
-void PublicTransportApplet::showStopInMarble( qreal lon, qreal lat )
+void PublicTransportApplet::startMarble( const QString &stopName )
 {
-    Q_D( const PublicTransportApplet );
+    Q_D( PublicTransportApplet );
 
     if ( !d->marble ) {
-        kDebug() << "No marble process?";
+        QString command = "marble --caption " + i18nc("@title:window Caption for "
+                "marble windows started to show a stops position in a map. %1 is the "
+                "stop name.", "\"PublicTransport: %1\"", stopName);
+        d->marble = new KProcess( this );
+        d->marble->setProgram( "marble", QStringList() << "--caption"
+                << i18nc("@title:window Caption for "
+                "marble windows started to show a stops position in a map. %1 is the "
+                "stop name.", "\"PublicTransport: %1\"", stopName) );
+        connect( d->marble, SIGNAL(error(QProcess::ProcessError)),
+                this, SLOT(errorMarble(QProcess::ProcessError)) );
+        connect( d->marble, SIGNAL(started()), this, SLOT(marbleHasStarted()) );
+        connect( d->marble, SIGNAL(finished(int)), this, SLOT(marbleFinished(int)) );
+        d->marble->start();
+    }
+}
+
+void PublicTransportApplet::showStopInMarble( const QString &stopName, bool coordinatesAreValid,
+                                              qreal lon, qreal lat )
+{
+    Q_D( PublicTransportApplet );
+
+    if ( coordinatesAreValid ) {
+        // Store values to set them when marble has started
+        d->longitude = lon;
+        d->latitude = lat;
+    } else {
+        kWarning() << "No valid coordinates available for stop" << stopName;
         return;
     }
 
-    if ( lon < 0 || lat < 0 ) {
+    if ( !d->marble ) {
+        startMarble( stopName );
+        return;
+    }
+
+    if ( !coordinatesAreValid ) {
+        // Get stored coordinates, marble has been started now
         lon = d->longitude;
         lat = d->latitude;
     }
 
-    kDebug() << lon << lat;
     QString destination = QString("org.kde.marble-%1").arg(d->marble->pid());
+
+    // Set new window title
+    if ( !stopName.isEmpty() ) {
+        QDBusMessage m0 = QDBusMessage::createMethodCall(destination,
+                "/marble/MainWindow_1", "org.kde.marble.KMainWindow", "setPlainCaption");
+        m0 << i18nc("@title:window Caption for marble windows started to show a stops "
+                "position in a map. %1 is the stop name.", "\"PublicTransport: %1\"",
+                stopName);
+        if ( !QDBusConnection::sessionBus().send(m0) ) {
+            kDebug() << "Couldn't set marble title with dbus" << m0.errorMessage();
+        }
+    }
 
     // Load OpenStreetMap
     QDBusMessage m1 = QDBusMessage::createMethodCall(destination,
@@ -1736,7 +1705,7 @@ void PublicTransportApplet::showStopInMarble( qreal lon, qreal lat )
 
     // Set zoom factor
     QDBusMessage m3 = QDBusMessage::createMethodCall(destination,
-            "/MarbleMap", "org.kde.MarbleMap", "zoomView");
+            "/MarbleWidget", "org.kde.MarbleWidget", "zoomView");
     m3 << 3080;
     if ( !QDBusConnection::sessionBus().send(m3) ) {
         showMessage( KIcon("marble"), i18nc("@info", "Couldn't interact with 'marble' "
