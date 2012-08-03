@@ -435,20 +435,21 @@ ServiceProviderGtfs::AgencyInformation::~AgencyInformation()
     delete timezone;
 }
 
-QStringList ServiceProviderGtfs::features() const
+QList<Enums::ProviderFeature> ServiceProviderGtfs::features() const
 {
-    QStringList list;
-    list << "Autocompletion" << "TypeOfVehicle" << "Operator" << "StopID" << "RouteStops"
-         << "RouteTimes" << "Arrivals";
+    QList<Enums::ProviderFeature> features;
+    features << Enums::ProvidesDepartures << Enums::ProvidesArrivals
+             << Enums::ProvidesStopSuggestions << Enums::ProvidesRouteInformation
+             << Enums::ProvidesStopID; // TODO << Enums::ProvidesStopPosition;
 #ifdef BUILD_GTFS_REALTIME
     if ( !m_data->realtimeAlertsUrl().isEmpty() ) {
-        list << "JourneyNews";
+        features << Enums::ProvidesNews;
     }
     if ( !m_data->realtimeTripUpdateUrl().isEmpty() ) {
-        list << "Delay";
+        features << Enums::ProvidesDelays;
     }
 #endif
-    return list;
+    return features;
 }
 
 QTime ServiceProviderGtfs::timeFromSecondsSinceMidnight(

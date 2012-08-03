@@ -48,6 +48,7 @@
 #include <QEventLoop>
 #include <QScriptProgram>
 #include <QScriptEngine>
+#include <QScriptContextInfo>
 
 const char *ServiceProviderScript::SCRIPT_FUNCTION_FEATURES = "features";
 const char *ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE = "getTimetable";
@@ -196,18 +197,30 @@ bool ServiceProviderScript::isTestResultUnchanged( const QSharedPointer<KConfig>
     return isTestResultUnchanged( id(), cache );
 }
 
-QStringList ServiceProviderScript::readScriptFeatures( const QSharedPointer<KConfig> &cache )
+QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
+        const QSharedPointer<KConfig> &cache )
 {
     // Check if the script file was modified since the cache was last updated
     KConfigGroup group = cache->group( m_data->id() );
     if ( group.hasGroup("script") && isTestResultUnchanged(cache) && group.hasKey("features") ) {
         // Return feature list stored in the cache
-        return group.readEntry("features", QStringList());
+        bool ok;
+        QStringList featureStrings = group.readEntry("features", QStringList());
+        featureStrings.removeOne("(none)");
+        QList<Enums::ProviderFeature> features =
+                ServiceProviderGlobal::featuresFromFeatureStrings( featureStrings );
+        if ( ok ) {
+            // The stored feature list only contains valid strings
+            return features;
+        } else {
+            kWarning() << "Invalid feature string stored for provider" << m_data->id();
+        }
     }
 
     // No actual cached information about the service provider
     kDebug() << "No up-to-date cache information for service provider" << m_data->id();
-    QStringList features, includedFiles;
+    QList<Enums::ProviderFeature> features;
+    QStringList includedFiles;
     bool ok = lazyLoadScript();
     QString errorMessage;
     if ( !ok ) {
@@ -228,14 +241,36 @@ QStringList ServiceProviderScript::readScriptFeatures( const QSharedPointer<KCon
             includeFunction.setData( maxIncludeLine(m_script->sourceCode()) );
             engine.globalObject().setProperty( "include", includeFunction );
 
+            // TODO: Add a class to load all needed script objects like here
+            QScopedPointer< ServiceProviderData > data( new ServiceProviderData(*m_data) );
+            QScopedPointer< Scripting::Helper > helper( new Scripting::Helper(m_data->id()) );
+            QScopedPointer< Scripting::Network > network( new Scripting::Network(m_data->fallbackCharset()) );
+            QScopedPointer< Scripting::Storage > storage( new Scripting::Storage(m_data->id()) );
+            QScopedPointer< Scripting::ResultObject > resultObject( new Scripting::ResultObject() );
+            engine.globalObject().setProperty( "provider", engine.newQObject(data.data()) );
+            engine.globalObject().setProperty( "helper", engine.newQObject(helper.data()) );
+            engine.globalObject().setProperty( "PublicTransport",
+                    engine.newQMetaObject(&Enums::staticMetaObject) );
+            engine.globalObject().setProperty( "network", engine.newQObject(network.data()) );
+            engine.globalObject().setProperty( "storage", engine.newQObject(storage.data()) );
+            engine.globalObject().setProperty( "result", engine.newQObject(resultObject.data()) );
+            engine.globalObject().setProperty( "enum",
+                    engine.newQMetaObject(&ResultObject::staticMetaObject) );
+
             engine.evaluate( *m_script );
+            QVariantList result;
+            if ( !engine.hasUncaughtException() ) {
+                result = engine.globalObject().property(
+                        SCRIPT_FUNCTION_FEATURES ).call().toVariant().toList();
+            }
             if ( engine.hasUncaughtException() ) {
                 kDebug() << "Error in the script" << engine.uncaughtExceptionLineNumber()
                          << engine.uncaughtException().toString();
                 kDebug() << "Backtrace:" << engine.uncaughtExceptionBacktrace().join("\n");
                 ok = false;
-                errorMessage = i18nc("@info/plain", "Uncaught exception in script line %1: "
-                                     "<message>%2</message>",
+                errorMessage = i18nc("@info/plain", "Uncaught exception in script "
+                                     "<filename>%1</filename>, line %1: <message>%2</message>",
+                                     QFileInfo(QScriptContextInfo(engine.currentContext()).fileName()).fileName(),
                                      engine.uncaughtExceptionLineNumber(),
                                      engine.uncaughtException().toString());
             } else {
@@ -244,10 +279,10 @@ QStringList ServiceProviderScript::readScriptFeatures( const QSharedPointer<KCon
 
                 // Test if specific functions exist in the script
                 if ( engine.globalObject().property(SCRIPT_FUNCTION_GETSTOPSUGGESTIONS).isValid() ) {
-                    features << "Autocompletion";
+                    features << Enums::ProvidesStopSuggestions;
                 }
                 if ( engine.globalObject().property(SCRIPT_FUNCTION_GETJOURNEYS).isValid() ) {
-                    features << "JourneySearch";
+                    features << Enums::ProvidesJourneys;
                 }
 
                 // Test if features() script function is available
@@ -256,43 +291,8 @@ QStringList ServiceProviderScript::readScriptFeatures( const QSharedPointer<KCon
                 } else {
                     // Use values returned by features() script functions
                     // to get additional features of the service provider
-//                     TODO
-                    QVariantList result = engine.globalObject().property(
-                            SCRIPT_FUNCTION_FEATURES ).call().toVariant().toList();
-                    QStringList usedTimetableInformations;
                     foreach ( const QVariant &value, result ) {
-                        usedTimetableInformations << value.toString();
-                    }
-
-                    if ( usedTimetableInformations.contains(QLatin1String("Arrivals"), Qt::CaseInsensitive) ) {
-                        features << "Arrivals";
-                    }
-                    if ( usedTimetableInformations.contains(QLatin1String("Delay"), Qt::CaseInsensitive) ) {
-                        features << "Delay";
-                    }
-                    if ( usedTimetableInformations.contains(QLatin1String("DelayReason"), Qt::CaseInsensitive) ) {
-                        features << "DelayReason";
-                    }
-                    if ( usedTimetableInformations.contains(QLatin1String("Platform"), Qt::CaseInsensitive) ) {
-                        features << "Platform";
-                    }
-                    if ( usedTimetableInformations.contains(QLatin1String("JourneyNews"), Qt::CaseInsensitive)
-                      || usedTimetableInformations.contains(QLatin1String("JourneyNewsOther"), Qt::CaseInsensitive)
-                      || usedTimetableInformations.contains(QLatin1String("JourneyNewsLink"), Qt::CaseInsensitive) )
-                    {
-                        features << "JourneyNews";
-                    }
-                    if ( usedTimetableInformations.contains(QLatin1String("TypeOfVehicle"), Qt::CaseInsensitive) ) {
-                        features << "TypeOfVehicle";
-                    }
-                    if ( usedTimetableInformations.contains(QLatin1String("Status"), Qt::CaseInsensitive) ) {
-                        features << "Status";
-                    }
-                    if ( usedTimetableInformations.contains(QLatin1String("Operator"), Qt::CaseInsensitive) ) {
-                        features << "Operator";
-                    }
-                    if ( usedTimetableInformations.contains(QLatin1String("StopID"), Qt::CaseInsensitive) ) {
-                        features << "StopID";
+                        features << static_cast<Enums::ProviderFeature>( value.toInt() );
                     }
                 }
             }
@@ -322,7 +322,7 @@ QStringList ServiceProviderScript::readScriptFeatures( const QSharedPointer<KCon
     return features;
 }
 
-QStringList ServiceProviderScript::features() const
+QList<Enums::ProviderFeature> ServiceProviderScript::features() const
 {
     return m_scriptFeatures;
 }

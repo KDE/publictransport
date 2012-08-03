@@ -305,7 +305,7 @@ void PublicTransportAppletPrivate::onServiceProviderSettingsChanged()
         // Only use the default target state (journey search) if journeys
         // are supported by the used service provider. Otherwise go to the
         // alternative target state (journeys not supported).
-        const bool journeysSupported = currentServiceProviderFeatures.contains( "JourneySearch" );
+        const bool journeysSupported = currentServiceProviderFeatures.contains( "ProvidesJourneys" );
         QAbstractState *target = journeysSupported
                                  ? states["journeySearch"] : states["journeysUnsupportedView"];
         journeySearchTransition1->setTargetState( target );
@@ -316,7 +316,7 @@ void PublicTransportAppletPrivate::onServiceProviderSettingsChanged()
         titleWidget->setJourneysSupported( journeysSupported );
 
         // Check if arrivals are currently shown but not supported by the new provider
-        if ( !currentServiceProviderFeatures.contains("arrivals", Qt::CaseInsensitive) &&
+        if ( !currentServiceProviderFeatures.contains("ProvidesArrivals", Qt::CaseInsensitive) &&
              settings.departureArrivalListType() == ArrivalList )
         {
             Settings newSettings = settings;

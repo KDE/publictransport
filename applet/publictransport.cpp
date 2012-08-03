@@ -339,7 +339,7 @@ QList< QAction* > PublicTransportApplet::contextualActions()
     actions.append( separator );
 
     // Add actions: Switch Departures/Arrivals, Switch Current Stop,
-    if ( d->currentServiceProviderFeatures.contains("Arrivals") ) {
+    if ( d->currentServiceProviderFeatures.contains("ProvidesArrivals") ) {
         actions << switchDepArr;
     }
 
@@ -351,7 +351,7 @@ QList< QAction* > PublicTransportApplet::contextualActions()
         actions << goBackAction;
     } else if ( d->settings.stops().count() > 1 ) {
         actions << d->createSwitchStopAction( this );
-        if ( d->currentServiceProviderFeatures.contains("JourneySearch") ) {
+        if ( d->currentServiceProviderFeatures.contains("ProvidesJourneys") ) {
 //             updateJourneyActionMenu();
             actions << action("journeys");
         }
@@ -722,11 +722,11 @@ void PublicTransportApplet::showActionButtons()
     if ( d->isStateActive("journeyView") ) {
         actions << action("backToDepartures");
     }
-    if ( d->currentServiceProviderFeatures.contains("Arrivals") ) {
+    if ( d->currentServiceProviderFeatures.contains("ProvidesArrivals") ) {
         actions << (d->settings.departureArrivalListType() == DepartureList
                 ? action("showArrivals") : action("showDepartures"));
     }
-    if ( d->currentServiceProviderFeatures.contains("JourneySearch") ) {
+    if ( d->currentServiceProviderFeatures.contains("ProvidesJourneys") ) {
 //         updateJourneyActionMenu();
         actions << action("journeys");
     }
@@ -1998,7 +1998,7 @@ QVariant PublicTransportApplet::supportedJourneySearchState() const
     Q_D( const PublicTransportApplet );
 
     QObject *object = qobject_cast<QObject*>(
-            d->currentServiceProviderFeatures.contains("JourneySearch")
+            d->currentServiceProviderFeatures.contains("ProvidesJourneys")
             ? d->states["journeySearch"] : d->states["journeysUnsupportedView"] );
     return qVariantFromValue( object );
 }

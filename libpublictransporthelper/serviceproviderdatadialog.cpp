@@ -145,7 +145,7 @@ ServiceProviderDataDialog::ServiceProviderDataDialog( const QVariantHash &servic
                 serviceProviderData["shortAuthor"].toString()) );
     }
     d_ptr->uiProviderData.description->setText( serviceProviderData["description"].toString() );
-    d_ptr->uiProviderData.features->setText( serviceProviderData["featuresLocalized"].toStringList().join(", ") );
+    d_ptr->uiProviderData.features->setText( serviceProviderData["featureNames"].toStringList().join(", ") );
 
     QStringList changelogEntries = serviceProviderData["changelog"].toStringList();
     if ( changelogEntries.isEmpty() ) {

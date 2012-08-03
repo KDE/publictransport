@@ -100,11 +100,6 @@ bool ServiceProvider::isSourceFileModified( const QSharedPointer<KConfig> &cache
     return ServiceProviderGlobal::isSourceFileModified( m_data->id(), cache );
 }
 
-QStringList ServiceProvider::featuresLocalized() const
-{
-    return ServiceProviderGlobal::localizeFeatures( features() );
-}
-
 void ServiceProvider::request( AbstractRequest *request )
 {
     StopSuggestionRequest *stopSuggestionRequest = dynamic_cast< StopSuggestionRequest* >( request );

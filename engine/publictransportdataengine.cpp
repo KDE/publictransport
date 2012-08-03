@@ -185,8 +185,6 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
     dataServiceProvider.insert( "credit", data.credit() );
     dataServiceProvider.insert( "useSeparateCityValue", data.useSeparateCityValue() );
     dataServiceProvider.insert( "onlyUseCitiesInList", data.onlyUseCitiesInList() );
-//     dataServiceProvider.insert( "features", data.features() );
-//     dataServiceProvider.insert( "featuresLocalized", data.featuresLocalized() );
     dataServiceProvider.insert( "author", data.author() );
     dataServiceProvider.insert( "shortAuthor", data.shortAuthor() );
     dataServiceProvider.insert( "email", data.email() );
@@ -203,19 +201,25 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
     // A given ServiceProvider or cached data gets used if available. Otherwise the ServiceProvider
     // gets created just to get the list of features
     if ( provider ) {
-        kDebug() << "Use given provider to get feature info";
         // Write features to the return value
-        dataServiceProvider.insert( "features", provider->features() );
-        dataServiceProvider.insert( "featuresLocalized", provider->featuresLocalized() );
+        const QList< Enums::ProviderFeature > features = provider->features();
+        dataServiceProvider.insert( "features", ServiceProviderGlobal::featureStrings(features) );
+        dataServiceProvider.insert( "featureNames", ServiceProviderGlobal::featureNames(features) );
     } else {
         const QSharedPointer<KConfig> cache = ServiceProviderGlobal::cache();
         KConfigGroup group = cache->group( data.id() );
-        QStringList features = group.readEntry("features", QStringList());
-        if ( !features.isEmpty() ) {
-            features.removeOne( "(none)" );
-            dataServiceProvider.insert( "features", features );
-            dataServiceProvider.insert( "featuresLocalized",
-                                        ServiceProviderGlobal::localizeFeatures(features) );
+
+        // Check stored feature strings and re-read features if an invalid string was found
+        bool ok;
+        QStringList featureStrings = group.readEntry("features", QStringList());
+        featureStrings.removeOne("(none)");
+        QList< Enums::ProviderFeature > features =
+                ServiceProviderGlobal::featuresFromFeatureStrings( featureStrings, &ok );
+
+        if ( !featureStrings.isEmpty() && ok ) {
+            dataServiceProvider.insert( "features", featureStrings );
+            dataServiceProvider.insert( "featureNames",
+                                        ServiceProviderGlobal::featureNames(features) );
         } else {
             kDebug() << "No cached feature data was found for provider" << data.id();
             // No cached feature data was found for the provider,
@@ -223,7 +227,8 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
             bool newlyCreated;
             ProviderPointer _provider = providerFromId( data.id(), &newlyCreated );
             features = _provider->features();
-            const QStringList featuresLocalized = _provider->featuresLocalized();
+            featureStrings = ServiceProviderGlobal::featureStrings( features );
+            const QStringList featuresNames = ServiceProviderGlobal::featureNames( features );
 
             // Remove provider from the list again to delete it
             if ( newlyCreated ) {
@@ -232,16 +237,16 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
 
             // If no features are supported write "(none)" to the cache
             // to indicate that features have been written to the cache
-            if ( features.isEmpty() ) {
-                features.append( "(none)" );
+            if ( featureStrings.isEmpty() ) {
+                featureStrings.append( "(none)" );
             }
 
             // Write features to the return value
-            dataServiceProvider.insert( "features", features );
-            dataServiceProvider.insert( "featuresLocalized", featuresLocalized );
+            dataServiceProvider.insert( "features", featureStrings );
+            dataServiceProvider.insert( "featureNames", featuresNames );
 
             // Write features to cache
-            group.writeEntry( "features", features );
+            group.writeEntry( "features", featureStrings );
         }
     }
 
@@ -627,7 +632,7 @@ bool PublicTransportEngine::updateTimetableDataSource( const SourceData &data )
                                  "source name '|city=X', where X stands for the city "
                                  "name." ).arg( data.defaultParameter );
             return false; // Service provider needs a separate city value
-        } else if ( !provider->features().contains("JourneySearch") &&
+        } else if ( !provider->features().contains(Enums::ProvidesJourneys) &&
                     (data.parseMode == ParseForJourneysByDepartureTime ||
                      data.parseMode == ParseForJourneysByArrivalTime) )
         {
@@ -1333,7 +1338,9 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
                 : secsSinceLastUpdate < 60 * 60 * 24; // Update GTFS feed once a day without realtime data
     } else
 #endif
-    if ( provider->features().contains("Delay") && dataSource["delayInfoAvailable"].toBool() ) {
+    if ( provider->features().contains(Enums::ProvidesDelays) &&
+         dataSource["delayInfoAvailable"].toBool() )
+    {
         minFetchWait = qBound((int)MIN_UPDATE_TIMEOUT, minForSufficientChanges,
                               (int)MAX_UPDATE_TIMEOUT_DELAY );
     } else {

@@ -63,8 +63,18 @@ public:
     static QString typeName( Enums::ServiceProviderType type,
                              ProviderTypeNameOptions options = AppendHintForUnsupportedProviderTypes );
 
-    /** @brief Get a list of short localized strings describing the supported features. */
-    static QStringList localizeFeatures( const QStringList &features );
+    /** @brief Get a localized name for @p feature. */
+    static QString featureName( Enums::ProviderFeature feature );
+
+    /** @brief Get a list of localized names for @p features. */
+    static QStringList featureNames( const QList<Enums::ProviderFeature> &features );
+
+    /** @brief Get a list of strings for @p features, using Enums::toString(). */
+    static QStringList featureStrings( const QList<Enums::ProviderFeature> &features );
+
+    /** @brief Get a list of provider feature enumerables from a list of feature strings. */
+    static QList<Enums::ProviderFeature> featuresFromFeatureStrings(
+            const QStringList &featureNames, bool *ok = 0 );
 
     /** @brief Get the service provider ID for the given service provider plugin file name. */
     static QString idFromFileName( const QString &serviceProviderPluginFileName );

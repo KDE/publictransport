@@ -232,64 +232,78 @@ bool ServiceProviderGlobal::isSourceFileModified( const QString &providerId,
     return fileName.isEmpty() ? true : QFileInfo(fileName).lastModified() != modifiedTime;
 }
 
-QStringList ServiceProviderGlobal::localizeFeatures( const QStringList &features )
+QString ServiceProviderGlobal::featureName( Enums::ProviderFeature feature )
 {
-    QStringList featuresl10n;
-    if ( features.contains("Arrivals") ) {
-        featuresl10n << i18nc( "Support for getting arrivals for a stop of public "
-                               "transport. This string is used in a feature list, "
-                               "should be short.", "Arrivals" );
+    switch ( feature ) {
+    case Enums::ProvidesDepartures:
+        return i18nc("@info/plain A short string indicating support for departure from a stop",
+                     "Departures");
+    case Enums::ProvidesArrivals:
+        return i18nc("@info/plain A short string indicating support for arrivals to a stop.",
+                     "Arrivals");
+    case Enums::ProvidesJourneys:
+        return i18nc("@info/plain A short string indicating support for journeys",
+                     "Journey search");
+    case Enums::ProvidesDelays:
+        return i18nc("@info/plain A short string indicating that delay information can be provided",
+                     "Delays");
+    case Enums::ProvidesNews:
+        return i18nc("@info/plain A short string indicating that news about timetable items can be provided",
+                     "News");
+    case Enums::ProvidesPlatform:
+        return i18nc("@info/plain A short string indicating that platform information can be provided",
+                     "Platform");
+    case Enums::ProvidesStopSuggestions:
+        return i18nc("@info/plain A short string indicating support for stop suggestions",
+                     "Stop suggestions");
+    case Enums::ProvidesStopID:
+        return i18nc("@info/plain A short string indicating that stop IDs can be provided",
+                     "Stop ID");
+    case Enums::ProvidesStopPosition:
+        return i18nc("@info/plain A short string indicating that stop geological positions can be provided",
+                     "Stop position");
+    case Enums::ProvidesPricing:
+        return i18nc("@info/plain A short string indicating that pricing information can be provided",
+                     "Pricing");
+    case Enums::ProvidesRouteInformation:
+        return i18nc("@info/plain A short string indicating that route information can be provided",
+                     "Route information");
+    default:
+        kWarning() << "Unexpected feature value" << feature;
+        return QString();
     }
-    if ( features.contains("Autocompletion") ) {
-        featuresl10n << i18nc( "Autocompletion for names of public transport stops",
-                               "Autocompletion" );
+}
+
+QStringList ServiceProviderGlobal::featureNames( const QList<Enums::ProviderFeature> &features )
+{
+    QStringList names;
+    foreach ( Enums::ProviderFeature feature, features ) {
+        names << featureName( feature );
     }
-    if ( features.contains("JourneySearch") ) {
-        featuresl10n << i18nc( "Support for getting journeys from one stop to another. "
-                               "This string is used in a feature list, should be short.",
-                               "Journey search" );
+    return names;
+}
+
+QStringList ServiceProviderGlobal::featureStrings( const QList<Enums::ProviderFeature> &features )
+{
+    QStringList names;
+    foreach ( Enums::ProviderFeature feature, features ) {
+        names << Enums::toString( feature );
     }
-    if ( features.contains("Delay") ) {
-        featuresl10n << i18nc( "Support for getting delay information. This string is "
-                               "used in a feature list, should be short.", "Delay" );
+    return names;
+}
+
+QList< Enums::ProviderFeature > ServiceProviderGlobal::featuresFromFeatureStrings(
+        const QStringList &featureNames, bool *ok )
+{
+    QList< Enums::ProviderFeature > features;
+    if ( ok ) *ok = true;
+    foreach ( const QString &featureName, featureNames ) {
+        Enums::ProviderFeature feature = Enums::stringToFeature( featureName.toAscii().data() );
+        if ( feature == Enums::InvalidProviderFeature ) {
+            if ( ok ) *ok = false;
+        } else {
+            features << feature;
+        }
     }
-    if ( features.contains("DelayReason") ) {
-        featuresl10n << i18nc( "Support for getting the reason of a delay. This string "
-                               "is used in a feature list, should be short.",
-                               "Delay reason" );
-    }
-    if ( features.contains("Platform") ) {
-        featuresl10n << i18nc( "Support for getting the information from which platform "
-                               "a public transport vehicle departs / at which it "
-                               "arrives. This string is used in a feature list, "
-                               "should be short.", "Platform" );
-    }
-    if ( features.contains("JourneyNews") ) {
-        featuresl10n << i18nc( "Support for getting the news about a journey with public "
-                               "transport, such as a platform change. This string is "
-                               "used in a feature list, should be short.", "Journey news" );
-    }
-    if ( features.contains("TypeOfVehicle") ) {
-        featuresl10n << i18nc( "Support for getting information about the type of "
-                               "vehicle of a journey with public transport. This string "
-                               "is used in a feature list, should be short.",
-                               "Type of vehicle" );
-    }
-    if ( features.contains("Status") ) {
-        featuresl10n << i18nc( "Support for getting information about the status of a "
-                               "journey with public transport or an aeroplane. This "
-                               "string is used in a feature list, should be short.",
-                               "Status" );
-    }
-    if ( features.contains("Operator") ) {
-        featuresl10n << i18nc( "Support for getting the operator of a journey with public "
-                               "transport or an aeroplane. This string is used in a "
-                               "feature list, should be short.", "Operator" );
-    }
-    if ( features.contains("StopID") ) {
-        featuresl10n << i18nc( "Support for getting the id of a stop of public transport. "
-                               "This string is used in a feature list, should be short.",
-                               "Stop ID" );
-    }
-    return featuresl10n;
+    return features;
 }

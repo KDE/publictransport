@@ -120,7 +120,7 @@ public:
     QString errorMessage() const { return m_errorMessage; };
 
     /** @brief Gets a list of features that this service provider supports through a script. */
-    virtual QStringList features() const;
+    virtual QList<Enums::ProviderFeature> features() const;
 
     /**
      * @brief Requests a list of departures.
@@ -174,14 +174,14 @@ protected slots:
 
 protected:
     bool lazyLoadScript();
-    QStringList readScriptFeatures( const QSharedPointer<KConfig> &cache );
+    QList<Enums::ProviderFeature> readScriptFeatures( const QSharedPointer<KConfig> &cache );
 
     /** @brief Run script provider specific tests. */
     virtual bool runTests( QString *errorMessage = 0 ) const;
 
 private:
     ScriptState m_scriptState; // The state of the script
-    QStringList m_scriptFeatures; // Caches the features the script provides
+    QList<Enums::ProviderFeature> m_scriptFeatures; // Caches the features the script provides
     ScriptThread *m_thread;
     QHash< QString, PublicTransportInfoList > m_publishedData;
     QScriptProgram *m_script;

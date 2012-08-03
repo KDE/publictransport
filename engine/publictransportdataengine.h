@@ -610,7 +610,7 @@ the following keys:
 <tr><td><i>useSeparateCityValue</i></td> <td>bool</td> <td>Wheather or not the service provider needs a separate city value. If this is true, you need to specify a "city" parameter in data source names for @ref usage_departures_sec and @ref usage_journeys_sec .</td></tr>
 <tr><td><i>onlyUseCitiesInList</i></td> <td>bool</td> <td>Wheather or not the service provider only accepts cities that are in the "cities" list.</td></tr>
 <tr><td><i>features</i></td> <td>QStringList</td> <td>A list of strings, each string stands for a feature of the service provider.</td></tr>
-<tr><td><i>featuresLocalized</i></td> <td>QStringList</td> <td>A list of localized strings describing which features the service provider offers.</td></tr>
+<tr><td><i>featureNames</i></td> <td>QStringList</td> <td>A list of localized names describing which features the service provider offers.</td></tr>
 <tr><td><i>author</i></td> <td>QString</td> <td>The author of the service provider plugin.</td></tr>
 <tr><td><i>email</i></td> <td>QString</td> <td>The email address of the author of the service provider plugin.</td></tr>
 <tr><td><i>description</i></td> <td>QString</td> <td>A description of the service provider.</td></tr>

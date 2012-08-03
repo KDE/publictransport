@@ -75,7 +75,7 @@ void ServiceProvidersTest::serviceProviderTest()
         QVERIFY( serviceProviderData["name"].canConvert(QVariant::String) );
         QVERIFY( serviceProviderData["description"].canConvert(QVariant::String) );
         QVERIFY( serviceProviderData["features"].canConvert(QVariant::StringList) );
-        QVERIFY( serviceProviderData["featuresLocalized"].canConvert(QVariant::StringList) );
+        QVERIFY( serviceProviderData["featureNames"].canConvert(QVariant::StringList) );
         QVERIFY( serviceProviderData["email"].canConvert(QVariant::String) );
         QVERIFY( serviceProviderData["author"].canConvert(QVariant::String) );
         QVERIFY( serviceProviderData["fileName"].canConvert(QVariant::String) );

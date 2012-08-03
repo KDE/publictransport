@@ -75,8 +75,7 @@ class ChangelogEntry;
 class ServiceProvider : public QObject {
     Q_OBJECT
     Q_PROPERTY( QString id READ id )
-    Q_PROPERTY( QStringList features READ features )
-    Q_PROPERTY( QStringList featuresLocalized READ featuresLocalized )
+    Q_PROPERTY( QList<Enums::ProviderFeature> features READ features )
     Q_PROPERTY( QString country READ country )
     Q_PROPERTY( QStringList cities READ cities )
     Q_PROPERTY( QString credit READ credit )
@@ -139,10 +138,7 @@ public:
      * @brief Get a list of features that this provider supports.
      * The default implementation returns an empty list.
      **/
-    virtual QStringList features() const { return QStringList(); };
-
-    /** @brief Get a list of short localized strings describing the supported features. */
-    QStringList featuresLocalized() const;
+    virtual QList<Enums::ProviderFeature> features() const { return QList<Enums::ProviderFeature>(); };
 
     /** @brief The country for which the provider returns results. */
     QString country() const;

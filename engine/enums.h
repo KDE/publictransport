@@ -65,7 +65,7 @@ enum ErrorCode {
 
 class Enums : public QObject {
     Q_OBJECT
-    Q_ENUMS( TimetableInformation ServiceProviderType VehicleType LineService )
+    Q_ENUMS( TimetableInformation ServiceProviderType ProviderFeature VehicleType LineService )
 
 public:
     /**
@@ -242,6 +242,8 @@ public:
 
     /** @brief Features of a provider. */
     enum ProviderFeature {
+        InvalidProviderFeature = -1, /**< @internal */
+
         ProvidesDepartures, /**< Departure data is provided through the getTimetable()
                 * script function. Scripts do not need to specify this enumerable in the features()
                 * script function, it is assumed by implementing the getTimetable() script function. */
@@ -261,6 +263,8 @@ public:
                 * enumerable in the features() script function, it is assumed by implementing the
                 * getStopSuggestions() script function. */
         ProvidesStopID, /**< Stop IDs are provided by the getStopSuggestions() script function. */
+        ProvidesStopPosition, /**< Stop positions are provided by the getStopSuggestions() script
+                * function, stored as StopLongitude and StopLatitude. */
         ProvidesPricing, /**< Pricing data is provided for departures/arrivals and/or journeys. */
         ProvidesRouteInformation, /**< Route information is provided for departures/arrivals
                 * and/or journeys. */

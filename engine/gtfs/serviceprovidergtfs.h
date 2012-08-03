@@ -110,7 +110,7 @@ public:
     bool hasErrors( QString *errorMessage = 0 ) const;
 
     /** @brief Gets a list of features that this provider supports. */
-    virtual QStringList features() const;
+    virtual QList<Enums::ProviderFeature> features() const;
 
 #ifdef BUILD_GTFS_REALTIME
     /** @brief Returns true, if there is a GTFS-realtime source available. */
