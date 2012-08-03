@@ -666,6 +666,31 @@ const AbstractRequest *StopSuggestionsJob::request() const
     return &d->request;
 }
 
+class StopSuggestionsFromGeoPositionJobPrivate {
+public:
+    StopSuggestionsFromGeoPositionJobPrivate( const StopSuggestionFromGeoPositionRequest &request )
+            : request(request) {};
+    StopSuggestionFromGeoPositionRequest request;
+};
+
+StopSuggestionsFromGeoPositionJob::StopSuggestionsFromGeoPositionJob( QScriptProgram* script,
+        const ServiceProviderData* info, Storage* scriptStorage,
+        const StopSuggestionFromGeoPositionRequest& request, QObject* parent )
+        : ScriptJob(script, info, scriptStorage, parent),
+          d(new StopSuggestionsFromGeoPositionJobPrivate(request))
+{
+}
+
+StopSuggestionsFromGeoPositionJob::~StopSuggestionsFromGeoPositionJob()
+{
+    delete d;
+}
+
+const AbstractRequest *StopSuggestionsFromGeoPositionJob::request() const
+{
+    return &d->request;
+}
+
 class AdditionalDataJobPrivate {
 public:
     AdditionalDataJobPrivate( const AdditionalDataRequest &request ) : request(request) {};

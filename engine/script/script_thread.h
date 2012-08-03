@@ -42,6 +42,7 @@ struct DepartureRequest;
 struct ArrivalRequest;
 struct JourneyRequest;
 struct StopSuggestionRequest;
+struct StopSuggestionFromGeoPositionRequest;
 struct AdditionalDataRequest;
 
 class ServiceProviderData;
@@ -271,6 +272,23 @@ public:
 
 private:
     const StopSuggestionsJobPrivate *d;
+};
+
+class StopSuggestionsFromGeoPositionJobPrivate;
+class StopSuggestionsFromGeoPositionJob : public ScriptJob {
+    Q_OBJECT
+
+public:
+    explicit StopSuggestionsFromGeoPositionJob(
+            QScriptProgram* script, const ServiceProviderData* info, Storage* scriptStorage,
+            const StopSuggestionFromGeoPositionRequest& request, QObject* parent = 0);
+
+    virtual ~StopSuggestionsFromGeoPositionJob();
+
+    virtual const AbstractRequest* request() const;
+
+private:
+    const StopSuggestionsFromGeoPositionJobPrivate *d;
 };
 
 class AdditionalDataJobPrivate;

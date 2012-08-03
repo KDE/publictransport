@@ -627,7 +627,9 @@ bool PublicTransportEngine::updateTimetableDataSource( const SourceData &data )
         const ProviderPointer provider = providerFromId( data.defaultParameter );
         if ( provider.isNull() ) {
             return false; // Service provider couldn't be created
-        } else if ( provider->useSeparateCityValue() && data.request->city.isEmpty() ) {
+        } else if ( provider->useSeparateCityValue() && data.request->city.isEmpty() &&
+                    !dynamic_cast<StopSuggestionFromGeoPositionRequest*>(data.request) )
+        {
             kDebug() << QString( "Service provider %1 needs a separate city value. Add to "
                                  "source name '|city=X', where X stands for the city "
                                  "name." ).arg( data.defaultParameter );
@@ -823,6 +825,11 @@ PublicTransportEngine::SourceData::SourceData( const QString &name )
           request(0)
 {
     if ( isDataRequestingSourceType(type) ) {
+        // Extract parameters, which follow after the source type keyword in name
+        // and are delimited with '|'
+        QStringList parameters = name.mid( QString(sourceTypeKeyword(type)).length() )
+                .trimmed().split( '|', QString::SkipEmptyParts );
+
         switch ( parseMode ) {
         case ParseForDepartures:
             request = new DepartureRequest( name, parseMode );
@@ -830,9 +837,24 @@ PublicTransportEngine::SourceData::SourceData( const QString &name )
         case ParseForArrivals:
             request = new ArrivalRequest( name, parseMode );
             break;
-        case ParseForStopSuggestions:
-            request = new StopSuggestionRequest( name, parseMode );
+        case ParseForStopSuggestions: {
+            bool hasLongitude = false, hasLatitude = false;
+            for ( int i = 0; i < parameters.length(); ++i ) {
+                const QString parameter = parameters.at( i ).trimmed();
+                const QString parameterName = parameter.left( parameter.indexOf('=') ).toLower();
+                if ( parameterName == QLatin1String("longitude") ) {
+                    hasLongitude = true;
+                } else if ( parameterName == QLatin1String("latitude") ) {
+                    hasLatitude = true;
+                }
+            }
+            if ( hasLongitude && hasLatitude ) {
+                request = new StopSuggestionFromGeoPositionRequest( name, parseMode );
+            } else {
+                request = new StopSuggestionRequest( name, parseMode );
+            }
             break;
+        }
         case ParseForJourneysByDepartureTime:
         case ParseForJourneysByArrivalTime:
             request = new JourneyRequest( name, parseMode );
@@ -841,11 +863,6 @@ PublicTransportEngine::SourceData::SourceData( const QString &name )
             kWarning() << "Cannot create a request for parse mode" << parseMode;
             return;
         }
-
-        // Extract parameters, which follow after the source type keyword in name
-        // and are delimited with '|'
-        QStringList parameters = name.mid( QString(sourceTypeKeyword(type)).length() )
-                .trimmed().split( '|', QString::SkipEmptyParts );
 
         // Read parameters
         for ( int i = 0; i < parameters.length(); ++i ) {
@@ -895,6 +912,28 @@ PublicTransportEngine::SourceData::SourceData( const QString &name )
                         kWarning() << "Bad value for 'maxCount' in source name:" << parameterValue;
                         request->maxCount = 20;
                     }
+                } else if ( dynamic_cast<StopSuggestionFromGeoPositionRequest*>(request) ) {
+                    StopSuggestionFromGeoPositionRequest *stopRequest =
+                            dynamic_cast< StopSuggestionFromGeoPositionRequest* >( request );
+                    bool ok;
+                    if ( parameterName == QLatin1String("longitude") ) {
+                        stopRequest->longitude = parameterValue.toFloat( &ok );
+                        if ( !ok ) {
+                            kWarning() << "Bad value for 'longitude' in source name:" << parameterValue;
+                        }
+                    } else if ( parameterName == QLatin1String("latitude") ) {
+                        stopRequest->latitude = parameterValue.toFloat( &ok );
+                        if ( !ok ) {
+                            kWarning() << "Bad value for 'latitude' in source name:" << parameterValue;
+                        }
+                    } else if ( parameterName == QLatin1String("distance") ) {
+                        stopRequest->distance = parameterValue.toInt( &ok );
+                        if ( !ok ) {
+                            kWarning() << "Bad value for 'distance' in source name:" << parameterValue;
+                        }
+                    } else {
+                        kWarning() << "Unknown argument" << parameterName;
+                    }
                 } else {
                     kWarning() << "Unknown argument" << parameterName;
                 }
@@ -938,11 +977,17 @@ bool PublicTransportEngine::SourceData::isValid() const
         if ( defaultParameter.isEmpty() ) {
             kWarning() << "No provider ID given in source name" << name;
             return false;
-        } else if ( parseMode == ParseForDepartures || parseMode == ParseForArrivals ||
-                    parseMode == ParseForStopSuggestions )
-        {
+        } else if ( parseMode == ParseForDepartures || parseMode == ParseForArrivals ) {
             // Check if the stop name is missing
             if ( !request || request->stop.isEmpty() ) {
+                kWarning() << "Stop name is missing in data source name" << name;
+                return false;
+            }
+        } else if ( parseMode == ParseForStopSuggestions ) {
+            // Check if the stop name or geo coordinates are missing
+            if ( !request || (!dynamic_cast<StopSuggestionFromGeoPositionRequest*>(request) &&
+                              request->stop.isEmpty()) )
+            {
                 kWarning() << "Stop name is missing in data source name" << name;
                 return false;
             }
@@ -1036,10 +1081,10 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
 
     QDateTime last = items.isEmpty() ? QDateTime::currentDateTime()
             : items.last()->value(Enums::DepartureDateTime).toDateTime();
-    if ( deleteDepartureInfos ) {
-        kDebug() << "Delete" << items.count() << "departures/arrivals";
+//     if ( deleteDepartureInfos ) {
+//         kDebug() << "Delete" << items.count() << "departures/arrivals";
 //         qDeleteAll( departures );
-    }
+//     }
 
     // Store a proposal for the next download time
     int secs = QDateTime::currentDateTime().secsTo( last ) / 3;

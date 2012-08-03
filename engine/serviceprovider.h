@@ -45,6 +45,7 @@ class AbstractRequest;
 class DepartureRequest;
 class ArrivalRequest;
 class StopSuggestionRequest;
+class StopSuggestionFromGeoPositionRequest;
 class AdditionalDataRequest;
 class JourneyRequest;
 
@@ -194,6 +195,9 @@ public:
      * @param request Information about the stop suggestion request.
      **/
     virtual void requestStopSuggestions( const StopSuggestionRequest &request );
+
+    virtual void requestStopSuggestionsFromGeoPosition(
+            const StopSuggestionFromGeoPositionRequest &request );
 
     /**
      * @brief Requests additional data for a valid timetable item in the engine.

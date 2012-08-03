@@ -10,7 +10,7 @@ include_directories(
    ${CMAKE_BINARY_DIR}
    ${KDE4_INCLUDES}
    ${CMAKE_CURRENT_SOURCE_DIR}
-   ${CMAKE_CURRENT_BINARY_DIR} # For "config.h" in subdirectories
+   ${CMAKE_CURRENT_BINARY_DIR} # For "config.h"
 )
 
 # Include cmake_dependent_option command

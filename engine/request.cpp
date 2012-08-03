@@ -80,6 +80,16 @@ QScriptValue StopSuggestionRequest::toScriptValue( QScriptEngine *engine ) const
     return value;
 }
 
+QScriptValue StopSuggestionFromGeoPositionRequest::toScriptValue( QScriptEngine *engine ) const
+{
+    QScriptValue value = engine->newObject();
+    value.setProperty( QLatin1String("longitude"), longitude );
+    value.setProperty( QLatin1String("latitude"), latitude );
+    value.setProperty( QLatin1String("distance"), distance );
+    value.setProperty( QLatin1String("maxCount"), maxCount );
+    return value;
+}
+
 QScriptValue DepartureRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();

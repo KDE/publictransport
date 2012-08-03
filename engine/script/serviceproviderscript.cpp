@@ -568,6 +568,23 @@ void ServiceProviderScript::requestStopSuggestions( const StopSuggestionRequest 
     return;
 }
 
+void ServiceProviderScript::requestStopSuggestionsFromGeoPosition(
+        const StopSuggestionFromGeoPositionRequest &request )
+{
+    if ( !lazyLoadScript() ) {
+        kDebug() << "Failed to load script!";
+        return;
+    }
+
+    StopSuggestionsFromGeoPositionJob *job = new StopSuggestionsFromGeoPositionJob(
+            m_script, m_data, m_scriptStorage, request, this );
+    connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
+    connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)),
+             this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)) );
+    ThreadWeaver::Weaver::instance()->enqueue( job );
+    return;
+}
+
 void ServiceProviderScript::requestAdditionalData( const AdditionalDataRequest &request )
 {
     if ( !lazyLoadScript() ) {

@@ -66,7 +66,8 @@ struct AbstractRequest {
 
     AbstractRequest( const QString &sourceName = QString(),
                      ParseDocumentMode parseMode = ParseInvalid )
-            : sourceName(sourceName), maxCount(20), parseMode(parseMode)
+            : sourceName(sourceName), maxCount(parseMode == ParseForStopSuggestions ? 200 : 20),
+              parseMode(parseMode)
     {
     };
 
@@ -116,6 +117,41 @@ struct StopSuggestionRequest : public AbstractRequest {
 
     /** @brief Get the name of the script function that is associated with this request. */
     virtual QString functionName() const;
+#endif
+};
+
+struct StopSuggestionFromGeoPositionRequest : public StopSuggestionRequest {
+    /** @brief The longitude of the stop. */
+    float longitude;
+
+    /** @brief The latitude of the stop. */
+    float latitude;
+
+    /** @brief Maximal distance in meters from the position at longitude/latitude. */
+    int distance;
+
+    StopSuggestionFromGeoPositionRequest( const QString &sourceName = QString(),
+                                          ParseDocumentMode parseMode = ParseForStopSuggestions )
+        : StopSuggestionRequest(sourceName, parseMode),
+          longitude(0.0), latitude(0.0), distance(500) {};
+    StopSuggestionFromGeoPositionRequest( const QString &sourceName,
+                                          float longitude, float latitude, int maxCount = 200,
+                                          int distance = 500,
+                                          ParseDocumentMode parseMode = ParseForStopSuggestions )
+        : StopSuggestionRequest(sourceName, QString(), maxCount, QString(), parseMode),
+          longitude(longitude), latitude(latitude), distance(distance) {};
+    StopSuggestionFromGeoPositionRequest( const StopSuggestionFromGeoPositionRequest &request )
+            : StopSuggestionRequest(request),
+              longitude(request.longitude), latitude(request.latitude), distance(request.distance) {};
+
+    virtual AbstractRequest *clone() const
+    {
+        return new StopSuggestionFromGeoPositionRequest( sourceName, longitude, latitude,
+                                                         maxCount, distance, parseMode );
+    };
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
 #endif
 };
 

@@ -9,9 +9,6 @@ include_directories(
    ${CMAKE_BINARY_DIR}
    ${KDE4_INCLUDES} )
 
-# Include directory of publictransporthelper, to be used by other components using the library
-set( PUBLICTRANSPORTHELPER_INCLUDES ${CMAKE_SOURCE_DIR}/libpublictransporthelper/ )
-
 # Can be used from the command line, eg. "cmake -DINSTALL_TIMETABLEMATE=ON .."
 # to configure with timetablemate (or use "cmake -i .." for interactive options)
 # Can also be set from a CMake GUI
@@ -41,6 +38,15 @@ message( "******************************************************" )
 # The library and the engine are used by all applets, the runner and TimetableMate
 message( " - PublicTransport Helper Library" )
 add_subdirectory( libpublictransporthelper )
+
+# Include directory of publictransporthelper, to be used by other components using the library
+set( PUBLICTRANSPORTHELPER_INCLUDES
+    ${CMAKE_SOURCE_DIR}/libpublictransporthelper/
+    ${CMAKE_BINARY_DIR}/libpublictransporthelper/ # for config.h
+)
+if ( BUILD_MARBLE_MAP )
+    list ( APPEND PUBLICTRANSPORTHELPER_INCLUDES /usr/include/marble )
+endif ( BUILD_MARBLE_MAP )
 
 message( " - PublicTransport Data Engine" )
 add_subdirectory( engine )

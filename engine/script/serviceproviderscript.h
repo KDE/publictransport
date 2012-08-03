@@ -138,6 +138,9 @@ public:
 
     virtual void requestStopSuggestions( const StopSuggestionRequest &request );
 
+    virtual void requestStopSuggestionsFromGeoPosition(
+            const StopSuggestionFromGeoPositionRequest &request );
+
     virtual void requestAdditionalData( const AdditionalDataRequest &request );
 
 protected slots:
