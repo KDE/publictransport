@@ -24,44 +24,62 @@
 #ifndef STOPLINEEDIT_H
 #define STOPLINEEDIT_H
 
+#include "config.h"
 #include "dynamicwidget.h" // For StopLineEditList
 #include <KLineEdit> // Base class of StopLineEdit
 #include <Plasma/DataEngine> // For Plasma::DataEngine::Data in StopLineEdit::dataUpdated()
+
+#ifdef USE_MARBLE_MAP
+    #include <GeoDataCoordinates.h>
+    using namespace Marble;
+#endif
 
 class KJob;
 
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
 
+struct Stop;
+
 class StopLineEditPrivate;
 
 /**
  * @brief A KLineEdit with some additional functionality for Public Transport.
  *
- * This KLineEdit amongst others provides stop name completion and an easy way to start and monitor
- * the first import of the GTFS feed. Errors in the Public Transport data engine or service are
- * also shown.
+ * This KLineEdit provides stop name completion and a popup map showing stop suggestions
+ * (if supported by the provider, see below). For GTFS providers it offers an easy way to start
+ * and monitor the first import of a GTFS feed. Errors in the Public Transport data engine or
+ * GTFS service are shown inside this KLineEdit (it is disabled then).
+ *
+ * Stop name completion requires the provider to support the feature "ProvidesStopSuggestions",
+ * the popup map requires "ProvidesStopPosition". To get a list of features supported by a
+ * provider you can query the data engine for the "ServiceProviders" data source.
+ *
+ * The popup map is a PublicTransportMapWidget. PopupHandler is used to turn it into a popup
+ * for this KLineEdit. It can be disabled completely at build time.
  *
  * This class uses the publictransport data engine to get stop name suggestions. The service
  * provider to be used for suggestions must be specified in the constructor or via
  * @ref setServiceProvider. If the service provider requires a city to be set you need to also
  * set a city name using @ref setCity.
  *
- * Besides stop name completion there are three situations in which this line edit behaves and
- * looks differently than KLineEdit.
+ * Besides stop name completion and the popup map there are three situations in which this
+ * line edit behaves and looks differently than KLineEdit.
  * @li If there is an error getting stop suggestions using the current service provider,
  *     the line edit gets put into read only mode, showing the error string. Negative colors are
  *     used from KColorScheme.
- * @li If a GTFS accessor is used, but it's GTFS feed has never been imported completely, a
+ * @li If a GTFS provider is used, but it's GTFS feed has not been imported completely, a
  *     question gets shown: "Start GTFS feed import?". By clicking the ok button shown inside the
  *     line edit, an import service job gets created and started. This leads to the following
  *     situation:
- * @li If the GTFS feed currently gets imported, a progress gets shown. There is also a cancel
+ * @li If the GTFS feed currently gets imported, the progress gets shown. There is also a cancel
  *     button, which allows to cancel the import service job.
  *
  * Shown buttons are no real QWidgets, they are only drawn in StopLineEdit::paintEvent() and
  * controlled by overriding other event handlers. Hover and pressed states of the buttons get
  * visualized.
+ *
+ * @see PublicTransportMapWidget
  **/
 class PUBLICTRANSPORTHELPER_EXPORT StopLineEdit : public KLineEdit
 {
@@ -115,6 +133,9 @@ protected Q_SLOTS:
     /** @brief The stop name was edited. */
     void edited( const QString &newText );
 
+    /** @brief The stop name was changed. */
+    void changed( const QString &newText );
+
     /** @brief The GTFS feed import has finished. */
     void importFinished( KJob *job );
 
@@ -126,6 +147,14 @@ protected Q_SLOTS:
 
     /** @brief Ask if timetable data import should be started, show a start button. */
     void askToImportTimetableData();
+
+#ifdef BUILD_MARBLE_MAP
+    /** @brief Called, when the map popup gets hidden. */
+    void popupHidden();
+
+    /** @brief Called, when a stop was clicked in the map. */
+    void stopClicked( const Stop &stop );
+#endif
 
 protected:
     StopLineEditPrivate* const d_ptr;
@@ -206,6 +235,6 @@ public Q_SLOTS:
     void updateToDataEngineState();
 };
 
-} // namespace Timetable
+} // namespace PublicTransport
 
 #endif // STOPLINEEDIT_H

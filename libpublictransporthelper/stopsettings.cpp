@@ -38,51 +38,75 @@
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
 
-Stop::Stop()
+Stop::Stop() : hasValidCoordinates(false)
 {
 }
 
-Stop::Stop(const char *name)
+Stop::Stop( const char *name ) : hasValidCoordinates(false)
 {
     this->name = name;
 }
 
-Stop::Stop(const QLatin1String& name)
+Stop::Stop( const QLatin1String& name ) : name(name), hasValidCoordinates(false)
 {
     this->name = name;
 }
 
-Stop::Stop(const QString& name, const QString& id)
+Stop::Stop( const QString& name, const QString& id, bool hasValidCoordinates,
+            qreal longitude, qreal latitude )
+        : name(name), id(id),
+          hasValidCoordinates(hasValidCoordinates), longitude(longitude), latitude(latitude)
 {
-    this->name = name;
-    this->id = id;
 }
 
-Stop::Stop(const Stop& other)
+Stop::Stop( const Stop& other )
+        : name(other.name), id(other.id), hasValidCoordinates(other.hasValidCoordinates),
+          longitude(other.longitude), latitude(other.latitude)
 {
-    this->name = other.name;
-    this->id = other.id;
 }
 
 Stop::~Stop()
 {
 }
 
+bool Stop::isValid() const
+{
+    return !name.isEmpty();
+}
+
+uint qHash( const Stop &stop )
+{
+    return !stop.id.isEmpty() ? qHash(stop.id) : (stop.hasValidCoordinates
+            ? qHash(QString::number(stop.longitude) + QString::number(stop.latitude))
+            : qHash(stop.name));
+}
+
 Stop& Stop::operator=(const Stop &other)
 {
     name = other.name;
     id = other.id;
+    longitude = other.longitude;
+    latitude = other.latitude;
+    hasValidCoordinates = other.hasValidCoordinates;
     return *this;
 }
 
 bool Stop::operator==(const Stop& other) const
 {
-    if ( id.isEmpty() || other.id.isEmpty() ) {
-        // An ID is missing from this and/or the other StopName, don't compare them
-        return name == other.name;
+    if ( hasValidCoordinates && other.hasValidCoordinates ) {
+        // No stop is expected to have exactly the same position as another one
+        return longitude == other.longitude && latitude == other.latitude;
+    } else if ( !id.isEmpty() && !other.id.isEmpty() ) {
+        // No stop is expected to have the same stop ID
+        qDebug() << "No valid coords" << name << other.name;
+        return id == other.id;
+    } else if ( !isValid() || !other.isValid() ) {
+        // No stop equals an invalid stop
+        return false;
     } else {
-        // If both IDs are used they should be the same
-        return name == other.name && id == other.id;
+        // A stop ID is missing, compare by name
+        qDebug() << "No ID" << name << other.name;
+        return name == other.name;
     }
 }
 

@@ -21,6 +21,12 @@
 #include "stoplineedit.h"
 #include "stopsettings.h"
 
+#ifdef BUILD_MARBLE_MAP
+    #include "publictransportmapwidget.h"
+    #include "publictransportlayer.h"
+    #include "popuphandler.h"
+#endif
+
 // Plasma/KDE includes
 #include <Plasma/DataEngineManager>
 #include <Plasma/ServiceJob>
@@ -112,6 +118,9 @@ public:
 
     ~StopLineEditPrivate()
     {
+#ifdef BUILD_MARBLE_MAP
+        delete mapPopup;
+#endif
         if ( dataEngineManager ) {
             dataEngineManager->unloadEngine("publictransport");
         }
@@ -213,13 +222,28 @@ public:
             buttonsWidth += 4 + button.rect.width();
         }
         return buttonsWidth;
-    }
+    };
+
+    void connectStopsSource( const QString &stopName ) {
+        Q_Q( StopLineEdit );
+        if ( !sourceName.isEmpty() ) {
+            publicTransportEngine->disconnectSource( sourceName, q );
+        }
+
+        state = StopLineEditPrivate::WaitingForStopSuggestions;
+        sourceName = QString("Stops %1|stop=%2").arg( serviceProvider, stopName );
+        if ( !city.isEmpty() ) { // m_useSeparateCityValue ) {
+            sourceName += QString("|city=%3").arg( city );
+        }
+        publicTransportEngine->connectSource( sourceName, q );
+    };
 
     Plasma::DataEngineManager *dataEngineManager;
     Plasma::DataEngine *publicTransportEngine;
     StopList stops;
     QString city;
     QString serviceProvider;
+    QString providerType;
     State state;
     qreal progress; // Progress of the data engine in processing a task (0.0 .. 1.0)
     QString sourceName; // Source name used to request stop suggestions at the data engine
@@ -229,6 +253,10 @@ public:
     QString infoMessage;
     QList<Button> buttons;
     Plasma::ServiceJob *importJob; // A currently running import job or 0 if no import is running
+
+#ifdef BUILD_MARBLE_MAP
+    PublicTransportMapWidget *mapPopup;
+#endif
 
 protected:
     StopLineEdit* const q_ptr;
@@ -240,8 +268,18 @@ StopLineEdit::StopLineEdit( QWidget* parent, const QString &serviceProvider,
                             KGlobalSettings::Completion completion )
         : KLineEdit( parent ), d_ptr( new StopLineEditPrivate(serviceProvider, this) )
 {
+#ifdef BUILD_MARBLE_MAP
+    Q_D( StopLineEdit );
+    d->mapPopup = new PublicTransportMapWidget( serviceProvider,
+                                                PublicTransportMapWidget::DefaultFlags, this );
+    connect( d->mapPopup, SIGNAL(stopClicked(Stop)), this, SLOT(stopClicked(Stop)) );
+    PopupHandler *handler = PopupHandler::installPopup( d->mapPopup, this );
+    connect( handler, SIGNAL(popupHidden()), this, SLOT(popupHidden()) );
+#endif
+
     setCompletionMode( completion );
     connect( this, SIGNAL(textEdited(QString)), this, SLOT(edited(QString)) );
+    connect( this, SIGNAL(textChanged(QString)), this, SLOT(changed(QString)) );
 }
 
 StopLineEdit::~StopLineEdit()
@@ -256,6 +294,20 @@ void StopLineEdit::updateToDataEngineState()
     setServiceProvider( d->serviceProvider );
 }
 
+#ifdef BUILD_MARBLE_MAP
+void StopLineEdit::popupHidden()
+{
+    setFocus( Qt::PopupFocusReason );
+}
+
+void StopLineEdit::stopClicked( const Stop &stop )
+{
+    if ( stop.isValid() ) {
+        setText( stop.name );
+    }
+}
+#endif
+
 void StopLineEdit::setServiceProvider( const QString& serviceProvider )
 {
     Q_D( StopLineEdit );
@@ -264,6 +316,14 @@ void StopLineEdit::setServiceProvider( const QString& serviceProvider )
     if ( !d->sourceName.isEmpty() ) {
         d->publicTransportEngine->disconnectSource( d->sourceName, this );
     }
+
+#ifdef BUILD_MARBLE_MAP
+    d->mapPopup->setServiceProvider( serviceProvider );
+#endif
+
+    const Plasma::DataEngine::Data providerData =
+            d->publicTransportEngine->query( "ServiceProvider " + d->serviceProvider );
+    d->providerType = providerData["type"].toString();
     setEnabled( true );
     setClearButtonShown( true ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
     setReadOnly( false );
@@ -301,6 +361,10 @@ QString StopLineEdit::city() const
 void StopLineEdit::importGtfsFeed()
 {
     Q_D( StopLineEdit );
+    if ( d->providerType != QLatin1String("GTFS") ) {
+        kWarning() << "Not a GTFS provider";
+        return;
+    }
 
     kDebug() << "GTFS accessor whithout imported feed data, use service to import using the GTFS feed";
     Plasma::Service *service = d->publicTransportEngine->serviceForSource("GTFS");
@@ -344,6 +408,19 @@ bool StopLineEdit::cancelImport()
     return false;
 }
 
+void StopLineEdit::changed( const QString &newText )
+{
+#ifdef BUILD_MARBLE_MAP
+    Q_D( StopLineEdit );
+    if ( newText.isEmpty() ) {
+        kDebug() << "Empty, hide map";
+        d->mapPopup->hide();
+    } else if ( d->mapPopup->isVisible() ) {
+        d->mapPopup->publicTransportLayer()->setSelectedStop( newText );
+    }
+#endif
+}
+
 void StopLineEdit::edited( const QString& newText )
 {
     Q_D( StopLineEdit );
@@ -363,16 +440,7 @@ void StopLineEdit::edited( const QString& newText )
         }
     }
 
-    if ( !d->sourceName.isEmpty() ) {
-        d->publicTransportEngine->disconnectSource( d->sourceName, this );
-    }
-
-    d->state = StopLineEditPrivate::WaitingForStopSuggestions;
-    d->sourceName = QString("Stops %1|stop=%2").arg( d->serviceProvider, newText.isEmpty() ? " " : newText ); // TODO
-    if ( !d->city.isEmpty() ) { // m_useSeparateCityValue ) {
-        d->sourceName += QString("|city=%3").arg( d->city );
-    }
-    d->publicTransportEngine->connectSource( d->sourceName, this );
+    d->connectStopsSource( newText );
 }
 
 void StopLineEdit::paintEvent( QPaintEvent *ev )
@@ -625,14 +693,18 @@ bool StopLineEdit::event( QEvent *ev )
     Q_D( StopLineEdit );
 
     StopLineEditPrivate::Button *button = d->hoveredButton();
-    if ( ev->type() == QEvent::ToolTip ) {
+    switch ( ev->type() ) {
+    case QEvent::ToolTip:
         if ( button ) {
             // Mouse is over a button
             setToolTip( button->toolTip );
-        } else {
+        } else if ( d->providerType == QLatin1String("GTFS") && !d->questionToolTip.isEmpty() ) {
             // Reset tooltip to question
             setToolTip( d->questionToolTip );
         }
+        break;
+    default:
+        break;
     }
 
     return KLineEdit::event( ev );
@@ -748,7 +820,16 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
         return;
     }
 
-    d->stops.clear();
+    // Delete old stops
+    QList<Stop>::Iterator it = d->stops.begin();
+    while ( it != d->stops.end() ) {
+        if ( it->name.contains(text()) ) {
+            ++it;
+        } else {
+            // The stop name does not contain the text in this StopLineEdit, remove it
+            it = d->stops.erase( it );
+        }
+    }
 
     QStringList weightedStops;
     QHash<Stop, QVariant> stopToStopWeight;
@@ -758,23 +839,25 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
         const QString stopName = stop["StopName"].toString();
         const QString stopID = stop["StopID"].toString();
         const int stopWeight = stop["StopWeight"].toInt();
+        const bool coordsAvailable = stop.contains("StopLongitude") && stop.contains("StopLatitude");
+        const qreal longitude = coordsAvailable ? stop["StopLongitude"].toReal() : 0;
+        const qreal latitude = coordsAvailable? stop["StopLatitude"].toReal() : 0;
 
-        const Stop stopItem( stopName, stopID );
+        const Stop stopItem( stopName, stopID, coordsAvailable, longitude, latitude );
         stopToStopWeight.insert( stopItem, stopWeight );
         d->stops << stopItem;
     }
-
     // Construct weighted stop list for KCompletion
     bool hasAtLeastOneWeight = false;
     foreach ( const Stop &stop, d->stops ) {
-        int stopWeight = stopToStopWeight[ stop ].toInt();
+        int stopWeight = stopToStopWeight[ stop.name ].toInt();
         if ( stopWeight <= 0 ) {
             stopWeight = 0;
         } else {
             hasAtLeastOneWeight = true;
         }
 
-        weightedStops << QString( "%1:%2" ).arg( stop ).arg( stopWeight );
+        weightedStops << QString( "%1:%2" ).arg( stop.name ).arg( stopWeight );
     }
 
     // Only add stop suggestions, if the line edit still has focus
@@ -782,6 +865,7 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
         kDebug() << "Prepare completion object";
         KCompletion *comp = completionObject();
         comp->setIgnoreCase( true );
+        comp->clear();
         if ( hasAtLeastOneWeight ) {
             comp->setOrder( KCompletion::Weighted );
             comp->insertItems( weightedStops );
@@ -794,8 +878,22 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
             comp->insertItems( stopList );
         }
 
-        // Complete manually, because the completions are requested asynchronously
-        doCompletion( text() );
+        // Complete manually, because the completions are requested asynchronously.
+        // Remove selected text for automatic completion modes, to still show other suggestions
+        // when text gets autocompleted
+        const bool autoCompletion = completionMode() == KGlobalSettings::CompletionAuto ||
+                                    completionMode() == KGlobalSettings::CompletionPopupAuto;
+        const QString input = (!autoCompletion || !hasSelectedText()) ? text()
+                : text().remove(selectionStart(), selectedText().length());
+        doCompletion( input );
+
+#ifdef BUILD_MARBLE_MAP
+        const QStringList activeStopNames = completionObject()->substringCompletion( input );
+        d->mapPopup->setStops( d->stops, text(), activeStopNames );
+        if ( !d->mapPopup->publicTransportLayer()->stops().isEmpty() ) {
+            d->mapPopup->show();
+        }
+#endif
     } else {
         kDebug() << "The stop line edit doesn't have focus, discard received stops.";
     }

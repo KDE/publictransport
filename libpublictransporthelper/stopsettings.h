@@ -89,7 +89,8 @@ public:
      * @param id The ID of the stop, which should be used preferably when requesting data from the
      *   publictransport data engine. Default is QString().
      **/
-    Stop( const QString &name, const QString &id = QString() );
+    Stop( const QString &name, const QString &id = QString(), bool hasValidCoordinates = false,
+          qreal longitude = 0, qreal latitude = 0 );
 
     /** @brief Copy constructor. */
     Stop( const Stop &other );
@@ -97,11 +98,18 @@ public:
     /** @brief Destructor. */
     ~Stop();
 
+    bool isValid() const;
+
     /** @brief Sets all values to the ones of @p other. */
-    Stop& operator=( const Stop &other );
+    Stop& operator =( const Stop &other );
 
     /** @brief Compares all values with the ones of @p other. */
     bool operator ==( const Stop &other ) const;
+
+    /** @brief Compares all values with the ones of @p other. */
+    inline bool operator !=( const Stop &other ) const { return !operator==(other); };
+
+    bool operator <( const Stop &other ) const { return latitude > other.latitude; };
 
     /**
      * @brief Gets the QString to preferably use when requesting data from the publictransport
@@ -132,8 +140,19 @@ public:
      * Can be empty if no ID is available for the stop.
      **/
     QString id;
+
+    /** @brief Whether or not longitude and latitude contain valid coordinates. */
+    bool hasValidCoordinates;
+
+    /** @brief The longitude of this stop, if hasValidCoordinates is @c true, otherwise undefined. */
+    qreal longitude;
+
+    /** @brief The latitude of this stop, if hasValidCoordinates is @c true, otherwise undefined. */
+    qreal latitude;
 };
 typedef QList<Stop> StopList;
+
+uint PUBLICTRANSPORTHELPER_EXPORT qHash( const Stop &stop );
 
 /**
  * @brief Stores settings for one set of stops/stations.
