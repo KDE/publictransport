@@ -256,6 +256,9 @@ QString ServiceProviderGlobal::featureName( Enums::ProviderFeature feature )
     case Enums::ProvidesStopSuggestions:
         return i18nc("@info/plain A short string indicating support for stop suggestions",
                      "Stop suggestions");
+    case Enums::ProvidesStopSuggestionsByPosition:
+        return i18nc("@info/plain A short string indicating support for querying stop suggestions by position",
+                     "Stop suggestions by position");
     case Enums::ProvidesStopID:
         return i18nc("@info/plain A short string indicating that stop IDs can be provided",
                      "Stop ID");
