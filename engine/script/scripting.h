@@ -32,6 +32,7 @@
 // Qt includes
 #include <QScriptEngine>
 #include <QScriptable> // Base class
+#include <QUrl>
 // #include <QMetaType> // For Q_DECLARE_METATYPE
 
 class PublicTransportInfo;
@@ -325,7 +326,10 @@ class Network;
 class NetworkRequest : public QObject {
     Q_OBJECT
     Q_PROPERTY( QString url READ url )
+    Q_PROPERTY( QUrl redirectedUrl READ redirectedUrl )
     Q_PROPERTY( bool isRunning READ isRunning )
+    Q_PROPERTY( bool isFinished READ isFinished )
+    Q_PROPERTY( bool isRedirected READ isRedirected )
     Q_PROPERTY( QString postData READ postData )
     friend class Network;
 
@@ -358,6 +362,12 @@ public:
      * @ingroup scripting
      **/
     bool isFinished() const { return m_isFinished; };
+
+    /** @brief Whether or not this request was redirected. */
+    bool isRedirected() const { return m_redirectUrl.isValid(); };
+
+    /** @brief Get the redirected URL of this request, if any. */
+    QUrl redirectedUrl() const { return m_redirectUrl; };
 
     /**
      * @brief Set the data to sent to the server when using Network::post().
@@ -440,6 +450,8 @@ Q_SIGNALS:
      **/
     void readyRead( const QString &data );
 
+    void redirected( const QUrl &newUrl );
+
     // TODO Do the decoding manually in the script, if needed
     void finishedNoDecoding();
 
@@ -456,6 +468,7 @@ protected:
 
 private:
     const QString m_url;
+    QUrl m_redirectUrl;
     Network *m_network;
     bool m_isFinished;
     QNetworkRequest *m_request;
@@ -660,11 +673,14 @@ Q_SIGNALS:
      **/
     void requestFinished( NetworkRequest *request, const QString &data = QString(), int size = 0 );
 
+    /** @brief Emitted when an asynchronous @p request was redirect to @p newUrl. */
+    void requestRedirected( NetworkRequest *request, const QUrl &newUrl );
+
     /**
      * @brief Emitted when a synchronous request has been started.
      *
      * This signal is @em not emitted if the network gets accessed asynchronously.
-     * @param request The request that has been started.
+     * @param url The URL of the request that has been started.
      * @ingroup scripting
      * @see requestStarted()
      **/
@@ -674,7 +690,7 @@ Q_SIGNALS:
      * @brief Emitted when an synchronous request has finished.
      *
      * This signal is @em not emitted if the network gets accessed asynchronously.
-     * @param request The request that has finished.
+     * @param url The URL of the request that has finished.
      * @param data Received data decoded to a string.
      * @param cancelled Whether or not the request has been cancelled, eg. because of a timeout.
      * @param waitTime The time spent waiting for the download to finish.
@@ -684,6 +700,16 @@ Q_SIGNALS:
      **/
     void synchronousRequestFinished( const QString &url, const QString &data = QString(),
                                      bool cancelled = false, int waitTime = 0, int size = 0 );
+
+    /**
+     * @brief Emitted when a synchronous request has been redirected.
+     *
+     * This signal is @em not emitted if the network gets accessed asynchronously.
+     * @param url The URL of the request that has been redirected.
+     * @ingroup scripting
+     * @see requestRedirected()
+     **/
+    void synchronousRequestRedirected( const QString &url );
 
     /**
      * @brief Emitted when all requests are finished.
@@ -714,6 +740,7 @@ protected Q_SLOTS:
     void slotRequestStarted();
     void slotRequestFinished( const QString &data = QString(), int size = 0 );
     void slotRequestAborted();
+    void slotRequestRedirected( const QUrl &newUrl );
 
 protected:
     bool checkRequest( NetworkRequest *request );
@@ -781,6 +808,10 @@ public:
      * Logs the error message with the given data string, eg. the HTML code where parsing failed.
      * The message gets also send to stdout with a short version of the data
      * The log file is normally located at "~/.kde4/share/apps/plasma_engine_publictransport/serviceproviders.log".
+     *
+     * If logging is not needed use the JavaScript function @c print instead.
+     * If the error is fatal consider using @c throw instead to create an exception and abort
+     * script execution.
      *
      * @param message The error message.
      * @param failedParseText The text in the source document where parsing failed.
@@ -1240,8 +1271,10 @@ public:
                 * result.giveHint( enum.CityNamesAreRight );
                 * @endcode
                 * @see Hint */
-        AllFeatures = AutoPublish | AutoDecodeHtmlEntities | AutoRemoveCityFromStopNames
+        AllFeatures = AutoPublish | AutoDecodeHtmlEntities | AutoRemoveCityFromStopNames,
                 /**< All available features are enabled. */
+        DefaultFeatures = AutoPublish | AutoDecodeHtmlEntities
+                /**< The default set of features gets enabled. */
     };
     Q_DECLARE_FLAGS( Features, Feature );
 
@@ -1373,7 +1406,7 @@ public:
      * @brief Get the currently enabled features.
      *
      * Scripts can access the Features enumeration like @verbatimenum.AutoPublish@endverbatim.
-     * By default this equals to AllFeatures.
+     * By default this equals to DefaultFeatures.
      * @since 0.10
      */
     Features features() const;

@@ -114,6 +114,26 @@ void NetworkRequest::slotFinished()
         return;
     }
 
+    if ( m_reply->attribute(QNetworkRequest::RedirectionTargetAttribute).isValid() ) {
+        if ( m_redirectUrl.isValid() ) {
+            kWarning() << "Only one redirection allowed, from" << m_url << "to" << m_redirectUrl;
+            kWarning() << "New redirection to"
+                       << m_reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
+        } else {
+            m_redirectUrl = m_reply->attribute( QNetworkRequest::RedirectionTargetAttribute ).toUrl();
+            kDebug() << "Redirection to" << m_redirectUrl;
+
+            // Delete the reply
+            m_reply->deleteLater();
+            m_reply = 0;
+
+            delete m_request;
+            m_request = new QNetworkRequest( m_redirectUrl );
+            emit redirected( m_redirectUrl );
+            return;
+        }
+    }
+
     // Read all data, decode it and give it to the script
     QByteArray data = m_reply->readAll();
     m_data.append( data );
@@ -289,6 +309,7 @@ NetworkRequest* Network::createRequest( const QString& url )
     connect( request, SIGNAL(started()), this, SLOT(slotRequestStarted()) );
     connect( request, SIGNAL(finished(QString,int)), this, SLOT(slotRequestFinished(QString,int)) );
     connect( request, SIGNAL(aborted()), this, SLOT(slotRequestAborted()) );
+    connect( request, SIGNAL(redirected(QUrl)), this, SLOT(slotRequestRedirected(QUrl)) );
     return request;
 }
 
@@ -322,6 +343,22 @@ void Network::slotRequestFinished( const QString &data, int size )
     if ( noMoreRequests ) {
         emit allRequestsFinished();
     }
+}
+
+void Network::slotRequestRedirected( const QUrl &newUrl )
+{
+    NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
+    Q_ASSERT( request ); // This slot should only be connected to signals of NetworkRequest
+
+    m_mutex->lockInline();
+    QNetworkReply *reply = m_manager->get( *request->request() );
+    m_lastUrl = newUrl.toString();
+    m_mutex->unlockInline();
+
+    request->started( reply );
+
+    kDebug() << "Redirected to" << newUrl;
+    emit requestRedirected( request, newUrl );
 }
 
 void Network::slotRequestAborted()
@@ -433,6 +470,7 @@ QString Network::getSynchronous( const QString &url, int timeout )
 {
     // Create a get request
     QNetworkRequest request( url );
+    kDebug() << "Start synchronous request" << url;
 
     m_mutex->lockInline();
     QNetworkReply *reply = m_manager->get( request );
@@ -443,27 +481,58 @@ QString Network::getSynchronous( const QString &url, int timeout )
     emit synchronousRequestStarted( url );
     const QTime start = QTime::currentTime();
 
-    // Use an event loop to wait for execution of the request,
-    // ie. make netAccess.download() synchronous for scripts
-    QEventLoop eventLoop;
-    connect( reply, SIGNAL(finished()), &eventLoop, SLOT(quit()) );
-    connect( this, SIGNAL(allRequestsFinished()), &eventLoop, SLOT(quit()) );
-    if ( timeout > 0 ) {
-        QTimer::singleShot( timeout, &eventLoop, SLOT(quit()) );
-    }
-    eventLoop.exec( QEventLoop::ExcludeUserInputEvents );
+    int redirectCount = 0;
+    const int maxRedirections = 3;
+    forever {
+        // Use an event loop to wait for execution of the request,
+        // ie. make netAccess.download() synchronous for scripts
+        QEventLoop eventLoop;
+        connect( reply, SIGNAL(finished()), &eventLoop, SLOT(quit()) );
+        connect( this, SIGNAL(allRequestsFinished()), &eventLoop, SLOT(quit()) );
+        if ( timeout > 0 ) {
+            QTimer::singleShot( timeout, &eventLoop, SLOT(quit()) );
+        }
+        eventLoop.exec( QEventLoop::ExcludeUserInputEvents );
 
-    m_mutex->lock();
-    const bool quit = reply->isRunning() || m_quit || m_lastDownloadAborted;
-    m_mutex->unlock();
+        m_mutex->lock();
+        const bool quit = reply->isRunning() || m_quit || m_lastDownloadAborted;
+        m_mutex->unlock();
 
-    // Check if the timeout occured before the request finished
-    if ( quit ) {
-        kDebug() << "Cancelled, destroyed or timeout while downloading" << url;
-        reply->abort();
-        reply->deleteLater();
-        emit synchronousRequestFinished( url, QString(), true );
-        return QString();
+        // Check if the timeout occured before the request finished
+        if ( quit ) {
+            kDebug() << "Cancelled, destroyed or timeout while downloading" << url;
+            reply->abort();
+            reply->deleteLater();
+            emit synchronousRequestFinished( url, QString(), true );
+            return QString();
+        }
+
+        if ( reply->attribute(QNetworkRequest::RedirectionTargetAttribute).isValid() ) {
+            ++redirectCount;
+            if ( redirectCount > maxRedirections ) {
+                reply->deleteLater();
+                emit synchronousRequestFinished( url, "Too many redirections", true,
+                                                 start.msecsTo(QTime::currentTime()) );
+                return QString();
+            }
+
+            // Request the redirection target
+            const QUrl redirectUrl =
+                    reply->attribute( QNetworkRequest::RedirectionTargetAttribute ).toUrl();
+            request.setUrl( redirectUrl );
+            kDebug() << "Redirected to" << redirectUrl;
+
+            m_mutex->lock();
+            delete reply;
+            reply = m_manager->get( request );
+            m_lastUrl = redirectUrl.toString();
+            m_mutex->unlock();
+
+            emit synchronousRequestRedirected( redirectUrl.toString() );
+        } else {
+            // No (more) redirection
+            break;
+        }
     }
 
     const int time = start.msecsTo( QTime::currentTime() );
@@ -485,7 +554,7 @@ QString Network::getSynchronous( const QString &url, int timeout )
 }
 
 ResultObject::ResultObject( QObject* parent )
-        : QObject(parent), m_mutex(new QMutex()), m_features(AllFeatures), m_hints(NoHint)
+        : QObject(parent), m_mutex(new QMutex()), m_features(DefaultFeatures), m_hints(NoHint)
 {
     qRegisterMetaType< Enums::TimetableInformation >( "Enums::TimetableInformation" );
 }
@@ -637,7 +706,9 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
 
         // Find word to remove from beginning/end of stop names, if not already found
         // TODO Use hint from the data engine..
-        if ( removeFirstWord.isEmpty() && removeLastWord.isEmpty() ) {
+        if ( features.testFlag(AutoRemoveCityFromStopNames) &&
+             removeFirstWord.isEmpty() && removeLastWord.isEmpty() )
+        {
             // First count the first/last word of the target stop name
             const QString target = info->value( Enums::Target ).toString();
             int pos = target.indexOf( ' ' );
@@ -682,77 +753,79 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
     }
 
     // Remove word with most occurrences from beginning/end of stop names
-    if ( removeFirstWord.isEmpty() && removeLastWord.isEmpty() ) {
-        // If no first/last word with at least maxWordOccurrence occurrences was found,
-        // find the word with the most occurrences
-        int max = 0;
+    if ( features.testFlag(AutoRemoveCityFromStopNames) ) {
+        if ( removeFirstWord.isEmpty() && removeLastWord.isEmpty() ) {
+            // If no first/last word with at least maxWordOccurrence occurrences was found,
+            // find the word with the most occurrences
+            int max = 0;
 
-        // Find word at the beginning with most occurrences
-        for ( QHash< QString, int >::ConstIterator it = firstWordCounts.constBegin();
-              it != firstWordCounts.constEnd(); ++it )
-        {
-            if ( it.value() > max ) {
-                max = it.value();
-                removeFirstWord = it.key();
+            // Find word at the beginning with most occurrences
+            for ( QHash< QString, int >::ConstIterator it = firstWordCounts.constBegin();
+                it != firstWordCounts.constEnd(); ++it )
+            {
+                if ( it.value() > max ) {
+                    max = it.value();
+                    removeFirstWord = it.key();
+                }
+            }
+
+            // Find word at the end with more occurrences
+            for ( QHash< QString, int >::ConstIterator it = lastWordCounts.constBegin();
+                it != lastWordCounts.constEnd(); ++it )
+            {
+                if ( it.value() > max ) {
+                    max = it.value();
+                    removeLastWord = it.key();
+                }
+            }
+
+            if ( max < minWordOccurrence ) {
+                // The first/last word with the most occurrences has too few occurrences
+                // Do not remove any word
+                removeFirstWord.clear();
+                removeLastWord.clear();
+            } else if ( !removeLastWord.isEmpty() ) {
+                // removeLastWord has more occurrences than removeFirstWord
+                removeFirstWord.clear();
             }
         }
 
-        // Find word at the end with more occurrences
-        for ( QHash< QString, int >::ConstIterator it = lastWordCounts.constBegin();
-              it != lastWordCounts.constEnd(); ++it )
-        {
-            if ( it.value() > max ) {
-                max = it.value();
-                removeLastWord = it.key();
-            }
-        }
+        if ( !removeFirstWord.isEmpty() ) {
+            // Remove removeFirstWord from all stop names
+            for ( int i = 0; i < infoList->count(); ++i ) {
+                QSharedPointer<PublicTransportInfo> info = infoList->at( i );
+                QString target = info->value( Enums::Target ).toString();
+                if ( target.startsWith(removeFirstWord) ) {
+                    target = target.mid( removeFirstWord.length() + 1 );
+                    info->insert( Enums::TargetShortened, target );
+                }
 
-        if ( max < minWordOccurrence ) {
-            // The first/last word with the most occurrences has too few occurrences
-            // Do not remove any word
-            removeFirstWord.clear();
-            removeLastWord.clear();
+                QStringList stops = info->value( Enums::RouteStops ).toStringList();
+                for ( int i = 0; i < stops.count(); ++i ) {
+                    if ( stops[i].startsWith(removeFirstWord) ) {
+                        stops[i] = stops[i].mid( removeFirstWord.length() + 1 );
+                    }
+                }
+                info->insert( Enums::RouteStopsShortened, stops );
+            }
         } else if ( !removeLastWord.isEmpty() ) {
-            // removeLastWord has more occurrences than removeFirstWord
-            removeFirstWord.clear();
-        }
-    }
-
-    if ( !removeFirstWord.isEmpty() ) {
-        // Remove removeFirstWord from all stop names
-        for ( int i = 0; i < infoList->count(); ++i ) {
-            QSharedPointer<PublicTransportInfo> info = infoList->at( i );
-            QString target = info->value( Enums::Target ).toString();
-            if ( target.startsWith(removeFirstWord) ) {
-                target = target.mid( removeFirstWord.length() + 1 );
-                info->insert( Enums::TargetShortened, target );
-            }
-
-            QStringList stops = info->value( Enums::RouteStops ).toStringList();
-            for ( int i = 0; i < stops.count(); ++i ) {
-                if ( stops[i].startsWith(removeFirstWord) ) {
-                    stops[i] = stops[i].mid( removeFirstWord.length() + 1 );
+            // Remove removeLastWord from all stop names
+            for ( int i = 0; i < infoList->count(); ++i ) {
+                QSharedPointer<PublicTransportInfo> info = infoList->at( i );
+                QString target = info->value( Enums::Target ).toString();
+                if ( target.endsWith(removeLastWord) ) {
+                    target = target.left( target.length() - removeLastWord.length() );
+                    info->insert( Enums::TargetShortened, target );
                 }
-            }
-            info->insert( Enums::RouteStopsShortened, stops );
-        }
-    } else if ( !removeLastWord.isEmpty() ) {
-        // Remove removeLastWord from all stop names
-        for ( int i = 0; i < infoList->count(); ++i ) {
-            QSharedPointer<PublicTransportInfo> info = infoList->at( i );
-            QString target = info->value( Enums::Target ).toString();
-            if ( target.endsWith(removeLastWord) ) {
-                target = target.left( target.length() - removeLastWord.length() );
-                info->insert( Enums::TargetShortened, target );
-            }
 
-            QStringList stops = info->value( Enums::RouteStops ).toStringList();
-            for ( int i = 0; i < stops.count(); ++i ) {
-                if ( stops[i].endsWith(removeLastWord) ) {
-                    stops[i] = stops[i].left( stops[i].length() - removeLastWord.length() );
+                QStringList stops = info->value( Enums::RouteStops ).toStringList();
+                for ( int i = 0; i < stops.count(); ++i ) {
+                    if ( stops[i].endsWith(removeLastWord) ) {
+                        stops[i] = stops[i].left( stops[i].length() - removeLastWord.length() );
+                    }
                 }
+                info->insert( Enums::RouteStopsShortened, stops );
             }
-            info->insert( Enums::RouteStopsShortened, stops );
         }
     }
 }
@@ -1305,7 +1378,11 @@ QVariantList Helper::findHtmlTags( const QString &str, const QString &tagName,
     }
 
     if ( debug ) {
-        kDebug() << "Found" << foundTags.count() << tagName << "HTML tags";
+        if ( foundTags.isEmpty() ) {
+            kDebug() << "Found no" << tagName << "HTML tags in HTML" << str;
+        } else {
+            kDebug() << "Found" << foundTags.count() << tagName << "HTML tags";
+        }
     }
     return foundTags;
 }
