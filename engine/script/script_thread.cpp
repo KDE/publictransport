@@ -186,8 +186,10 @@ void ScriptJob::run()
                         << m_engine->uncaughtExceptionLineNumber()
                         << m_engine->uncaughtException().toString();
             kDebug() << "Backtrace:" << m_engine->uncaughtExceptionBacktrace().join("\n");
-            m_errorString = i18nc("@info/plain", "Error in the script when calling function '%1': "
-                    "<message>%2</message>.", functionName, m_engine->uncaughtException().toString());
+            m_errorString = i18nc("@info/plain", "Error in script function <icode>%1</icode>, "
+                                  "line %2: <message>%3</message>.",
+                                  functionName, m_engine->uncaughtExceptionLineNumber(),
+                                  m_engine->uncaughtException().toString());
             m_engine->deleteLater();
             m_engine = 0;
             m_scriptNetwork.clear();
@@ -304,8 +306,10 @@ void ScriptJob::run()
                         << m_engine->uncaughtExceptionLineNumber()
                         << m_engine->uncaughtException().toString();
             kDebug() << "Backtrace:" << m_engine->uncaughtExceptionBacktrace().join("\n");
-            m_errorString = i18nc("@info/plain", "Error in the script when calling function '%1': "
-                    "<message>%2</message>.", functionName, m_engine->uncaughtException().toString());
+            m_errorString = i18nc("@info/plain", "Error in script function <icode>%1</icode>, "
+                                  "line %2: <message>%3</message>.",
+                                  functionName, m_engine->uncaughtExceptionLineNumber(),
+                                  m_engine->uncaughtException().toString());
             m_engine->deleteLater();
             m_engine = 0;
             m_scriptNetwork.clear();
@@ -510,8 +514,9 @@ bool ScriptJob::loadScript( QScriptProgram *script )
         kDebug() << "Error in the script" << m_engine->uncaughtExceptionLineNumber()
                  << m_engine->uncaughtException().toString();
         kDebug() << "Backtrace:" << m_engine->uncaughtExceptionBacktrace().join("\n");
-        m_errorString = i18nc("@info/plain", "Error in the script: "
-                "<message>%1</message>.", m_engine->uncaughtException().toString());
+        m_errorString = i18nc("@info/plain", "Error in script, line %1: <message>%2</message>.",
+                              m_engine->uncaughtExceptionLineNumber(),
+                              m_engine->uncaughtException().toString());
         m_engine->deleteLater();
         m_engine = 0;
         m_scriptNetwork.clear();

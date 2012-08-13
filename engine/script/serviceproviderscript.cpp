@@ -269,7 +269,7 @@ QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
                 kDebug() << "Backtrace:" << engine.uncaughtExceptionBacktrace().join("\n");
                 ok = false;
                 errorMessage = i18nc("@info/plain", "Uncaught exception in script "
-                                     "<filename>%1</filename>, line %1: <message>%2</message>",
+                                     "<filename>%1</filename>, line %2: <message>%3</message>",
                                      QFileInfo(QScriptContextInfo(engine.currentContext()).fileName()).fileName(),
                                      engine.uncaughtExceptionLineNumber(),
                                      engine.uncaughtException().toString());
