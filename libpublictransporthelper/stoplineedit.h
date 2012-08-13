@@ -29,7 +29,7 @@
 #include <KLineEdit> // Base class of StopLineEdit
 #include <Plasma/DataEngine> // For Plasma::DataEngine::Data in StopLineEdit::dataUpdated()
 
-#ifdef USE_MARBLE_MAP
+#ifdef BUILD_MARBLE_MAP
     #include <GeoDataCoordinates.h>
     using namespace Marble;
 #endif
