@@ -17,6 +17,7 @@ Comment[ca]=Una biblioteca per a ser utilitzada amb el motor de dades publictran
 Comment[et]=Ühiskondliku transpordi andmemootoriga kasutatav teek. See pakub vidinaid ja dialooge peatuste seadistuste häälestamiseks. 
 Comment[fr]=Une bibliothèque à utiliser avec le moteur de données « Publictransport ». Elle fournit des composants graphiques / boîtes de dialogue pour configurer les paramètres des arrêts.
 Comment[km]=បណ្ណាល័យ​ដែល​ត្រូវ​បាន​ប្រើ​​ជាមួយ​ម៉ាស៊ីន​ទិន្នន័យ​ដឹកជញ្ជូន​សាធារណៈ ។ វា​ផ្ដល់​​ធាតុ​ក្រាហ្វិក/ប្រអប់​ដើម្បី​​ដំឡើង​ការកំណត់​បញ្ឈប់ ។
+Comment[nl]=Een bibliotheek voor gebruik met de gegevensengine voor openbaar vervoer. Het levert widgets/dialogen voor het instellen van gegevens van haltes.
 Comment[pl]=Biblioteka używana z silnikiem danych komunikacji publicznej. Zapewnia elementy interfejsu/okna dialogowe do konfiguracji ustawień przystanków.
 Comment[pt]=Uma biblioteca a usar com o motor de dados de transportes públicos. Fornece itens para configurar as definições das paragens.
 Comment[pt_BR]=Uma biblioteca para usar com o mecanismo de dados de transportes públicos. Fornece widgets/janelas para configurar as opções de paradas.
