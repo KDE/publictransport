@@ -411,6 +411,8 @@ public:
     Q_INVOKABLE void setHeader( const QString &header, const QString &value,
                                 const QString &charset = QString() );
 
+    quint64 uncompressedSize() const { return m_uncompressedSize; };
+
 public Q_SLOTS:
     /**
      * @brief Aborts this (running) request.
@@ -476,6 +478,7 @@ private:
     QNetworkReply *m_reply;
     QByteArray m_data;
     QByteArray m_postData;
+    quint32 m_uncompressedSize;
 };
 
 /**

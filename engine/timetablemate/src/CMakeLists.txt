@@ -67,6 +67,7 @@ set( LIBS ${KDE4_KDEUI_LIBS}
     kdeclarative # For KDeclarative, no ${KDE4_KDECLARATIVE_LIBS} available..
     ${QT_QTDECLARATIVE_LIBRARY} # For the dashboard main view tabs
     publictransporthelper
+    z # zlib
 )
 
 if ( BUILD_PROVIDER_TYPE_SCRIPT )

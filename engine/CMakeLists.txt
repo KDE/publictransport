@@ -97,7 +97,7 @@ endif ( BUILD_TESTS )
 kde4_add_plugin( plasma_engine_publictransport ${publictransport_engine_SRCS} )
 
 # Collect all needed libraries in LIBS
-set( LIBS ${KDE4_PLASMA_LIBS} ${KDE4_KIO_LIBS} ${KDE4_THREADWEAVER_LIBS} )
+set( LIBS ${KDE4_PLASMA_LIBS} ${KDE4_KIO_LIBS} ${KDE4_THREADWEAVER_LIBS} z )
 
 # Add libraries needed for the script provider type
 if ( BUILD_PROVIDER_TYPE_SCRIPT )

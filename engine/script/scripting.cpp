@@ -46,6 +46,9 @@
 #include <QMutex>
 #include <QFileInfo>
 
+// Other includes
+#include <zlib.h>
+
 namespace Scripting {
 
 NetworkRequest::NetworkRequest( QObject* parent )
@@ -103,6 +106,54 @@ void NetworkRequest::slotReadyRead()
     emit readyRead( data );
 }
 
+QByteArray gzipDecompress( QByteArray compressData )
+{
+    // Strip header and trailer
+    compressData.remove( 0, 10 );
+    compressData.chop( 12 );
+
+    const int buffersize = 16384;
+    quint8 buffer[buffersize];
+
+    z_stream cmpr_stream;
+    cmpr_stream.next_in = (unsigned char *)compressData.data();
+    cmpr_stream.avail_in = compressData.size();
+    cmpr_stream.total_in = 0;
+
+    cmpr_stream.next_out = buffer;
+    cmpr_stream.avail_out = buffersize;
+    cmpr_stream.total_out = 0;
+
+    cmpr_stream.zalloc = Z_NULL;
+    cmpr_stream.zalloc = Z_NULL;
+
+    if ( inflateInit2(&cmpr_stream, -8 ) != Z_OK ) {
+        kDebug() << "cmpr_stream error!";
+    }
+
+    QByteArray uncompressed;
+    do {
+        int status = inflate( &cmpr_stream, Z_SYNC_FLUSH );
+
+        if ( status == Z_OK || status == Z_STREAM_END ) {
+            uncompressed.append( QByteArray::fromRawData((char*)buffer,
+                                                         buffersize - cmpr_stream.avail_out) );
+            cmpr_stream.next_out = buffer;
+            cmpr_stream.avail_out = buffersize;
+        } else {
+            inflateEnd( &cmpr_stream );
+        }
+
+        if ( status == Z_STREAM_END ) {
+            inflateEnd( &cmpr_stream );
+            break;
+        }
+
+    } while( cmpr_stream.avail_out == 0 );
+
+    return uncompressed;
+}
+
 void NetworkRequest::slotFinished()
 {
     if ( !m_reply ) {
@@ -140,6 +191,15 @@ void NetworkRequest::slotFinished()
 
     if ( m_data.isEmpty() ) {
         kDebug() << "Error downloading" << m_url << m_reply->errorString();
+    }
+
+    // Check if the data is compressed and was not decompressed by QNetworkAccessManager
+    if ( data.length() >= 2 && quint8(data[0]) == 0x1f && quint8(data[1]) == 0x8b ) {
+        // Data is compressed, uncompress it
+        // NOTE qUncompress() did not work here, "invalid zip"
+        m_data = gzipDecompress( m_data );
+        kDebug() << "Uncompressed data from" << size << "Bytes to" << m_data.size() << "Bytes, ratio:"
+                 << 100 - qRound(100 * size / m_data.size()) << '%';
     }
 
     m_reply->deleteLater();
