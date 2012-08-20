@@ -559,7 +559,8 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
 
         // Create the title widget and connect slots
         titleWidget = new TitleWidget( ShowDepartureArrivalListTitle,
-                                       &settings, mainGraphicsWidget );
+                &settings, currentServiceProviderFeatures.contains("ProvidesJourneys"),
+                mainGraphicsWidget );
         q->connect( titleWidget, SIGNAL(journeySearchInputFinished(QString)),
                     q, SLOT(journeySearchInputFinished(QString)) );
         q->connect( titleWidget, SIGNAL(journeySearchListUpdated(QList<JourneySearchItem>)),
