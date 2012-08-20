@@ -57,7 +57,6 @@ PublicTransportInfo::PublicTransportInfo( const QHash< Enums::TimetableInformati
                 kDebug() << "Guessed DepartureDate as today";
                 insert( Enums::DepartureDate, QDate::currentDate() );
             }
-    //         insert( Enums::DepartureYear, value(DepartureDate).toDate().year() ); TEST not needed? maybe use DepartureYear as comine-correction to DepartureDate
         }
     }
 
@@ -85,26 +84,24 @@ PublicTransportInfo::PublicTransportInfo( const QHash< Enums::TimetableInformati
         }
     }
 
-    if ( corrections.testFlag(ConvertValuesToCorrectFormat) ) {
-        // Convert route times list to a list of QTime objects (from string and time objects)
+    if ( corrections.testFlag(TestValuesForCorrectFormat) ) {
+        // Check RouteTimes values
         if ( contains(Enums::RouteTimes) ) {
             if ( value(Enums::RouteTimes).canConvert(QVariant::List) ) {
-                QVariantList times;
                 QVariantList vars = value( Enums::RouteTimes ).toList();
                 foreach ( const QVariant &var, vars ) {
                     // Convert from QVariant to QTime
-                    if ( var.canConvert(QVariant::Time) && var.toTime().isValid() ) {
-                        times << var.toTime();
-                    } else if ( var.canConvert(QVariant::String) ) {
-                        times << QTime::fromString( var.toString().trimmed(), "hh:mm" );
+                    if ( !var.canConvert(QVariant::Time) || !var.toTime().isValid() ) {
+                        // Value for DepartureTime is not QTime
+                        kWarning() << "Invalid time in RouteTimes:" << var;
+                        remove( Enums::RouteTimes );
+                        break;
                     }
                 }
-
-                insert( Enums::RouteTimes, times );
             } else {
                 // No list of values given for RouteTimes, remove the invalid value
-                kDebug() << "RouteTimes value is invalid (not a list of values): "
-                         << value(Enums::RouteTimes);
+                kWarning() << "RouteTimes value is invalid (not a list of values): "
+                           << value(Enums::RouteTimes);
                 remove( Enums::RouteTimes );
             }
         }
@@ -117,7 +114,9 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
     if ( corrections.testFlag(DeduceMissingValues) ) {
         // Guess arrival date value if none is given,
         // this could produce wrong dates (better give ArrivalDate eg. in scripts)
-        if ( !contains(Enums::ArrivalDate) && contains(Enums::ArrivalTime) ) {
+        if ( !contains(Enums::ArrivalDateTime) &&
+             !contains(Enums::ArrivalDate) && contains(Enums::ArrivalTime) )
+        {
             QTime arrivalTime = value(Enums::ArrivalTime).toTime();
             if ( arrivalTime < QTime::currentTime().addSecs(-5 * 60) ) {
                 insert( Enums::ArrivalDate, QDate::currentDate().addDays(1) );
@@ -125,85 +124,121 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
                 insert( Enums::ArrivalDate, QDate::currentDate() );
             }
         }
+
+        // Deduce Duration from DepartureDateTime and ArrivalDateTime
+        if ( value(Enums::Duration).toInt() <= 0 && contains(Enums::DepartureDateTime) &&
+             contains(Enums::ArrivalDateTime) )
+        {
+            QDateTime departure = value( Enums::DepartureDateTime ).toDateTime();
+            QDateTime arrival = value( Enums::ArrivalDateTime ).toDateTime();
+            int minsDuration = departure.secsTo( arrival ) / 60;
+            if ( minsDuration < 0 ) {
+                kWarning() << "Calculated duration is negative" << minsDuration
+                           << "departure" << departure << "arrival" << arrival;
+                insert( Enums::Duration, -1 );
+            } else {
+                insert( Enums::Duration, minsDuration );
+            }
+        }
     }
 
 //     TODO Move to PublicTransportInfo? ...or is it already in there?
-    if ( corrections.testFlag(ConvertValuesToCorrectFormat) ) {
-        // Convert departure time from string value
-        if ( contains(Enums::DepartureTime) ) {
-            QVariant timeValue = value( Enums::DepartureTime );
-            if ( !timeValue.canConvert(QVariant::Time) ) {
-                // Value for DepartureTime is not QTime, read string
-                QTime departureTime = QTime::fromString( timeValue.toString(), "hh:mm:ss" );
-                if ( !departureTime.isValid() ) {
-                    departureTime = QTime::fromString( timeValue.toString(), "hh:mm" );
-                }
-                insert( Enums::DepartureTime, departureTime );
-            }
+    if ( corrections.testFlag(TestValuesForCorrectFormat) ) {
+        // Test departure time format
+        if ( contains(Enums::DepartureTime) &&
+             !value(Enums::DepartureTime).canConvert(QVariant::Time) )
+        {
+            // Value for DepartureTime is not QTime
+            kWarning() << "DepartureTime needs to be convertable to QTime:"
+                       << value(Enums::DepartureTime);
+            remove( Enums::DepartureTime );
         }
 
-        // Convert date value from string if not given as date
-        if ( contains(Enums::DepartureDate) && (!value(Enums::DepartureDate).canConvert(QVariant::Date)
-                                      || !value(Enums::DepartureDate).toDate().isValid()) )
+        // Test departure date format
+        if ( contains(Enums::DepartureDate) &&
+             (!value(Enums::DepartureDate).canConvert(QVariant::Date) ||
+              !value(Enums::DepartureDate).toDate().isValid()) )
         {
-            if ( value(Enums::DepartureDate).canConvert(QVariant::String) ) {
-                QString sDate = value(Enums::DepartureDate).toString();
-                QDate date = QDate::fromString( sDate, "dd.MM.yyyy" );
-                if ( !date.isValid() ) {
-                    int currentYear = QDate::currentDate().year();
-                    date = QDate::fromString( sDate, "dd.MM.yy" );
-                    if ( date.year() <= currentYear - 99 ) {
-                        date.setDate( currentYear, date.month(), date.day() );
+            kWarning() << "DepartureDate needs to be convertable to QDate:"
+                       << value( Enums::DepartureDate );
+            remove( Enums::DepartureDate );
+        }
+
+        // Check ArrivalDate value
+        if ( contains(Enums::ArrivalDate) &&
+             (!value(Enums::ArrivalDate).canConvert(QVariant::Date) ||
+              !value(Enums::ArrivalDate).toDate().isValid()) )
+        {
+            kWarning() << "ArrivalDate needs to be convertable to QDate:"
+                       << value(Enums::ArrivalDate);
+            remove( Enums::ArrivalDate );
+        }
+
+        // Check Duration value
+        if ( contains(Enums::Duration) && value(Enums::Duration).toInt() <= 0 &&
+             value(Enums::Duration).canConvert(QVariant::String) )
+        {
+            kWarning() << "Duration needs to be convertable to int:" << value(Enums::Duration);
+            remove( Enums::Duration );
+        }
+
+        // Check RouteTimesDeparture values
+        if ( contains(Enums::RouteTimesDeparture) ) {
+            if ( !value(Enums::RouteTimesDeparture).canConvert(QVariant::List) ) {
+                kWarning() << "Value for RouteTimesDeparture needs to be a list"
+                           << value(Enums::RouteTimesDeparture);
+                remove( Enums::RouteTimesDeparture );
+            } else {
+                QVariantList vars = value( Enums::RouteTimesDeparture ).toList();
+                foreach( const QVariant &var, vars ) {
+                    if ( !var.canConvert(QVariant::Time) ) {
+                        kWarning() << "Invalid time in RouteTimesDeparture" << var;
+                        remove( Enums::RouteTimesDeparture );
+                        break;
                     }
                 }
-                insert( Enums::DepartureDate, date );
+            }
+        }
+
+        // Check RouteTimesArrival values
+        if ( contains(Enums::RouteTimesArrival) ) {
+            if ( !value(Enums::RouteTimesArrival).canConvert(QVariant::List) ) {
+                kWarning() << "Value for RouteTimesArrival needs to be a list"
+                           << value(Enums::RouteTimesArrival);
+                remove( Enums::RouteTimesArrival );
             } else {
-                kDebug() << "Departure date is in wrong format:" << value( Enums::DepartureDate );
-                remove( Enums::DepartureDate );
-            }
-        }
-
-        if ( contains(Enums::TransportLine) ) {
-            // Fix transport line string, eg. do not repeat vehicle type name
-            const QString sTransportLine = value(Enums::TransportLine).toString().trimmed()
-                    .remove( QRegExp("^(bus|tro|tram|str)", Qt::CaseInsensitive) )
-                    .replace( QRegExp("\\s{2,}"), " " );
-            insert( Enums::TransportLine, sTransportLine );
-        }
-
-        // Fix transport line strings in RouteTransportLines, eg. do not repeat vehicle type name
-        if ( contains(Enums::RouteTransportLines) ) {
-            QStringList transportLines = value( Enums::RouteTransportLines ).toStringList();
-            for ( int i = 0; i < transportLines.count(); ++i ) {
-                transportLines[i] = transportLines[i].trimmed()
-                        .remove( QRegExp("^(bus|tro|tram|str)", Qt::CaseInsensitive) )
-                        .replace( QRegExp("\\s{2,}"), " " ).trimmed();
-            }
-            insert( Enums::RouteTransportLines, transportLines );
-        }
-
-        // Convert date value from string if not given as date
-        if ( contains(Enums::ArrivalDate) && (!value(Enums::ArrivalDate).canConvert(QVariant::Date)
-                                    || !value(Enums::ArrivalDate).toDate().isValid()) )
-        {
-            if ( value(Enums::ArrivalDate).canConvert(QVariant::String) ) {
-                const QString sDate = value(Enums::ArrivalDate).toString();
-                QDate date = QDate::fromString( sDate, "dd.MM.yyyy" );
-
-                if ( !date.isValid() ) {
-                    int currentYear = QDate::currentDate().year();
-                    date = QDate::fromString( sDate, "dd.MM.yy" );
-                    if ( date.year() <= currentYear - 99 ) {
-                        date.setDate( currentYear, date.month(), date.day() );
+                QVariantList vars = value( Enums::RouteTimesArrival ).toList();
+                foreach( const QVariant &var, vars ) {
+                    if ( !var.canConvert(QVariant::Time) ) {
+                        kWarning() << "Invalid time in RouteTimesArrival" << var;
+                        remove( Enums::RouteTimesArrival );
+                        break;
                     }
                 }
-                insert( Enums::ArrivalDate, date );
+            }
+        }
+    }
+
+    if ( corrections.testFlag(CombineToPreferredValueType) ) {
+        // If the duration value is invalid, but there are departure and arrival date and time
+        // values available, calculate the duration between departure and arrival
+        if ( value(Enums::Duration).toInt() <= 0 && contains(Enums::DepartureDate) &&
+             contains(Enums::DepartureTime) && contains(Enums::ArrivalDate) &&
+             contains(Enums::ArrivalTime) )
+        {
+            QDateTime departure( value(Enums::DepartureDate).toDate(), value(Enums::ArrivalTime).toTime() );
+            QDateTime arrival( value(Enums::ArrivalDate).toDate(), value(Enums::ArrivalTime).toTime() );
+            int minsDuration = departure.secsTo( arrival ) / 60;
+            if ( minsDuration < 0 ) {
+                kDebug() << "Calculated duration is negative" << minsDuration
+                        << "departure" << departure << "arrival" << arrival;
+                insert( Enums::Duration, -1 );
             } else {
-                kDebug() << "Arrival date is in wrong format:" << value(Enums::ArrivalDate);
-                remove( Enums::ArrivalDate );
+                insert( Enums::Duration, minsDuration );
             }
         }
 
+        // Combine ArrivalTime and ArrivalDate to ArrivalDateTime
         if ( !contains(Enums::ArrivalDateTime) ) {
             if ( contains(Enums::ArrivalTime) ) {
                 const QTime time = value( Enums::ArrivalTime ).toTime();
@@ -221,94 +256,13 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
                 remove( Enums::ArrivalDate );
                 remove( Enums::ArrivalTime );
             } else {
-                kDebug() << "No ArrivalDateTime or ArrivalTime information given";
-            }
-        }
-        if ( value(Enums::Duration).toInt() <= 0 && contains(Enums::DepartureDateTime) &&
-             contains(Enums::ArrivalDateTime) )
-        {
-            QDateTime departure = value( Enums::DepartureDateTime ).toDateTime();
-            QDateTime arrival = value( Enums::ArrivalDateTime ).toDateTime();
-            int minsDuration = departure.secsTo( arrival ) / 60;
-            if ( minsDuration < 0 ) {
-                kDebug() << "Calculated duration is negative" << minsDuration
-                        << "departure" << departure << "arrival" << arrival;
-                insert( Enums::Duration, -1 );
-            } else {
-                insert( Enums::Duration, minsDuration );
-            }
-        }
-
-        // Convert duration value given as string in "h:mm" format to minutes
-        if ( contains(Enums::Duration) && value(Enums::Duration).toInt() <= 0 &&
-             value(Enums::Duration).canConvert(QVariant::String) )
-        {
-            QString duration = value( Enums::Duration ).toString();
-            QTime timeDuration = QTime::fromString( duration, "h:mm" );
-            if ( timeDuration.isValid() ) {
-                const int minsDuration = QTime( 0, 0 ).secsTo( timeDuration ) / 60;
-                insert( Enums::Duration, minsDuration );
-            }
-        }
-
-        // Convert route departure time values to QTime
-        if ( contains(Enums::RouteTimesDeparture) ) {
-            QVariantList times;
-            if ( value(Enums::RouteTimesDeparture).canConvert(QVariant::StringList) ) {
-                QStringList strings = value( Enums::RouteTimesDeparture ).toStringList();
-                foreach( const QString &str, strings ) {
-                    times << QTime::fromString( str.trimmed(), "hh:mm" );
-                }
-            } else if ( value(Enums::RouteTimesDeparture).canConvert(QVariant::List) ) {
-                QVariantList vars = value( Enums::RouteTimesDeparture ).toList();
-                foreach( const QVariant &var, vars ) {
-                    times << var.toTime();
-                }
-            }
-
-            insert( Enums::RouteTimesDeparture, times );
-        }
-
-        // Convert route arrival time values to QTime
-        if ( contains(Enums::RouteTimesArrival) ) {
-            QVariantList times;
-            if ( value(Enums::RouteTimesArrival).canConvert(QVariant::StringList) ) {
-                QStringList strings = value( Enums::RouteTimesArrival ).toStringList();
-                foreach( const QString &str, strings ) {
-                    times << QTime::fromString( str.trimmed(), "hh:mm" );
-                }
-            } else if ( value(Enums::RouteTimesArrival).canConvert(QVariant::List) ) {
-                QVariantList vars = value( Enums::RouteTimesArrival ).toList();
-                foreach( const QVariant &var, vars ) {
-                    times << var.toTime();
-                }
-            }
-
-            insert( Enums::RouteTimesArrival, times );
-        }
-    }
-
-    if ( corrections.testFlag(CombineToPreferredValueType) ) {
-        // If the duration value is invalid, but there are departure and arrival date and time
-        // values available, calculate the duration between departure and arrival
-        if ( value(Enums::Duration).toInt() <= 0 && contains(Enums::DepartureDate) && contains(Enums::DepartureTime) &&
-             contains(Enums::ArrivalDate) && contains(Enums::ArrivalTime) )
-        {
-            QDateTime departure( value(Enums::DepartureDate).toDate(), value(Enums::ArrivalTime).toTime() );
-            QDateTime arrival( value(Enums::ArrivalDate).toDate(), value(Enums::ArrivalTime).toTime() );
-            int minsDuration = departure.secsTo( arrival ) / 60;
-            if ( minsDuration < 0 ) {
-                kDebug() << "Calculated duration is negative" << minsDuration
-                        << "departure" << departure << "arrival" << arrival;
-                insert( Enums::Duration, -1 );
-            } else {
-                insert( Enums::Duration, minsDuration );
+                kWarning() << "No ArrivalDateTime or ArrivalTime information given";
             }
         }
     }
 
-    m_isValid = contains( Enums::DepartureDateTime ) && contains( Enums::ArrivalDateTime )
-            && contains( Enums::StartStopName ) && contains( Enums::TargetStopName );
+    m_isValid = contains(Enums::DepartureDateTime) && contains(Enums::ArrivalDateTime) &&
+                contains(Enums::StartStopName) && contains(Enums::TargetStopName);
 }
 
 StopInfo::StopInfo( QObject *parent ) : PublicTransportInfo(parent)

@@ -59,11 +59,11 @@ public:
     enum Correction {
         NoCorrection                    = 0x0000,
         DeduceMissingValues             = 0x0001,
-        ConvertValuesToCorrectFormat    = 0x0002,
+        TestValuesForCorrectFormat      = 0x0002,
         CombineToPreferredValueType     = 0x0004, /**< eg. combine DepartureHour and
                 * DepartureMinute into the preferred value type DepartureTime.
                 * TODO Update TimetableInformation enum documentation. */
-        CorrectEverything = DeduceMissingValues | ConvertValuesToCorrectFormat |
+        CorrectEverything = DeduceMissingValues | TestValuesForCorrectFormat |
                 CombineToPreferredValueType
     };
     Q_DECLARE_FLAGS( Corrections, Correction );
