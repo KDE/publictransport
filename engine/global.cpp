@@ -433,3 +433,18 @@ QString Global::decodeHtml( const QByteArray& document, const QByteArray& fallba
         return textCodec ? textCodec->toUnicode(document) : QString::fromUtf8(document);
     }
 }
+
+QString Global::decode( const QByteArray &document, const QByteArray &charset )
+{
+    if ( !charset.isEmpty() ) {
+        QTextCodec *textCodec = QTextCodec::codecForName( charset );
+        if ( !textCodec ) {
+            kDebug() << "Charset" << charset << "not found! Using utf8 now.";
+            textCodec = QTextCodec::codecForName( "UTF-8" );
+        }
+
+        return textCodec->toUnicode( document );
+    } else {
+        return QString::fromUtf8( document );
+    }
+}

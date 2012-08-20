@@ -418,7 +418,7 @@ public Q_SLOTS:
      * @note If the request has not already been started, it cannot be aborted, of course,
      *   and this function will do nothing.
      **/
-    Q_INVOKABLE void abort();
+    void abort();
 
 Q_SIGNALS:
     /**
@@ -437,10 +437,11 @@ Q_SIGNALS:
      * @brief Emitted when this request has finished.
      *
      * @param data The complete data downloaded for this request.
+     * @param statusCode The HTTP status code received.
      * @param size The size in bytes of the received data.
      * @ingroup scripting
      **/
-    void finished( const QString &data = QString(), int size = 0 );
+    void finished( const QByteArray &data = QByteArray(), int statusCode = 200, int size = 0 );
 
     /**
      * @brief Emitted when new data is available for this request.
@@ -448,12 +449,12 @@ Q_SIGNALS:
      * @param data New downloaded data for this request.
      * @ingroup scripting
      **/
-    void readyRead( const QString &data );
+    void readyRead( const QByteArray &data );
 
     void redirected( const QUrl &newUrl );
 
-    // TODO Do the decoding manually in the script, if needed
-    void finishedNoDecoding();
+//     // TODO Do the decoding manually in the script, if needed
+//     void finishedNoDecoding( const QByteArray &ba );
 
 protected Q_SLOTS:
     void slotFinished();
@@ -573,13 +574,13 @@ public:
      *   no timeout gets used.
      * @ingroup scripting
      **/
-    Q_INVOKABLE QString getSynchronous( const QString &url, int timeout = DEFAULT_TIMEOUT );
+    Q_INVOKABLE QByteArray getSynchronous( const QString &url, int timeout = DEFAULT_TIMEOUT );
 
     /**
      * @brief This is an alias for getSynchronous().
      * @ingroup scripting
      **/
-    Q_INVOKABLE inline QString downloadSynchronous( const QString &url, int timeout = DEFAULT_TIMEOUT ) {
+    Q_INVOKABLE inline QByteArray downloadSynchronous( const QString &url, int timeout = DEFAULT_TIMEOUT ) {
         return getSynchronous(url, timeout); };
 
     /**
@@ -667,11 +668,13 @@ Q_SIGNALS:
      * This signal is @em not emitted if the network gets accessed synchronously.
      * @param request The request that has finished.
      * @param data Received data decoded to a string.
+     * @param statusCode The HTTP status code received.
      * @param size The size in bytes of the received data.
      * @ingroup scripting
      * @see synchronousRequestFinished()
      **/
-    void requestFinished( NetworkRequest *request, const QString &data = QString(), int size = 0 );
+    void requestFinished( NetworkRequest *request, const QByteArray &data = QByteArray(),
+                          int statusCode = 200, int size = 0 );
 
     /** @brief Emitted when an asynchronous @p request was redirect to @p newUrl. */
     void requestRedirected( NetworkRequest *request, const QUrl &newUrl );
@@ -693,13 +696,15 @@ Q_SIGNALS:
      * @param url The URL of the request that has finished.
      * @param data Received data decoded to a string.
      * @param cancelled Whether or not the request has been cancelled, eg. because of a timeout.
+     * @param statusCode The HTTP status code if @p cancelled is @c false.
      * @param waitTime The time spent waiting for the download to finish.
      * @param size The size in bytes of the received data.
      * @ingroup scripting
      * @see requestFinished()
      **/
-    void synchronousRequestFinished( const QString &url, const QString &data = QString(),
-                                     bool cancelled = false, int waitTime = 0, int size = 0 );
+    void synchronousRequestFinished( const QString &url, const QByteArray &data = QByteArray(),
+                                     bool cancelled = false, int statusCode = 200,
+                                     int waitTime = 0, int size = 0 );
 
     /**
      * @brief Emitted when a synchronous request has been redirected.
@@ -738,7 +743,8 @@ public Q_SLOTS:
 
 protected Q_SLOTS:
     void slotRequestStarted();
-    void slotRequestFinished( const QString &data = QString(), int size = 0 );
+    void slotRequestFinished( const QByteArray &data = QByteArray(), int statusCode = 200,
+                              int size = 0 );
     void slotRequestAborted();
     void slotRequestRedirected( const QUrl &newUrl );
 
@@ -800,6 +806,7 @@ public:
      **/
     explicit Helper( const QString &serviceProviderId, QObject* parent = 0 ) : QObject( parent ) {
         m_serviceProviderId = serviceProviderId;
+        qRegisterMetaType< ErrorSeverity >( "ErrorSeverity" );
     };
 
     /**
@@ -846,6 +853,28 @@ public:
 
     /** @brief Encodes HTML entities in @p html, e.g. "<" is replaced by "&lt;". */
     Q_INVOKABLE static QString encodeHtmlEntities( const QString& html );
+
+    /**
+     * @brief Decodes the given HTML document.
+     *
+     * First it tries QTextCodec::codecForHtml().
+     * If that doesn't work, it parses the document for the charset in a meta-tag.
+     **/
+    Q_INVOKABLE static QString decodeHtml( const QByteArray& document,
+                                           const QByteArray& fallbackCharset = QByteArray() );
+
+    /** @brief Decode @p document using @p charset. */
+    Q_INVOKABLE static QString decode( const QByteArray& document,
+                                       const QByteArray& charset = QByteArray() );
+
+    /**
+     * @brief Decode @p document using @p charset.
+     * This is needed for scripts that use a string as argument. If the @p charset argument gets
+     * converted to QByteArray from a script string value automatically, it will be empty.
+     **/
+    Q_INVOKABLE static QString decode( const QByteArray& document, const QString& charset ) {
+        return decode( document, charset.toAscii() );
+    };
 
     /**
      * @brief Trims spaces from the beginning and the end of the given string @p str.

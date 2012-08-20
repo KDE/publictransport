@@ -65,6 +65,9 @@ public:
      **/
     static QString decodeHtml( const QByteArray& document,
                                const QByteArray& fallbackCharset = QByteArray() );
+
+    /** @brief Decode @p document using @p charset. */
+    static QString decode( const QByteArray& document, const QByteArray& charset = QByteArray() );
 };
 
 #endif // Multiple inclusion guard

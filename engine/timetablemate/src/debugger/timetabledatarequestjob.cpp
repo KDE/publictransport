@@ -275,10 +275,10 @@ void CallScriptFunctionJob::debuggerRun()
     // Create new Network object in this thread, restore old object at the end
     const QScriptValue previousScriptNetwork = engine->globalObject().property("network");
     Network *scriptNetwork = new Network( m_data.fallbackCharset() );
-    connect( scriptNetwork, SIGNAL(requestFinished(NetworkRequest*,QString,int)),
-             this, SLOT(requestFinished(NetworkRequest*,QString,int)) );
-    connect( scriptNetwork, SIGNAL(synchronousRequestFinished(QString,QString,bool,int,int)),
-             this, SLOT(synchronousRequestFinished(QString,QString,bool,int,int)) );
+    connect( scriptNetwork, SIGNAL(requestFinished(NetworkRequest*,QByteArray,int,int)),
+             this, SLOT(requestFinished(NetworkRequest*,QByteArray,int,int)) );
+    connect( scriptNetwork, SIGNAL(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)),
+             this, SLOT(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)) );
     engine->globalObject().setProperty( "network", engine->newQObject(scriptNetwork) );
 
     // Get the helper object and connect to the errorReceived() signal to collect
@@ -461,32 +461,35 @@ void CallScriptFunctionJob::invalidDataReceived( Enums::TimetableInformation inf
             TimetableDataRequestMessage::Error, context.fileName(), context.lineNumber() );
 }
 
-void CallScriptFunctionJob::requestFinished( NetworkRequest *request, const QString &data, int size )
+void CallScriptFunctionJob::requestFinished( NetworkRequest *request, const QByteArray &data,
+                                             int statusCode, int size )
 {
     m_additionalMessages << TimetableDataRequestMessage(
-            i18nc("@info/plain", "Download finished: %1, <link>%2</link>",
-                  KGlobal::locale()->formatByteSize(size), request->url()),
+            i18nc("@info/plain", "Download finished (status %1): %2, <link>%3</link>",
+                  statusCode, KGlobal::locale()->formatByteSize(size), request->url()),
             TimetableDataRequestMessage::Information, QString(), -1,
             TimetableDataRequestMessage::OpenLink, request->url() );
-    emit asynchronousRequestWaitFinished( size );
+    emit asynchronousRequestWaitFinished( statusCode, size );
 }
 
-void CallScriptFunctionJob::synchronousRequestFinished( const QString &url, const QString &data,
-                                                        bool cancelled, int waitingTime, int size )
+void CallScriptFunctionJob::synchronousRequestFinished( const QString &url, const QByteArray &data,
+                                                        bool cancelled, int statusCode,
+                                                        int waitingTime, int size )
 {
     if ( cancelled ) {
         m_additionalMessages << TimetableDataRequestMessage(
-                i18nc("@info/plain", "Download cancelled/failed: <link>%1</link>", url),
+                i18nc("@info/plain", "Download cancelled/failed (status %1): <link>%2</link>",
+                      statusCode, url),
                 TimetableDataRequestMessage::Warning, QString(), -1,
                 TimetableDataRequestMessage::OpenLink, url );
     } else {
         m_additionalMessages << TimetableDataRequestMessage(
-                i18nc("@info/plain", "Download finished: %1, <link>%2</link>",
-                      KGlobal::locale()->formatByteSize(size), url),
+                i18nc("@info/plain", "Download finished (status %1): %2, <link>%3</link>",
+                      statusCode, KGlobal::locale()->formatByteSize(size), url),
                 TimetableDataRequestMessage::Information, QString(), -1,
                 TimetableDataRequestMessage::OpenLink, url );
     }
-    emit synchronousRequestWaitFinished( waitingTime, size );
+    emit synchronousRequestWaitFinished( statusCode, waitingTime, size );
 }
 
 bool TimetableDataRequestJob::testResults()

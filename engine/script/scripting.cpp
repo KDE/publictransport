@@ -96,14 +96,11 @@ void NetworkRequest::slotReadyRead()
     QByteArray data = m_reply->readAll();
     m_data.append( data );
 
-    QString string;
     if ( data.isEmpty() ) {
         kDebug() << "Error downloading" << m_url << m_reply->errorString();
-    } else {
-        string = Global::decodeHtml( data, m_network->fallbackCharset() );
     }
 
-    emit readyRead( string );
+    emit readyRead( data );
 }
 
 void NetworkRequest::slotFinished()
@@ -134,24 +131,23 @@ void NetworkRequest::slotFinished()
         }
     }
 
+    const int size = m_reply->size();
+    const int statusCode = m_reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+
     // Read all data, decode it and give it to the script
     QByteArray data = m_reply->readAll();
     m_data.append( data );
 
-    QString string;
     if ( m_data.isEmpty() ) {
         kDebug() << "Error downloading" << m_url << m_reply->errorString();
-    } else {
-        string = Global::decodeHtml( m_data, m_network->fallbackCharset() );
     }
 
     m_reply->deleteLater();
     m_reply = 0;
-    const int size = m_data.size();
-    m_data.clear();
 
     m_isFinished = true;
-    emit finished( string, size );
+    emit finished( m_data, statusCode, size );
+    m_data.clear();
 }
 
 void NetworkRequest::started( QNetworkReply* reply )
@@ -164,14 +160,14 @@ void NetworkRequest::started( QNetworkReply* reply )
     m_reply = reply;
 
     // Connect to signals of reply only when the associated signals of this class are connected
-    if ( receivers(SIGNAL(readyRead(QString))) > 0 ) {
+    if ( receivers(SIGNAL(readyRead(QByteArray))) > 0 ) {
         connect( m_reply, SIGNAL(readyRead()), this, SLOT(slotReadyRead()) );
     }
-    if ( receivers(SIGNAL(finished(QString))) > 0 ) {
+    if ( receivers(SIGNAL(finished(QByteArray,int))) > 0 ) {
         connect( m_reply, SIGNAL(finished()), this, SLOT(slotFinished()) );
     }
 
-    connect( m_reply, SIGNAL(finished()), this, SIGNAL(finishedNoDecoding()) );
+//     connect( m_reply, SIGNAL(finished()), this, SIGNAL(finishedNoDecoding()) );
     emit started();
 }
 
@@ -307,7 +303,8 @@ NetworkRequest* Network::createRequest( const QString& url )
 {
     NetworkRequest *request = new NetworkRequest( url, this );
     connect( request, SIGNAL(started()), this, SLOT(slotRequestStarted()) );
-    connect( request, SIGNAL(finished(QString,int)), this, SLOT(slotRequestFinished(QString,int)) );
+    connect( request, SIGNAL(finished(QByteArray,int,int)),
+             this, SLOT(slotRequestFinished(QByteArray,int,int)) );
     connect( request, SIGNAL(aborted()), this, SLOT(slotRequestAborted()) );
     connect( request, SIGNAL(redirected(QUrl)), this, SLOT(slotRequestRedirected(QUrl)) );
     return request;
@@ -328,7 +325,7 @@ void Network::slotRequestStarted()
     emit requestStarted( request );
 }
 
-void Network::slotRequestFinished( const QString &data, int size )
+void Network::slotRequestFinished( const QByteArray &data, int statusCode, int size )
 {
     NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
     Q_ASSERT( request ); // This slot should only be connected to signals of NetworkRequest
@@ -339,7 +336,7 @@ void Network::slotRequestFinished( const QString &data, int size )
     const bool noMoreRequests = m_runningRequests.isEmpty();
     m_mutex->unlockInline();
 
-    emit requestFinished( request, data, size );
+    emit requestFinished( request, data, statusCode, size );
     if ( noMoreRequests ) {
         emit allRequestsFinished();
     }
@@ -466,7 +463,7 @@ void Network::abortAllRequests()
     }
 }
 
-QString Network::getSynchronous( const QString &url, int timeout )
+QByteArray Network::getSynchronous( const QString &url, int timeout )
 {
     // Create a get request
     QNetworkRequest request( url );
@@ -501,19 +498,19 @@ QString Network::getSynchronous( const QString &url, int timeout )
         // Check if the timeout occured before the request finished
         if ( quit ) {
             kDebug() << "Cancelled, destroyed or timeout while downloading" << url;
+            emit synchronousRequestFinished( url, QByteArray(), true );
             reply->abort();
             reply->deleteLater();
-            emit synchronousRequestFinished( url, QString(), true );
-            return QString();
+            return QByteArray();
         }
 
         if ( reply->attribute(QNetworkRequest::RedirectionTargetAttribute).isValid() ) {
             ++redirectCount;
             if ( redirectCount > maxRedirections ) {
                 reply->deleteLater();
-                emit synchronousRequestFinished( url, "Too many redirections", true,
-                                                 start.msecsTo(QTime::currentTime()) );
-                return QString();
+                emit synchronousRequestFinished( url, QByteArray("Too many redirections"), true,
+                                                 200, start.msecsTo(QTime::currentTime()) );
+                return QByteArray();
             }
 
             // Request the redirection target
@@ -528,7 +525,7 @@ QString Network::getSynchronous( const QString &url, int timeout )
             m_lastUrl = redirectUrl.toString();
             m_mutex->unlock();
 
-            emit synchronousRequestRedirected( redirectUrl.toString() );
+            emit synchronousRequestRedirected( redirectUrl.toEncoded() );
         } else {
             // No (more) redirection
             break;
@@ -536,6 +533,7 @@ QString Network::getSynchronous( const QString &url, int timeout )
     }
 
     const int time = start.msecsTo( QTime::currentTime() );
+    const int statusCode = reply->attribute( QNetworkRequest::HttpStatusCodeAttribute ).toInt();
 //     kDebug() << "Waited" << ( time / 1000.0 ) << "seconds for download of" << url;
 
     // Read all data, decode it and give it to the script
@@ -543,13 +541,13 @@ QString Network::getSynchronous( const QString &url, int timeout )
     reply->deleteLater();
     if ( data.isEmpty() ) {
         kDebug() << "Error downloading" << url << reply->errorString();
-        emit synchronousRequestFinished( url, QString(), true, time );
-        return QString();
+        emit synchronousRequestFinished( url, QByteArray(), true, statusCode, time );
+        return QByteArray();
     } else {
         QMutexLocker locker( m_mutex );
-        const QString html = Global::decodeHtml( data, m_fallbackCharset );
-        emit synchronousRequestFinished( url, html, false, time, data.size() );
-        return html;
+//         const QString html = Global::decodeHtml( data, m_fallbackCharset ); TEST
+        emit synchronousRequestFinished( url, data, false, statusCode, time, data.size() );
+        return data;
     }
 }
 
@@ -699,7 +697,6 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
         }
 
         if ( !info->isValid() ) {
-//             delete info;
             info.clear();
             continue;
         }
@@ -838,6 +835,16 @@ QString Helper::decodeHtmlEntities( const QString& html )
 QString Helper::encodeHtmlEntities( const QString &html )
 {
     return Global::encodeHtmlEntities( html );
+}
+
+QString Helper::decodeHtml( const QByteArray &document, const QByteArray &fallbackCharset )
+{
+    return Global::decodeHtml( document, fallbackCharset );
+}
+
+QString Helper::decode( const QByteArray &document, const QByteArray &charset )
+{
+    return Global::decode( document, charset );
 }
 
 void Helper::error( const QString& message, const QString &failedParseText, ErrorSeverity severity )

@@ -76,8 +76,8 @@ public:
     QString functionName() const;
 
 signals:
-    void asynchronousRequestWaitFinished( int size = 0 );
-    void synchronousRequestWaitFinished( int waitingTime = 0, int size = 0 );
+    void asynchronousRequestWaitFinished( int statusCode = 200, int size = 0 );
+    void synchronousRequestWaitFinished( int statusCode = 200, int waitingTime = 0, int size = 0 );
 
 protected slots:
     /**
@@ -96,9 +96,11 @@ protected slots:
                               const QScriptContextInfo &context,
                               int index, const QVariantMap& map );
 
-    void requestFinished( NetworkRequest *request, const QString &data = QString(), int size = 0 );
-    void synchronousRequestFinished( const QString &url, const QString &data = QString(),
-                                     bool cancelled = false, int waitingTime = 0, int size = 0 );
+    void requestFinished( NetworkRequest *request, const QByteArray &data = QByteArray(),
+                          int statusCode = 200, int size = 0 );
+    void synchronousRequestFinished( const QString &url, const QByteArray &data = QByteArray(),
+                                     bool cancelled = false, int statusCode = 200,
+                                     int waitingTime = 0, int size = 0 );
 
 protected:
     /**
