@@ -23,6 +23,9 @@
 // Own includes
 #include "global.h"
 
+// libpublictransporthelper includes
+#include <enums.h>
+
 // Qt includes
 #include <QGraphicsWidget> // Base class
 #include <QPointer> // Member variable
@@ -325,6 +328,9 @@ public:
 
     void updateData( JourneyItem *item );
 
+    bool showIntermediateStops() const { return m_showIntermediateStops; };
+    void setShowIntermediateStops( bool showIntermediateStops );
+
     void setZoomFactor( qreal zoomFactor = 1.0 );
     qreal zoomFactor() const { return m_zoomFactor; };
     inline qreal padding() const { return 5.0; };
@@ -333,6 +339,8 @@ public:
 
     virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
                         QWidget* widget = 0 );
+
+    QString svgVehicleKey( PublicTransport::VehicleType vehicleType ) const;
 
 private:
     QPointer<JourneyItem> m_item;
@@ -343,6 +351,7 @@ private:
     StopAction *m_showInMapAction;
     StopAction *m_requestJourneyToStopAction;
     StopAction *m_requestJourneyFromStopAction;
+    bool m_showIntermediateStops;
 };
 
 #endif // Multiple inclusion guard

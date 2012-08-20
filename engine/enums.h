@@ -140,6 +140,7 @@ public:
         Operator = 16, /**< The company that is responsible for the journey. */
         Status = 20, /**< The current status of the departure / arrival. Currently only used for planes. */
 
+        // Route information
         /**
         * A list of stops of the departure / arrival to it's destination stop or a list of stops of
         * the journey from it's start to it's destination stop. If @ref RouteStops and @ref RouteTimes
@@ -207,6 +208,22 @@ public:
 
         /** A list of delays in minutes for each arrival time of a route (RouteTimesArrival). */
         RouteTimesArrivalDelay = 33,
+
+        /** News/notes for each "sub-journey" of a journey. */
+        RouteNews = 34,
+
+        /**
+         * A hash with route TimetableInformation values for each "sub-journey" of a journey.
+         * Contains one element less than RouteStops, one sub-journey between each pair of
+         * successive route stops.
+         * Can use all TimetableInformation enumerables which begin with "Route", except for
+         * RouteTypesOfVehicles, RouteTransportLines and RouteSubJourneys.
+         * Each sub-journey represents the exact route of one transport line/vehicle in a journey.
+         * @note All sub-journeys are stored without their origin and target stops.
+         *   Only intermediate stops are listed here. Therefore all route data in a sub-journey list
+         *   needs to have the same number of elements, eg. RouteStops and RouteTimesDeparture.
+         **/
+        RouteSubJourneys = 35,
 
         // Journey information
         Duration = 50, /**< The duration of a journey. */

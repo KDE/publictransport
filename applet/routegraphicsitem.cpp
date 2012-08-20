@@ -31,6 +31,7 @@
 #include <KColorUtils>
 #include <KGlobalSettings>
 #include <KMenu>
+#include <KAction>
 
 // Qt includes
 #include <QPainter>
@@ -844,7 +845,7 @@ void JourneyRouteStopGraphicsItem::setText( const QString& text )
     update();
 }
 
-void JourneyRouteStopGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
+void JourneyRouteStopGraphicsItem::contextMenuEvent( QGraphicsSceneContextMenuEvent *event )
 {
     QList<QAction*> actionList = actions();
     if ( actionList.isEmpty() ) {
@@ -855,10 +856,20 @@ void JourneyRouteStopGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEve
         action->setStopName( m_stopName, m_stopNameShortened );
     }
 
+    KAction *toggleIntermediateStopsAction = new KAction( m_parent->showIntermediateStops()
+            ? i18nc("@info/plain", "&Hide intermediate stops")
+            : i18nc("@info/plain", "&Show intermediate stops"),
+            this );
+    actionList << toggleIntermediateStopsAction;
+
     KMenu contextMenu;
     contextMenu.addTitle( GlobalApplet::stopIcon(routeStopFlags()), m_stopNameShortened );
     contextMenu.addActions( actionList );
-    contextMenu.exec( event->screenPos() );
+    QAction *executeAction = contextMenu.exec( event->screenPos() );
+    if ( executeAction == toggleIntermediateStopsAction ) {
+        m_parent->setShowIntermediateStops( !m_parent->showIntermediateStops() );
+    }
+    delete toggleIntermediateStopsAction;
 }
 
 QSizeF JourneyRouteStopGraphicsItem::sizeHint( Qt::SizeHint which, const QSizeF& constraint ) const
@@ -930,7 +941,8 @@ JourneyRouteGraphicsItem::JourneyRouteGraphicsItem( QGraphicsItem* parent, Journ
           m_copyStopToClipboardAction(copyStopToClipboardAction),
           m_showInMapAction(showInMapAction),
           m_requestJourneyToStopAction(requestJourneyToStopAction),
-          m_requestJourneyFromStopAction(requestJourneyFromStopAction)
+          m_requestJourneyFromStopAction(requestJourneyFromStopAction),
+          m_showIntermediateStops(false)
 {
     setFlag( ItemClipsChildrenToShape );
     m_zoomFactor = 1.0;
@@ -948,7 +960,7 @@ void JourneyRouteGraphicsItem::setZoomFactor( qreal zoomFactor )
 void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
 {
     if ( rect().isEmpty() ) {
-        kDebug() << "Empty rect for the JourneyRouteGraphicsItem";
+//         kDebug() << "Empty rect for the JourneyRouteGraphicsItem";
         return;
     }
     m_item = item;
@@ -974,106 +986,227 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
         for ( int i = 0; i < info->routeStops().count(); ++i ) {
             QFont *font = i == 0 || i == info->routeStops().count() - 1
                     ? &boldRouteFont : &routeFont;
-            const QString stopName = info->routeStopsShortened()[i];
-            QString text = QString( "<b>%1</b>" ).arg( stopName );
 
-            // Prepend departure time at the current stop, if a time is given
-            if ( i - 1 >= 0 && i - 1 < info->routeTimesArrival().count()
-                && info->routeTimesArrival()[i - 1].isValid() )
+            const RouteSubJourney subJourney =
+                    i < info->routeSubJourneys().count() && m_showIntermediateStops
+                    ? info->routeSubJourneys()[i] : RouteSubJourney();
+
+            QStringList routePartStops = QStringList() << info->routeStops()[i];
+            QStringList routePartStopsShortened = QStringList() << info->routeStopsShortened()[i];
+            if ( i != info->routeStops().count() - 1 ) {
+                routePartStops << subJourney.routeStops;
+                routePartStopsShortened <<
+                        (subJourney.routeStopsShortened.count() != subJourney.routeStops.count()
+                        ? subJourney.routeStops : subJourney.routeStopsShortened);
+            }
+
+            QStringList routePlatformsArrival, routePlatformsDeparture, routeNews;
+            QList<QTime> routeTimesArrival, routeTimesDeparture;
+            QList<int> routeTimesArrivalDelay, routeTimesDepartureDelay;
+
+            if ( i < info->routeTimesDeparture().count() &&
+                 info->routeTimesDeparture()[i].isValid() )
             {
-                QString timeString = KGlobal::locale()->formatTime(info->routeTimesArrival()[i - 1]);
-                QString timeText( "<span style='font-weight:bold;'>" + timeString + "</span>" );
-                if ( i < info->routeTimesArrivalDelay().count() ) {
-                    int delay = info->routeTimesArrivalDelay()[i];
-                    if ( delay == 0 ) {
-                        timeText.prepend( QString("<span style='color:%1;'>")
-                                    .arg(Global::textColorOnSchedule().name()) )
-                                .append( QLatin1String("</span>") );
-                    } else if ( delay > 0 ) {
-                        timeText += ' ' + i18ncp( "@info/plain", "+%1 minute", "+%1 minutes", delay );
-                        timeText.replace( QRegExp( "(+?\\s*\\d+)" ),
-                                QString( "%1 <span style='color:%2;'>+&nbsp;\\1</span>" )
-                                .arg(timeString).arg(Global::textColorDelayed().name()) );
+                // First add the subjourney departure time, then the intermediate departure times
+                routeTimesDeparture << info->routeTimesDeparture()[i]
+                                    << subJourney.routeTimesDeparture;
+            }
+
+            if ( i < info->routeTimesDepartureDelay().count() ) {
+                routeTimesDepartureDelay << info->routeTimesDepartureDelay()[i]
+                                         << subJourney.routeTimesDepartureDelay;
+            }
+
+            if ( i < info->routePlatformsDeparture().count() ) {
+                routePlatformsDeparture << info->routePlatformsDeparture()[i]
+                                        << subJourney.routePlatformsDeparture;
+            }
+
+            if ( i < info->routeNews().count() ) {
+                routeNews << info->routeNews()[i] << subJourney.routeNews;
+            }
+
+            if ( i == 0 ) {
+                routeTimesArrival << QTime();
+                routeTimesArrivalDelay << -1;
+                routePlatformsArrival << QString();
+            } else {
+                if( i - 1 < info->routeTimesArrival().count() &&
+                    info->routeTimesArrival()[i - 1].isValid() )
+                {
+                    // First add the intermediate arrival times, then the subjourney arrival time
+                    routeTimesArrival << info->routeTimesArrival()[i - 1];
+                }
+
+                if ( i - 1 < info->routeTimesArrivalDelay().count() ) {
+                    routeTimesArrivalDelay << info->routeTimesArrivalDelay()[i - 1];
+                }
+
+                if ( i - 1 < info->routePlatformsArrival().count() ) {
+                    routePlatformsArrival << info->routePlatformsArrival()[i - 1];
+                }
+            }
+            routeTimesArrival << subJourney.routeTimesArrival;
+            routeTimesArrivalDelay << subJourney.routeTimesArrivalDelay;
+            routePlatformsArrival << subJourney.routePlatformsArrival;
+
+            for ( int n = 0; n < routePartStops.count(); ++n ) {
+                const QString stopName = routePartStops[n];
+                const QString stopNameShortened = routePartStopsShortened[n];
+                QString text = QString( "<b>%1</b>" ).arg( stopNameShortened );
+                RouteStopFlags routeStopFlags = item->departureRouteStopFlags( i, n );
+
+                // Prepend departure time at the current stop, if a time is given
+                QTime departureTime = (n < routeTimesDeparture.count() && routeTimesDeparture[n].isValid())
+                        ? routeTimesDeparture[n] : QTime();
+                QTime arrivalTime = (n < routeTimesArrival.count() && routeTimesArrival[n].isValid())
+                        ? routeTimesArrival[n] : QTime();
+                if ( arrivalTime.isValid() && arrivalTime != departureTime ) {
+                    QString timeString = KGlobal::locale()->formatTime(arrivalTime);
+                    QString timeText( "<span style='font-weight:bold;'>" + timeString + "</span>" );
+                    if ( n < routeTimesArrivalDelay.count() ) {
+                        const int delay = routeTimesArrivalDelay[n];
+                        if ( delay == 0 ) {
+                            timeText.prepend( QString("<span style='color:%1;'>")
+                                        .arg(Global::textColorOnSchedule().name()) )
+                                    .append( QLatin1String("</span>") );
+                        } else if ( delay > 0 ) {
+                            timeText += ' ' + i18ncp( "@info/plain", "+%1 minute", "+%1 minutes", delay );
+                            timeText.replace( QRegExp( "(+?\\s*\\d+)" ),
+                                    QString( "%1 <span style='color:%2;'>+&nbsp;\\1</span>" )
+                                    .arg(timeString).arg(Global::textColorDelayed().name()) );
+                        }
+                    }
+                    text.append( "<br/>" + i18nc("@info", "Arrival:") + ' ' + timeText );
+
+                        if ( n < routePlatformsArrival.count() &&
+                             !routePlatformsArrival[n].isEmpty() )
+                        {
+                            text = text.append( i18nc("@info Info string for a stop in a journey shown in "
+                                    "the route item after the arrival time",
+                                    " at platform <emphasis strong='1'>%1</emphasis>",
+                                    routePlatformsArrival[n]) );
+                        }
+                }
+                if ( departureTime.isValid() ) {
+                    QString timeString = KGlobal::locale()->formatTime( departureTime );
+                    QString timeText( "<span style='font-weight:bold;'>" + timeString + "</span>" );
+                    if ( n < routeTimesDepartureDelay.count() ) {
+                        const int delay = routeTimesDepartureDelay[n];
+                        if ( delay == 0 ) {
+                            timeText.prepend( QString("<span style='color:%1;'>")
+                                        .arg(Global::textColorOnSchedule().name()) )
+                                    .append( QLatin1String("</span>") );
+                        } else if ( delay > 0 ) {
+                            timeText += ' ' + i18ncp( "@info/plain", "+%1 minute", "+%1 minutes", delay );
+                            timeText.replace( QRegExp( "(+?\\s*\\d+)" ),
+                                    QString( " <span style='color:%1;'>+&nbsp;\\1</span>" )
+                                    .arg(Global::textColorDelayed().name()) );
+                        }
+                    }
+                    text.append( "<br/>" + i18nc("@info", "Departure:") + ' ' + timeText );
+
+                        if ( n < routePlatformsDeparture.count() &&
+                             !routePlatformsDeparture[n].isEmpty() )
+                        {
+                            text = text.append( i18nc("@info Info string for a stop in a journey shown in "
+                                    "the route item after the departure time",
+                                    " from platform <emphasis strong='1'>%1</emphasis>",
+                                    routePlatformsDeparture[n]) );
+                        }
+
+                    if ( routeStopFlags.testFlag(RouteStopIsConnectingStop) ||
+                         !routeStopFlags.testFlag(RouteStopIsIntermediate) )
+                    {
+                        if ( i < info->routeTransportLines().count() &&
+                            !info->routeTransportLines()[i].isEmpty() )
+                        {
+    //     TODO Show vehicle type and transport line only at the first stop of the journey part
+                            text = text.append( "<br/>" + i18nc("@info Info string for a stop in a journey shown in "
+                                    "the route item after the departure time. %1 is one of the transport "
+                                    "lines used in the journey, %2 is the name of the used vehicle if "
+                                    "available.", " using <emphasis strong='1'>%1%2</emphasis>",
+                                    info->routeTransportLines()[i], i < info->routeVehicleTypes().count()
+                                    ? QString(" (%1)").arg(Global::vehicleTypeToString(info->routeVehicleTypes()[i]))
+                                    : QString()) );
+                        }
                     }
                 }
-                text.append( "<br/>" + i18nc("@info", "Arrival:") + ' ' + timeText );
-
-                if ( i - 1 < info->routePlatformsArrival().count()
-                    && !info->routePlatformsArrival()[i - 1].isEmpty() )
-                {
-                    text = text.append( i18nc("@info Info string for a stop in a journey shown in "
-                            "the route item after the arrival time",
-                            " at platform <emphasis strong='1'>%1</emphasis>",
-                            info->routePlatformsArrival()[i - 1]) );
+                if ( n < routeNews.count() && !routeNews[n].isEmpty() ) {
+                    text.append( "<br/>" + i18nc("@info", "News:") + ' ' + routeNews[n] );
                 }
-            }
-            if ( i < info->routeTimesDeparture().count() && info->routeTimesDeparture()[i].isValid() ) {
-                QString timeString = KGlobal::locale()->formatTime(info->routeTimesDeparture()[i]);
-                QString timeText( "<span style='font-weight:bold;'>" + timeString + "</span>" );
-                if ( i < info->routeTimesDepartureDelay().count() ) {
-                    int delay = info->routeTimesDepartureDelay()[i];
-                    if ( delay == 0 ) {
-                        timeText.prepend( QString("<span style='color:%1;'>")
-                                    .arg(Global::textColorOnSchedule().name()) )
-                                .append( QLatin1String("</span>") );
-                    } else if ( delay > 0 ) {
-                        timeText += ' ' + i18ncp( "@info/plain", "+%1 minute", "+%1 minutes", delay );
-                        timeText.replace( QRegExp( "(+?\\s*\\d+)" ),
-                                QString( " <span style='color:%1;'>+&nbsp;\\1</span>" )
-                                .arg(Global::textColorDelayed().name()) );
+
+                JourneyRouteStopGraphicsItem *routeItem = new JourneyRouteStopGraphicsItem(
+                        this, QPixmap(32, 32), text, routeStopFlags, stopName, stopNameShortened );
+                routeItem->setZoomFactor( m_zoomFactor );
+                routeItem->setFont( *font );
+                if ( n < routeNews.count() && !routeNews[n].isEmpty() ) {
+                    routeItem->setToolTip( routeNews[n] );
+                }
+
+                QList<QAction*> actionList;
+                if ( !routeStopFlags.testFlag(RouteStopIsHomeStop) ) {
+                    if ( !routeStopFlags.testFlag(RouteStopIsTarget) ) {
+                        routeItem->addAction( m_requestJourneyToStopAction );
+                    }
+                    if ( !routeStopFlags.testFlag(RouteStopIsOrigin) ) {
+                        routeItem->addAction( m_requestJourneyFromStopAction );
                     }
                 }
-                text.append( "<br/>" + i18nc("@info", "Departure:") + ' ' + timeText );
 
-                if ( i < info->routePlatformsDeparture().count()
-                    && !info->routePlatformsDeparture()[i].isEmpty() )
-                {
-                    text = text.append( i18nc("@info Info string for a stop in a journey shown in "
-                            "the route item after the departure time",
-                            " from platform <emphasis strong='1'>%1</emphasis>",
-                            info->routePlatformsDeparture()[i]) );
+                if ( m_showInMapAction ) {
+                    actionList << m_showInMapAction;
                 }
+                actionList << m_copyStopToClipboardAction;;
+                routeItem->addActions( actionList );
 
-                if ( i < info->routeTransportLines().count()
-                    && !info->routeTransportLines()[i].isEmpty() )
-                {
-                    text = text.append( i18nc("@info Info string for a stop in a journey shown in "
-                            "the route item after the departure time. %1 is one of the transport "
-                            "lines used in the journey, %2 is the name of the used vehicle if "
-                            "available.", " using <emphasis strong='1'>%1%2</emphasis>",
-                            info->routeTransportLines()[i], i < info->routeVehicleTypes().count()
-                            ? QString(" (%1)").arg(Global::vehicleTypeToString(info->routeVehicleTypes()[i]))
-                            : QString()) );
-                }
-            }
+                m_routeItems << routeItem;
+                l->addItem( routeItem );
+            } // for n, routePartStops
+        } // for i, routeStops
+    } // routeStops.count() >= 2
+}
 
-            RouteStopFlags routeStopFlags = item->departureRouteStopFlags( i );
-            JourneyRouteStopGraphicsItem *routeItem = new JourneyRouteStopGraphicsItem(
-                    this, QPixmap(32, 32), text, routeStopFlags,
-                    info->routeStops()[i], info->routeStopsShortened()[i] );
-            routeItem->setZoomFactor( m_zoomFactor );
-            routeItem->setFont( *font );
-
-            QList<QAction*> actionList;
-            if ( !routeStopFlags.testFlag(RouteStopIsHomeStop) ) {
-                if ( !routeStopFlags.testFlag(RouteStopIsTarget) ) {
-                    routeItem->addAction( m_requestJourneyToStopAction );
-                }
-                if ( !routeStopFlags.testFlag(RouteStopIsOrigin) ) {
-                    routeItem->addAction( m_requestJourneyFromStopAction );
-                }
-            }
-
-            if ( m_showInMapAction ) {
-                actionList << m_showInMapAction;
-            }
-            actionList << m_copyStopToClipboardAction;;
-            routeItem->addActions( actionList );
-
-            m_routeItems << routeItem;
-            l->addItem( routeItem );
-        }
+QString JourneyRouteGraphicsItem::svgVehicleKey( VehicleType vehicleType ) const
+{
+    switch ( vehicleType ) {
+    case Tram:
+        return "tram";
+    case Bus:
+        return "bus";
+    case TrolleyBus:
+        return "trolleybus";
+    case Subway:
+        return "subway";
+    case Metro:
+        return "metro";
+    case InterurbanTrain:
+        return "interurbantrain";
+    case RegionalTrain:
+        return "regionaltrain";
+    case RegionalExpressTrain:
+        return "regionalexpresstrain";
+    case InterregionalTrain:
+        return "interregionaltrain";
+    case IntercityTrain:
+        return "intercitytrain";
+    case HighSpeedTrain:
+        return "highspeedtrain";
+    case Feet:
+        return "feet";
+    case Ship:
+        return "ship";
+    case Plane:
+        return "plane";
+    default:
+        return QString();
     }
+}
+
+void JourneyRouteGraphicsItem::setShowIntermediateStops( bool showIntermediateStops )
+{
+    m_showIntermediateStops = showIntermediateStops;
+    updateData( m_item );
 }
 
 void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -1090,10 +1223,11 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 
     const qreal marginLeft = 32.0 * m_zoomFactor; // TODO
-    const qreal iconSize = 32.0 * m_zoomFactor;
+    const qreal iconSizeConnecting = 32.0 * m_zoomFactor;
+    const qreal iconSizeIntermediate = 32.0 * m_zoomFactor/* * 0.7*/;
     QRectF timelineRect = contentsRect();
     timelineRect.setWidth( marginLeft - 6 * m_zoomFactor );
-    timelineRect.setLeft( iconSize / 2.0 );
+    timelineRect.setLeft( iconSizeConnecting / 2.0 );
     const qreal routeLineWidth = 4.0 * m_zoomFactor;
 
     // Draw vertical timeline
@@ -1114,13 +1248,25 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
 
     qreal stopRadius = 8.0 * m_zoomFactor;
     qreal lastY = -stopRadius;
-    for ( int i = 0; i < m_routeItems.count() - 1; ++i ) {
+    bool hasSubJourneys = false;
+    for ( int i = 0, index = 0; i < m_routeItems.count() - 1; ++i ) {
         JourneyRouteStopGraphicsItem *routeItem = m_routeItems[i];
+        JourneyRouteStopGraphicsItem *nextRouteItem = m_routeItems[i + 1];
+        const RouteStopFlags flags = routeItem->routeStopFlags();
+        const RouteStopFlags nextFlags = nextRouteItem->routeStopFlags();
+        const bool isConnectingStop = flags.testFlag( RouteStopIsConnectingStop );
+        const bool isOriginStop = i == 0 && flags.testFlag(RouteStopIsOrigin);
+        if ( m_showIntermediateStops && (isConnectingStop || isOriginStop) ) {
+            hasSubJourneys = !nextFlags.testFlag(RouteStopIsConnectingStop);
+        }
+        if ( (!hasSubJourneys && i > 0) || isConnectingStop ) {
+            ++index;
+        }
+        const qreal iconSize = isConnectingStop ? iconSizeConnecting : iconSizeIntermediate;
         qreal y = routeItem->pos().y() + routeItem->size().height();
-        QRectF iconRect( timelineRect.left() + (routeLineWidth - iconSize) / 2.0,
-                         y - iconSize / 2.0, iconSize, iconSize );
         QPointF stopPos( timelineRect.left() + routeLineWidth / 2.0,
                          lastY + (y - lastY) / 2.0 + 1.0 );
+        lastY = y;
 
         // Draw lines to connect to the stop text
         qreal lineWidth = iconSize / 2.0;
@@ -1129,56 +1275,46 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
         painter->drawLine( stopPos.x() + lineWidth, stopPos.y() - lineHeight,
                            stopPos.x() + lineWidth, stopPos.y() + lineHeight );
 
-        // Draw the stop
-        KIcon stopIcon = GlobalApplet::stopIcon( routeItem->routeStopFlags() );
-        stopIcon.paint( painter, stopPos.x() - stopRadius, stopPos.y() - stopRadius,
-                        2.0 * stopRadius, 2.0 * stopRadius );
-        lastY = y;
-
-        if ( i < m_item->journeyInfo()->routeVehicleTypes().count() ) {
-            QString vehicleKey;
-            switch ( m_item->journeyInfo()->routeVehicleTypes()[i] ) {
-                case Tram: vehicleKey = "tram"; break;
-                case Bus: vehicleKey = "bus"; break;
-                case TrolleyBus: vehicleKey = "trolleybus"; break;
-                case Subway: vehicleKey = "subway"; break;
-                case Metro: vehicleKey = "metro"; break;
-                case InterurbanTrain: vehicleKey = "interurbantrain"; break;
-                case RegionalTrain: vehicleKey = "regionaltrain"; break;
-                case RegionalExpressTrain: vehicleKey = "regionalexpresstrain"; break;
-                case InterregionalTrain: vehicleKey = "interregionaltrain"; break;
-                case IntercityTrain: vehicleKey = "intercitytrain"; break;
-                case HighSpeedTrain: vehicleKey = "highspeedtrain"; break;
-                case Feet: vehicleKey = "feet"; break;
-                case Ship: vehicleKey = "ship"; break;
-                case Plane: vehicleKey = "plane"; break;
-                default:
-                    kDebug() << "Unknown vehicle type" << m_item->journeyInfo()->routeVehicleTypes()[i];
+        const QRect stopRect( stopPos.x() - stopRadius, stopPos.y() - stopRadius,
+                              2.0 * stopRadius, 2.0 * stopRadius );
+        const QRectF iconRect = hasSubJourneys ? stopRect.adjusted(-5, -5, 5, 5)
+                : QRectF( timelineRect.left() + (routeLineWidth - iconSize) / 2.0,
+                          y - iconSize / 2.0, iconSize, iconSize );
+        const int shadowWidth = 4;
+        if ( !hasSubJourneys || (!isConnectingStop && !isOriginStop) ) {
+            if ( index < m_item->journeyInfo()->routeVehicleTypes().count() ) {
+                const VehicleType vehicleType = m_item->journeyInfo()->routeVehicleTypes()[index];
+                if ( vehicleType == UnknownVehicleType ) {
                     painter->drawEllipse( iconRect.adjusted(5, 5, -5, -5) );
                     painter->drawText( iconRect, "?", QTextOption(Qt::AlignCenter) );
                     continue;
-            }
-        //     if ( drawTransportLine ) {
-        //         vehicleKey.append( "_empty" );
-        //     }
+                }
 
-            if ( !m_svg->hasElement(vehicleKey) ) {
-                kDebug() << "SVG element" << vehicleKey << "not found";
-            } else {
-                // Draw SVG vehicle element into pixmap
-                int shadowWidth = 4;
-                QPixmap pixmap( (int)iconRect.width(), (int)iconRect.height() );
-                pixmap.fill( Qt::transparent );
-                QPainter p( &pixmap );
-                m_svg->resize( iconRect.width() - 2 * shadowWidth, iconRect.height() - 2 * shadowWidth );
-                m_svg->paint( &p, shadowWidth, shadowWidth, vehicleKey );
+                const QString vehicleKey = svgVehicleKey( vehicleType );
+                if ( !m_svg->hasElement(vehicleKey) ) {
+                    kDebug() << "SVG element" << vehicleKey << "not found";
+                } else {
+                    // Draw SVG vehicle element into pixmap
+                    QPixmap vehicleTypePixmap( (int)iconRect.width(), (int)iconRect.height() );
+                    vehicleTypePixmap.fill( Qt::transparent );
+                    QPainter p( &vehicleTypePixmap );
+                    m_svg->resize( iconRect.width() - 2 * shadowWidth, iconRect.height() - 2 * shadowWidth );
+                    m_svg->paint( &p, shadowWidth, shadowWidth, vehicleKey );
 
-                // Create shadow for the SVG element and draw the SVG and it's shadow.
-                QImage shadow = pixmap.toImage();
-                Plasma::PaintUtils::shadowBlur( shadow, shadowWidth - 1, Qt::black );
-                painter->drawImage( iconRect.topLeft() + QPoint(1, 2), shadow );
-                painter->drawPixmap( iconRect.topLeft(), pixmap );
+                    // Draw the vehicle type with a shadow   TODO: Use shadow setting
+                    QImage shadow = vehicleTypePixmap.toImage();
+                    Plasma::PaintUtils::shadowBlur( shadow, shadowWidth - 1, Qt::black );
+                    const QPoint pos = iconRect.topLeft().toPoint();
+                    painter->drawImage( pos + QPoint(1, 2), shadow );
+                    painter->drawPixmap( pos, vehicleTypePixmap );
+                }
             }
+        }
+
+        if ( !hasSubJourneys || isConnectingStop || isOriginStop ) {
+            // Draw the stop
+            KIcon stopIcon = GlobalApplet::stopIcon( routeItem->routeStopFlags() );
+            stopIcon.paint( painter, stopRect );
         }
     }
 
@@ -1186,7 +1322,7 @@ void JourneyRouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraph
     JourneyRouteStopGraphicsItem *routeItem = m_routeItems.last();
     QPointF stopPos( timelineRect.left() + routeLineWidth / 2.0,
                      lastY + (timelineRect.bottom() - lastY) / 2.0 + 1.0 );
-    qreal lineWidth = iconSize / 2.0;
+    qreal lineWidth = iconSizeConnecting / 2.0;
     qreal lineHeight = routeItem->size().height() / 3.0;
     painter->drawLine( stopPos.x(), stopPos.y(), stopPos.x() + lineWidth, stopPos.y() );
     painter->drawLine( stopPos.x() + lineWidth, stopPos.y() - lineHeight,

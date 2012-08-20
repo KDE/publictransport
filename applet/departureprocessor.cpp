@@ -358,16 +358,19 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
         QList<QTime> routeTimesDeparture, routeTimesArrival;
         if ( journeyData.contains( "RouteTimesDeparture" ) ) {
             QVariantList times = journeyData[ "RouteTimesDeparture" ].toList();
-            foreach( const QVariant &time, times )
-            routeTimesDeparture << time.toTime();
+            foreach( const QVariant &time, times ) {
+                routeTimesDeparture << time.toTime();
+            }
         }
         if ( journeyData.contains( "RouteTimesArrival" ) ) {
             QVariantList times = journeyData[ "RouteTimesArrival" ].toList();
-            foreach( const QVariant &time, times )
-            routeTimesArrival << time.toTime();
+            foreach( const QVariant &time, times ) {
+                routeTimesArrival << time.toTime();
+            }
         }
-        QStringList routeTransportLines,
-        routePlatformsDeparture, routePlatformsArrival;
+
+//         TODO Remove variables here
+        QStringList routeTransportLines, routePlatformsDeparture, routePlatformsArrival;
         if ( journeyData.contains( "RouteTransportLines" ) ) {
             routeTransportLines = journeyData[ "RouteTransportLines" ].toStringList();
         }
@@ -392,6 +395,54 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
             }
         }
 
+        QList<RouteSubJourney> routeSubJourneys;
+        if ( journeyData.contains("RouteSubJourneys") ) {
+            QVariantList list = journeyData[ "RouteSubJourneys" ].toList();
+            foreach ( const QVariant &item, list ) {
+                const QVariantMap map = item.toMap();
+
+                QStringList routeSubPlatformsDeparture, routeSubPlatformsArrival;
+                if ( map.contains( "RoutePlatformsDeparture" ) ) {
+                    routeSubPlatformsDeparture = map[ "RoutePlatformsDeparture" ].toStringList();
+                }
+                if ( map.contains( "RoutePlatformsArrival" ) ) {
+                    routeSubPlatformsArrival = map[ "RoutePlatformsArrival" ].toStringList();
+                }
+                QList<int> routeSubTimesDepartureDelay, routeSubTimesArrivalDelay;
+                if ( map.contains( "RouteTimesDepartureDelay" ) ) {
+                    QVariantList list = map[ "RouteTimesDepartureDelay" ].toList();
+                    foreach( const QVariant &var, list ) {
+                        routeSubTimesDepartureDelay << var.toInt();
+                    }
+                }
+                if ( map.contains("RouteTimesArrivalDelay") ) {
+                    QVariantList list = map[ "RouteTimesArrivalDelay" ].toList();
+                    foreach( const QVariant &var, list ) {
+                        routeSubTimesArrivalDelay << var.toInt();
+                    }
+                }
+                QList<QTime> routeSubTimesDeparture, routeSubTimesArrival;
+                if ( map.contains("RouteTimesDeparture") ) {
+                    QVariantList times = map[ "RouteTimesDeparture" ].toList();
+                    foreach( const QVariant &time, times ) {
+                        routeSubTimesDeparture << time.toTime();
+                    }
+                }
+                if ( map.contains("RouteTimesArrival") ) {
+                    QVariantList times = map[ "RouteTimesArrival" ].toList();
+                    foreach( const QVariant &time, times ) {
+                        routeSubTimesArrival << time.toTime();
+                    }
+                }
+                routeSubJourneys << RouteSubJourney( map["RouteStops"].toStringList(),
+                        map["RouteStopsShortened"].toStringList(), map["RouteNews"].toStringList(),
+                        map["RoutePlatformsDeparture"].toStringList(),
+                        map["RoutePlatformsArrival"].toStringList(),
+                        routeSubTimesDeparture, routeSubTimesArrival,
+                        routeSubTimesDepartureDelay, routeSubTimesArrivalDelay );
+            }
+        }
+
 //         TODO
         JourneyInfo journeyInfo( journeyData["Operator"].toString(),
                                  journeyData["TypesOfVehicleInJourney"].toList(),
@@ -405,11 +456,13 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
                                  journeyData["JourneyNews"].toString(),
                                  journeyData["RouteStops"].toStringList(),
                                  journeyData["RouteStopsShortened"].toStringList(),
+                                 journeyData["RouteNews"].toStringList(),
                                  routeTransportLines, routePlatformsDeparture,
                                  routePlatformsArrival,
-                                 journeyData["RouteVehicleTypes"].toList(),
+                                 journeyData["RouteTypesOfVehicles"].toList(),
                                  routeTimesDeparture, routeTimesArrival,
-                                 routeTimesDepartureDelay, routeTimesArrivalDelay );
+                                 routeTimesDepartureDelay, routeTimesArrivalDelay,
+                                 routeSubJourneys );
 
         // TODO Use a dummy DepartureInfo that "mimics" the first journey part of the current journey
 //         QString lineString = journeyInfo.routeTransportLines().isEmpty()

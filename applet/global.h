@@ -87,15 +87,19 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( RouteItemFlags )
 /** @brief A set of flags for stops in a route. */
 enum RouteStopFlag {
     RouteStopDefault        = 0x0000, /**< The route stop has no special settings. */
-    RouteStopIsIntermediate = 0x0001, /**< The route stop is an intermediate one (not the first
-                                       * and not the last). Can't be used together with
-                                       * RouteStopIsOrigin or RouteStopIsTarget. */
-    RouteStopIsOrigin       = 0x0002, /**< The route stop is the origin of the route. Can't be used
+    RouteStopIsOrigin       = 0x0001, /**< The route stop is the origin of the route. Can't be used
                                        * together with RouteStopIsIntermediate or RouteStopIsTarget. */
-    RouteStopIsTarget       = 0x0004, /**< The route stop is the target of the route. Can't be used
+    RouteStopIsTarget       = 0x0002, /**< The route stop is the target of the route. Can't be used
                                        * together with RouteStopIsIntermediate or RouteStopIsOrigin. */
-    RouteStopIsHomeStop     = 0x0008, /**< The route stop is the currently selected home stop. */
-    RouteStopIsHighlighted  = 0x0010  /**< The route stop is the currently highlighted stop. */
+    RouteStopIsIntermediate = 0x0004, /**< The route stop is an intermediate one (not the first
+                                       * and not the last). Can not be used together with
+                                       * RouteStopIsOrigin or RouteStopIsTarget. */
+    RouteStopIsConnectingStop = 0x0008, /**< The route stop is a connecting stop (an intermediate
+                                       * stop with a change of the public transport vehicle).
+                                       * Can not be used together with RouteStopIsOrigin or
+                                       * RouteStopIsTarget. */
+    RouteStopIsHomeStop     = 0x0010, /**< The route stop is the currently selected home stop. */
+    RouteStopIsHighlighted  = 0x0020  /**< The route stop is the currently highlighted stop. */
 };
 Q_DECLARE_FLAGS( RouteStopFlags, RouteStopFlag )
 Q_DECLARE_OPERATORS_FOR_FLAGS( RouteStopFlags )

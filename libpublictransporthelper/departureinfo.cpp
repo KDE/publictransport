@@ -30,6 +30,24 @@
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
 
+RouteSubJourney::RouteSubJourney( const QStringList &routeStops,
+                                  const QStringList &routeStopsShortened,
+                                  const QStringList &routeNews,
+                                  const QStringList &routePlatformsDeparture,
+                                  const QStringList &routePlatformsArrival,
+                                  const QList< QTime >& routeTimesDeparture,
+                                  const QList< QTime >& routeTimesArrival,
+                                  const QList< int >& routeTimesDepartureDelay,
+                                  const QList< int >& routeTimesArrivalDelay )
+    : routeStops(routeStops), routeStopsShortened(routeStopsShortened),
+      routePlatformsDeparture(routePlatformsDeparture),
+      routePlatformsArrival(routePlatformsArrival), routeNews(routeNews),
+      routeTimesDeparture(routeTimesDeparture), routeTimesArrival(routeTimesArrival),
+      routeTimesDepartureDelay(routeTimesDepartureDelay),
+      routeTimesArrivalDelay(routeTimesArrivalDelay)
+{
+}
+
 JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList &vehicleTypesVariant,
                           const QDateTime &departure, const QDateTime &arrival,
                           const QString& pricing, const QString& startStopName,
@@ -37,6 +55,7 @@ JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList &vehic
                           const QString &journeyNews,
                           const QStringList &routeStops,
                           const QStringList &routeStopsShortened,
+                          const QStringList &routeNews,
                           const QStringList &routeTransportLines,
                           const QStringList &routePlatformsDeparture,
                           const QStringList &routePlatformsArrival,
@@ -45,6 +64,7 @@ JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList &vehic
                           const QList<QTime> &routeTimesArrival,
                           const QList<int> &routeTimesDepartureDelay,
                           const QList<int> &routeTimesArrivalDelay,
+                          const QList<RouteSubJourney> &routeSubJourneys,
                           int routeExactStops ) : PublicTransportInfo()
 {
     QSet<VehicleType> vehicleTypes;
@@ -60,10 +80,10 @@ JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList &vehic
     routeVehicleTypes.append( static_cast<VehicleType>( routeVehicleType.toInt() ) );
 
     init( operatorName, vehicleTypes, departure, arrival, pricing, startStopName, targetStopName,
-          duration, changes, journeyNews, routeStops, routeStopsShortened,
+          duration, changes, journeyNews, routeStops, routeStopsShortened, routeNews,
           routeTransportLines, routePlatformsDeparture, routePlatformsArrival, routeVehicleTypes,
           routeTimesDeparture, routeTimesArrival, routeTimesDepartureDelay,
-          routeTimesArrivalDelay, routeExactStops );
+          routeTimesArrivalDelay, routeSubJourneys, routeExactStops );
 }
 
 void JourneyInfo::init( const QString &operatorName, const QSet< VehicleType > &vehicleTypes,
@@ -73,6 +93,7 @@ void JourneyInfo::init( const QString &operatorName, const QSet< VehicleType > &
                         const QString &journeyNews,
                         const QStringList &routeStops,
                         const QStringList &routeStopsShortened,
+                        const QStringList &routeNews,
                         const QStringList &routeTransportLines,
                         const QStringList &routePlatformsDeparture,
                         const QStringList &routePlatformsArrival,
@@ -81,6 +102,7 @@ void JourneyInfo::init( const QString &operatorName, const QSet< VehicleType > &
                         const QList<QTime> &routeTimesArrival,
                         const QList<int> &routeTimesDepartureDelay,
                         const QList<int> &routeTimesArrivalDelay,
+                        const QList<RouteSubJourney> &routeSubJourneys,
                         int routeExactStops )
 {
     m_operator = operatorName;
@@ -95,6 +117,7 @@ void JourneyInfo::init( const QString &operatorName, const QSet< VehicleType > &
     m_journeyNews = journeyNews;
     m_routeStops = routeStops;
     m_routeStopsShortened = routeStopsShortened.isEmpty() ? routeStops : routeStopsShortened;
+    m_routeNews = routeNews;
     m_routeTransportLines = routeTransportLines;
     m_routePlatformsDeparture = routePlatformsDeparture;
     m_routePlatformsArrival = routePlatformsArrival;
@@ -103,6 +126,7 @@ void JourneyInfo::init( const QString &operatorName, const QSet< VehicleType > &
     m_routeTimesArrival = routeTimesArrival;
     m_routeTimesDepartureDelay = routeTimesDepartureDelay;
     m_routeTimesArrivalDelay = routeTimesArrivalDelay;
+    m_routeSubJourneys = routeSubJourneys;
     m_routeExactStops = routeExactStops;
 
     generateHash();

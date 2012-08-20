@@ -329,8 +329,10 @@ public:
     /** @returns the information that this item currently shows. */
     const JourneyInfo *journeyInfo() const { return &m_journeyInfo; };
 
-    RouteStopFlags departureRouteStopFlags( int routeStopIndex = 0, int *minsFromFirstRouteStop = 0 );
-    RouteStopFlags arrivalRouteStopFlags( int routeStopIndex = 0, int *minsFromFirstRouteStop = 0 );
+    RouteStopFlags departureRouteStopFlags( int routeStopIndex = 0, int routeSubStopIndex = 0,
+                                            int *minsFromFirstRouteStop = 0 );
+    RouteStopFlags arrivalRouteStopFlags( int routeStopIndex = 0, int routeSubStopIndex = 0,
+                                          int *minsFromFirstRouteStop = 0 );
 
     /** @returns a hash with child items by their type. */
     QHash< ItemType, ChildItem* > typedChildren() const;
@@ -393,8 +395,8 @@ protected:
      **/
     qreal rating() const;
 
-    RouteStopFlags routeStopFlags( int routeStopIndex, int *minsFromFirstRouteStop,
-                                   const QList<QTime> &times );
+    RouteStopFlags routeStopFlags( int routeStopIndex, int routeSubStopIndex,
+                                   int *minsFromFirstRouteStop, const QList<QTime> &times );
 
     JourneyInfo m_journeyInfo;
 };

@@ -221,6 +221,10 @@ Enums::TimetableInformation Global::timetableInformationFromString(
         return Enums::RouteTimesDepartureDelay;
     } else if ( sInfo == QLatin1String("routetimesarrivaldelay") ) {
         return Enums::RouteTimesArrivalDelay;
+    } else if ( sInfo == QLatin1String("routenews") ) {
+        return Enums::RouteNews;
+    } else if ( sInfo == QLatin1String("routesubjourneys") ) {
+        return Enums::RouteSubJourneys;
     } else if ( sInfo == QLatin1String("operator") ) {
         return Enums::Operator;
     } else if ( sInfo == QLatin1String("duration") ) {
@@ -334,6 +338,7 @@ bool Global::checkTimetableInformation( Enums::TimetableInformation info, const 
     case Enums::RouteTypesOfVehicles:
     case Enums::RouteTimesDepartureDelay:
     case Enums::RouteTimesArrivalDelay:
+    case Enums::RouteSubJourneys:
         return !value.toList().isEmpty();
     case Enums::IsNightLine:
         return value.canConvert( QVariant::Bool );
@@ -342,6 +347,7 @@ bool Global::checkTimetableInformation( Enums::TimetableInformation info, const 
     case Enums::RouteTransportLines:
     case Enums::RoutePlatformsDeparture:
     case Enums::RoutePlatformsArrival:
+    case Enums::RouteNews:
         return !value.toStringList().isEmpty();
 
     default:

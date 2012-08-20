@@ -2250,25 +2250,35 @@ RouteStopFlags DepartureItem::routeStopFlags( int routeStopIndex, int *minsFromF
     return routeStopFlags;
 }
 
-RouteStopFlags JourneyItem::departureRouteStopFlags( int routeStopIndex, int* minsFromFirstRouteStop )
+RouteStopFlags JourneyItem::departureRouteStopFlags( int routeStopIndex, int routeSubStopIndex,
+                                                     int* minsFromFirstRouteStop )
 {
-    return routeStopFlags( routeStopIndex, minsFromFirstRouteStop, m_journeyInfo.routeTimesDeparture() );
+    return routeStopFlags( routeStopIndex, routeSubStopIndex,
+                           minsFromFirstRouteStop, m_journeyInfo.routeTimesDeparture() );
 }
 
-RouteStopFlags JourneyItem::arrivalRouteStopFlags( int routeStopIndex, int* minsFromFirstRouteStop )
+RouteStopFlags JourneyItem::arrivalRouteStopFlags( int routeStopIndex, int routeSubStopIndex,
+                                                   int* minsFromFirstRouteStop )
 {
-    return routeStopFlags( routeStopIndex, minsFromFirstRouteStop, m_journeyInfo.routeTimesArrival() );
+    return routeStopFlags( routeStopIndex, routeSubStopIndex,
+                           minsFromFirstRouteStop, m_journeyInfo.routeTimesArrival() );
 }
 
-RouteStopFlags JourneyItem::routeStopFlags( int routeStopIndex, int* minsFromFirstRouteStop,
+RouteStopFlags JourneyItem::routeStopFlags( int routeStopIndex, int routeSubStopIndex,
+                                            int* minsFromFirstRouteStop,
                                             const QList< QTime >& times )
 {
     RouteStopFlags routeStopFlags;
 
-    if ( routeStopIndex == 0 ) {
+    if ( routeStopIndex == 0 && routeSubStopIndex == 0 ) {
         routeStopFlags |= RouteStopIsOrigin;
-    } else if ( routeStopIndex == m_journeyInfo.routeStops().count() - 1 ) {
+    } else if ( routeStopIndex == m_journeyInfo.routeStops().count() - 1 &&
+                (routeStopIndex >= m_journeyInfo.routeSubJourneys().count() ||
+                 routeSubStopIndex == m_journeyInfo.routeSubJourneys()[routeStopIndex].routeStops.count() - 1) )
+    {
         routeStopFlags |= RouteStopIsTarget;
+    } else if ( routeSubStopIndex == 0 ) {
+        routeStopFlags |= RouteStopIsConnectingStop; // TODO | RouteStopIsIntermediate?
     } else {
         routeStopFlags |= RouteStopIsIntermediate;
     }
