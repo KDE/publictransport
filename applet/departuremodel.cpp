@@ -704,7 +704,9 @@ ChildItem* JourneyItem::createRouteItem()
         {
             icon = Global::vehicleTypeToIcon( m_journeyInfo.routeVehicleTypes()[row] );
         }
-        if ( m_journeyInfo.routeVehicleTypes()[row] == Feet ) {
+        if ( row < m_journeyInfo.routeVehicleTypes().count() &&
+             m_journeyInfo.routeVehicleTypes()[row] == Feet )
+        {
             sTransportLine = i18nc( "@info/plain", "Footway" );
         } else if ( m_journeyInfo.routeTransportLines().count() > row ) {
             sTransportLine = m_journeyInfo.routeTransportLines()[row];
@@ -727,7 +729,7 @@ ChildItem* JourneyItem::createRouteItem()
                     + " - " + stopArr;
         }
 
-        QString sTimeDep = m_journeyInfo.routeTimesDeparture()[row].toString( "hh:mm" );
+        QString sTimeDep = m_journeyInfo.routeTimesDeparture().value(row).toString( "hh:mm" );
         if ( m_journeyInfo.routeTimesDepartureDelay().count() > row ) {
             int delay = m_journeyInfo.routeTimesDepartureDelay()[ row ];
             if ( delay > 0 ) {
@@ -740,7 +742,7 @@ ChildItem* JourneyItem::createRouteItem()
             }
         }
 
-        QString sTimeArr = m_journeyInfo.routeTimesArrival()[row].toString( "hh:mm" );
+        QString sTimeArr = m_journeyInfo.routeTimesArrival().value(row).toString( "hh:mm" );
         if ( m_journeyInfo.routeTimesArrivalDelay().count() > row ) {
             int delay = m_journeyInfo.routeTimesArrivalDelay()[ row ];
             if ( delay > 0 ) {
