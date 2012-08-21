@@ -525,8 +525,8 @@ protected slots:
     void slotInterrupted();
     void slotContinued( bool willInterruptAfterNextStatement = false );
     void slotAborted();
-    void asynchronousRequestWaitFinished( int size );
-    void synchronousRequestWaitFinished( int waitingTime, int size );
+    void asynchronousRequestWaitFinished( int statusCode, int size );
+    void synchronousRequestWaitFinished( int statusCode, int waitingTime, int size );
 
     void timeout();
 

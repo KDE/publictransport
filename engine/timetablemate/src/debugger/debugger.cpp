@@ -436,10 +436,10 @@ void Debugger::connectJob( DebuggerJob *debuggerJob )
     case DebuggerJob::TimetableDataRequest:
     case DebuggerJob::CallScriptFunction:
     case DebuggerJob::TestFeatures:
-        connect( qobject_cast<CallScriptFunctionJob*>(debuggerJob), SIGNAL(asynchronousRequestWaitFinished(int)),
-                 this, SLOT(asynchronousRequestWaitFinished(int)) );
-        connect( qobject_cast<CallScriptFunctionJob*>(debuggerJob), SIGNAL(synchronousRequestWaitFinished(int,int)),
-                 this, SLOT(synchronousRequestWaitFinished(int,int)) );
+        connect( qobject_cast<CallScriptFunctionJob*>(debuggerJob), SIGNAL(asynchronousRequestWaitFinished(int,int)),
+                 this, SLOT(asynchronousRequestWaitFinished(int,int)) );
+        connect( qobject_cast<CallScriptFunctionJob*>(debuggerJob), SIGNAL(synchronousRequestWaitFinished(int,int,int)),
+                 this, SLOT(synchronousRequestWaitFinished(int,int,int)) );
         break;
     default:
         break;
@@ -614,14 +614,24 @@ void Debugger::testFeaturesJobDone( ThreadWeaver::Job *job )
     delete job;
 }
 
-void Debugger::asynchronousRequestWaitFinished( int size )
+void Debugger::asynchronousRequestWaitFinished( int statusCode, int size )
 {
-    m_runData->asynchronousDownloadFinished( size );
+    Q_UNUSED( statusCode )
+    if ( m_runData ) {
+        m_runData->asynchronousDownloadFinished( size );
+    } else {
+        kWarning() << "ScriptRunData object already deleted";
+    }
 }
 
-void Debugger::synchronousRequestWaitFinished( int waitingTime, int size )
+void Debugger::synchronousRequestWaitFinished( int statusCode, int waitingTime, int size )
 {
-    m_runData->synchronousDownloadFinished( waitingTime, size );
+    Q_UNUSED( statusCode )
+    if ( m_runData ) {
+        m_runData->synchronousDownloadFinished( waitingTime, size );
+    } else {
+        kWarning() << "ScriptRunData object already deleted";
+    }
 }
 
 }; // namespace Debugger
