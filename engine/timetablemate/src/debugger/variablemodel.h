@@ -5,6 +5,9 @@
 // Own includes
 #include "debuggerstructures.h"
 
+// PublicTransport engine includes
+#include <engine/enums.h>
+
 // KDE includes
 #include <KIcon>
 
@@ -141,6 +144,8 @@ struct VariableTreeData : VariableData {
             : VariableData(type, name, value, icon) {};
 
     static VariableTreeData fromScripValue( const QString &name, const QScriptValue &value );
+    static VariableTreeData fromTimetableData( Enums::TimetableInformation info,
+                                               const QVariant &data );
     operator VariableData() const;
 
     QList< VariableTreeData > children;
@@ -314,7 +319,8 @@ public:
 
     enum Roles {
         SortRole = Qt::UserRole + 1,
-        CompleteValueRole = Qt::UserRole + 2
+        CompleteValueRole = Qt::UserRole + 2,
+        ContainsBinaryDataRole = Qt::UserRole + 3
     };
 
     VariableModel( QObject *parent = 0 );

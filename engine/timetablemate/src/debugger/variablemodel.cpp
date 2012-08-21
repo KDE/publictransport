@@ -273,7 +273,13 @@ QVariant VariableModel::data( const QModelIndex &index, int role ) const
         }
         break;
     case CompleteValueRole:
-        return item->completeValueString();
+        if ( item->scriptValue().isVariant() && !item->value().toByteArray().isNull() ) {
+            return item->value().toByteArray();
+        } else {
+            return item->completeValueString();
+        }
+    case ContainsBinaryDataRole:
+        return item->scriptValue().isVariant() && !item->value().toByteArray().isNull();
     }
 
     return QVariant();
@@ -370,9 +376,13 @@ void VariableModel::pushVariableStack()
 
 void VariableModel::popVariableStack()
 {
+    if ( m_variableStack.isEmpty() ) {
+        kWarning() << "Cannot pop, variable stack is empty";
+        return;
+    }
+
     switchToVariableStack( 1 );
     qDeleteAll( m_variableStack.pop().variables );
-
 }
 
 VariableTreeData::operator VariableData() const
@@ -774,39 +784,65 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
         data.flags |= VariableIsHelperObject;
     }
 
-    QString valueString;
     bool encodeValue = false;
     QChar endCharacter;
     if ( value.isArray() ) {
-        valueString = QString("[%0]").arg( value.toVariant().toStringList().join(", ") );
+        data.description = data.completeValueString = data.valueString =
+                QString("[%0]").arg( value.toVariant().toStringList().join(", ") );
         endCharacter = ']';
     } else if ( value.isString() ) {
-        valueString = QString("\"%1\"").arg( value.toString() );
+        data.description = data.completeValueString = value.toString();
+        data.valueString = QString("\"%1\"").arg( value.toString() );
         encodeValue = true;
         endCharacter = '\"';
     } else if ( value.isRegExp() ) {
-        valueString = QString("/%1/%2").arg( value.toRegExp().pattern() )
+        data.description = data.completeValueString = data.valueString =
+                QString("/%1/%2").arg( value.toRegExp().pattern() )
                 .arg( value.toRegExp().caseSensitivity() == Qt::CaseSensitive ? "" : "i" );
         encodeValue = true;
     } else if ( value.isFunction() ) {
-        valueString = QString(); //QString("function %1").arg( name ); // it.value() is the function definition
+        data.valueString = QString(); //QString("function %1").arg( name ); // it.value() is the function definition
+    } else if ( value.isVariant() && !value.toVariant().toByteArray().isNull() ) {
+        const QByteArray hex = value.toVariant().toByteArray().toHex();
+        const int rowLength = 32;
+        int pos = 0;
+        while ( pos < hex.length() ) {
+            // Get next part of the byte array
+            const QString hexPart = hex.mid( pos, rowLength );
+            QString row;
+            int i = 0;
+            do {
+                if ( !row.isEmpty() ) {
+                    row += ' ';
+                }
+                row += hexPart.mid( i, 2 );
+                i += 2;
+            } while ( i + 2 <= hexPart.length() );
+
+            if ( !data.completeValueString.isEmpty() ) {
+                data.description += "<br />";
+                data.completeValueString += ' ';
+                data.valueString += ' ';
+            }
+            data.description += QString("<i>%1:</i> %2").arg(pos).arg(row);
+            data.completeValueString += row;
+            data.valueString += row;
+            pos += row.length();
+        }
     } else {
-        valueString = value.toString();
+        data.description = data.completeValueString = data.valueString = value.toString();
     }
 
-    const QString completeValueString = valueString;
-    const int cutPos = qMin( 200, valueString.indexOf('\n') );
+    const int cutPos = qMin( 200, data.valueString.indexOf('\n') );
     if ( cutPos != -1 ) {
-        valueString = valueString.left( cutPos ) + " ...";
+        data.valueString = data.valueString.left( cutPos ) + " ...";
     }
 
     data.name = name;
     data.scriptValue = value;
     data.value = value.toVariant(); // TODO remove?
-    data.valueString = valueString;
-    data.completeValueString = completeValueString;
-    data.description = VariableItem::variableValueTooltip( completeValueString, encodeValue,
-                                                           endCharacter );
+    data.description = VariableItem::variableValueTooltip( data.description,
+                                                           encodeValue, endCharacter );
 
     if ( value.isRegExp() ) {
         data.icon = KIcon("code-variable");
@@ -868,54 +904,10 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
                         i18nc("@info/plain", "Result %1", i), QString("<%1>").arg(shortInfo),
                         KIcon("code-class") );
                 for ( TimetableData::ConstIterator it = timetableData.constBegin();
-                    it != timetableData.constEnd(); ++it )
+                      it != timetableData.constEnd(); ++it )
                 {
-                    QString subValueString;
-                    const bool isList = it->isValid() && it->canConvert( QVariant::List );
-                    if ( isList ) {
-                        const bool isVehicleTypeList = it.key() == Enums::TypesOfVehicleInJourney;
-                        const QVariantList list = it->toList();
-                        QStringList stringList;
-                        int count = 0;
-                        for ( int i = 0; i < list.count(); ++i ) {
-                            QString str;
-                            if ( isVehicleTypeList ) {
-                                Enums::VehicleType vehicleType =
-                                        static_cast<Enums::VehicleType>( list[i].toInt() );
-                                str = "PublicTransport." + Enums::toString( vehicleType );
-                            } else {
-                                str = list[i].toString();
-                            }
-                            count += str.length();
-                            if ( count > 100 ) {
-                                stringList << "...";
-                                break;
-                            }
-                            stringList << str;
-                        }
-                        subValueString = '[' + stringList.join(", ") + ']';
-                    } else if ( it.key() == Enums::TypeOfVehicle ) {
-                        Enums::VehicleType vehicleType =
-                                static_cast<Enums::VehicleType>( it.value().toInt() );
-                        subValueString = "PublicTransport." + Enums::toString( vehicleType );
-                    } else {
-                        subValueString = it->toString();
-                    }
-                    VariableTreeData timetableInformationItem(
-                            SpecialVariable, Global::timetableInformationToString(it.key()),
-                            subValueString, KIcon("code-variable") );
-
-                    if ( !Global::checkTimetableInformation(it.key(), it.value()) ) {
-                        timetableInformationItem.flags |= VariableHasErroneousValue;
-                    }
-                    if ( isList ) {
-                        const QVariantList list = it->toList();
-                        for ( int i = 0; i < list.count(); ++i ) {
-                            VariableTreeData listItem( StringVariable,
-                                    QString::number(i + 1), list[i].toString(), KIcon("code-variable") );
-                            timetableInformationItem.children << listItem;
-                        }
-                    }
+                    VariableTreeData timetableInformationItem =
+                            VariableTreeData::fromTimetableData( it.key(), it.value() );
                     resultItem.children << timetableInformationItem;
                 }
                 ++i;
@@ -982,6 +974,89 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
     }
 
     return data;
+}
+
+VariableTreeData VariableTreeData::fromTimetableData( Enums::TimetableInformation info,
+                                                      const QVariant &data )
+{
+    QString subValueString;
+    const bool isList = data.isValid() && data.canConvert( QVariant::List );
+    if ( isList ) {
+        const bool isVehicleTypeList = info == Enums::TypesOfVehicleInJourney ||
+                                        info == Enums::RouteTypesOfVehicles;
+        const bool isSubJourneyList = info == Enums::RouteSubJourneys;
+        const QVariantList list = data.toList();
+        QStringList stringList;
+        int count = 0;
+        for ( int i = 0; i < list.count(); ++i ) {
+            QString str;
+            if ( isVehicleTypeList ) {
+                Enums::VehicleType vehicleType =
+                        static_cast<Enums::VehicleType>( list[i].toInt() );
+                str = "PublicTransport." + Enums::toString( vehicleType );
+            } else if ( isSubJourneyList ) {
+                str = i18nc("@info/plain", "%1 sub journeys",
+                            list[i].toMap()[Global::timetableInformationToString(Enums::RouteStops)]
+                            .toList().count());
+            } else {
+                str = list[i].toString();
+            }
+            count += str.length();
+            if ( count > 100 ) {
+                stringList << "...";
+                break;
+            }
+            stringList << str;
+        }
+        subValueString = '[' + stringList.join(", ") + ']';
+    } else if ( info == Enums::TypeOfVehicle ) {
+        Enums::VehicleType vehicleType =
+                static_cast<Enums::VehicleType>( data.toInt() );
+        subValueString = "PublicTransport." + Enums::toString( vehicleType );
+    } else {
+        subValueString = data.toString();
+    }
+
+    VariableTreeData treeData( SpecialVariable, Global::timetableInformationToString(info),
+                               subValueString, KIcon("code-variable") );
+    if ( !Global::checkTimetableInformation(info, data) ) {
+        treeData.flags |= VariableHasErroneousValue;
+    }
+
+    if ( data.canConvert(QVariant::List) ) {
+        const QVariantList list = data.toList();
+        for ( int i = 0; i < list.count(); ++i ) {
+            VariableTreeData listItem( StringVariable,
+                    QString::number(i + 1), list[i].toString(), KIcon("code-variable") );
+            if ( list[i].isValid() && list[i].canConvert(QVariant::Map) ) {
+                const QVariantMap map = list[i].toMap();
+                for ( QVariantMap::ConstIterator subIt = map.constBegin();
+                        subIt != map.constEnd(); ++subIt )
+                {
+                    Enums::TimetableInformation subInfo =
+                            Global::timetableInformationFromString(subIt.key());
+                    VariableTreeData hashItem =
+                            VariableTreeData::fromTimetableData(subInfo, subIt.value());
+                    if ( info == Enums::RouteSubJourneys &&
+                         subInfo != Enums::RouteStops &&
+                         subInfo != Enums::RouteStopsShortened &&
+                         subInfo != Enums::RouteTimes &&
+                         subInfo != Enums::RouteTimesArrival &&
+                         subInfo != Enums::RouteTimesDeparture &&
+                         subInfo != Enums::RoutePlatformsArrival &&
+                         subInfo != Enums::RoutePlatformsDeparture &&
+                         subInfo != Enums::RouteExactStops &&
+                         subInfo != Enums::RouteNews )
+                    {
+                        hashItem.flags |= VariableHasErroneousValue;
+                    }
+                    listItem.children << hashItem;
+                }
+            }
+            treeData.children << listItem;
+        }
+    }
+    return treeData;
 }
 
 QString VariableItem::variableValueTooltip( const QString &completeValueString,

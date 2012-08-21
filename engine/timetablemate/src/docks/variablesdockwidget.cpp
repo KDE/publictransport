@@ -32,6 +32,9 @@
 #include <KLineEdit>
 #include <KDebug>
 #include <KLocalizedString>
+#include <KTemporaryFile>
+#include <KMessageBox>
+#include <KProcess>
 
 // Qt includes
 #include <QTreeView>
@@ -40,6 +43,7 @@
 #include <QMenu>
 #include <QClipboard>
 #include <QApplication>
+#include <QMimeData>
 
 VariablesDockWidget::VariablesDockWidget( ProjectModel *projectModel, KActionMenu *showDocksAction,
                                           QWidget *parent )
@@ -107,17 +111,53 @@ void VariablesDockWidget::contextMenu( const QPoint &pos )
     if ( !index.isValid() ) {
         return;
     }
-    const QString completeValueString =
-            m_variableModel->data( index, VariableModel::CompleteValueRole ).toString();
-    kDebug() << completeValueString;
+    const bool isBinaryData =
+            m_variableModel->data( index, VariableModel::ContainsBinaryDataRole ).toBool();
+    const QVariant data = m_variableModel->data( index, VariableModel::CompleteValueRole );
 
     QPointer<QMenu> menu( new QMenu(this) );
     QAction *copyAction = new QAction( KIcon("edit-copy"), i18nc("@info/plain", "Copy"), menu );
-    menu->addActions( QList<QAction*>() << copyAction );
+    QAction *showInOktetaAction = new QAction( KIcon("okteta"),
+                                               i18nc("@info/plain", "Show in Okteta"), menu );
+
+    menu->addAction( copyAction );
+    if ( isBinaryData ) {
+        menu->addAction( showInOktetaAction );
+    }
+
     QAction *action = menu->exec( m_variablesWidget->mapToGlobal(pos) );
     if ( action == copyAction ) {
-        QApplication::clipboard()->setText( completeValueString );
+        if ( isBinaryData ) {
+            // Copy binary data (from a QByteArray), can be pasted into Okteta
+            QMimeData *mime = new QMimeData();
+            mime->setData( "binary/octet-stream", data.toByteArray() );
+            QApplication::clipboard()->setMimeData( mime );
+        } else {
+            // Copy text
+            QApplication::clipboard()->setText( data.toString() );
+        }
+    } else if ( action == showInOktetaAction ) {
+        // Write data to a temporary file...
+        KTemporaryFile *temporary = new KTemporaryFile(); // No QObject* parent argument...
+        temporary->setParent( this );
+        if ( !temporary->open() ) {
+            KMessageBox::information( this, temporary->errorString() );
+        } else {
+            if ( isBinaryData ) {
+                temporary->write( data.toByteArray() );
+            } else {
+                temporary->write( data.toString().toAscii() );
+            }
+            temporary->close();
+
+            // ...and open it in Okteta
+            KProcess *okteta = new KProcess( this );
+            okteta->setProgram( "okteta", QStringList() << temporary->fileName() );
+            connect( okteta, SIGNAL(finished(int)), temporary, SLOT(deleteLater()) );
+            okteta->start();
+        }
     }
+
     // TODO Update script value
     delete menu.data();
 }
