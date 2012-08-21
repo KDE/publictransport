@@ -431,7 +431,8 @@ QScriptValue include( QScriptContext *context, QScriptEngine *engine )
     // Store included files in global property "includedFiles"
     includedFiles << filePath;
     includedFiles.removeDuplicates();
-    engine->globalObject().setProperty( "includedFiles", engine->newVariant(includedFiles) );
+    QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
+    engine->globalObject().setProperty( "includedFiles", engine->newVariant(includedFiles), flags );
 
     // Evaluate script
     return engine->evaluate( program, filePath );
@@ -476,21 +477,27 @@ bool ScriptJob::loadScript( QScriptProgram *script )
     }
 //     m_scriptStorage->mutex.unlock();
 
-    m_engine->globalObject().setProperty( "provider", m_engine->newQObject(&m_data) ); //parent()) );
+    QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
+    m_engine->globalObject().setProperty( "provider", m_engine->newQObject(&m_data), flags );
 
     QScriptValue includeFunction = m_engine->globalObject().property("include");
     if ( !includeFunction.isValid() ) {
         includeFunction = m_engine->newFunction( include, 1 );
     }
     includeFunction.setData( maxIncludeLine(script->sourceCode()) );
-    m_engine->globalObject().setProperty( "include", includeFunction );
+    m_engine->globalObject().setProperty( "include", includeFunction, flags );
 
     // Process events every 100ms
 //     m_engine->setProcessEventsInterval( 100 );
 
-    // Register NetworkRequest class for use in the script
+    // Register classes for use in the script
     qScriptRegisterMetaType< NetworkRequestPtr >( m_engine,
             networkRequestToScript, networkRequestFromScript );
+
+    qRegisterMetaType< QIODevice* >( "QIODevice*" );
+    qRegisterMetaType< DataStreamPrototype* >( "DataStreamPrototype*" );
+    qScriptRegisterMetaType< DataStreamPrototypePtr >( m_engine,
+            dataStreamToScript, dataStreamFromScript );
 
     // Create objects for the script
     Helper *scriptHelper = new Helper( m_data.id(), m_engine );
@@ -498,15 +505,21 @@ bool ScriptJob::loadScript( QScriptProgram *script )
     m_scriptResult = QSharedPointer<ResultObject>( new ResultObject(m_engine) );
     connect( m_scriptResult.data(), SIGNAL(publish()), this, SLOT(publish()) );
 
+    DataStreamPrototype *dataStream = new DataStreamPrototype( m_engine );
+    QScriptValue streamConstructor = m_engine->newFunction( constructStream );
+    QScriptValue streamMeta = m_engine->newQMetaObject( &DataStreamPrototype::staticMetaObject,
+                                                        streamConstructor );
+    m_engine->globalObject().setProperty( "DataStream", streamMeta, flags );
+
     // Make the objects available to the script
-    m_engine->globalObject().setProperty( "helper", m_engine->newQObject(scriptHelper) );
-    m_engine->globalObject().setProperty( "network", m_engine->newQObject(m_scriptNetwork.data()) );
-    m_engine->globalObject().setProperty( "storage", m_engine->newQObject(m_scriptStorage) );
-    m_engine->globalObject().setProperty( "result", m_engine->newQObject(m_scriptResult.data()) );
+    m_engine->globalObject().setProperty( "helper", m_engine->newQObject(scriptHelper), flags );
+    m_engine->globalObject().setProperty( "network", m_engine->newQObject(m_scriptNetwork.data()), flags );
+    m_engine->globalObject().setProperty( "storage", m_engine->newQObject(m_scriptStorage), flags );
+    m_engine->globalObject().setProperty( "result", m_engine->newQObject(m_scriptResult.data()), flags );
     m_engine->globalObject().setProperty( "enum",
-            m_engine->newQMetaObject(&ResultObject::staticMetaObject) );
+            m_engine->newQMetaObject(&ResultObject::staticMetaObject), flags );
     m_engine->globalObject().setProperty( "PublicTransport",
-            m_engine->newQMetaObject(&Enums::staticMetaObject) );
+            m_engine->newQMetaObject(&Enums::staticMetaObject), flags );
 
     // Load the script program
     m_engine->evaluate( *script );

@@ -59,6 +59,7 @@ Debugger::Debugger( QObject *parent )
           m_engine(new QScriptEngine(this)), m_script(0),
           m_debugger(new DebuggerAgent(m_engine, m_engineMutex)), m_lastScriptError(NoScriptError),
           m_data(0), m_scriptNetwork(0), m_scriptHelper(0), m_scriptResult(0), m_scriptStorage(0),
+          m_scriptDataStreamPrototype(0),
           m_variableModel(new VariableModel(this)),
           m_backtraceModel(new BacktraceModel(this)),
           m_breakpointModel(new BreakpointModel(this)),
@@ -282,6 +283,10 @@ void Debugger::createScriptObjects( const ServiceProviderData *data )
     if ( !m_scriptStorage ) {
         m_scriptStorage = new Storage( data->id() );
     }
+
+    if ( !m_scriptDataStreamPrototype ) {
+        m_scriptDataStreamPrototype = new DataStreamPrototype( m_engine );
+    }
 }
 
 void Debugger::removeAllBreakpoints()
@@ -333,7 +338,8 @@ LoadScriptJob *Debugger::enqueueNewLoadScriptJob()
     createScriptObjects( m_data );
     m_loadScriptJob = new LoadScriptJob( m_debugger, *m_data, m_engineMutex, m_script,
                                          m_scriptHelper, m_scriptResult, m_scriptNetwork,
-                                         m_scriptStorage, ResultObject::staticMetaObject, this );
+                                         m_scriptStorage, m_scriptDataStreamPrototype,
+                                         ResultObject::staticMetaObject, this );
     enqueueJob( m_loadScriptJob );
     return m_loadScriptJob;
 }

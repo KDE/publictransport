@@ -40,6 +40,7 @@ namespace Scripting {
     class Storage;
     class ResultObject;
     class Helper;
+    class DataStreamPrototype;
 };
 namespace ThreadWeaver {
     class Job;
@@ -555,6 +556,7 @@ private:
     Helper *m_scriptHelper;
     ResultObject *m_scriptResult;
     Storage *m_scriptStorage;
+    DataStreamPrototype *m_scriptDataStreamPrototype;
 
     VariableModel *const m_variableModel;
     BacktraceModel *const m_backtraceModel;

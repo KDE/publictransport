@@ -166,9 +166,10 @@ void LoadScriptJob::debuggerRun()
     }
 
     // Get first lines of script code until the first statement after any previous include() calls
+    QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
     QScriptValue includeFunction = engine->globalObject().property("include");
     includeFunction.setData( maxIncludeLine(script.sourceCode()) );
-    engine->globalObject().setProperty( "include", includeFunction );
+    engine->globalObject().setProperty( "include", includeFunction, flags );
 
     debugger->setExecutionControlType( ExecuteRun );
 
@@ -226,34 +227,46 @@ bool LoadScriptJob::loadScriptObjects()
             networkRequestToScript, networkRequestFromScript );
 
     // Expose objects to the script engine
+    QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
     if ( !engine->globalObject().property("provider").isValid() ) {
         engine->globalObject().setProperty( "provider", engine->newQObject(
-                new ServiceProviderData(m_data)) ); // info has only readonly properties
+                new ServiceProviderData(m_data)), flags ); // info has only readonly properties
+    }
+    if ( !engine->globalObject().property("DataStream").isValid() ) {
+        qRegisterMetaType< QIODevice* >( "QIODevice*" );
+        qRegisterMetaType< DataStreamPrototype* >( "DataStreamPrototype*" );
+        qScriptRegisterMetaType< DataStreamPrototypePtr >( engine,
+                dataStreamToScript, dataStreamFromScript );
+
+        QScriptValue stream = engine->newQObject( m_dataStreamPrototype );
+        QScriptValue streamConstructor = engine->newFunction( constructStream );
+        engine->setDefaultPrototype( qMetaTypeId<DataStreamPrototype*>(), stream );
+        engine->globalObject().setProperty( "DataStream", streamConstructor, flags );
     }
     if ( !engine->globalObject().property("helper").isValid() ) {
-        engine->globalObject().setProperty( "helper", engine->newQObject(m_scriptHelper) );
+        engine->globalObject().setProperty( "helper", engine->newQObject(m_scriptHelper), flags );
     }
     if ( !engine->globalObject().property("PublicTransport").isValid() ) {
         engine->globalObject().setProperty( "PublicTransport",
-                engine->newQMetaObject(&Enums::staticMetaObject) );
+                engine->newQMetaObject(&Enums::staticMetaObject), flags );
     }
     if ( !engine->globalObject().property("network").isValid() ) {
-        engine->globalObject().setProperty( "network", engine->newQObject(m_scriptNetwork) );
+        engine->globalObject().setProperty( "network", engine->newQObject(m_scriptNetwork), flags );
     }
     if ( !engine->globalObject().property("storage").isValid() ) {
-        engine->globalObject().setProperty( "storage", engine->newQObject(m_scriptStorage) );
+        engine->globalObject().setProperty( "storage", engine->newQObject(m_scriptStorage), flags );
     }
     if ( !engine->globalObject().property("result").isValid() ) {
-        engine->globalObject().setProperty( "result", engine->newQObject(m_scriptResult) );
+        engine->globalObject().setProperty( "result", engine->newQObject(m_scriptResult), flags );
     }
     if ( !engine->globalObject().property("enum").isValid() ) {
         engine->globalObject().setProperty( "enum",
-                engine->newQMetaObject(&ResultObject::staticMetaObject) );
+                engine->newQMetaObject(&ResultObject::staticMetaObject), flags );
     }
 
     // Make include() function available to scripts, store programBegin to be able to check
     // if an include() call is at the beginning of a script
-    engine->globalObject().setProperty( "include", engine->newFunction(include, 1) );
+    engine->globalObject().setProperty( "include", engine->newFunction(include, 1), flags );
 
     // Import extensions (from XML file, <script extensions="...">)
     foreach ( const QString &extension, data.scriptExtensions() ) {

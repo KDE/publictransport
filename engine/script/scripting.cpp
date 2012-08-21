@@ -45,6 +45,7 @@
 #include <QWriteLocker>
 #include <QMutex>
 #include <QFileInfo>
+#include <QBuffer>
 
 // Other includes
 #include <zlib.h>
@@ -1968,6 +1969,139 @@ void ResultObject::clear()
 {
     QMutexLocker locker( m_mutex );
     m_timetableData.clear();
+}
+
+QScriptValue constructStream( QScriptContext *context, QScriptEngine *engine )
+{
+    QScriptValue argument = context->argument(0);
+    DataStreamPrototype *object;
+    if ( argument.instanceOf(context->callee()) ) {
+        object = new DataStreamPrototype( qscriptvalue_cast<DataStreamPrototype*>(argument) );
+    } else if ( argument.isQObject() && qscriptvalue_cast<QIODevice*>(argument) ) {
+        object = new DataStreamPrototype( qscriptvalue_cast<QIODevice*>(argument) );
+    } else if ( argument.isVariant() ) {
+        const QVariant variant = argument.toVariant();
+        object = new DataStreamPrototype( variant.toByteArray() );
+//         : new DataStreamPrototype(qscriptvalue_cast<QByteArray>(argument));
+    }
+    return engine->newQObject( object, QScriptEngine::ScriptOwnership );
+}
+
+QScriptValue dataStreamToScript( QScriptEngine *engine, const DataStreamPrototypePtr &stream )
+{
+    return engine->newQObject( const_cast<DataStreamPrototype*>(stream), QScriptEngine::QtOwnership,
+                               QScriptEngine::PreferExistingWrapperObject );
+}
+
+void dataStreamFromScript( const QScriptValue &object, DataStreamPrototypePtr &stream )
+{
+    stream = qobject_cast< DataStreamPrototype* >( object.toQObject() );
+}
+
+DataStreamPrototype::DataStreamPrototype( QObject *parent )
+        : QObject( parent )
+{
+}
+
+DataStreamPrototype::DataStreamPrototype( const QByteArray &byteArray, QObject *parent )
+        : QObject( parent )
+{
+    QBuffer *buffer = new QBuffer( const_cast<QByteArray*>(&byteArray), this );
+    buffer->open( QIODevice::ReadOnly );
+    m_dataStream = QSharedPointer< QDataStream >( new QDataStream(buffer) );
+}
+
+DataStreamPrototype::DataStreamPrototype( QIODevice *device, QObject *parent )
+        : QObject( parent )
+{
+    if ( !device->isOpen() ) {
+        kWarning() << "Device not opened";
+    }
+    m_dataStream = QSharedPointer< QDataStream >( new QDataStream(device) );
+}
+
+DataStreamPrototype::DataStreamPrototype( DataStreamPrototype *other )
+        : QObject(), m_dataStream(other->stream())
+{
+}
+
+QDataStream *DataStreamPrototype::thisDataStream() const
+{
+    return m_dataStream.data();
+}
+
+qint8 DataStreamPrototype::readInt8()
+{
+    qint8 i;
+    thisDataStream()->operator >>( i );
+    return i;
+}
+
+quint8 DataStreamPrototype::readUInt8()
+{
+    quint8 i;
+    thisDataStream()->operator >>( i );
+    return i;
+}
+
+quint16 DataStreamPrototype::readUInt16()
+{
+    quint16 i;
+    thisDataStream()->operator >>( i );
+    return i;
+}
+
+qint32 DataStreamPrototype::readInt32()
+{
+    qint32 i;
+    thisDataStream()->operator >>( i );
+    return i;
+}
+
+qint16 DataStreamPrototype::readInt16()
+{
+    qint16 i;
+    thisDataStream()->operator >>( i );
+    return i;
+}
+
+quint32 DataStreamPrototype::readUInt32()
+{
+    quint32 i;
+    thisDataStream()->operator >>( i );
+    return i;
+}
+
+QString DataStreamPrototype::readString()
+{
+    QString string;
+    char character;
+    while ( thisDataStream()->device()->getChar(&character) && character != 0 ) {
+        string.append( character );
+    }
+    return string;
+}
+
+QByteArray DataStreamPrototype::readBytes( uint byteCount )
+{
+    char *chars = new char[ byteCount ];
+    const uint bytesRead = thisDataStream()->readRawData( chars, byteCount );
+    if ( bytesRead != byteCount ) {
+        kWarning() << "Did not read all requested bytes, read" << bytesRead << "of" << byteCount;
+    }
+    QByteArray bytes( chars );
+    delete[] chars;
+    return bytes;
+}
+
+QByteArray DataStreamPrototype::readBytesUntilZero()
+{
+    QByteArray bytes;
+    char character;
+    while ( thisDataStream()->device()->getChar(&character) && character != 0 ) {
+        bytes.append( character );
+    }
+    return bytes;
 }
 
 #include "scripting.moc"

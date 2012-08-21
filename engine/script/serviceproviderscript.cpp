@@ -82,8 +82,8 @@ ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, Q
 ServiceProviderScript::~ServiceProviderScript()
 {
     // Wait for running jobs to finish for proper cleanup
-    ThreadWeaver::Weaver::instance()->requestAbort();
-    ThreadWeaver::Weaver::instance()->finish(); // This prevents crashes on exit of the engine
+//     ThreadWeaver::Weaver::instance()->requestAbort();
+//     ThreadWeaver::Weaver::instance()->finish(); // This prevents crashes on exit of the engine
     delete m_script;
     delete m_mutex;
 }
@@ -208,7 +208,7 @@ QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
         QStringList featureStrings = group.readEntry("features", QStringList());
         featureStrings.removeOne("(none)");
         QList<Enums::ProviderFeature> features =
-                ServiceProviderGlobal::featuresFromFeatureStrings( featureStrings );
+                ServiceProviderGlobal::featuresFromFeatureStrings( featureStrings, &ok );
         if ( ok ) {
             // The stored feature list only contains valid strings
             return features;
@@ -237,9 +237,10 @@ QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
             }
         }
         if ( ok ) {
+            QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
             QScriptValue includeFunction = engine.newFunction( include, 1 );
             includeFunction.setData( maxIncludeLine(m_script->sourceCode()) );
-            engine.globalObject().setProperty( "include", includeFunction );
+            engine.globalObject().setProperty( "include", includeFunction, flags );
 
             // TODO: Add a class to load all needed script objects like here
             QScopedPointer< ServiceProviderData > data( new ServiceProviderData(*m_data) );
@@ -247,15 +248,29 @@ QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
             QScopedPointer< Scripting::Network > network( new Scripting::Network(m_data->fallbackCharset()) );
             QScopedPointer< Scripting::Storage > storage( new Scripting::Storage(m_data->id()) );
             QScopedPointer< Scripting::ResultObject > resultObject( new Scripting::ResultObject() );
-            engine.globalObject().setProperty( "provider", engine.newQObject(data.data()) );
-            engine.globalObject().setProperty( "helper", engine.newQObject(helper.data()) );
+
+            engine.globalObject().setProperty( "provider", engine.newQObject(data.data()), flags );
+            engine.globalObject().setProperty( "helper", engine.newQObject(helper.data()), flags );
             engine.globalObject().setProperty( "PublicTransport",
-                    engine.newQMetaObject(&Enums::staticMetaObject) );
-            engine.globalObject().setProperty( "network", engine.newQObject(network.data()) );
-            engine.globalObject().setProperty( "storage", engine.newQObject(storage.data()) );
-            engine.globalObject().setProperty( "result", engine.newQObject(resultObject.data()) );
+                    engine.newQMetaObject(&Enums::staticMetaObject), flags );
+            engine.globalObject().setProperty( "network", engine.newQObject(network.data()), flags );
+            engine.globalObject().setProperty( "storage", engine.newQObject(storage.data()), flags );
+            engine.globalObject().setProperty( "result", engine.newQObject(resultObject.data()), flags );
             engine.globalObject().setProperty( "enum",
-                    engine.newQMetaObject(&ResultObject::staticMetaObject) );
+                    engine.newQMetaObject(&ResultObject::staticMetaObject), flags );
+
+            if ( !engine.globalObject().property("DataStream").isValid() ) {
+                qRegisterMetaType< QIODevice* >( "QIODevice*" );
+                qRegisterMetaType< DataStreamPrototype* >( "DataStreamPrototype*" );
+                qScriptRegisterMetaType< DataStreamPrototypePtr >( &engine,
+                        dataStreamToScript, dataStreamFromScript );
+
+                DataStreamPrototype *dataStream = new DataStreamPrototype( &engine );
+                QScriptValue stream = engine.newQObject( dataStream );
+                QScriptValue streamConstructor = engine.newFunction( constructStream );
+                engine.setDefaultPrototype( qMetaTypeId<DataStreamPrototype*>(), stream );
+                engine.globalObject().setProperty( "DataStream", streamConstructor, flags );
+            }
 
             engine.evaluate( *m_script );
             QVariantList result;
@@ -404,7 +419,6 @@ void ServiceProviderScript::journeysReady( const QList<TimetableData> &data,
 //         Q_ASSERT( request.parseMode == ParseForJourneys );
         JourneyInfoList journeys;
         foreach( const PublicTransportInfoPtr &info, results ) {
-//             journeys << dynamic_cast< JourneyInfo* >( info.data() );
             journeys << info.dynamicCast<JourneyInfo>();
         }
 

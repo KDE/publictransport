@@ -41,10 +41,11 @@
 
 namespace Scripting
 {
-class Storage;
-class Network;
-class ResultObject;
-class Helper;
+    class Storage;
+    class Network;
+    class ResultObject;
+    class Helper;
+    class DataStreamPrototype;
 }
 
 class QScriptProgram;
@@ -160,10 +161,12 @@ protected:
                             QMutex *engineMutex, QScriptProgram *script,
                             Scripting::Helper *scriptHelper, Scripting::ResultObject *scriptResult,
                             Scripting::Network *scriptNetwork, Scripting::Storage *scriptStorage,
+                            Scripting::DataStreamPrototype *dataStreamPrototype,
                             const QMetaObject &enums, QObject* parent = 0 )
             : DebuggerJob(debugger, data, engineMutex, parent),
               m_script(script), m_scriptHelper(scriptHelper), m_scriptResult(scriptResult),
-              m_scriptNetwork(scriptNetwork), m_scriptStorage(scriptStorage), m_enums(enums) {};
+              m_scriptNetwork(scriptNetwork), m_scriptStorage(scriptStorage),
+              m_dataStreamPrototype(dataStreamPrototype), m_enums(enums) {};
 
     virtual void debuggerRun();
     bool loadScriptObjects();
@@ -174,6 +177,7 @@ private:
     Scripting::ResultObject *const m_scriptResult;
     Scripting::Network *const m_scriptNetwork;
     Scripting::Storage *const m_scriptStorage;
+    Scripting::DataStreamPrototype *const m_dataStreamPrototype;
     const QMetaObject m_enums;
 };
 

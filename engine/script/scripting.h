@@ -1814,9 +1814,93 @@ private:
     StoragePrivate *d;
 };
 
+/**
+ * @brief A data stream class to be used in scripts.
+ *
+ * This class wraps a QDataStream, because it's read/write operators cannot be used from QtScript
+ * otherwise, ie. the operator>>(), operator<<() functions. This class offers some read functions
+ * to make this possible, ie readInt8(), readUInt8() or readString(). To read byte data use
+ * readBytes().
+ **/
+class DataStreamPrototype: public QObject, protected QScriptable {
+    Q_OBJECT
+    Q_PROPERTY( quint64 pos READ pos WRITE seek )
+    Q_PROPERTY( bool atEnd READ atEnd )
+
+public:
+    DataStreamPrototype( QObject *parent = 0 );
+    DataStreamPrototype( const QByteArray &byteArray, QObject *parent = 0 );
+    DataStreamPrototype( QIODevice *device, QObject *parent = 0 );
+    DataStreamPrototype( DataStreamPrototype *other );
+
+    /** @brief Reads an 8 bit integer. */
+    Q_INVOKABLE qint8 readInt8();
+
+    /** @brief Reads an unsigned 8 bit integer. */
+    Q_INVOKABLE quint8 readUInt8();
+
+    /** @brief Reads a 16 bit integer. */
+    Q_INVOKABLE qint16 readInt16();
+
+    /** @brief Reads an unsigned 16 bit integer. */
+    Q_INVOKABLE quint16 readUInt16();
+
+    /** @brief Reads a 32 bit integer. */
+    Q_INVOKABLE qint32 readInt32();
+
+    /** @brief Reads an unsigned 32 bit integer. */
+    Q_INVOKABLE quint32 readUInt32();
+
+    /** @brief Reads a string until the first \0 character is read. */
+    Q_INVOKABLE QString readString();
+
+    /** @brief Reads bytes until the first \0 character is read. */
+    Q_INVOKABLE QByteArray readBytesUntilZero();
+
+    /** @brief Reads @p bytes bytes. */
+    Q_INVOKABLE QByteArray readBytes( uint bytes );
+
+    /** @brief Whether or not the stream is at it's end. */
+    Q_INVOKABLE bool atEnd() const { return m_dataStream->atEnd(); };
+
+    /** @brief Get the current position in the streams device. */
+    Q_INVOKABLE quint64 pos() const { return m_dataStream->device()->pos(); };
+
+    /** @brief Seek to @p pos in the streams device. */
+    Q_INVOKABLE bool seek( quint64 pos ) const { return m_dataStream->device()->seek(pos); };
+
+    /** @brief Peek data with the given @p maxLength. */
+    Q_INVOKABLE QByteArray peek( quint64 maxLength ) const {
+        return m_dataStream->device()->peek(maxLength);
+    };
+
+    /** @brief Skip @p bytes bytes. */
+    Q_INVOKABLE int skip( int bytes ) const { return m_dataStream->skipRawData(bytes); };
+
+    /** @brief Return a human-readable description of the last device error that occured. */
+    Q_INVOKABLE QString errorString() const { return m_dataStream->device()->errorString(); };
+
+    /** @brief Get the underlying QDataStream as a QSharedPointer. */
+    QSharedPointer< QDataStream > stream() const { return m_dataStream; };
+
+private:
+    QDataStream *thisDataStream() const;
+    QSharedPointer< QDataStream > m_dataStream;
+};
+
+typedef DataStreamPrototype* DataStreamPrototypePtr;
+QScriptValue constructStream( QScriptContext *context, QScriptEngine *engine );
+QScriptValue dataStreamToScript( QScriptEngine *engine, const DataStreamPrototypePtr &stream );
+void dataStreamFromScript( const QScriptValue &object, DataStreamPrototypePtr &stream );
+
 }; // namespace Scripting
 
 Q_DECLARE_METATYPE(Scripting::NetworkRequest*)
 Q_SCRIPT_DECLARE_QMETAOBJECT(Scripting::NetworkRequest, QObject*)
+
+Q_DECLARE_METATYPE(QIODevice*)
+Q_DECLARE_METATYPE(QDataStream*)
+Q_DECLARE_METATYPE(Scripting::DataStreamPrototype*)
+Q_SCRIPT_DECLARE_QMETAOBJECT(Scripting::DataStreamPrototype, QObject*)
 
 #endif // SCRIPTING_HEADER
