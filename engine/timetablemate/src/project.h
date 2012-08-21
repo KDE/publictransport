@@ -21,6 +21,7 @@
 #define PROJECT_H
 
 // Own includes
+#include "config.h"
 #include "enums.h" // For TabType
 #include "testmodel.h" // For TestModel::Test, TestModel::TestCase
 #include "debugger/debuggerstructures.h"

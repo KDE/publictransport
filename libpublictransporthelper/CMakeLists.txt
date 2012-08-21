@@ -8,14 +8,15 @@ add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
 
 option( BUILD_MARBLE_MAP "Use the MarbleWidget to show stops in it" ON )
 
-# Create config.h from config.h.in, ie. create #define's for each enabled variable from above
-configure_file( config.h.in config.h )
+# Create lib_config.h from lib_config.h.in, ie.
+# create #define's for each enabled variable from above
+configure_file( lib_config.h.in lib_config.h )
 
 set( include_dirs
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}
     ${KDE4_INCLUDES}
-    ${CMAKE_CURRENT_BINARY_DIR} # For "config.h"
+    ${CMAKE_CURRENT_BINARY_DIR} # For "lib_config.h"
 )
 if ( BUILD_MARBLE_MAP )
     list ( APPEND include_dirs /usr/include/marble )
@@ -52,7 +53,7 @@ endif ( BUILD_MARBLE_MAP )
 
 set( publictransporthelper_LIB_HDRS
 	publictransporthelper_export.h
-	${CMAKE_CURRENT_BINARY_DIR}/config.h
+	${CMAKE_CURRENT_BINARY_DIR}/lib_config.h
 
 	# Models
 	locationmodel.h

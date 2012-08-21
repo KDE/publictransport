@@ -24,7 +24,7 @@
 #ifndef STOPLINEEDIT_H
 #define STOPLINEEDIT_H
 
-#include "config.h"
+#include "lib_config.h"
 #include "dynamicwidget.h" // For StopLineEditList
 #include <KLineEdit> // Base class of StopLineEdit
 #include <Plasma/DataEngine> // For Plasma::DataEngine::Data in StopLineEdit::dataUpdated()
