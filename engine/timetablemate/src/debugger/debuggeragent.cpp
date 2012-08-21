@@ -104,12 +104,13 @@ DebuggerAgent::DebuggerAgent( QScriptEngine *engine, QMutex *engineMutex )
     // Install custom print function (overwriting the builtin print function)
     QScriptValue printFunction = engine->newFunction( debugPrintFunction );
     printFunction.setData( engine->newQObject(this) );
-    engine->globalObject().setProperty( "print", printFunction );
+    QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
+    engine->globalObject().setProperty( "print", printFunction, flags );
 /*
     // Make include() function available to scripts, store programBegin to be able to check
     // if an include() call is at the beginning of a script
     QScriptValue includeFunction = engine->newFunction( include, 1 );
-    engine->globalObject().setProperty( "include", includeFunction );*/
+    engine->globalObject().setProperty( "include", includeFunction, flags );*/
 
 //     kDebug() << "Check execution in 250ms";
 //     QTimer::singleShot( 250, this, SLOT(checkExecution()) );
@@ -917,7 +918,6 @@ void DebuggerAgent::debugStepOver( int repeat )
     m_interruptFunctionLevel = 0;
     m_repeatExecutionTypeCount = repeat;
     m_executionControl = ExecuteStepOver;
-    kDebug() << "STEP OVER" << m_interruptFunctionLevel;
     m_interruptWaiter->wakeAll();
 }
 
@@ -1157,8 +1157,6 @@ ExecutionControl DebuggerAgent::applyExecutionControl( ExecutionControl executio
                         m_executionControl = executionControl = ExecuteInterrupt;
                     }
                 }
-            } else {
-                kDebug() << "Step over" << m_lineNumber;
             }
             break;
         case ExecuteStepOut:

@@ -273,13 +273,14 @@ void CallScriptFunctionJob::debuggerRun()
     }
 
     // Create new Network object in this thread, restore old object at the end
+    QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
     const QScriptValue previousScriptNetwork = engine->globalObject().property("network");
     Network *scriptNetwork = new Network( m_data.fallbackCharset() );
     connect( scriptNetwork, SIGNAL(requestFinished(NetworkRequest*,QByteArray,int,int)),
              this, SLOT(requestFinished(NetworkRequest*,QByteArray,int,int)) );
     connect( scriptNetwork, SIGNAL(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)),
              this, SLOT(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)) );
-    engine->globalObject().setProperty( "network", engine->newQObject(scriptNetwork) );
+    engine->globalObject().setProperty( "network", engine->newQObject(scriptNetwork), flags );
 
     // Get the helper object and connect to the errorReceived() signal to collect
     // messages sent to "helper.error()" from a script
@@ -393,7 +394,7 @@ void CallScriptFunctionJob::debuggerRun()
     // This needs to be called after setFinished(true), otherwise the Debugger thinks there are
     // still running jobs, ie. waiting for a signal
     m_engineMutex->lockInline();
-    engine->globalObject().setProperty( "network", previousScriptNetwork );
+    engine->globalObject().setProperty( "network", previousScriptNetwork, flags );
     m_engineMutex->unlockInline();
     delete scriptNetwork;
 
