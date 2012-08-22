@@ -37,7 +37,6 @@ set( publictransporthelper_LIB_SRCS
 	stopsettingsdialog.cpp
 	stoplineedit.cpp
 	stopfinder.cpp
-	htmldelegate.cpp
 	global.cpp
 	columnresizer.cpp
 	filter.cpp

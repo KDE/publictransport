@@ -42,7 +42,6 @@
 
 class KLineEdit;
 class DynamicLabeledLineEditList;
-class HtmlDelegate;
 
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
@@ -120,8 +119,7 @@ public:
     /**
      * @brief Options for the stop settings dialog.
      *
-     * With these options widgets can be shown/hidden and usage of the @ref HtmlDelegate can be
-     * toggled on/off.
+     * With these options widgets can be shown/hidden.
      *
      * Some enumerables are combined into a single enumberable for convenience, eg.
      * SimpleServiceProviderSelection, SimpleStopSelection or ExtendedStopSelection.
@@ -161,12 +159,6 @@ public:
                 * time in minutes from now) and <em>"At custom time"</em> (with a time input
                 * field to edit the first departure/arrival time directly. */
 
-        UseHtmlForLocationConfig = 0x1000, /**< Uses an @ref HtmlDelegate to draw the items of
-                * the location combobox. */
-        UseHtmlForServiceProviderConfig = 0x2000, /**< Uses an @ref HtmlDelegate to draw the items
-                * of the service provider combobox. */
-
-        UseHtmlEverywhere = UseHtmlForLocationConfig | UseHtmlForServiceProviderConfig,
                 /** Combination of UseHtmlForLocationConfig and UseHtmlForServiceProviderConfig. */
         ShowAllDetailsWidgets = ShowInstallProviderButton | ShowFilterConfigurationConfig |
                 ShowAlarmTimeConfig | ShowFirstDepartureConfig,
@@ -176,7 +168,7 @@ public:
                  * ShowFirstDepartureConfig. */
 
         SimpleProviderSelection = ShowProviderConfiguration | ShowProviderInfoButton |
-                ShowInstallProviderButton | UseHtmlEverywhere,
+                ShowInstallProviderButton,
                 /**< Options for a simple provider selection dialog.
                  * It doesn't show stop selection fields, only widgets associated to service
                  * provider selection, including a provider info button and a button to install

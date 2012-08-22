@@ -22,7 +22,6 @@
 #include "ui_stopConfig.h"
 
 #include "global.h"
-#include "htmldelegate.h"
 #include "dynamicwidget.h"
 #include "stopwidget.h"
 #include "locationmodel.h"
@@ -166,7 +165,7 @@ public:
             StopSettingsDialog *q )
             : factory(_factory), detailsWidget(0), stopFinder(0), nearStopsDialog(0),
             modelLocations(0), modelServiceProviders(0),
-            modelLocationServiceProviders(0), stopList(0), htmlDelegate(0), resizer(0),
+            modelLocationServiceProviders(0), stopList(0), resizer(0),
             dataEngineManager(0), q_ptr(q)
     {
         // Store options and given stop settings
@@ -389,19 +388,6 @@ public:
                 uiStop.serviceProvider->setModel( modelLocationServiceProviders );
             #endif
             uiStop.location->setModel( modelLocations );
-
-            // Set html delegate
-            if ( options.testFlag(StopSettingsDialog::UseHtmlForLocationConfig) ||
-                 options.testFlag(StopSettingsDialog::UseHtmlForServiceProviderConfig) )
-            {
-                htmlDelegate = new HtmlDelegate( HtmlDelegate::AlignTextToDecoration, q );
-                if ( options.testFlag(StopSettingsDialog::UseHtmlForLocationConfig) ) {
-                    uiStop.location->setItemDelegate( htmlDelegate );
-                }
-                if ( options.testFlag(StopSettingsDialog::UseHtmlForServiceProviderConfig) ) {
-                    uiStop.serviceProvider->setItemDelegate( htmlDelegate );
-                }
-            }
 
             // Watch location and service provider for changes
             q->connect( uiStop.location, SIGNAL(currentIndexChanged(int)),
@@ -696,7 +682,6 @@ public:
     ServiceProviderModel *modelServiceProviders; // Model of service providers
     QSortFilterProxyModel *modelLocationServiceProviders; // Model of service providers for the current location
     StopLineEditList *stopList;
-    HtmlDelegate *htmlDelegate;
     ColumnResizer *resizer;
 
     Plasma::DataEngineManager *dataEngineManager;
@@ -1148,7 +1133,9 @@ void StopSettingsDialog::locationChanged( int index )
 {
     Q_D( StopSettingsDialog );
 
+    const bool wasBlocked = d->uiStop.serviceProvider->blockSignals( true );
     d->updateServiceProviderModel( index );
+    d->uiStop.serviceProvider->blockSignals( wasBlocked );
 
     // Select default provider of the selected location
     QString locationCode = d->uiStop.location->itemData( index, LocationCodeRole ).toString();
@@ -1452,12 +1439,6 @@ QDebug& operator<<( QDebug debug, StopSettingsDialog::Option option )
             return debug << "ShowAlarmTimeConfig";
         case StopSettingsDialog::ShowFirstDepartureConfig:
             return debug << "ShowFirstDepartureConfig";
-        case StopSettingsDialog::UseHtmlForLocationConfig:
-            return debug << "UseHtmlForLocationConfig";
-        case StopSettingsDialog::UseHtmlForServiceProviderConfig:
-            return debug << "UseHtmlForServiceProviderConfig";
-        case StopSettingsDialog::UseHtmlEverywhere:
-            return debug << "UseHtmlEverywhere";
         case StopSettingsDialog::ShowAllDetailsWidgets:
             return debug << "ShowAllDetailsWidgets";
         case StopSettingsDialog::SimpleProviderSelection:
