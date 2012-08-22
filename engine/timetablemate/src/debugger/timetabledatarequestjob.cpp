@@ -353,13 +353,14 @@ void CallScriptFunctionJob::debuggerRun()
 //     globalInfo.delayInfoAvailable =
 //             !m_scriptResult->isHintGiven( ResultObject::NoDelaysForStop );
 
+    bool locked;
     if ( finishedSuccessfully || debugger->wasLastRunAborted() ) {
         // Script finished or was aborted
-        m_engineMutex->lockInline();
+        locked = m_engineMutex->tryLock( 250 );
     } else {
         // Script not finished, engine mutex is most probably still locked
         kDebug() << "Script not finished, abort";
-        m_engineMutex->tryLock();
+        locked = m_engineMutex->tryLock( 250 );
         engine->abortEvaluation();
     }
 
@@ -368,7 +369,9 @@ void CallScriptFunctionJob::debuggerRun()
 
     // Check for exceptions
     if ( finishedSuccessfully && engine->hasUncaughtException() ) {
-        m_engineMutex->unlockInline();
+        if ( locked ) {
+            m_engineMutex->unlockInline();
+        }
         ThreadWeaver::debug( 0, " - Run script ERROR: In function %s: %s\n",
                             functionName.toUtf8().constData(),
                             engine->uncaughtException().toString().toUtf8().constData() );
@@ -380,7 +383,9 @@ void CallScriptFunctionJob::debuggerRun()
         return;
     }
 //     engine->clearExceptions();
-    m_engineMutex->unlockInline();
+    if ( locked ) {
+        m_engineMutex->unlockInline();
+    }
 
     m_mutex->lockInline();
     m_returnValue = returnValue;

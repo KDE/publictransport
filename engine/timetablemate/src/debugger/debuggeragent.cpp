@@ -1111,6 +1111,13 @@ void DebuggerAgent::functionExit( qint64 scriptId, const QScriptValue& returnVal
 
     if ( scriptId != -1 ) {
         m_mutex->lockInline();
+        if ( m_executionControl == ExecuteAbort || m_state == Aborting ) {
+            // Do nothing when aborting, changing m_functionDepth when aborting
+            // leads to problems when starting the script again
+            m_mutex->unlockInline();
+            return;
+        }
+
         --m_functionDepth;
         const int functionDepth = m_functionDepth;
         m_mutex->unlockInline();
@@ -1608,6 +1615,10 @@ void DebuggerAgent::shutdown()
     m_mutex->unlockInline();
 
     if ( oldState == Aborting ) {
+        if ( engine()->isEvaluating() ) {
+            kDebug() << "Still evaluating, abort";
+            engine()->abortEvaluation();
+        }
         emit aborted();
     }
     engine()->clearExceptions();

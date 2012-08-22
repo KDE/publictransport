@@ -174,6 +174,9 @@ void Debugger::slotStopped()
     if ( m_runningJobs.isEmpty() ) {
         // No more running jobs
         m_running = false;
+    } else if ( m_debugger->state() == Aborting || m_debugger->wasLastRunAborted() ) {
+        // Execution was aborted
+        m_running = false;
     } else if ( m_runningJobs.count() == 1 ) {
         // Only one job still in the list, check if it is finished
         // (slotStopped() was called before the job was destroyed)
