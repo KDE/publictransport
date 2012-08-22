@@ -362,7 +362,8 @@ public:
 
     virtual void sort( int column, Qt::SortOrder order = Qt::AscendingOrder );
 
-    static QList<VariableTreeData> variablesFromScriptValue( const QScriptValue &value );
+    static QList<VariableTreeData> variablesFromScriptValue( const QScriptValue &value,
+            int maxDepth = 10, const QList<QScriptValue> &parents = QList<QScriptValue>() );
 
 public slots:
     /** @brief Applies the given @p change. */

@@ -635,16 +635,16 @@ int variableTypeSort( VariableType type ) {
 }
 
 bool variableItemLessThan( VariableItem *item1, VariableItem *item2 ) {
-    if ( item1->isHelperObject() && !item2->isHelperObject() ) {
-        return true;
-    } else if ( !item1->isHelperObject() && item2->isHelperObject() ) {
-        return false;
-    } else if ( variableTypeSort(item1->type()) != variableTypeSort(item2->type()) ) {
-        return variableTypeSort(item1->type()) < variableTypeSort(item2->type());
-    } else if ( item1->isDefinedInParentContext() && !item2->isDefinedInParentContext() ) {
-        return true; // Sort variables from parent context to the beginning
-    } else if ( !item1->isDefinedInParentContext() && item2->isDefinedInParentContext() ) {
-        return false;
+    if ( item1->isHelperObject() != item2->isHelperObject() ) {
+        return item1->isHelperObject();
+    }
+
+    const int s1 = variableTypeSort( item1->type() );
+    const int s2 = variableTypeSort( item2->type() );
+    if ( s1 != s2 ) {
+        return s1 < s2;
+    } else if ( item1->isDefinedInParentContext() != item2->isDefinedInParentContext() ) {
+        return item1->isDefinedInParentContext(); // Sort variables from parent context to the beginning
     } else {
         // Sort by variable name
         if ( KGlobalSettings::naturalSorting() ) {
@@ -733,29 +733,57 @@ void VariableModel::sortVariableItemList( VariableItemList *variables,
     }
 }
 
-QList<VariableTreeData> VariableModel::variablesFromScriptValue( const QScriptValue &value )
+QList<VariableTreeData> VariableModel::variablesFromScriptValue( const QScriptValue &value,
+        int maxDepth, const QList<QScriptValue> &parents )
 {
     QScriptValueIterator it( value );
+
+    // Limit depth of variable children
+    if ( it.hasNext() && maxDepth <= 0 ) {
+        kWarning() << "Maximum variable depth reached";
+        return QList<VariableTreeData>();
+    }
+
+    // Prevent recursively adding the same child
+    foreach ( const QScriptValue &parent, parents ) {
+        if ( parent.strictlyEquals(value) ) {
+            // Recursive variable found
+            return QList<VariableTreeData>()
+                    << VariableTreeData( i18nc("@info/plain", "(Recursive variable)") );
+        }
+    }
+
     QList<VariableTreeData> variables;
-    const KColorScheme scheme( QPalette::Active );
     while ( it.hasNext() ) {
+        if ( variables.count() >= 500 ) {
+            // Add a dummy variable instead of adding more than 500 variables
+            kWarning() << "Only show up to 500 variables per level";
+            variables << VariableTreeData( "..." );
+            break;
+        }
+
         it.next();
-//         if ( (it.value().isFunction() && it.value().property("prototype").isValid()) || // Constructors
+
+        const QString childName = it.name();
+        const QScriptValue childValue = it.value();
+//         if ( (childValue.isFunction() && childValue.property("prototype").isValid()) || // Constructors
         if ( it.flags().testFlag(QScriptValue::SkipInEnumeration) ||
-            it.name() == QLatin1String("Qt")|| // Too many enumerables in there, bad performance
-            it.name() == QLatin1String("QtConcurrent")|| // Unused
-            it.name() == QLatin1String("NaN") || it.name() == QLatin1String("undefined") ||
-            it.name() == QLatin1String("Infinity") || it.name() == QLatin1String("objectName") ||
-            it.name() == QLatin1String("callee") || it.name() == QLatin1String("__qt_data__") )
+             childName == QLatin1String("Qt")|| // Too many enumerables in there, bad performance
+             childName == QLatin1String("QtConcurrent")|| // Unused
+             childName == QLatin1String("NaN") || childName == QLatin1String("undefined") ||
+             childName == QLatin1String("Infinity") || childName == QLatin1String("objectName") ||
+             childName == QLatin1String("callee") ||
+             childName.startsWith(QLatin1String("__")) ) // Hide variables starting with "__"
         {
             continue;
         }
 
         // Create variable item
-        VariableTreeData item = VariableTreeData::fromScripValue( it.name(), it.value() );
+        VariableTreeData item = VariableTreeData::fromScripValue( childName, childValue );
 
-        // Recursively add children, but not for functions
-        item.children << variablesFromScriptValue( it.value() );
+        // Recursively add children
+        item.children << variablesFromScriptValue( childValue, maxDepth - 1,
+                                                   QList<QScriptValue>() << parents << value );
 
         // Add variable item to the return list
         variables << item;
