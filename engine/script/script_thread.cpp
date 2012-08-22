@@ -367,20 +367,41 @@ bool importExtension( QScriptEngine *engine, const QString &extension )
 QScriptValue include( QScriptContext *context, QScriptEngine *engine )
 {
     // Check argument count, include() call in global context?
+    const QScriptContextInfo contextInfo( context->parentContext() );
     if ( context->argumentCount() < 1 ) {
         context->throwError( i18nc("@info/plain", "One argument expected for <icode>include()</icode>") );
         return engine->undefinedValue();
     } else if ( context->parentContext() && context->parentContext()->parentContext() ) {
-        context->throwError( i18nc("@info/plain", "<icode>include()</icode> calls must be in global context") );
-        return engine->undefinedValue();
+        QScriptContext *parentContext = context->parentContext()->parentContext();
+        bool error = false;
+        while ( parentContext ) {
+            const QScriptContextInfo parentContextInfo( parentContext );
+            if ( !parentContextInfo.fileName().isEmpty() &&
+                 parentContextInfo.fileName() == contextInfo.fileName() )
+            {
+                // Parent context is in the same file, error
+                error = true;
+                break;
+            }
+            parentContext = parentContext->parentContext();
+        }
+
+        if ( error ) {
+            context->throwError( i18nc("@info/plain", "<icode>include()</icode> calls must be in global context") );
+            return engine->undefinedValue();
+        }
     }
 
     // Check if this include() call is before all other statements
-    const QScriptContextInfo contextInfo( context->parentContext() );
-    const quint16 maxIncludeLine = context->callee().data().toUInt16();
-    if ( contextInfo.lineNumber() > maxIncludeLine ) {
-        context->throwError( i18nc("@info/plain", "<icode>include()</icode> calls must be the first statements") );
-        return engine->undefinedValue();
+    QVariantHash includeData = context->callee().data().toVariant().toHash();
+    if ( includeData.contains(contextInfo.fileName()) ) {
+        const quint16 maxIncludeLine = includeData[ contextInfo.fileName() ].toInt();
+        if ( contextInfo.lineNumber() > maxIncludeLine ) {
+            context->throwError( i18nc("@info/plain", "<icode>include()</icode> calls must be the first statements") );
+            return engine->undefinedValue();
+        }
+    } else {
+        kWarning() << "No include data for source file" << contextInfo.fileName() << includeData;
     }
 
     // Get argument and check that it's not pointing to another directory
@@ -420,6 +441,17 @@ QScriptValue include( QScriptContext *context, QScriptEngine *engine )
     QTextStream stream( &scriptFile );
     const QString program = stream.readAll();
     scriptFile.close();
+
+    if ( !includeData.contains(scriptFile.fileName()) ) {
+        includeData[ scriptFile.fileName() ] = maxIncludeLine( program );
+        kDebug() << "Update include data for" << scriptFile.fileName() << includeData[scriptFile.fileName()];
+
+        QScriptValue includeFunction = engine->globalObject().property("include");
+        Q_ASSERT( includeFunction.isValid() );
+        includeFunction.setData( qScriptValueFromValue(engine, includeData) );
+        engine->globalObject().setProperty( "include", includeFunction,
+                                            QScriptValue::KeepExistingFlags );
+    }
 
     // Set script context
     QScriptContext *parent = context->parentContext();
@@ -484,7 +516,9 @@ bool ScriptJob::loadScript( QScriptProgram *script )
     if ( !includeFunction.isValid() ) {
         includeFunction = m_engine->newFunction( include, 1 );
     }
-    includeFunction.setData( maxIncludeLine(script->sourceCode()) );
+    QVariantHash includeData;
+    includeData[ script->fileName() ] = maxIncludeLine( script->sourceCode() );
+    includeFunction.setData( qScriptValueFromValue(m_engine, includeData) );
     m_engine->globalObject().setProperty( "include", includeFunction, flags );
 
     // Process events every 100ms
