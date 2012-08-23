@@ -42,7 +42,7 @@
 #include <QEventLoop>
 #include <QFileInfo>
 
-static int thread_count = 0;
+// static int thread_count = 0;
 ScriptJob::ScriptJob( QScriptProgram *script, const ServiceProviderData* data,
                       Storage *scriptStorage, QObject* parent )
     : ThreadWeaver::Job( parent ),
@@ -50,7 +50,7 @@ ScriptJob::ScriptJob( QScriptProgram *script, const ServiceProviderData* data,
       m_scriptStorage(scriptStorage), m_scriptNetwork(0), m_scriptResult(0),
       m_eventLoop(0), m_published(0), m_success(true), m_data(*data)
 {
-    kDebug() << "Thread count:" << ++thread_count;
+//     kDebug() << "Thread count:" << ++thread_count;
     qRegisterMetaType<DepartureRequest>( "DepartureRequest" );
     qRegisterMetaType<ArrivalRequest>( "ArrivalRequest" );
     qRegisterMetaType<JourneyRequest>( "JourneyRequest" );
@@ -60,7 +60,7 @@ ScriptJob::ScriptJob( QScriptProgram *script, const ServiceProviderData* data,
 
 ScriptJob::~ScriptJob()
 {
-    kDebug() << "Thread count:" << --thread_count;
+//     kDebug() << "Thread count:" << --thread_count;
     if ( !m_engine ) {
         return;
     }
@@ -74,10 +74,8 @@ ScriptJob::~ScriptJob()
     m_engine->deleteLater();
     m_engine = 0;
 
-    m_scriptNetwork.clear();
-    m_scriptResult.clear();
-//     m_scriptNetwork->deleteLater();
-//     m_scriptResult->deleteLater();
+//     m_scriptNetwork->clear();
+//     m_scriptResult->clear();
 }
 
 
@@ -126,9 +124,6 @@ void ScriptJob::run()
         kDebug() << "Script could not be loaded correctly";
         return;
     }
-    kDebug() << "Run script job";
-    kDebug() << "JOB:" << request()->stop << request()->dateTime << request()->parseMode;
-//     emit begin( m_sourceName );
 
     // Store start time of the script
     QTime time;
@@ -137,7 +132,6 @@ void ScriptJob::run()
     // Add call to the appropriate function
     QString functionName;
     QScriptValueList arguments = QScriptValueList() << request()->toScriptValue( m_engine );
-    kDebug() << "Stop" << request()->toScriptValue( m_engine ).property("stop").toString();
     switch ( request()->parseMode ) {
     case ParseForDepartures:
     case ParseForArrivals:
@@ -163,13 +157,13 @@ void ScriptJob::run()
         m_errorString = "Unknown parse mode";
         m_success = false;
     } else {
-        kDebug() << "Call script function" << functionName;
         if ( m_scriptNetwork.isNull() ) {
+            // TODO TEST
             kDebug() << "Deleted ------------------------------------------------";
             m_engine->deleteLater();
             m_engine = 0;
-            m_scriptNetwork.clear();
-            m_scriptResult.clear();
+//             m_scriptNetwork.clear();
+//             m_scriptResult.clear();
             m_success = false;
             return;
         }
@@ -192,12 +186,8 @@ void ScriptJob::run()
                                   m_engine->uncaughtException().toString());
             m_engine->deleteLater();
             m_engine = 0;
-            m_scriptNetwork.clear();
-            m_scriptResult.clear();
-//             m_scriptNetwork->deleteLater();
-//             m_scriptNetwork = 0;
-//             m_scriptResult->deleteLater();
-//             m_scriptResult = 0;
+//             m_scriptNetwork.clear();
+//             m_scriptResult.clear();
             m_success = false;
             return;
         }
@@ -290,12 +280,7 @@ void ScriptJob::run()
                 kDebug() << "Parse mode unsupported:" << request()->parseMode;
                 break;
             }
-//             emit dataReady( m_scriptResult->data().mid(m_published),
-//                             m_scriptResult->features(), m_scriptResult->hints(),
-//                             m_scriptNetwork->lastUrl(), globalInfo,
-//                             request(), couldNeedForcedUpdate );
         }
-//         emit end( m_sourceName );
 
         // Cleanup
         m_scriptResult->clear();
@@ -312,11 +297,7 @@ void ScriptJob::run()
                                   m_engine->uncaughtException().toString());
             m_engine->deleteLater();
             m_engine = 0;
-            m_scriptNetwork.clear();
-//             m_scriptNetwork->deleteLater();
-//             m_scriptNetwork = 0;
-//             m_scriptResult->deleteLater();
-//             m_scriptResult = 0;
+//             m_scriptNetwork.clear();
             m_success = false;
             return;
         }
@@ -346,8 +327,6 @@ bool importExtension( QScriptEngine *engine, const QString &extension )
         kDebug() << "Allowed extensions:" << ServiceProviderScript::allowedExtensions();
         return false;
     } else {
-        kDebug() << "Import extension" << extension << engine << engine->thread();
-
         // FIXME: This crashes, if it gets called simultanously from multiple threads
         // (with separate script engines)...
         if ( engine->importExtension(extension).isUndefined() ) {
@@ -437,14 +416,12 @@ QScriptValue include( QScriptContext *context, QScriptEngine *engine )
     }
 
     // Read the file
-    kDebug() << "include(" << filePath << ")";
     QTextStream stream( &scriptFile );
     const QString program = stream.readAll();
     scriptFile.close();
 
     if ( !includeData.contains(scriptFile.fileName()) ) {
         includeData[ scriptFile.fileName() ] = maxIncludeLine( program );
-        kDebug() << "Update include data for" << scriptFile.fileName() << includeData[scriptFile.fileName()];
 
         QScriptValue includeFunction = engine->globalObject().property("include");
         Q_ASSERT( includeFunction.isValid() );
@@ -492,11 +469,7 @@ quint16 maxIncludeLine( const QString &program )
 bool ScriptJob::loadScript( QScriptProgram *script )
 {
     // Create script engine
-    kDebug() << "Create QScriptEngine";
-    m_engine = new QScriptEngine( /*thread()*/ );
-//     m_scriptStorage->mutex.lock();
-//     kDebug() << "LOAD qt.core" << thread() << m_parseMode;
-//     m_engine->importExtension("qt.core");
+    m_engine = new QScriptEngine();
     foreach ( const QString &extension, m_data.scriptExtensions() ) {
         if ( !importExtension(m_engine, extension) ) {
             m_errorString = i18nc("@info/plain", "Could not load script extension "
@@ -507,7 +480,6 @@ bool ScriptJob::loadScript( QScriptProgram *script )
             return false;
         }
     }
-//     m_scriptStorage->mutex.unlock();
 
     QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
     m_engine->globalObject().setProperty( "provider", m_engine->newQObject(&m_data), flags );
@@ -566,12 +538,8 @@ bool ScriptJob::loadScript( QScriptProgram *script )
                               m_engine->uncaughtException().toString());
         m_engine->deleteLater();
         m_engine = 0;
-        m_scriptNetwork.clear();
-        m_scriptResult.clear();
-//         m_scriptNetwork->deleteLater();
-//         m_scriptNetwork = 0;
-//         m_scriptResult->deleteLater();
-//         m_scriptResult = 0;
+//         m_scriptNetwork.clear();
+//         m_scriptResult.clear();
         m_success = false;
         return false;
     } else {
@@ -581,16 +549,11 @@ bool ScriptJob::loadScript( QScriptProgram *script )
 
 void ScriptJob::publish()
 {
-    qDebug() << "PUBLISH" << request()->parseMode << m_scriptResult->count() << "'ED" << m_published << m_scriptResult << m_scriptNetwork << thread();
     // Only publish, if there is data which is not already published
     if ( m_scriptResult->count() > m_published ) {
         GlobalTimetableInfo globalInfo;
         QList< TimetableData > data = m_scriptResult->data().mid( m_published );
-        kDebug() << "Publish" << data.count() << "items" << request()->sourceName;
         const bool couldNeedForcedUpdate = m_published > 0;
-//         emit dataReady( data, m_scriptResult->features(), m_scriptResult->hints(),
-//                         m_scriptNetwork->lastUrl(), globalInfo, request(),
-//                         couldNeedForcedUpdate );
         switch ( request()->parseMode ) {
         case ParseForDepartures:
             emit departuresReady( m_scriptResult->data().mid(m_published),

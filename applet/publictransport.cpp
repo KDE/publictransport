@@ -522,7 +522,7 @@ void PublicTransportApplet::handleDataError( const QString& /*sourceName*/,
             setAssociatedApplicationUrlForDepartures();
         }
 
-        QString error = data["errorString"].toString();
+        QString error = data["errorMessage"].toString();
         if ( error.isEmpty() ) {
             if ( d->isStateActive("networkActivated") ) {
                 if ( d->settings.departureArrivalListType() == DepartureList ) {

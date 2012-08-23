@@ -129,7 +129,6 @@ bool PublicTransportEngine::isProviderUsed( const QString &serviceProviderId )
 void PublicTransportEngine::slotSourceRemoved( const QString& name )
 {
     const QString nonAmbiguousName = name.toLower();
-    kDebug() << "Running" << m_runningSources.removeOne( nonAmbiguousName );
 
     // Delete the update timer for the source if any
     if ( m_updateTimers.contains(nonAmbiguousName) ) {
@@ -137,7 +136,6 @@ void PublicTransportEngine::slotSourceRemoved( const QString& name )
     }
 
     const QVariant data = m_dataSources.take( nonAmbiguousName );
-    kDebug() << "Cached" << data.isValid();
     kDebug() << "Source" << name << "removed, still cached data sources" << m_dataSources.count();
 
     // If a provider was used by the source, remove the provider if it is not used in another source
@@ -1305,13 +1303,13 @@ void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
 }
 
 void PublicTransportEngine::errorParsing( ServiceProvider *provider,
-        ErrorCode errorCode, const QString &errorString,
+        ErrorCode errorCode, const QString &errorMessage,
         const QUrl &requestUrl, const AbstractRequest *request )
 {
     Q_UNUSED( provider );
     kDebug() << "Error while parsing" << requestUrl //<< request->serviceProvider
              << "\n  sourceName =" << request->sourceName << request->parseMode;
-    kDebug() << errorCode << errorString;
+    kDebug() << errorCode << errorMessage;
 
     // Remove erroneous source from running sources list
     m_runningSources.removeOne( request->sourceName );
@@ -1323,7 +1321,7 @@ void PublicTransportEngine::errorParsing( ServiceProvider *provider,
     setData( sourceName, "receivedData", "nothing" );
     setData( sourceName, "error", true );
     setData( sourceName, "errorCode", errorCode );
-    setData( sourceName, "errorString", errorString );
+    setData( sourceName, "errorMessage", errorMessage );
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 }
 

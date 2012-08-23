@@ -61,7 +61,6 @@ ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, Q
         : ServiceProvider(data, parent), m_thread(0), m_script(0), m_scriptStorage(0),
           m_mutex(new QMutex)
 {
-    kDebug() << "Constructor" << m_data->id();
     m_scriptState = WaitingForScriptUsage;
     m_scriptFeatures = readScriptFeatures( cache.isNull() ? ServiceProviderGlobal::cache() : cache );
 
@@ -498,13 +497,6 @@ void ServiceProviderScript::jobDone( ThreadWeaver::Job* job )
 
     const QString sourceName = scriptJob->request()->sourceName;
     PublicTransportInfoList results = m_publishedData.take( sourceName );
-    kDebug() << "***** (DO NOT => QSharedPointer) Delete" << results.count() << "items";
-    kDebug() << "m_publishedData contains" << m_publishedData.count() << "items";
-//     qDeleteAll( results );
-//     foreach ( PublicTransportInfoPtr ptr, results ) {
-//         ptr.clear();
-//         kDebug() << "DELETED?" << ptr.isNull();
-//     }
     scriptJob->deleteLater();
 }
 

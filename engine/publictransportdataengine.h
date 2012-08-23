@@ -274,7 +274,7 @@ protected slots:
      *
      * @see ServiceProvider::useSeparateCityValue()
      **/
-    void errorParsing( ServiceProvider *provider, ErrorCode errorCode, const QString &errorString,
+    void errorParsing( ServiceProvider *provider, ErrorCode errorCode, const QString &errorMessage,
             const QUrl &requestUrl, const AbstractRequest *request );
 
     void progress( ServiceProvider *provider, qreal progress, const QString &jobDescription,

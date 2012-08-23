@@ -330,14 +330,11 @@ QNetworkRequest* NetworkRequest::request() const
     return m_request;
 }
 
-static int networkObjects = 0; // TODO Remove
 Network::Network( const QByteArray &fallbackCharset, QObject* parent )
         : QObject(parent), m_mutex(new QMutex()), m_fallbackCharset(fallbackCharset),
           m_manager(new QNetworkAccessManager(this)), m_quit(false), m_lastDownloadAborted(false)
 {
     qRegisterMetaType<NetworkRequest*>( "NetworkRequest*" );
-    ++networkObjects;
-    kDebug() << "Create Network object" << thread() << networkObjects;
 }
 
 Network::~Network()
@@ -348,9 +345,6 @@ Network::~Network()
     QList< NetworkRequest* > runningRequests = m_runningRequests;
     m_mutex->unlock();
 
-    --networkObjects;
-
-    kDebug() << "DELETE Network object" << thread() << networkObjects;
     if ( !runningRequests.isEmpty() ) {
         kDebug() << "Deleting Network object with" << runningRequests.count()
                  << "running requests";
