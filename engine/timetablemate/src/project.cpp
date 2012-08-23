@@ -107,11 +107,16 @@ public:
         TestsGetAborted
     };
 
+    enum ScriptState {
+        ScriptNotLoaded = 0,
+        ScriptLoaded
+    };
+
     ProjectPrivate( Project *project ) : state(Project::Uninitialized),
           projectModel(0), projectSourceBufferModified(false),
           dashboardTab(0), projectSourceTab(0), plasmaPreviewTab(0), webTab(0),
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-          scriptTab(0),
+          scriptState(ScriptNotLoaded), scriptTab(0),
           debugger(new Debugger::Debugger(project)),
 #endif
           provider(ServiceProvider::createInvalidProvider(project)),
@@ -250,8 +255,8 @@ public:
         q->connect( debugger, SIGNAL(informationMessage(QString)), q, SIGNAL(informationMessage(QString)) );
         q->connect( debugger, SIGNAL(errorMessage(QString)), q, SLOT(emitErrorMessage(QString)) );
 
-        q->connect( debugger, SIGNAL(loadScriptResult(ScriptErrorType,QString)),
-                    q, SLOT(loadScriptResult(ScriptErrorType,QString)) );
+        q->connect( debugger, SIGNAL(loadScriptResult(ScriptErrorType,QString,QStringList)),
+                    q, SLOT(loadScriptResult(ScriptErrorType,QString,QStringList)) );
         q->connect( debugger, SIGNAL(requestTimetableDataResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QScriptValue)),
                     q, SLOT(functionCallResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QScriptValue)) );
 
@@ -352,6 +357,7 @@ public:
 
         setXmlFilePath( projectSourceFile );
         state = Project::ProjectSuccessfullyLoaded;
+        scriptState = ScriptNotLoaded;
         return true;
     };
 
@@ -1606,6 +1612,7 @@ public:
     PlasmaPreviewTab *plasmaPreviewTab;
     WebTab *webTab;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    ScriptState scriptState;
     ScriptTab *scriptTab;
     QList< ScriptTab* > externalScriptTabs;
 
@@ -1631,6 +1638,7 @@ public:
     QString consoleText;
 
     QString lastError;
+    QStringList globalFunctions;
 
 private:
     Project *q_ptr;
@@ -2954,18 +2962,12 @@ bool Project::isDebuggerRunning() const
     return d->isDebuggerRunning();
 }
 
-QStringList Project::scriptFunctions() const
+QStringList Project::scriptFunctions()
 {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    Q_D( const Project );
-    if ( d->scriptTab ) {
-        return d->scriptTab->scriptModel()->functionNames();
-    } else {
-        JavaScriptParser parser( scriptText() );
-        JavaScriptModel scriptModel;
-        scriptModel.setNodes( parser.nodes() );
-        return scriptModel.functionNames();
-    }
+    Q_D( Project );
+    loadScriptSynchronous();
+    return d->globalFunctions;
 #else
     return QStringList();
 #endif
@@ -3213,12 +3215,37 @@ void Project::functionCallResult( const QSharedPointer< AbstractRequest > &reque
     }
 }
 
-void Project::loadScriptResult( ScriptErrorType lastScriptError,
-                                const QString &lastScriptErrorString )
+bool Project::loadScriptSynchronous()
 {
+    Q_D( Project );
+    if ( isDebuggerRunning() ) {
+        return true;
+    }
+
+    d->debugger->loadScript( scriptText(), d->data() );
+
+    QEventLoop loop;
+    connect( d->debugger, SIGNAL(loadScriptResult(ScriptErrorType,QString,QStringList)),
+             &loop, SLOT(quit()) );
+    connect( d->debugger, SIGNAL(stopped(ScriptRunData)), &loop, SLOT(quit()) );
+    loop.exec();
+
+    return d->scriptState == ProjectPrivate::ScriptLoaded;
+}
+
+void Project::loadScriptResult( ScriptErrorType lastScriptError,
+                                const QString &lastScriptErrorString,
+                                const QStringList &globalFunctions )
+{
+    Q_D( Project );
     if ( lastScriptError != NoScriptError ) {
         // Emit an information message about the error (eg. a syntax error)
+        d->globalFunctions.clear();
+        d->scriptState = ProjectPrivate::ScriptNotLoaded;
         emit informationMessage( lastScriptErrorString, KMessageWidget::Error, 10000 );
+    } else {
+        d->globalFunctions = globalFunctions;
+        d->scriptState = ProjectPrivate::ScriptLoaded;
     }
 }
 
@@ -3486,7 +3513,6 @@ void Project::debugStopped( const ScriptRunData &scriptRunData )
     Q_D( Project );
     d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
                                                          << DebuggerActionGroup );
-    kDebug() << "STOPPED" << isDebuggerRunning();
 
     QString message = i18nc("@info Shown in project output, %1: Current time",
                             "<emphasis strong='1'>Execution finished</emphasis> (%1)",
@@ -3499,14 +3525,14 @@ void Project::debugStopped( const ScriptRunData &scriptRunData )
     }
     if ( scriptRunData.signalWaitingTime() > 0 || scriptRunData.asynchronousDownloadSize() > 0 ) {
         message.append( "<br />" );
-        message.append( i18nc("@info %1 is a formatted duration string, %2 a formateed byte size string",
+        message.append( i18nc("@info %1 is a formatted duration string, %2 a formatted byte size string",
                               "- %1 spent waiting for signals (%2 downloaded in asynchronous network requests)",
                               KGlobal::locale()->formatDuration(scriptRunData.signalWaitingTime()),
                               KGlobal::locale()->formatByteSize(scriptRunData.asynchronousDownloadSize())) );
     }
     if ( scriptRunData.synchronousDownloadTime() > 0 || scriptRunData.synchronousDownloadSize() > 0 ) {
         message.append( "<br />" );
-        message.append( i18nc("@info %1 is a formatted duration string, %2 a formateed byte size string",
+        message.append( i18nc("@info %1 is a formatted duration string, %2 a formatted byte size string",
                               "- %1 spent for synchronous downloads (%2 downloaded)",
                               KGlobal::locale()->formatDuration(scriptRunData.synchronousDownloadTime()),
                               KGlobal::locale()->formatByteSize(scriptRunData.synchronousDownloadSize())) );

@@ -170,6 +170,7 @@ protected:
 
     virtual void debuggerRun();
     bool loadScriptObjects();
+    QStringList globalFunctions() const { return m_globalFunctions; };
 
 private:
     QScriptProgram *m_script;
@@ -179,6 +180,7 @@ private:
     Scripting::Storage *const m_scriptStorage;
     Scripting::DataStreamPrototype *const m_dataStreamPrototype;
     const QMetaObject m_enums;
+    QStringList m_globalFunctions;
 };
 
 /**

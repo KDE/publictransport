@@ -416,9 +416,12 @@ signals:
      * @param returnValue The string returned by the console command.
      * @param error True, if there was an error while executing the console command (@p returnValue
      *   contains an error message in that case). False otherwise.
+     * @param globalFunctions A list of global functions used by the PublicTransport engine that
+     *   are implemented by the script.
      **/
     void loadScriptResult( ScriptErrorType lastScriptError,
-                           const QString &lastScriptErrorString );
+                           const QString &lastScriptErrorString,
+                           const QStringList &globalFunctions );
 
     /**
      * @brief An ExecuteConsoleCommandJob is done.

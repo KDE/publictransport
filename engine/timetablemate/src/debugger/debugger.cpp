@@ -556,11 +556,12 @@ void Debugger::loadScriptJobDone( ThreadWeaver::Job *job )
         m_lastScriptErrorString = m_loadScriptJob->explanation();
     }
 
+    const QStringList globalFunctions = m_loadScriptJob->globalFunctions();
     ThreadWeaver::DependencyPolicy::instance().free( m_loadScriptJob );
     delete m_loadScriptJob;
     m_loadScriptJob = 0;
 
-    emit loadScriptResult( m_lastScriptError, m_lastScriptErrorString );
+    emit loadScriptResult( m_lastScriptError, m_lastScriptErrorString, globalFunctions );
 }
 
 void Debugger::timetableDataRequestJobDone( ThreadWeaver::Job *job )

@@ -349,9 +349,7 @@ void ScriptTab::slotSetStatusBarText( const QString &message )
 
 void ScriptTab::toggleBreakpoint( int lineNumber )
 {
-    if ( !project()->isDebuggerRunning() ) {
-        project()->debugger()->loadScript( project()->scriptText(), project()->data() );
-    }
+    project()->loadScriptSynchronous();
 
     lineNumber = lineNumber == -1
             ? document()->views().first()->cursorPosition().line() + 1 : lineNumber;
@@ -404,10 +402,7 @@ void ScriptTab::markChanged( KTextEditor::Document *document, const KTextEditor:
                              KTextEditor::MarkInterface::MarkChangeAction action )
 {
     if ( mark.type == KTextEditor::MarkInterface::BreakpointActive ) {
-        if ( !project()->isDebuggerRunning() ) {
-            project()->debugger()->loadScript( project()->scriptText(), project()->data() );
-            QApplication::processEvents( QEventLoop::AllEvents, 1000 );
-        }
+        project()->loadScriptSynchronous();
 
         Debugger::BreakpointModel *breakpointModel = project()->debugger()->breakpointModel();
         if ( action == KTextEditor::MarkInterface::MarkAdded ) {

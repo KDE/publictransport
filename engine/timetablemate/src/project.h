@@ -682,6 +682,8 @@ public:
     /** @brief Get the script template text for @p templateType. */
     Q_INVOKABLE static QString scriptTemplateText(
             ScriptTemplateType templateType = DefaultScriptTemplate );
+
+    bool loadScriptSynchronous();
 #endif
 
     /**
@@ -718,7 +720,7 @@ public:
     Q_INVOKABLE QString savePathInfoString() const;
 
     /** @brief Get a list of all functions that are implemented in the script. */
-    Q_INVOKABLE QStringList scriptFunctions() const;
+    Q_INVOKABLE QStringList scriptFunctions();
 
     DepartureRequest getDepartureRequest( QWidget *parent = 0, bool* cancelled = 0 ) const;
     StopSuggestionRequest getStopSuggestionRequest( QWidget *parent = 0,
@@ -727,6 +729,7 @@ public:
 
     /** @brief Return the model for tests. */
     TestModel *testModel() const;
+
 
 signals:
     void nameChanged( const QString &newName );
@@ -945,7 +948,8 @@ protected slots:
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     void loadScriptResult( ScriptErrorType lastScriptError,
-                           const QString &lastScriptErrorString );
+                           const QString &lastScriptErrorString,
+                           const QStringList &globalFunctions );
     void functionCallResult( const QSharedPointer< AbstractRequest > &request,
                              bool success, const QString &explanation,
                              const QList< TimetableData > &timetableData,

@@ -177,9 +177,8 @@ void LoadScriptJob::debuggerRun()
     // Evaluate the script
     QScriptValue returnValue = engine->evaluate( script );
     const QString functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
-    QScriptValue function = engine->globalObject().property( functionName );
+    const QScriptValue function = engine->globalObject().property( functionName );
     m_engineMutex->unlockInline();
-
 
     if ( !function.isFunction() ) {
         ThreadWeaver::debug( 0, " - Load script ERROR: Did not find function %s\n",
@@ -188,6 +187,19 @@ void LoadScriptJob::debuggerRun()
         m_explanation = i18nc("@info/plain", "Did not find a '%1' function in the script.",
                               functionName);
         m_success = false;
+    }
+
+    const QStringList functions = QStringList()
+            << ServiceProviderScript::SCRIPT_FUNCTION_FEATURES
+            << ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE
+            << ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS
+            << ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS
+            << ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA;
+    foreach ( const QString &function, functions ) {
+        const QScriptValue value = engine->globalObject().property( function );
+        if ( value.isFunction() ) {
+            m_globalFunctions << function;
+        }
     }
 
     m_engineMutex->lockInline();
