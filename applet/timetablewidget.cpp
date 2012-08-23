@@ -1488,6 +1488,11 @@ TimetableWidget::TimetableWidget( Options options, QGraphicsItem* parent )
     setupActions();
 }
 
+TimetableWidget::~TimetableWidget()
+{
+    delete m_pixmapCache;
+}
+
 void TimetableWidget::setupActions()
 {
     PublicTransportWidget::setupActions();

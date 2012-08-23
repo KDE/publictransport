@@ -699,6 +699,7 @@ class TimetableWidget : public PublicTransportWidget
 
 public:
     TimetableWidget( Options options = DefaultOptions, QGraphicsItem* parent = 0 );
+    virtual ~TimetableWidget();
 
     void setTargetHidden( bool targetHidden ) { m_targetHidden = targetHidden; updateItemLayouts(); };
     bool isTargetHidden() const { return m_targetHidden; };
