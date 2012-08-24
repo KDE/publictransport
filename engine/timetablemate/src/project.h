@@ -58,6 +58,7 @@ class ServiceProviderData;
 struct AbstractRequest;
 struct DepartureRequest;
 struct StopSuggestionRequest;
+struct StopSuggestionFromGeoPositionRequest;
 struct JourneyRequest;
 
 namespace Debugger {
@@ -230,14 +231,17 @@ public:
         // RunActionGroup
         RunMenuAction, /**< A KMenuAction which contains the other RunXXX actions. */
         RunGetTimetable, /**< Run the getTimetable() script function, interrupt on exceptions. */
-        RunGetStopSuggestions, /**< Run the getStopSuggestions() script function, interrupt on
-                * exceptions. */
+        RunGetStopSuggestions, /**< Run the getStopSuggestions() script function, interrupt on exceptions. */
+        RunGetStopSuggestionsByGeoPosition, /**< Run the getStopSuggestions() script function
+                * with a geo position as argument, interrupt on exceptions. */
         RunGetJourneys, /**< Run the getJourneys() script function, interrupt on exceptions. */
 
         DebugMenuAction, /**< A KMenuAction which contains the other DebugXXX actions. */
         DebugGetTimetable, /**< Run the getTimetable() script function, interrupt at start. */
-        DebugGetStopSuggestions, /**< Run the getStopSuggestions() script function, interrupt
-                * at start. */
+        DebugGetStopSuggestions, /**< Run the getStopSuggestions() script function with a stop name
+                * part as argument, interrupt at start. */
+        DebugGetStopSuggestionsByGeoPosition, /**< Run the getStopSuggestions() script function
+                * with a geo position as argument, interrupt at start. */
         DebugGetJourneys, /**< Run the getJourneys() script function, interrupt at start. */
 #endif
 
@@ -723,8 +727,9 @@ public:
     Q_INVOKABLE QStringList scriptFunctions();
 
     DepartureRequest getDepartureRequest( QWidget *parent = 0, bool* cancelled = 0 ) const;
-    StopSuggestionRequest getStopSuggestionRequest( QWidget *parent = 0,
-                                                            bool* cancelled = 0 ) const;
+    StopSuggestionRequest getStopSuggestionRequest( QWidget *parent = 0, bool* cancelled = 0 ) const;
+    StopSuggestionFromGeoPositionRequest getStopSuggestionFromGeoPositionRequest(
+            QWidget *parent = 0, bool* cancelled = 0 ) const;
     JourneyRequest getJourneyRequest( QWidget *parent = 0, bool* cancelled = 0 ) const;
 
     /** @brief Return the model for tests. */
@@ -879,8 +884,11 @@ public slots:
     /** @brief Run the getTimetable() script function. */
     void runGetTimetable();
 
-    /** @brief Run the getStopSuggestions() script function. */
+    /** @brief Run the getStopSuggestions() script function with a stop name part as argument. */
     void runGetStopSuggestions();
+
+    /** @brief Run the getStopSuggestions() script function with a geo position as argument. */
+    void runGetStopSuggestionsByGeoPosition();
 
     /** @brief Run the getJourneys() script function. */
     void runGetJourneys();
@@ -890,6 +898,9 @@ public slots:
 
     /** @brief Run the getStopSuggestions() script function and interrupt at the first executed line. */
     void debugGetStopSuggestions();
+
+    /** @brief Run the getStopSuggestions() script function and interrupt at the first executed line. */
+    void debugGetStopSuggestionsByGeoPosition();
 
     /** @brief Run the getJourneys() script function and interrupt at the first executed line. */
     void debugGetJourneys();

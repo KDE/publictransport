@@ -3,6 +3,8 @@
 set_source_files_properties( ../../gtfs-realtime.pb.h ../../gtfs-realtime.pb.cc
                              PROPERTIES GENERATED TRUE )
 
+include_directories( /usr/include/marble )
+
 qt4_wrap_cpp( timetablemate_MOC_SRCS ../../enums.h )
 set( timetablemate_SRCS
    main.cpp
@@ -84,7 +86,7 @@ endif ( BUILD_PROVIDER_TYPE_GTFS )
 # if ( BUILD_MARBLE_MAP )
 #     message( "   - Build marble map" )
 # Always add Marble library for TimetableMate?
-    list ( APPEND LIBS marblewidget )
+    set ( LIBS ${LIBS} marblewidget )
 # endif ( BUILD_MARBLE_MAP )
 
 target_link_libraries( timetablemate ${LIBS} )

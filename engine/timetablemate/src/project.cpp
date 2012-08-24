@@ -73,6 +73,8 @@
 #include <KTextEditor/TemplateInterface>
 #include <KTextEditor/MarkInterface>
 #include <ThreadWeaver/WeaverInterface>
+#include <KDoubleNumInput>
+#include <marble/LatLonEdit.h>
 
 // Qt includes
 #include <QWidget>
@@ -889,10 +891,12 @@ public:
         case Project::RunMenuAction:
         case Project::RunGetTimetable:
         case Project::RunGetStopSuggestions:
+        case Project::RunGetStopSuggestionsByGeoPosition:
         case Project::RunGetJourneys:
         case Project::DebugMenuAction:
         case Project::DebugGetTimetable:
         case Project::DebugGetStopSuggestions:
+        case Project::DebugGetStopSuggestionsByGeoPosition:
         case Project::DebugGetJourneys:
 #endif
             // Only enabled if the debugger and the test are both currently not running
@@ -1050,6 +1054,19 @@ public:
         Q_Q( Project );
         bool cancelled = false;
         StopSuggestionRequest request = q->getStopSuggestionRequest( parentWidget(), &cancelled );
+        if ( !cancelled ) {
+            callScriptFunction( &request, debugMode );
+        }
+    };
+
+    // Call script function getStopSuggestions() in the given @p debugMode
+    void callGetStopSuggestionsByGeoPosition(
+            Debugger::DebugFlag debugMode = Debugger::InterruptOnExceptions )
+    {
+        Q_Q( Project );
+        bool cancelled = false;
+        StopSuggestionFromGeoPositionRequest request =
+                q->getStopSuggestionFromGeoPositionRequest( parentWidget(), &cancelled );
         if ( !cancelled ) {
             callScriptFunction( &request, debugMode );
         }
@@ -2049,6 +2066,8 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
         return "run_departures";
     case RunGetStopSuggestions:
         return "run_stop_suggestions";
+    case RunGetStopSuggestionsByGeoPosition:
+        return "run_stop_suggestions_geo_position";
     case RunGetJourneys:
         return "run_journeys";
 
@@ -2058,6 +2077,8 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
         return "debug_departures";
     case DebugGetStopSuggestions:
         return "debug_stop_suggestions";
+    case DebugGetStopSuggestionsByGeoPosition:
+        return "debug_stop_suggestions_geo_position";
     case DebugGetJourneys:
         return "debug_journeys";
 #endif
@@ -2412,6 +2433,10 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(runGetStopSuggestions()),
                                  flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
+    case RunGetStopSuggestionsByGeoPosition:
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(runGetStopSuggestionsByGeoPosition()),
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
+        break;
     case RunGetJourneys:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(runGetJourneys()),
                                  flags | ProjectPrivate::AutoUpdateEnabledState );
@@ -2423,6 +2448,10 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
         break;
     case DebugGetStopSuggestions:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(debugGetStopSuggestions()),
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
+        break;
+    case DebugGetStopSuggestionsByGeoPosition:
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(debugGetStopSuggestionsByGeoPosition()),
                                  flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case DebugGetJourneys:
@@ -2530,6 +2559,8 @@ QString Project::projectActionText( Project::ProjectAction actionType, const QVa
         return i18nc("@action", "Run get&Timetable()");
     case RunGetStopSuggestions:
         return i18nc("@action", "Run get&StopSuggestions()");
+    case RunGetStopSuggestionsByGeoPosition:
+        return i18nc("@action", "Run get&StopSuggestions(), Geo Position");
     case RunGetJourneys:
         return i18nc("@action", "Run get&Journeys()");
 
@@ -2539,6 +2570,8 @@ QString Project::projectActionText( Project::ProjectAction actionType, const QVa
         return i18nc("@action", "Debug get&Timetable()");
     case DebugGetStopSuggestions:
         return i18nc("@action", "Debug get&StopSuggestions()");
+    case DebugGetStopSuggestionsByGeoPosition:
+        return i18nc("@action", "Debug get&StopSuggestions(), Geo Position");
     case DebugGetJourneys:
         return i18nc("@action", "Debug get&Journeys()");
 #endif
@@ -2751,6 +2784,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         debugScript->setDelayed( false );
         debugScript->addAction( createProjectAction(Project::RunGetTimetable, parent) );
         debugScript->addAction( createProjectAction(Project::RunGetStopSuggestions, parent) );
+        debugScript->addAction( createProjectAction(Project::RunGetStopSuggestionsByGeoPosition, parent) );
         debugScript->addAction( createProjectAction(Project::RunGetJourneys, parent) );
         action = debugScript;
     } break;
@@ -2762,6 +2796,12 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
     case RunGetStopSuggestions:
         action = new KAction( KIcon("system-run"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getStopSuggestions()'") );
+        action->setEnabled( false );
+        break;
+    case RunGetStopSuggestionsByGeoPosition:
+        action = new KAction( KIcon("system-run"), text, parent );
+        action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getStopSuggestions()'"
+                                                   "with a geo position as argument") );
         action->setEnabled( false );
         break;
     case RunGetJourneys:
@@ -2776,6 +2816,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         debugScript->setDelayed( false );
         debugScript->addAction( createProjectAction(Project::DebugGetTimetable, parent) );
         debugScript->addAction( createProjectAction(Project::DebugGetStopSuggestions, parent) );
+        debugScript->addAction( createProjectAction(Project::DebugGetStopSuggestionsByGeoPosition, parent) );
         debugScript->addAction( createProjectAction(Project::DebugGetJourneys, parent) );
         action = debugScript;
     } break;
@@ -2789,6 +2830,12 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         action = new KAction( KIcon("debug-run"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getStopSuggestions()' "
                                                    "in a debugger") );
+        action->setEnabled( false );
+        break;
+    case DebugGetStopSuggestionsByGeoPosition:
+        action = new KAction( KIcon("debug-run"), text, parent );
+        action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getStopSuggestions()' "
+                                                   "in a debugger with a geo position as argument") );
         action->setEnabled( false );
         break;
     case DebugGetJourneys:
@@ -2970,10 +3017,12 @@ Project::ProjectActionGroup Project::actionGroupFromType( Project::ProjectAction
     case RunMenuAction:
     case RunGetTimetable:
     case RunGetStopSuggestions:
+    case RunGetStopSuggestionsByGeoPosition:
     case RunGetJourneys:
     case DebugMenuAction:
     case DebugGetTimetable:
     case DebugGetStopSuggestions:
+    case DebugGetStopSuggestionsByGeoPosition:
     case DebugGetJourneys:
         return RunActionGroup;
 #endif
@@ -3018,9 +3067,10 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
                     << StepOut << ToggleBreakpoint << RemoveAllBreakpoints;
         break;
     case RunActionGroup:
-        actionTypes << RunMenuAction << RunGetTimetable << RunGetStopSuggestions << RunGetJourneys
+        actionTypes << RunMenuAction << RunGetTimetable << RunGetStopSuggestions
+                    << RunGetStopSuggestionsByGeoPosition << RunGetJourneys
                     << DebugMenuAction << DebugGetTimetable << DebugGetStopSuggestions
-                    << DebugGetJourneys;
+                    << DebugGetStopSuggestionsByGeoPosition << DebugGetJourneys;
         break;
 #endif
 
@@ -3393,10 +3443,22 @@ void Project::runGetStopSuggestions()
     d->callGetStopSuggestions( Debugger::InterruptOnExceptions );
 }
 
+void Project::runGetStopSuggestionsByGeoPosition()
+{
+    Q_D( Project );
+    d->callGetStopSuggestionsByGeoPosition( Debugger::InterruptOnExceptions );
+}
+
 void Project::debugGetStopSuggestions()
 {
     Q_D( Project );
     d->callGetStopSuggestions( Debugger::InterruptAtStart );
+}
+
+void Project::debugGetStopSuggestionsByGeoPosition()
+{
+    Q_D( Project );
+    d->callGetStopSuggestionsByGeoPosition( Debugger::InterruptAtStart );
 }
 
 void Project::runGetJourneys()
@@ -3421,7 +3483,8 @@ DepartureRequest Project::getDepartureRequest( QWidget *parent, bool* cancelled 
     QWidget *w = new QWidget( dialog );
     QFormLayout *l = new QFormLayout( w );
     KLineEdit *city = 0;
-    KLineEdit *stop = new KLineEdit( w );
+    const QStringList stops = d->provider->data()->sampleStopNames();
+    KLineEdit *stop = new KLineEdit( stops.isEmpty() ? QString() : stops.first(), w );
     KComboBox *dataType = new KComboBox( w );
     KDateTimeWidget *dateTime = new KDateTimeWidget( QDateTime::currentDateTime(), w );
     dataType->addItem( i18nc("@info/plain", "Departures"), "departures" );
@@ -3480,18 +3543,53 @@ StopSuggestionRequest Project::getStopSuggestionRequest( QWidget *parent,
     dialog->setMainWidget( w );
     stop->setFocus();
 
-    StopSuggestionRequest info;
+    StopSuggestionRequest request;
     int result = dialog->exec();
     if ( result == KDialog::Accepted ) {
-        info.city = city ? city->text() : QString();
-        info.stop = stop->text();
+        request.city = city ? city->text() : QString();
+        request.stop = stop->text();
     }
     if ( cancelled ) {
         *cancelled = result != KDialog::Accepted;
     }
 
     delete dialog;
-    return info;
+    return request;
+}
+
+StopSuggestionFromGeoPositionRequest Project::getStopSuggestionFromGeoPositionRequest(
+        QWidget *parent, bool *cancelled ) const
+{
+    Q_D( const Project );
+    parent = d->parentWidget( parent );
+
+    QPointer<KDialog> dialog = new KDialog( parent );
+    QWidget *w = new QWidget( dialog );
+    QFormLayout *l = new QFormLayout( w );
+    Marble::LatLonEdit *longitude = new Marble::LatLonEdit( w, Marble::Longitude );
+    Marble::LatLonEdit *latitude = new Marble::LatLonEdit( w, Marble::Latitude );
+    KIntSpinBox *distance = new KIntSpinBox( 500, 50000, 1, 5000, w );
+    longitude->setValue( d->provider->data()->sampleLongitude() );
+    latitude->setValue( d->provider->data()->sampleLatitude() );
+    l->addRow( i18nc("@info", "Longitude:"), longitude );
+    l->addRow( i18nc("@info", "Latitude:"), latitude );
+    l->addRow( i18nc("@info", "Distance:"), distance );
+    dialog->setMainWidget( w );
+    longitude->setFocus();
+
+    StopSuggestionFromGeoPositionRequest request;
+    int result = dialog->exec();
+    if ( result == KDialog::Accepted ) {
+        request.longitude = longitude->value();
+        request.latitude = latitude->value();
+        request.distance = distance->value();
+    }
+    if ( cancelled ) {
+        *cancelled = result != KDialog::Accepted;
+    }
+
+    delete dialog;
+    return request;
 }
 
 JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) const
@@ -3502,8 +3600,9 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
     QWidget *w = new QWidget( dialog );
     QFormLayout *l = new QFormLayout( w );
     KLineEdit *city = 0;
-    KLineEdit *originStop = new KLineEdit( w );
-    KLineEdit *targetStop = new KLineEdit( w );
+    const QStringList stops = d->provider->data()->sampleStopNames();
+    KLineEdit *originStop = new KLineEdit( stops.isEmpty() ? QString() : stops.first(), w );
+    KLineEdit *targetStop = new KLineEdit( stops.count() < 2 ? QString() : stops[1], w );
     KComboBox *dataType = new KComboBox( w );
     KDateTimeWidget *dateTime = new KDateTimeWidget( QDateTime::currentDateTime(), w );
     dataType->addItem( i18nc("@info/plain", "Departing at Given Time"), "dep" );
@@ -3529,14 +3628,14 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
     }
     originStop->setFocus();
 
-    JourneyRequest info;
+    JourneyRequest request;
     int result = dialog->exec();
     if ( result == KDialog::Accepted ) {
-        info.city = city ? city->text() : QString();
-        info.stop = originStop->text();
-        info.targetStop = targetStop->text();
-        info.dateTime = dateTime->dateTime();
-        info.parseMode = dataType->itemData( dataType->currentIndex() ).toString()
+        request.city = city ? city->text() : QString();
+        request.stop = originStop->text();
+        request.targetStop = targetStop->text();
+        request.dateTime = dateTime->dateTime();
+        request.parseMode = dataType->itemData( dataType->currentIndex() ).toString()
                 == QLatin1String("arr") ? ParseForJourneysByArrivalTime
                                         : ParseForJourneysByDepartureTime;
     }
@@ -3545,7 +3644,7 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
     }
 
     delete dialog;
-    return info;
+    return request;
 }
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
