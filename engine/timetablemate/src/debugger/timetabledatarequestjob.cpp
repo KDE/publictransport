@@ -679,6 +679,15 @@ bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request
                           "Target and at least a departure time (better also a date)", i),
                     TimetableDataRequestMessage::Error );
         }
+
+        m_additionalMessages << TimetableDataRequestMessage(
+                QString("%1: %2 (%3, %4), %5").arg(i + 1)
+                .arg(timetableData[Enums::TransportLine].toString())
+                .arg(Enums::toString(static_cast<Enums::VehicleType>(timetableData[Enums::TypeOfVehicle].toInt())))
+                .arg(timetableData[Enums::DepartureDateTime].toDateTime().time().toString(Qt::DefaultLocaleShortDate))
+                .arg(timetableData[Enums::Target].toString()),
+                isValid ? TimetableDataRequestMessage::Information
+                        : TimetableDataRequestMessage::Warning );
     }
 
     bool success = true;
@@ -959,6 +968,16 @@ bool TimetableDataRequestJob::testJourneyData( const JourneyRequest *request )
         if ( !isValid ) {
             ++countInvalid;
         }
+
+        m_additionalMessages << TimetableDataRequestMessage(
+                QString("%1: %2 (%3) - %4 (%5), %6 route stops").arg(i + 1)
+                .arg(timetableData[Enums::StartStopName].toString())
+                .arg(timetableData[Enums::DepartureDateTime].toDateTime().time().toString(Qt::DefaultLocaleShortDate))
+                .arg(timetableData[Enums::TargetStopName].toString())
+                .arg(timetableData[Enums::ArrivalDateTime].toDateTime().time().toString(Qt::DefaultLocaleShortDate))
+                .arg(timetableData[Enums::RouteStops].toStringList().count()),
+                isValid ? TimetableDataRequestMessage::Information
+                        : TimetableDataRequestMessage::Error );
     }
 
     bool success = true;
