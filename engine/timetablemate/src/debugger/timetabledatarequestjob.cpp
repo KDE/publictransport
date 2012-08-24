@@ -82,6 +82,9 @@ TimetableDataRequestJob::TimetableDataRequestJob( DebuggerAgent *debugger,
     case ParseForArrivals:
         m_functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
         break;
+    case ParseForAdditionalData:
+        m_functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA;
+        break;
     case ParseForJourneysByDepartureTime:
     case ParseForJourneysByArrivalTime:
         m_functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS;
@@ -133,9 +136,9 @@ QScriptValueList TimetableDataRequestJob::createArgumentScriptValues() const
     return QScriptValueList() << m_request->toScriptValue( m_debugger->engine() );
 }
 
-void TimetableDataRequestJob::finish( Scripting::ResultObject *result )
+void TimetableDataRequestJob::finish( const QList<TimetableData> &data )
 {
-    m_timetableData = result->data();
+    m_timetableData = data;
 }
 
 CallScriptFunctionJob::~CallScriptFunctionJob()
@@ -389,7 +392,18 @@ void CallScriptFunctionJob::debuggerRun()
 
     m_mutex->lockInline();
     m_returnValue = returnValue;
-    finish( scriptResult );
+    if ( functionName == ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA ) {
+        const QVariantMap map = m_returnValue.toVariant().toMap();
+        TimetableData data;
+        for ( QVariantMap::ConstIterator it = map.constBegin(); it != map.constEnd(); ++it ) {
+            data[ Global::timetableInformationFromString(it.key()) ] = it.value();
+        }
+        if ( !data.isEmpty() ) {
+            finish( QList<TimetableData>() << data );
+        }
+    } else {
+        finish( scriptResult->data() );
+    }
     m_mutex->unlockInline();
 
     // Mark job as done for Debugger to know that the script is not waiting for a signal
@@ -512,10 +526,22 @@ bool TimetableDataRequestJob::testResults()
         return testStopSuggestionData( stopSuggestionRequest );
     }
 
+    const StopSuggestionFromGeoPositionRequest *stopSuggestionFromGeoPositionRequest =
+            dynamic_cast< const StopSuggestionFromGeoPositionRequest* >( m_request );
+    if ( stopSuggestionFromGeoPositionRequest ) {
+        return testStopSuggestionData( stopSuggestionFromGeoPositionRequest );
+    }
+
     const JourneyRequest *journeyRequest =
             dynamic_cast< const JourneyRequest* >( m_request );
     if ( journeyRequest ) {
         return testJourneyData( journeyRequest );
+    }
+
+    const AdditionalDataRequest *additinalDataRequest =
+            dynamic_cast< const AdditionalDataRequest* >( m_request );
+    if ( additinalDataRequest ) {
+        return testAdditionalData( additinalDataRequest );
     }
 
     return false;
@@ -545,6 +571,40 @@ TimetableDataRequestMessage CallScriptFunctionJob::message( MessageType messageT
     }
 
     return TimetableDataRequestMessage( msg, type, fileName, lineNumber );
+}
+
+bool TimetableDataRequestJob::testAdditionalData( const AdditionalDataRequest *request )
+{
+    if ( m_timetableData.isEmpty() ) {
+        m_explanation = i18nc("@info/plain", "No additional data found");
+        return false;
+    }
+
+    const TimetableData timetableData = m_timetableData.first();
+    for ( TimetableData::ConstIterator it = timetableData.constBegin();
+          it != timetableData.constEnd(); ++it )
+    {
+        const bool isValid = Global::checkTimetableInformation( it.key(), it.value() );
+        QString info;
+        if ( it->canConvert(QVariant::List) ) {
+            const QVariantList list = it->toList();
+            QStringList elements;
+            foreach ( const QVariant &item, list ) {
+                elements << item.toString();
+            }
+            info = "[" + elements.join(", ") + "]";
+        } else {
+            info = it->toString();
+        }
+        m_additionalMessages << TimetableDataRequestMessage(
+                QString("%1%2: %3")
+                .arg(Global::timetableInformationToString(it.key()))
+                .arg(isValid ? QString() : (' ' + i18nc("@info/plain", "(invalid)")))
+                .arg(info),
+                isValid ? TimetableDataRequestMessage::Information
+                        : TimetableDataRequestMessage::Warning );
+    }
+    return true;
 }
 
 bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request )
@@ -774,6 +834,12 @@ bool TimetableDataRequestJob::testStopSuggestionData(
         }
         if ( timetableData.contains(Enums::StopCity) ) {
             info += ", city: " + timetableData[Enums::StopCity].toString();
+        }
+        if ( timetableData.contains(Enums::StopLongitude) ) {
+            info += ", longitude: " + timetableData[Enums::StopLongitude].toString();
+        }
+        if ( timetableData.contains(Enums::StopLatitude) ) {
+            info += ", latitude: " + timetableData[Enums::StopLatitude].toString();
         }
         m_additionalMessages << TimetableDataRequestMessage(
                 QString("%1%2: %3").arg(i)

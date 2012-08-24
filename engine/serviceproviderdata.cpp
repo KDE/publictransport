@@ -56,6 +56,7 @@ ServiceProviderData::ServiceProviderData( const Enums::ServiceProviderType& type
     m_onlyUseCitiesInList = false;
     m_defaultVehicleType = Enums::UnknownVehicleType;
     m_minFetchWait = 0;
+    m_sampleLongitude = m_sampleLatitude = 0.0;
 
     qRegisterMetaType< Enums::ServiceProviderType >( "Enums::ServiceProviderType" );
 }
@@ -88,6 +89,7 @@ ServiceProviderData::ServiceProviderData( const Enums::ServiceProviderType &type
     m_changelog = changelog;
     m_cities = cities;
     m_hashCityNameToValue = cityNameToValueReplacementHash;
+    m_sampleLongitude = m_sampleLatitude = 0.0;
 }
 
 ServiceProviderData::ServiceProviderData( const ServiceProviderData &data, QObject *parent )
@@ -128,6 +130,8 @@ ServiceProviderData &ServiceProviderData::operator=( const ServiceProviderData &
     m_fallbackCharset = data.m_fallbackCharset;
     m_sampleStopNames = data.m_sampleStopNames;
     m_sampleCity = data.m_sampleCity;
+    m_sampleLongitude = data.m_sampleLongitude;
+    m_sampleLatitude = data.m_sampleLatitude;
     m_notes = data.m_notes;
 
     // For ScriptedProvider
@@ -169,6 +173,8 @@ bool ServiceProviderData::operator ==( const ServiceProviderData &data ) const
            m_fallbackCharset == data.m_fallbackCharset &&
            m_sampleStopNames == data.m_sampleStopNames &&
            m_sampleCity == data.m_sampleCity &&
+           m_sampleLongitude == data.m_sampleLongitude &&
+           m_sampleLatitude == data.m_sampleLatitude &&
            m_notes == data.m_notes &&
 
            // For ScriptedProvider

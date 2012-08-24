@@ -262,6 +262,10 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     ui_provider->defaultVehicleType->addItem(
         KIcon( "vehicle_type_plane" ), i18nc( "@item:listbox", "Plane" ), "Plane" );
 
+    // Initialize Marble::LatLonEdit widgets
+    ui_provider->sampleLongitude->setDimension( Marble::Longitude );
+    ui_provider->sampleLatitude->setDimension( Marble::Latitude );
+
     providerTypeChanged( ui_provider->type->currentIndex() );
     connect( ui_provider->type, SIGNAL(currentIndexChanged(int)),
              this, SLOT(providerTypeChanged(int)) );
@@ -301,6 +305,8 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     connect( ui_provider->predefinedCities, SIGNAL(changed()), m_mapper, SLOT(map()) );
     connect( ui_provider->sampleStopNames, SIGNAL(changed()), m_mapper, SLOT(map()) );
     connect( ui_provider->sampleCity, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->sampleLongitude, SIGNAL(valueChanged(qreal)), m_mapper, SLOT(map()) );
+    connect( ui_provider->sampleLatitude, SIGNAL(valueChanged(qreal)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(added(QWidget*)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(removed(QWidget*,int)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(changed()), m_mapper, SLOT(map()) );
@@ -322,6 +328,8 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     m_mapper->setMapping( ui_provider->predefinedCities, ui_provider->predefinedCities );
     m_mapper->setMapping( ui_provider->sampleStopNames, ui_provider->sampleStopNames );
     m_mapper->setMapping( ui_provider->sampleCity, ui_provider->sampleCity );
+    m_mapper->setMapping( ui_provider->sampleLongitude, ui_provider->sampleLongitude );
+    m_mapper->setMapping( ui_provider->sampleLatitude, ui_provider->sampleLatitude );
     m_mapper->setMapping( m_changelog, m_changelog );
     connect( m_mapper, SIGNAL(mapped(QWidget*)), this, SLOT(slotChanged(QWidget*)) );
 }
@@ -595,6 +603,8 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     m_providerData->setCityNameToValueReplacementHash( cityNameReplacements );
     m_providerData->setSampleCity( ui_provider->sampleCity->text() );
     m_providerData->setSampleStops( ui_provider->sampleStopNames->items() );
+    m_providerData->setSampleCoordinates( ui_provider->sampleLongitude->value(),
+                                          ui_provider->sampleLatitude->value() );
     m_providerData->setNotes( ui_provider->notes->textOrHtml() );
     switch ( providerType ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -936,6 +946,8 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *data,
 
     ui_provider->sampleStopNames->setItems( data->sampleStopNames() );
     ui_provider->sampleCity->setText( data->sampleCity() );
+    ui_provider->sampleLongitude->setValue( data->sampleLongitude() );
+    ui_provider->sampleLatitude->setValue( data->sampleLatitude() );
 
     ui_provider->notes->setText( data->notes() );
 

@@ -74,7 +74,9 @@ void TestModel::removeTestChildren( TestModel::Test test )
 
 void TestModel::addTestResult( TestModel::Test test, TestState state, const QString &explanation,
                                const QString &tooltip, QAction *solution,
-                               const QList< TimetableDataRequestMessage > &childrenExplanations )
+                               const QList< TimetableDataRequestMessage > &childrenExplanations,
+                               const QList< TimetableData > &results,
+                               const QSharedPointer<AbstractRequest> &request )
 {
     const QModelIndex testIndex = indexFromTest( test );
     removeTestChildren( test );
@@ -101,10 +103,12 @@ void TestModel::addTestResult( TestModel::Test test, TestState state, const QStr
     }
 
     if ( childrenExplanations.isEmpty() ) {
-        m_testData[ test ] = TestData( state, explanation, tooltip, solution, childrenExplanations );
+        m_testData[ test ] = TestData( state, explanation, tooltip, solution,
+                                       childrenExplanations, results, request );
     } else {
         beginInsertRows( testIndex, 0, childrenExplanations.count() - 1 );
-        m_testData[ test ] = TestData( state, explanation, tooltip, solution, childrenExplanations );
+        m_testData[ test ] = TestData( state, explanation, tooltip, solution,
+                                       childrenExplanations, results, request );
         endInsertRows();
     }
 
@@ -680,6 +684,16 @@ TestModel::TestState TestModel::testState( TestModel::Test test ) const
     return m_testData.contains(test) ? m_testData[test].state : TestNotStarted;
 }
 
+QList< TimetableData > TestModel::testResults( TestModel::Test test ) const
+{
+    return m_testData.contains(test) ? m_testData[test].results : QList< TimetableData >();
+}
+
+QSharedPointer<AbstractRequest> TestModel::testRequest( TestModel::Test test ) const
+{
+    return m_testData.contains(test) ? m_testData[test].request : QSharedPointer<AbstractRequest>();
+}
+
 QList< TestModel::Test > TestModel::testsOfTestCase( TestModel::TestCase testCase )
 {
     QList< TestModel::Test > tests;
@@ -694,8 +708,9 @@ QList< TestModel::Test > TestModel::testsOfTestCase( TestModel::TestCase testCas
         break;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptExecutionTestCase:
-        tests << DepartureTest << ArrivalTest << StopSuggestionTest << JourneyTest
-              << FeaturesTest;
+        tests << DepartureTest << ArrivalTest << AdditionalDataTest
+              << StopSuggestionTest << StopSuggestionFromGeoPositionTest
+              << JourneyTest << FeaturesTest;
         break;
 #endif
     default:
@@ -724,7 +739,9 @@ TestModel::TestCase TestModel::testCaseOfTest( TestModel::Test test )
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case DepartureTest:
     case ArrivalTest:
+    case AdditionalDataTest:
     case StopSuggestionTest:
+    case StopSuggestionFromGeoPositionTest:
     case JourneyTest:
     case FeaturesTest:
         return ScriptExecutionTestCase;
@@ -733,6 +750,36 @@ TestModel::TestCase TestModel::testCaseOfTest( TestModel::Test test )
     default:
         kDebug() << "Unknown test" << test;
         return InvalidTestCase;
+    }
+}
+
+QList< TestModel::Test > TestModel::testIsDependedOf( TestModel::Test test )
+{
+    switch ( test ) {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    case AdditionalDataTest:
+        return QList< TestModel::Test >() << DepartureTest;
+
+    case DepartureTest:
+    case ArrivalTest:
+    case StopSuggestionTest:
+    case StopSuggestionFromGeoPositionTest:
+    case JourneyTest:
+    case FeaturesTest:
+#endif
+
+    case ServiceProviderDataNameTest:
+    case ServiceProviderDataVersionTest:
+    case ServiceProviderDataFileFormatVersionTest:
+    case ServiceProviderDataAuthorNameTest:
+    case ServiceProviderDataShortAuthorNameTest:
+    case ServiceProviderDataEmailTest:
+    case ServiceProviderDataUrlTest:
+    case ServiceProviderDataShortUrlTest:
+    case ServiceProviderDataScriptFileNameTest:
+    case ServiceProviderDataDescriptionTest:
+    default:
+        return QList< TestModel::Test >();
     }
 }
 
@@ -780,8 +827,12 @@ QString TestModel::nameForTest( TestModel::Test test )
         return i18nc("@info/plain", "Departure Test" );
     case ArrivalTest:
         return i18nc("@info/plain", "Arrival Test" );
+    case AdditionalDataTest:
+        return i18nc("@info/plain", "Additional Data Test" );
     case StopSuggestionTest:
         return i18nc("@info/plain", "Stop Suggestion Test" );
+    case StopSuggestionFromGeoPositionTest:
+        return i18nc("@info/plain", "Stop Suggestion From Geo Position Test" );
     case JourneyTest:
         return i18nc("@info/plain", "Journey Test" );
     case FeaturesTest:
@@ -839,8 +890,16 @@ QString TestModel::descriptionForTest( TestModel::Test test )
     case ArrivalTest:
         return i18nc("@info/plain", "Runs the %1() script function and tests collected arrival data",
                      ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE );
+    case AdditionalDataTest:
+        return i18nc("@info/plain", "Runs the %1() script function and tests collected additional data",
+                     ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA );
     case StopSuggestionTest:
-        return i18nc("@info/plain", "Runs the %1() script function and tests collected stop suggestions",
+        return i18nc("@info/plain", "Runs the %1() script function with a stop name part as argument "
+                                    "and tests collected stop suggestions",
+                     ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS );
+    case StopSuggestionFromGeoPositionTest:
+        return i18nc("@info/plain", "Runs the %1() script function with a geo position as argument "
+                                    "and tests collected stop suggestions",
                      ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS );
     case JourneyTest:
         return i18nc("@info/plain", "Runs the %1() script function and tests collected journey data",

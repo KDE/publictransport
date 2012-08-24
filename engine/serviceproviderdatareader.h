@@ -121,7 +121,8 @@ private:
     void readAuthor( QString *fullname, QString *shortName, QString *email, QString *comments = 0 );
     void readCities( QStringList *cities, QHash<QString, QString> *cityNameReplacements,
                      QString *comments = 0 );
-    void readSamples( QStringList *stops, QString *city, QString *comments = 0 );
+    void readSamples( QStringList *stops, QString *city, qreal *longitude, qreal *latitude,
+                      QString *comments = 0 );
     QList<ChangelogEntry> readChangelog( QString *comments = 0 );
     QString readStartElementString() const;
     void addComments( QString *comments, const QString &newComments, bool newLine = true );

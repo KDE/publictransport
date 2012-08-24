@@ -80,6 +80,8 @@ class ServiceProviderData : public QObject {
     Q_PROPERTY( QString fileName READ fileName CONSTANT )
     Q_PROPERTY( QStringList sampleStopNames READ sampleStopNames CONSTANT )
     Q_PROPERTY( QString sampleCity READ sampleCity CONSTANT )
+    Q_PROPERTY( qreal sampleLongitude READ sampleLongitude CONSTANT )
+    Q_PROPERTY( qreal sampleLatitude READ sampleLatitude CONSTANT )
     Q_PROPERTY( QList<ChangelogEntry> changelog READ changelog CONSTANT )
     Q_PROPERTY( QString lastChangelogAuthor READ lastChangelogAuthor CONSTANT )
     Q_PROPERTY( QString lastChangelogVersion READ lastChangelogVersion CONSTANT )
@@ -209,6 +211,11 @@ public:
 
     QStringList sampleStopNames() const { return m_sampleStopNames; };
     QString sampleCity() const { return m_sampleCity; };
+    qreal sampleLongitude() const { return m_sampleLongitude; };
+    qreal sampleLatitude() const { return m_sampleLatitude; };
+    bool hasSampleCoordinates() const {
+        return !qFuzzyIsNull(m_sampleLongitude) && !qFuzzyIsNull(m_sampleLatitude);
+    };
 
     /** @brief Wheather or not the service provider needs a separate city value. */
     bool useSeparateCityValue() const { return m_useSeparateCityValue; };
@@ -470,6 +477,10 @@ public:
     void setSampleStops( const QStringList &sampleStopNames )
             { m_sampleStopNames = sampleStopNames; }; // For journeys at least two stop names are required
     void setSampleCity( const QString &sampleCity ) { m_sampleCity = sampleCity; };
+    void setSampleCoordinates( qreal longitude, qreal latitude ) {
+        m_sampleLongitude = longitude;
+        m_sampleLatitude = latitude;
+    };
 
     void setNotes( const QString &notes ) { m_notes = notes; };
 
@@ -536,6 +547,8 @@ protected:
     // Sample data, used to test service provider plugins
     QStringList m_sampleStopNames; // For journeys at least two stop names are required
     QString m_sampleCity;
+    qreal m_sampleLongitude;
+    qreal m_sampleLatitude;
 
     QString m_notes;
 };

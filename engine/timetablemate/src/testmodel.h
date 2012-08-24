@@ -22,12 +22,16 @@
 
 #include "config.h"
 
+// PublicTransport engine includes
+#include <engine/enums.h>
+
 // KDE includes
 #include <KWidgetItemDelegate>
 
 // Qt inlcudes
 #include <QAbstractItemModel>
 
+class AbstractRequest;
 class QAction;
 
 Q_DECLARE_METATYPE( QAction* );
@@ -124,9 +128,13 @@ public:
         ArrivalTest, /**< Tests for an implemented getTimetable() function and for valid
                 * arrival results. */
         StopSuggestionTest, /**< Tests for an implemented getStopSuggestions() function and
-                * for valid stop suggestion results. */
+                * for valid stop suggestion results for a request by string. */
+        StopSuggestionFromGeoPositionTest, /**< Tests for an implemented getStopSuggestions()
+                * function and for valid stop suggestion results for a request by geo position. */
         JourneyTest, /**< Tests for an implemented getJourneys() function and for valid
                 * journey results. */
+        AdditionalDataTest, /**< Tests for an implemented getAdditionalData() function and for
+                * valid results. */
         FeaturesTest, /**< Tests for an implemented features() function and for valid results. */
 #endif
 
@@ -183,7 +191,10 @@ public:
     void addTestResult( Test test, TestState state, const QString &explanation = QString(),
                         const QString &tooltip = QString(), QAction *solution = 0,
                         const QList< TimetableDataRequestMessage > &childrenExplanations =
-                                QList< TimetableDataRequestMessage >() );
+                                QList< TimetableDataRequestMessage >(),
+                        const QList< TimetableData > &results = QList< TimetableData >(),
+                        const QSharedPointer<AbstractRequest> &request =
+                                QSharedPointer<AbstractRequest>() );
 
     /** @brief Get the QModelIndex for @p testCase. */
     Q_INVOKABLE QModelIndex indexFromTestCase( TestCase testCase, int column = 0 ) const;
@@ -206,6 +217,15 @@ public:
      **/
     Q_INVOKABLE TestState testState( Test test ) const;
 
+    inline bool isTestFinished( Test test ) const {
+        const TestState state = testState( test );
+        return state == TestFinishedSuccessfully || state == TestFinishedWithErrors ||
+               state == TestFinishedWithWarnings;
+    };
+
+    QList< TimetableData > testResults( Test test ) const;
+    QSharedPointer<AbstractRequest> testRequest( Test test ) const;
+
     /**
      * @brief Whether or not there are erroneous tests.
      * Uses testCaseState() for all available test cases to check for errors.
@@ -217,6 +237,8 @@ public:
 
     /** @brief Get the test case to which @p test belongs. */
     Q_INVOKABLE static TestCase testCaseOfTest( Test test );
+
+    Q_INVOKABLE static QList< Test > testIsDependedOf( Test test );
 
     inline static TestState testStateFromBool( bool success ) {
            return success ? TestFinishedSuccessfully : TestFinishedWithErrors; };
@@ -252,12 +274,17 @@ private:
                   const QString &explanation = QString(),
                   const QString &tooltip = QString(), QAction *solution = 0,
                   const QList< TimetableDataRequestMessage > &childrenExplanations =
-                        QList< TimetableDataRequestMessage >() )
+                        QList< TimetableDataRequestMessage >(),
+                  const QList< TimetableData > &results = QList< TimetableData >(),
+                  const QSharedPointer<AbstractRequest> &request =
+                        QSharedPointer<AbstractRequest>() )
                 : TestCaseData(explanation, tooltip, solution), state(state),
-                  childrenExplanations(childrenExplanations) {};
+                  childrenExplanations(childrenExplanations), results(results), request(request) {};
 
         TestState state;
         QList< TimetableDataRequestMessage > childrenExplanations;
+        QList< TimetableData > results;
+        QSharedPointer<AbstractRequest> request;
 
         inline bool isNotStarted() const { return state == TestNotStarted; };
         inline bool isRunning() const { return state == TestIsRunning; };

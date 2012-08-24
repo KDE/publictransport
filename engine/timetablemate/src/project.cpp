@@ -1145,6 +1145,27 @@ public:
         endTesting();
     };
 
+    bool testForCoordinatesSampleData()
+    {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        Q_Q( Project );
+        const ServiceProviderData *data = provider->data();
+        if ( !data->hasSampleCoordinates() ) {
+            testModel->addTestResult( TestModel::StopSuggestionFromGeoPositionTest,
+                    TestModel::TestCouldNotBeStarted,
+                    i18nc("@info/plain", "Missing sample coordinates"),
+                    i18nc("@info", "<title>Missing sample stop coordinates</title> "
+                        "<para>Cannot run script execution tests for stop suggestions by geo "
+                        "position. Open the project settings and add one or more "
+                        "<interface>Sample Stop Coordinates</interface></para>"),
+                    q->projectAction(Project::ShowProjectSettings) );
+            return false;
+        }
+#endif
+
+        return true;
+    };
+
     bool testForSampleData()
     {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -1196,6 +1217,16 @@ public:
     {
         Q_Q( Project );
 
+        const QList< TestModel::Test > requiredTests = TestModel::testIsDependedOf( test );
+        foreach ( TestModel::Test requiredTest, requiredTests ) {
+            if ( !testModel->isTestFinished(requiredTest) ) {
+                // A required test is not finished, add it to the dependend test list
+                // and start it when all required tests are done
+                dependendTests << test;
+                return false;
+            }
+        }
+
         // Test if enough sample data is available
         // and get the name of the script function to run
         QString function, message, shortMessage;
@@ -1212,8 +1243,21 @@ public:
                             "currently not accepted by the data engine, but that may change."
                             "</para>", function);
             break;
-        case TestModel::StopSuggestionTest:
+        case TestModel::AdditionalDataTest:
             if ( !testForSampleData() ) {
+                return false;
+            }
+            function = ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA;
+            shortMessage = i18nc("@info/plain", "'%1' script function not implemented", function);
+            message = i18nc("@info", "<title>You can implement a '%1' script function</title> "
+                            "<para>This can be used to load additional data for single departures "
+                            "or arrivals.</para>", function);
+            break;
+        case TestModel::StopSuggestionTest:
+        case TestModel::StopSuggestionFromGeoPositionTest:
+            if ( test == TestModel::StopSuggestionTest ? !testForSampleData()
+                                                       : !testForCoordinatesSampleData() )
+            {
                 return false;
             }
             function = ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
@@ -1287,9 +1331,53 @@ public:
                             data->sampleStopNames().first(), QDateTime::currentDateTime(),
                             testItemCount, data->sampleCity() );
                     break;
+                case TestModel::AdditionalDataTest: {
+                    if ( !testModel->isTestFinished(TestModel::DepartureTest) ) {
+                        bool departureTestIsEnqueued =
+                                testModel->testState(TestModel::DepartureTest) == TestModel::TestIsRunning;
+                        if ( !departureTestIsEnqueued ) {
+                            foreach ( ThreadWeaver::Job *testJob, pendingTests ) {
+                                TimetableDataRequestJob *requestJob =
+                                        qobject_cast<TimetableDataRequestJob*>(testJob);
+                                if ( requestJob &&
+                                     requestJob->request()->parseMode == ParseForDepartures )
+                                {
+                                    departureTestIsEnqueued = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if ( !departureTestIsEnqueued ) {
+                            kWarning() << "First start the departure test";
+                            return false;
+                        }
+                    }
+
+                    const QList< TimetableData > results =
+                            testModel->testResults( TestModel::DepartureTest );
+                    if ( results.isEmpty() ) {
+                        kWarning() << "No results in departure test";
+                        return false;
+                    }
+
+                    QSharedPointer< AbstractRequest > departureRequest =
+                            testModel->testRequest( TestModel::DepartureTest );
+                    const TimetableData result = results.first();
+                    request = new AdditionalDataRequest( "TEST_ADDITIONAL_DATA",
+                            0, departureRequest->stop,
+                            result[Enums::DepartureDateTime].toDateTime(),
+                            result[Enums::TransportLine].toString(),
+                            result[Enums::Target].toString(), departureRequest->city );
+                }   break;
                 case TestModel::StopSuggestionTest:
                     request = new StopSuggestionRequest( "TEST_STOP_SUGGESTIONS",
                             data->sampleStopNames().first().left(4), testItemCount, data->sampleCity() );
+                    break;
+                case TestModel::StopSuggestionFromGeoPositionTest:
+                    request = new StopSuggestionFromGeoPositionRequest(
+                            "TEST_STOP_SUGGESTIONS_FROMGEOPOSITION",
+                            data->sampleLongitude(), data->sampleLatitude(), testItemCount );
                     break;
                 case TestModel::JourneyTest:
                     request = new JourneyRequest( "TEST_JOURNEYS",
@@ -1632,6 +1720,7 @@ public:
     TestModel *testModel;
     TestState testState;
     QList< ThreadWeaver::Job* > pendingTests;
+    QList< TestModel::Test > dependendTests;
 
     // Collects output/console text for the project
     QString output;
@@ -3111,8 +3200,12 @@ void Project::testJobStarted( ThreadWeaver::Job *job )
                 test = TestModel::DepartureTest;
             } else if ( sourceName == QLatin1String("TEST_ARRIVALS") ) {
                 test = TestModel::ArrivalTest;
+            } else if ( sourceName == QLatin1String("TEST_ADDITIONAL_DATA") ) {
+                test = TestModel::AdditionalDataTest;
             } else if ( sourceName == QLatin1String("TEST_STOP_SUGGESTIONS") ) {
                 test = TestModel::StopSuggestionTest;
+            } else if ( sourceName == QLatin1String("TEST_STOP_SUGGESTIONS_FROMGEOPOSITION") ) {
+                test = TestModel::StopSuggestionFromGeoPositionTest;
             } else if ( sourceName == QLatin1String("TEST_JOURNEYS") ) {
                 test = TestModel::JourneyTest;
             } else if ( sourceName == QLatin1String("TEST_FEATURES") ) {
@@ -3150,8 +3243,12 @@ void Project::testJobDone( ThreadWeaver::Job *job )
                 test = TestModel::DepartureTest;
             } else if ( sourceName == QLatin1String("TEST_ARRIVALS") ) {
                 test = TestModel::ArrivalTest;
+            } else if ( sourceName == QLatin1String("TEST_ADDITIONAL_DATA") ) {
+                test = TestModel::AdditionalDataTest;
             } else if ( sourceName == QLatin1String("TEST_STOP_SUGGESTIONS") ) {
                 test = TestModel::StopSuggestionTest;
+            } else if ( sourceName == QLatin1String("TEST_STOP_SUGGESTIONS_FROMGEOPOSITION") ) {
+                test = TestModel::StopSuggestionFromGeoPositionTest;
             } else if ( sourceName == QLatin1String("TEST_JOURNEYS") ) {
                 test = TestModel::JourneyTest;
             } else if ( sourceName == QLatin1String("TEST_FEATURES") ) {
@@ -3175,10 +3272,39 @@ void Project::testJobDone( ThreadWeaver::Job *job )
                                          TestModel::testStateFromBool(callFunctionJob->success()),
                                          callFunctionJob->explanation(), QString(),
                                          projectAction(ShowScript),
-                                         callFunctionJob->additionalMessages() );
+                                         callFunctionJob->additionalMessages(),
+                                         requestJob ? requestJob->timetableData()
+                                                    : QList<TimetableData>(),
+                                         requestJob ? requestJob->request()
+                                                    : QSharedPointer<AbstractRequest>() );
+
+            for ( QList<TestModel::Test>::Iterator it = d->dependendTests.begin();
+                  it != d->dependendTests.end(); ++it )
+            {
+                const QList< TestModel::Test > requiredTests = TestModel::testIsDependedOf( *it );
+                if ( requiredTests.contains(test) ) {
+                    // A required test was finished
+                    bool allFinished = true;
+                    foreach ( TestModel::Test requiredTest, requiredTests ) {
+                        if ( !d->testModel->isTestFinished(requiredTest) && test != requiredTest ) {
+                            allFinished = false;
+                            break;
+                        }
+                    }
+                    if ( allFinished ) {
+                        kDebug() << "All required tests for test" << test << "are finished";
+                        const TestModel::Test test = *it;
+                        it = d->dependendTests.erase( it );
+                        delete job;
+
+                        startTest( test );
+                        return;
+                    }
+                }
+            }
         }
 
-        if ( d->pendingTests.isEmpty() ) {
+        if ( d->pendingTests.isEmpty() && d->dependendTests.isEmpty() ) {
             // The last pending test has finished
             d->endTesting();
         } else if ( !job->success() ) {
@@ -3431,7 +3557,7 @@ void Project::abortDebugger()
         // no stopped signal received? Update UI state to debugger state
         kDebug() << "Internal error, debugger not running, update UI state";
         d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
-                                                            << DebuggerActionGroup );
+                                                             << DebuggerActionGroup );
     } else {
         d->debugger->abortDebugger();
     }

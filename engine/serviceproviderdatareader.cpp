@@ -357,9 +357,11 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
             } else if ( name().compare(QLatin1String("samples"), Qt::CaseInsensitive) == 0 ) {
                 QStringList stops;
                 QString city;
-                readSamples( &stops, &city );
+                qreal longitude, latitude;
+                readSamples( &stops, &city, &longitude, &latitude );
                 serviceProviderData->setSampleStops( stops );
                 serviceProviderData->setSampleCity( city );
+                serviceProviderData->setSampleCoordinates( longitude, latitude );
             } else if ( name().compare(QLatin1String("notes"), Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setNotes( readElementText() );
             } else {
@@ -462,7 +464,8 @@ void ServiceProviderDataReader::readCities( QStringList *cities,
     }
 }
 
-void ServiceProviderDataReader::readSamples( QStringList *stops, QString *city, QString *comments )
+void ServiceProviderDataReader::readSamples( QStringList *stops, QString *city,
+                                             qreal *longitude, qreal *latitude, QString *comments )
 {
     while ( !atEnd() ) {
         readNext();
@@ -480,6 +483,10 @@ void ServiceProviderDataReader::readSamples( QStringList *stops, QString *city, 
                 stops->append( readElementText() );
             } else if ( name().compare(QLatin1String("city"), Qt::CaseInsensitive ) == 0 ) {
                 *city = readElementText();
+            } else if ( name().compare(QLatin1String("longitude"), Qt::CaseInsensitive ) == 0 ) {
+                *longitude = readElementText().toDouble();
+            } else if ( name().compare(QLatin1String("latitude"), Qt::CaseInsensitive ) == 0 ) {
+                *latitude = readElementText().toDouble();
             } else {
                 readUnknownElement();
             }

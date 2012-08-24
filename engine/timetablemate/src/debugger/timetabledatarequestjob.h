@@ -46,6 +46,7 @@ class AbstractRequest;
 struct JourneyRequest;
 struct StopSuggestionRequest;
 struct DepartureRequest;
+struct AdditionalDataRequest;
 
 using namespace Scripting;
 
@@ -139,7 +140,7 @@ protected:
      **/
     virtual QScriptValueList createArgumentScriptValues() const;
 
-    virtual void finish( Scripting::ResultObject *result ) { Q_UNUSED(result); };
+    virtual void finish( const QList<TimetableData> &data ) { Q_UNUSED(data); };
 
     /**
      * @brief Test the results, ie. the return value of the called function.
@@ -246,7 +247,7 @@ protected:
             const ServiceProviderData &data, QMutex *engineMutex, const AbstractRequest *request,
             DebugFlags debugFlags = DefaultDebugFlags, QObject* parent = 0 );
 
-    virtual void finish( Scripting::ResultObject *result );
+    virtual void finish( const QList<TimetableData> &data );
 
     /**
      * @brief Create a list of arguments for the function to call, using AbstractRequest::toScriptValue().
@@ -261,6 +262,7 @@ private:
     bool testDepartureData( const DepartureRequest *request );
     bool testStopSuggestionData( const StopSuggestionRequest *request );
     bool testJourneyData( const JourneyRequest *request );
+    bool testAdditionalData( const AdditionalDataRequest *request );
 
     const AbstractRequest *m_request;
     QList< TimetableData > m_timetableData;

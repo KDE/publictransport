@@ -186,13 +186,19 @@ bool ServiceProviderDataWriter::write( QIODevice *device, const ServiceProvider 
     }
 
     // Write samples
-    if ( !data->sampleStopNames().isEmpty() || !data->sampleCity().isEmpty() ) {
+    if ( !data->sampleStopNames().isEmpty() || !data->sampleCity().isEmpty() ||
+         data->hasSampleCoordinates() )
+    {
         writeStartElement( "samples" );
         foreach ( const QString &stop, data->sampleStopNames() ) {
             writeTextElement( "stop", stop );
         }
         if ( !data->sampleCity().isEmpty() ) {
             writeTextElement( "city", data->sampleCity() );
+        }
+        if ( data->hasSampleCoordinates() ) {
+            writeTextElement( "longitude", QString::number(data->sampleLongitude()) );
+            writeTextElement( "latitude", QString::number(data->sampleLatitude()) );
         }
         writeEndElement(); // samples
     }

@@ -81,6 +81,12 @@ if ( BUILD_PROVIDER_TYPE_GTFS )
     endif ( BUILD_GTFS_REALTIME )
 endif ( BUILD_PROVIDER_TYPE_GTFS )
 
+# if ( BUILD_MARBLE_MAP )
+#     message( "   - Build marble map" )
+# Always add Marble library for TimetableMate?
+    list ( APPEND LIBS marblewidget )
+# endif ( BUILD_MARBLE_MAP )
+
 target_link_libraries( timetablemate ${LIBS} )
 
 install( TARGETS timetablemate ${INSTALL_TARGETS_DEFAULT_ARGS} )

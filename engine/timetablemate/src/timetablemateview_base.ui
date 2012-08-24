@@ -845,7 +845,7 @@
        <item row="2" column="0">
         <widget class="QLabel" name="lblSampleCity">
          <property name="text">
-          <string>Sampe &amp;City:</string>
+          <string>Sample &amp;City:</string>
          </property>
          <property name="buddy">
           <cstring>sampleCity</cstring>
@@ -854,6 +854,32 @@
        </item>
        <item row="2" column="1">
         <widget class="KLineEdit" name="sampleCity"/>
+       </item>
+       <item row="3" column="1">
+        <widget class="Marble::LatLonEdit" name="sampleLongitude"/>
+       </item>
+       <item row="3" column="0">
+        <widget class="QLabel" name="lblSampleCoordinates">
+         <property name="text">
+          <string>Sample &amp;Longitude:</string>
+         </property>
+         <property name="buddy">
+          <cstring>sampleLongitude</cstring>
+         </property>
+        </widget>
+       </item>
+       <item row="4" column="1">
+        <widget class="Marble::LatLonEdit" name="sampleLatitude"/>
+       </item>
+       <item row="4" column="0">
+        <widget class="QLabel" name="lblSampleCoordinates_2">
+         <property name="text">
+          <string>Sample L&amp;atitude:</string>
+         </property>
+         <property name="buddy">
+          <cstring>sampleLatitude</cstring>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
@@ -939,6 +965,11 @@
    <class>KTimeZoneWidget</class>
    <extends>QTreeWidget</extends>
    <header>ktimezonewidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>Marble::LatLonEdit</class>
+   <extends>QWidget</extends>
+   <header>LatLonEdit.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
