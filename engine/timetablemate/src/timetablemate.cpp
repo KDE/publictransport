@@ -336,10 +336,11 @@ void TimetableMate::readProperties( const KConfigGroup &config )
                 isActive = true;
                 openedTabsCode.chop( 9 ); // Cut " ::active"
             }
-
-            const QStringList openedTabStrings = openedTabsCode.split(',');
-            foreach ( const QString &openedTabString, openedTabStrings ) {
-                openedTabs << static_cast< TabType >( openedTabString.toInt() );
+            if ( !openedTabsCode.isEmpty() ) {
+                const QStringList openedTabStrings = openedTabsCode.split(',');
+                foreach ( const QString &openedTabString, openedTabStrings ) {
+                    openedTabs << static_cast< TabType >( openedTabString.toInt() );
+                }
             }
         }
         Project *project = openProject( xmlFilePath );
