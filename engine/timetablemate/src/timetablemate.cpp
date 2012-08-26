@@ -1486,7 +1486,6 @@ void TimetableMate::removeAllMessageWidgets()
     // Hide the widget and then delete it (give 1 second for the hide animation)
     while ( !m_messageWidgets.isEmpty() ) {
         QPointer< KMessageWidget > messageWidget = m_messageWidgets.dequeue();
-        m_autoRemoveMessageWidgets.removeOne( messageWidget );
         if ( messageWidget.data() ) {
             messageWidget->animatedHide();
             QTimer::singleShot( 1000, messageWidget, SLOT(deleteLater()) );

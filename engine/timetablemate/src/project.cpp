@@ -1109,9 +1109,9 @@ public:
                               QList<Project::ProjectAction>() << Project::RunToCursor
 #endif
                             );
-        q->emit informationMessage( i18nc("@info", "Test started") );
         q->emit testStarted();
         q->emit testRunningChanged( true );
+        q->emit informationMessage( i18nc("@info", "Test started") );
         return true;
     };
 
@@ -1119,7 +1119,11 @@ public:
     void endTesting()
     {
         Q_Q( Project );
-        const bool success = !testModel->hasErroneousTests();
+        if ( !isTestRunning() ) {
+            return;
+        }
+
+        const TestModel::TestState state = testModel->completeState();
         pendingTests.clear();
         testState = NoTestRunning;
         updateProjectActions( QList<Project::ProjectActionGroup>() << Project::TestActionGroup
@@ -1128,21 +1132,40 @@ public:
                               QList<Project::ProjectAction>() << Project::RunToCursor
 #endif
                             );
-        if ( success ) {
+
+        switch ( state ) {
+        case TestModel::TestFinishedSuccessfully:
             q->emit informationMessage( i18nc("@info", "Test finished successfully"),
                     KMessageWidget::Positive, 4000,
                     QList<QAction*>() << q->projectAction(Project::ShowPlasmaPreview) );
-        } else {
+            break;
+        case TestModel::TestFinishedWithErrors:
             q->emit informationMessage( i18nc("@info", "Test finished with errors"),
                                         KMessageWidget::Error, 4000 );
+            break;
+        case TestModel::TestFinishedWithWarnings:
+            q->emit informationMessage( i18nc("@info", "Test finished with warnings"),
+                                        KMessageWidget::Warning, 4000 );
+            break;
+        case TestModel::TestCouldNotBeStarted:
+            q->emit informationMessage( i18nc("@info", "Test could not be started"),
+                                        KMessageWidget::Error, 4000 );
+            break;
+        default:
+            kWarning() << "Unexpected test state" << state;
+            break;
         }
-        q->emit testFinished( success );
+        q->emit testFinished( state == TestModel::TestFinishedSuccessfully );
         q->emit testRunningChanged( false );
     };
 
-    // Cancels all running tests
+    // Cancels all running/pending tests
     void abortTests()
     {
+        if ( !isTestRunning() ) {
+            return;
+        }
+
         testState = TestsGetAborted;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         foreach ( ThreadWeaver::Job *testJob, pendingTests ) {
@@ -1155,7 +1178,6 @@ public:
             while ( !pendingTests.isEmpty() ) {
                 DebuggerJob *job = qobject_cast< DebuggerJob* >( pendingTests.takeFirst() );
                 job->debugger()->engine()->abortEvaluation();
-//                 deleteLater();
             }
         }
 #endif
@@ -1240,7 +1262,7 @@ public:
                 // A required test is not finished, add it to the dependend test list
                 // and start it when all required tests are done
                 dependendTests << test;
-                return false;
+                return true;
             }
         }
 
@@ -3172,11 +3194,11 @@ bool Project::startTestCase( TestModel::TestCase testCase )
         }
     }
 
-    bool success = true;
     const QList< TestModel::Test > tests = TestModel::testsOfTestCase( testCase );
+    bool success = tests.isEmpty();
     foreach ( TestModel::Test test, tests ) {
-        if ( !startTest(test)  ) {
-            success = false;
+        if ( startTest(test)  ) {
+            success = true;
         }
 
         if ( d->testState == ProjectPrivate::TestsGetAborted ) {
@@ -3306,12 +3328,14 @@ void Project::testJobDone( ThreadWeaver::Job *job )
             }
             if ( test != TestModel::InvalidTest ) {
                 d->pendingTests.removeOne( requestJob );
+            } else {
+                kWarning() << "Unknown test" << test;
             }
         } else if ( callFunctionJob->functionName() ==
                     ServiceProviderScript::SCRIPT_FUNCTION_FEATURES )
         {
             test = TestModel::FeaturesTest;
-            d->pendingTests.removeOne( requestJob );
+            d->pendingTests.removeOne( job );
         }
 
         if ( test == TestModel::InvalidTest ) {
@@ -3356,9 +3380,7 @@ void Project::testJobDone( ThreadWeaver::Job *job )
 
         if ( d->pendingTests.isEmpty() && d->dependendTests.isEmpty() ) {
             // The last pending test has finished
-            d->endTesting();
-        } else if ( !job->success() ) {
-            // The job was not successful, therefore following test jobs will not be executed
+            kDebug() << "The last pending test has finished";
             d->endTesting();
         }
     }
@@ -3398,13 +3420,15 @@ bool Project::loadScriptSynchronous()
         return true;
     }
 
-    d->debugger->loadScript( scriptText(), d->data() );
-
-    QEventLoop loop;
-    connect( d->debugger, SIGNAL(loadScriptResult(ScriptErrorType,QString,QStringList)),
-             &loop, SLOT(quit()) );
-    connect( d->debugger, SIGNAL(stopped(ScriptRunData)), &loop, SLOT(quit()) );
-    loop.exec();
+    if ( d->debugger->loadScript(scriptText(), d->data()) ) {
+        // A LoadScriptJob was started or is already running,
+        // wait for it's result (received in loadScriptResult() => d->scriptState)
+        QEventLoop loop;
+        connect( d->debugger, SIGNAL(loadScriptResult(ScriptErrorType,QString,QStringList)),
+                &loop, SLOT(quit()) );
+        connect( d->debugger, SIGNAL(stopped(ScriptRunData)), &loop, SLOT(quit()) );
+        loop.exec();
+    }
 
     return d->scriptState == ProjectPrivate::ScriptLoaded;
 }

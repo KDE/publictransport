@@ -205,6 +205,8 @@ public:
     Q_INVOKABLE TestCase testCaseFromIndex( const QModelIndex &testCaseIndex ) const;
     Q_INVOKABLE Test testFromIndex( const QModelIndex &testIndex ) const;
 
+    Q_INVOKABLE TestState completeState() const;
+
     /**
      * @brief Get the current state of @p testCase.
      * @see TestState
@@ -305,6 +307,9 @@ private:
     QVariant testData( Test test, const QModelIndex &index, int role = Qt::DisplayRole ) const;
 
     void removeTestChildren( Test test );
+    static bool isErroneousTestState( TestState state ) {
+        return state == TestFinishedWithErrors || state == TestCouldNotBeStarted;
+    };
 
     QFont getFont( const QVariant &fontData ) const;
     QBrush backgroundFromTestState( TestState testState ) const;

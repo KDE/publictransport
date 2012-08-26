@@ -241,6 +241,13 @@ public:
     inline BreakpointModel *breakpointModel() const { return m_breakpointModel; };
 
     /**
+     * @brief Load script code @p program.
+     * @return @c True if a LoadScriptJob was started or is already running,
+     *   @c false if the script was already loaded and did not change.
+     **/
+    bool loadScript( const QString &program, const ServiceProviderData *data );
+
+    /**
      * @brief Checks whether script execution can be interrupted at @p lineNumber.
      * @see DebuggerAgent::canBreakAt(int)
      **/
@@ -473,9 +480,6 @@ signals:
                               const QString &failedParseText );
 
 public slots:
-    /** @brief Load script code @p program. */
-    void loadScript( const QString &program, const ServiceProviderData *data );
-
     /** @brief Continue script execution until the next statement. */
     inline void debugStepInto( int repeat = 0 ) { m_debugger->debugStepInto(repeat); };
 

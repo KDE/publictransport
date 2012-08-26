@@ -213,14 +213,22 @@ void Debugger::slotAborted()
 
 void Debugger::slotInterrupted()
 {
-    Q_ASSERT( m_runData );
+    if ( !m_runData ) {
+        kWarning() << "No ScriptRunData available";
+        return;
+    }
+
     m_runData->interrupted();
     emit interrupted();
 }
 
 void Debugger::slotContinued( bool willInterruptAfterNextStatement )
 {
-    Q_ASSERT( m_runData );
+    if ( !m_runData ) {
+        kWarning() << "No ScriptRunData available";
+        return;
+    }
+
     m_runData->continued();
     emit continued( willInterruptAfterNextStatement );
 }
@@ -315,17 +323,17 @@ void Debugger::evaluateInContext( const QString &program, const QString &context
     return;
 }
 
-void Debugger::loadScript( const QString &program, const ServiceProviderData *data )
+bool Debugger::loadScript( const QString &program, const ServiceProviderData *data )
 {
     if ( m_loadScriptJob ) {
         kDebug() << "Script already gets loaded, please wait...";
-        return;
+        return true;
     }
     if ( m_script && m_script->sourceCode() == program &&
          (!m_data || m_data == data) )
     {
         kDebug() << "Script code and provider data unchanged";
-        return;
+        return false;
     }
 
     m_state = ScriptModified;
@@ -333,6 +341,7 @@ void Debugger::loadScript( const QString &program, const ServiceProviderData *da
     m_data = data;
     m_lastScriptError = NoScriptError;
     enqueueNewLoadScriptJob();
+    return true;
 }
 
 LoadScriptJob *Debugger::enqueueNewLoadScriptJob()

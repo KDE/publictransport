@@ -650,11 +650,25 @@ QVariant TestModel::headerData( int section, Qt::Orientation orientation, int ro
 bool TestModel::hasErroneousTests() const
 {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    if ( testCaseState(ScriptExecutionTestCase) == TestFinishedWithErrors ) {
+    if ( isErroneousTestState(testCaseState(ScriptExecutionTestCase)) ) {
         return true;
     }
 #endif
-    return testCaseState( ServiceProviderDataTestCase ) == TestFinishedWithErrors;
+    return isErroneousTestState( testCaseState(ServiceProviderDataTestCase) );
+}
+
+TestModel::TestState TestModel::completeState() const
+{
+    TestState completeState = TestNotStarted;
+    for ( int i = 0; i < TestCaseCount; ++i ) {
+        const TestCase testCase = static_cast< TestCase >( i );
+        const TestState state = testCaseState( testCase );
+        if ( state > completeState ) {
+            completeState = state;
+        }
+    }
+
+    return completeState;
 }
 
 TestModel::TestState TestModel::testCaseState( TestModel::TestCase testCase ) const
