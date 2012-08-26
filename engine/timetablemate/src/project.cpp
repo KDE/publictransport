@@ -1828,8 +1828,15 @@ void Project::appendOutput( const QString &output )
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
 void Project::scriptOutput( const QString &message, const QScriptContextInfo &context )
 {
-    appendOutput( i18nc("@info", "<emphasis strong='1'>Line %1:</emphasis> <message>%2</message>",
-                        context.lineNumber(), message) );
+    if ( context.fileName() != scriptFileName() ) {
+        appendOutput( i18nc("@info %2 is the script file name",
+                            "<emphasis strong='1'>Line %1 (%2):</emphasis> <message>%3</message>",
+                            context.lineNumber(), QFileInfo(context.fileName()).fileName(),
+                            message) );
+    } else {
+        appendOutput( i18nc("@info", "<emphasis strong='1'>Line %1:</emphasis> <message>%2</message>",
+                            context.lineNumber(), message) );
+    }
 }
 
 void Project::scriptErrorReceived( const QString &errorMessage,
@@ -1837,8 +1844,15 @@ void Project::scriptErrorReceived( const QString &errorMessage,
                                    const QString &failedParseText )
 {
     Q_UNUSED( failedParseText );
-    appendOutput( i18nc("@info", "<emphasis strong='1'>Error in line %1:</emphasis> <message>%2</message>",
-                        context.lineNumber(), errorMessage) );
+    if ( context.fileName() != scriptFileName() ) {
+        appendOutput( i18nc("@info %2 is the script file name",
+                            "<emphasis strong='1'>Error in line %1 (%2):</emphasis> <message>%3</message>",
+                            context.lineNumber(), QFileInfo(context.fileName()).fileName(),
+                            errorMessage) );
+    } else {
+        appendOutput( i18nc("@info", "<emphasis strong='1'>Error in line %1:</emphasis> <message>%2</message>",
+                            context.lineNumber(), errorMessage) );
+    }
 }
 #endif
 
@@ -3593,6 +3607,7 @@ StopSuggestionFromGeoPositionRequest Project::getStopSuggestionFromGeoPositionRe
     Marble::LatLonEdit *longitude = new Marble::LatLonEdit( w, Marble::Longitude );
     Marble::LatLonEdit *latitude = new Marble::LatLonEdit( w, Marble::Latitude );
     KIntSpinBox *distance = new KIntSpinBox( 500, 50000, 1, 5000, w );
+    distance->setSuffix( "m" ); // meters
     longitude->setValue( d->provider->data()->sampleLongitude() );
     latitude->setValue( d->provider->data()->sampleLatitude() );
     l->addRow( i18nc("@info", "Longitude:"), longitude );
