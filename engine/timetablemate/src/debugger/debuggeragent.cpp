@@ -1649,10 +1649,13 @@ void DebuggerAgent::exceptionThrow( qint64 scriptId, const QScriptValue &excepti
     Q_UNUSED( scriptId );
     if ( !hasHandler && m_injectedScriptState != InjectedScriptEvaluating ) {
         QScriptEngine *_engine = engine();
-        const int uncaughtExceptionLineNumber = _engine->uncaughtExceptionLineNumber();
+        int uncaughtExceptionLineNumber = _engine->uncaughtExceptionLineNumber();
         m_engineMutex->unlockInline();
 
         m_mutex->lockInline();
+        if ( uncaughtExceptionLineNumber < 0 ) {
+            uncaughtExceptionLineNumber = m_lineNumber;
+        }
         m_hasUncaughtException = true;
         m_uncaughtExceptionLineNumber = uncaughtExceptionLineNumber;
         m_uncaughtException = exceptionValue;
