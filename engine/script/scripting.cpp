@@ -75,8 +75,10 @@ NetworkRequest::~NetworkRequest()
 
 void NetworkRequest::abort()
 {
+    const bool timedOut = qobject_cast< QTimer* >( sender() );
     if ( !isRunning() ) {
-        kDebug() << "Cannot abort a request that is not running!";
+        kDebug() << (timedOut ? "Timeout, but request already finished"
+                              : "Cannot abort a request that is not running!");
         return;
     }
 
@@ -85,7 +87,7 @@ void NetworkRequest::abort()
     m_reply->deleteLater();
     m_reply = 0;
 
-    emit aborted();
+    emit aborted( timedOut );
 }
 
 void NetworkRequest::slotReadyRead()
@@ -211,7 +213,7 @@ void NetworkRequest::slotFinished()
     m_data.clear();
 }
 
-void NetworkRequest::started( QNetworkReply* reply )
+void NetworkRequest::started( QNetworkReply* reply, int timeout )
 {
     if ( !m_network ) {
         kDebug() << "Can't decode, no m_network given...";
@@ -219,6 +221,10 @@ void NetworkRequest::started( QNetworkReply* reply )
     }
     m_data.clear();
     m_reply = reply;
+
+    if ( timeout > 0 ) {
+        QTimer::singleShot( timeout, this, SLOT(abort()) );
+    }
 
     // Connect to signals of reply only when the associated signals of this class are connected
     if ( receivers(SIGNAL(readyRead(QByteArray))) > 0 ) {
@@ -460,7 +466,7 @@ bool Network::checkRequest( NetworkRequest* request )
     return request->isValid();
 }
 
-void Network::get( NetworkRequest* request )
+void Network::get( NetworkRequest* request, int timeout )
 {
     if ( !checkRequest(request) ) {
         return;
@@ -472,11 +478,11 @@ void Network::get( NetworkRequest* request )
     m_lastUrl = request->url();
     m_mutex->unlockInline();
 
-    request->started( reply );
+    request->started( reply, timeout );
 //     kDebug() << "GET DOCUMENT, now" << m_runningRequests.count() << "running requests" << request->url();
 }
 
-void Network::head( NetworkRequest* request )
+void Network::head( NetworkRequest* request, int timeout )
 {
     if ( !checkRequest(request) ) {
         return;
@@ -488,10 +494,10 @@ void Network::head( NetworkRequest* request )
     m_lastUrl = request->url();
     m_mutex->unlockInline();
 
-    request->started( reply );
+    request->started( reply, timeout );
 }
 
-void Network::post( NetworkRequest* request )
+void Network::post( NetworkRequest* request, int timeout )
 {
     if ( !checkRequest(request) ) {
         return;
@@ -503,7 +509,7 @@ void Network::post( NetworkRequest* request )
     m_lastUrl = request->url();
     m_mutex->unlockInline();
 
-    request->started( reply );
+    request->started( reply, timeout );
 }
 
 void Network::abortAllRequests()
@@ -905,6 +911,7 @@ QString Helper::decode( const QByteArray &document, const QByteArray &charset )
 void Helper::error( const QString& message, const QString &failedParseText, ErrorSeverity severity )
 {
     QScriptContextInfo info( context()->parentContext() );
+    qRegisterMetaType< ErrorSeverity >( "ErrorSeverity" );
     emit errorReceived( message, info, failedParseText, severity );
 
     // Output debug message and a maximum count of 200 characters of the text where the parsing failed

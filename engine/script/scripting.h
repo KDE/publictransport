@@ -430,10 +430,11 @@ Q_SIGNALS:
     void started();
 
     /**
-     * @brief Emitted when this request got aborted.
+     * @brief Emitted when this request got aborted or timed out.
+     * @param timedOut Whether or not the request was aborted because of a timeout.
      * @ingroup scripting
      **/
-    void aborted();
+    void aborted( bool timedOut = false );
 
     /**
      * @brief Emitted when this request has finished.
@@ -455,15 +456,12 @@ Q_SIGNALS:
 
     void redirected( const QUrl &newUrl );
 
-//     // TODO Do the decoding manually in the script, if needed
-//     void finishedNoDecoding( const QByteArray &ba );
-
 protected Q_SLOTS:
     void slotFinished();
     void slotReadyRead();
 
 protected:
-    void started( QNetworkReply* reply );
+    void started( QNetworkReply* reply, int timeout = 0 );
     QByteArray postDataByteArray() const;
     QNetworkRequest *request() const;
     QByteArray getCharset( const QString &charset = QString() ) const;
@@ -573,8 +571,8 @@ public:
      * If the @p timeout expires or the abort() slot gets called, the download gets stopped.
      *
      * @param url The URL to download.
-     * @param timeout Maximum time in milliseconds to wait for the reply to finish. If smaller than 0,
-     *   no timeout gets used.
+     * @param timeout Maximum time in milliseconds to wait for the reply to finish.
+     *   If smaller than 0, no timeout gets used.
      * @ingroup scripting
      **/
     Q_INVOKABLE QByteArray getSynchronous( const QString &url, int timeout = DEFAULT_TIMEOUT );
@@ -600,17 +598,21 @@ public:
      * @brief Perform the network @p request asynchronously.
      *
      * @param request The NetworkRequest object created with createRequest().
+     * @param timeout Maximum time in milliseconds to wait for the reply to finish.
+     *   If smaller than 0, no timeout gets used.
      * @ingroup scripting
      **/
-    Q_INVOKABLE void get( NetworkRequest *request );
+    Q_INVOKABLE void get( NetworkRequest *request, int timeout = DEFAULT_TIMEOUT );
 
     /**
      * @brief Perform the network @p request asynchronously using POST method.
      *
      * @param request The NetworkRequest object created with createRequest().
+     * @param timeout Maximum time in milliseconds to wait for the reply to finish.
+     *   If smaller than 0, no timeout gets used.
      * @ingroup scripting
      **/
-    Q_INVOKABLE void post( NetworkRequest *request );
+    Q_INVOKABLE void post( NetworkRequest *request, int timeout = DEFAULT_TIMEOUT );
 
     /**
      * @brief Perform the network @p request asynchronously, but only get headers.
@@ -618,13 +620,15 @@ public:
      * @param request The NetworkRequest object created with createRequest().
      * @ingroup scripting
      **/
-    Q_INVOKABLE void head( NetworkRequest *request );
+    Q_INVOKABLE void head( NetworkRequest *request, int timeout = DEFAULT_TIMEOUT );
 
     /**
      * @brief This is an alias for get().
      * @ingroup scripting
      **/
-    Q_INVOKABLE inline void download( NetworkRequest *request ) { get(request); };
+    Q_INVOKABLE inline void download( NetworkRequest *request, int timeout = DEFAULT_TIMEOUT ) {
+        get( request, timeout );
+    };
 
     /**
      * @brief Returns whether or not there are asynchronous requests running in the background.
