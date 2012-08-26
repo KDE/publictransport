@@ -721,9 +721,21 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
         }
 
         stateChanged( "project_opened" );
+
+        // Update text of the choose active project action
+        QAction *chooseActiveProject = action("project_choose_active");
+        if ( chooseActiveProject ) {
+            chooseActiveProject->setText( project->projectName() );
+        }
     } else {
         stateChanged( "no_project_opened" );
         stateChanged( "project_opened", StateReverse );
+
+        // Update text of the choose active project action
+        QAction *chooseActiveProject = action("project_choose_active");
+        if ( chooseActiveProject ) {
+            chooseActiveProject->setText( i18nc("@action", "&Active Project") );
+        }
     }
 }
 
