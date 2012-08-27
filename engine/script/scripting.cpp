@@ -911,7 +911,6 @@ QString Helper::decode( const QByteArray &document, const QByteArray &charset )
 void Helper::error( const QString& message, const QString &failedParseText, ErrorSeverity severity )
 {
     QScriptContextInfo info( context()->parentContext() );
-    qRegisterMetaType< ErrorSeverity >( "ErrorSeverity" );
     emit errorReceived( message, info, failedParseText, severity );
 
     // Output debug message and a maximum count of 200 characters of the text where the parsing failed

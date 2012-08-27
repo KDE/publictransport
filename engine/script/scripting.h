@@ -813,7 +813,7 @@ public:
      **/
     explicit Helper( const QString &serviceProviderId, QObject* parent = 0 ) : QObject( parent ) {
         m_serviceProviderId = serviceProviderId;
-        qRegisterMetaType< ErrorSeverity >( "ErrorSeverity" );
+        qRegisterMetaType< Helper::ErrorSeverity >( "Helper::ErrorSeverity" );
     };
 
     /**
