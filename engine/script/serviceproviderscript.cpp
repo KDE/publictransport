@@ -164,28 +164,33 @@ bool ServiceProviderScript::runTests( QString *errorMessage ) const
 bool ServiceProviderScript::isTestResultUnchanged( const QString &providerId,
                                                    const QSharedPointer< KConfig > &cache )
 {
-    // Check if the script file was modified since the cache was last updated
-    const KConfigGroup group = cache->group( providerId );
-    if ( !group.hasGroup("script") ) {
+    const KConfigGroup providerGroup = cache->group( providerId );
+    if ( !providerGroup.hasGroup("script") ) {
         // Not a scripted provider or modified time not stored yet
         return true;
     }
 
-    const KConfigGroup scriptGroup = group.group( "script" );
-    const QDateTime scriptModifiedTime = scriptGroup.readEntry("modifiedTime", QDateTime());
-    const QString scriptFilePath = scriptGroup.readEntry( "scriptFileName", QString() );
-    if ( QFileInfo(scriptFilePath).lastModified() != scriptModifiedTime ) {
+    // Check if included files have been marked as modified since the cache was last updated
+    const KConfigGroup providerScriptGroup = providerGroup.group( "script" );
+    const bool includesUpToDate = providerScriptGroup.readEntry( "includesUpToDate", false );
+    if ( !includesUpToDate ) {
+        // An included file was modified
         return false;
     }
 
-    const QStringList includedFiles = scriptGroup.readEntry( "includedFiles", QStringList() );
-    foreach ( const QString &includedFile, includedFiles ) {
-        const QFileInfo fileInfo( includedFile );
-        const QDateTime includedFileModifiedTime =
-                scriptGroup.readEntry("include_" + fileInfo.fileName() + "_modifiedTime", QDateTime());
-        if ( fileInfo.lastModified() != includedFileModifiedTime ) {
-            return false;
-        }
+    // Check if the script file was modified since the cache was last updated
+    const QDateTime scriptModifiedTime = providerScriptGroup.readEntry("modifiedTime", QDateTime());
+    const QString scriptFilePath = providerScriptGroup.readEntry( "scriptFileName", QString() );
+    const QFileInfo scriptFileInfo( scriptFilePath );
+    if ( scriptFileInfo.lastModified() != scriptModifiedTime ) {
+        kDebug() << "Script was modified:" << scriptFileInfo.fileName();
+        return false;
+    }
+
+    // Check all included files and update "includesUpToDate" fields in using providers
+    if ( checkIncludedFiles(cache, providerId) ) {
+        // An included file of the provider was modified
+        return false;
     }
 
     return true;
@@ -200,11 +205,13 @@ QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
         const QSharedPointer<KConfig> &cache )
 {
     // Check if the script file was modified since the cache was last updated
-    KConfigGroup group = cache->group( m_data->id() );
-    if ( group.hasGroup("script") && isTestResultUnchanged(cache) && group.hasKey("features") ) {
+    KConfigGroup providerGroup = cache->group( m_data->id() );
+    if ( providerGroup.hasGroup("script") && isTestResultUnchanged(cache) &&
+         providerGroup.hasKey("features") )
+    {
         // Return feature list stored in the cache
         bool ok;
-        QStringList featureStrings = group.readEntry("features", QStringList());
+        QStringList featureStrings = providerGroup.readEntry("features", QStringList());
         featureStrings.removeOne("(none)");
         QList<Enums::ProviderFeature> features =
                 ServiceProviderGlobal::featuresFromFeatureStrings( featureStrings, &ok );
@@ -314,17 +321,48 @@ QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
     }
 
     // Update script modified time in cache
-    KConfigGroup scriptGroup = group.group( "script" );
+    KConfigGroup scriptGroup = providerGroup.group( "script" );
     scriptGroup.writeEntry( "scriptFileName", m_data->scriptFileName() );
     scriptGroup.writeEntry( "modifiedTime", QFileInfo(m_data->scriptFileName()).lastModified() );
 
-    // Update modified times of included files
-    scriptGroup.writeEntry( "includedFiles", includedFiles );
-    foreach ( const QString &includedFile, includedFiles ) {
+    // Remove provider from cached data for include file(s) no longer used by the provider
+    KConfigGroup globalScriptGroup = cache->group( "script" );
+    const QStringList globalScriptGroupNames = globalScriptGroup.groupList();
+    foreach ( const QString &globalScriptGroupName, globalScriptGroupNames ) {
+        if ( !globalScriptGroupName.startsWith(QLatin1String("include_")) ) {
+            continue;
+        }
+
+        QString includedFile = globalScriptGroupName;
+        includedFile.remove( 0, 8 ); // Remove "include_" from beginning
         const QFileInfo fileInfo( includedFile );
-        scriptGroup.writeEntry("include_" + fileInfo.fileName() + "_modifiedTime",
-                               fileInfo.lastModified());
+
+        KConfigGroup includeFileGroup = globalScriptGroup.group( "include_" + fileInfo.filePath() );
+        QStringList usingProviders = includeFileGroup.readEntry( "usingProviders", QStringList() );
+        if ( usingProviders.contains(m_data->id()) && !includedFiles.contains(includedFile) ) {
+            // This provider is marked as using the include file, but it no longer uses that file
+            usingProviders.removeOne( m_data->id() );
+            includeFileGroup.writeEntry( "usingProviders", usingProviders );
+        }
     }
+
+    // Check if included file(s) were modified
+    foreach ( const QString &includedFile, includedFiles ) {
+        // Add this provider to the list of providers using the current include file
+        const QFileInfo fileInfo( includedFile );
+        KConfigGroup includeFileGroup = globalScriptGroup.group( "include_" + fileInfo.filePath() );
+        QStringList usingProviders = includeFileGroup.readEntry( "usingProviders", QStringList() );
+        if ( !usingProviders.contains(m_data->id()) ) {
+            usingProviders << m_data->id();
+            includeFileGroup.writeEntry( "usingProviders", usingProviders );
+        }
+
+        // Check if the include file was modified
+        checkIncludedFile( cache, fileInfo );
+    }
+
+    // Update modified times of included files
+    scriptGroup.writeEntry( "includesUpToDate", true ); // Was just updated
 
     // Set error in default cache group
     if ( !ok ) {
@@ -334,6 +372,59 @@ QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
     }
 
     return features;
+}
+
+bool ServiceProviderScript::checkIncludedFile( const QSharedPointer<KConfig> &cache,
+                                               const QFileInfo &fileInfo, const QString &providerId )
+{
+    // Use a config group in the global script group for each included file.
+    // It stores the last modified time and a list of IDs of providers using the include file
+    KConfigGroup globalScriptGroup = cache->group( "script" );
+    KConfigGroup includeFileGroup = globalScriptGroup.group( "include_" + fileInfo.filePath() );
+    const QDateTime lastModified = includeFileGroup.readEntry( "modifiedTime", QDateTime() );
+
+    // Update "includesUpToDate" field of using providers, if the include file was modified
+    if ( lastModified != fileInfo.lastModified() ) {
+        // The include file was modified, update all using providers (later).
+        // isTestResultUnchanged() returns false if "includesUpToDate" is false
+        const QStringList usingProviders = includeFileGroup.readEntry( "usingProviders", QStringList() );
+        foreach ( const QString &usingProvider, usingProviders ) {
+            if ( cache->hasGroup(usingProvider) ) {
+                KConfigGroup usingProviderScriptGroup =
+                        cache->group( usingProvider ).group( "script" );
+                usingProviderScriptGroup.writeEntry( "includesUpToDate", false );
+            }
+        }
+
+        includeFileGroup.writeEntry( "modifiedTime", fileInfo.lastModified() );
+        return providerId.isEmpty() || usingProviders.contains(providerId);
+    } else {
+        return false;
+    }
+}
+
+bool ServiceProviderScript::checkIncludedFiles( const QSharedPointer<KConfig> &cache,
+                                                const QString &providerId )
+{
+    bool modified = false;
+    KConfigGroup globalScriptGroup = cache->group( "script" );
+    const QStringList globalScriptGroups = globalScriptGroup.groupList();
+    foreach ( const QString &globalScriptGroup, globalScriptGroups ) {
+        if ( !globalScriptGroup.startsWith(QLatin1String("include_")) ) {
+            continue;
+        }
+
+        QString includedFile = globalScriptGroup;
+        includedFile.remove( 0, 8 ); // Remove "include_" from beginning
+
+        const QFileInfo fileInfo( includedFile );
+        if ( checkIncludedFile(cache, fileInfo, providerId) ) {
+            // The include file was modified and is used by this provider
+            modified = true;
+        }
+    }
+
+    return modified;
 }
 
 QList<Enums::ProviderFeature> ServiceProviderScript::features() const

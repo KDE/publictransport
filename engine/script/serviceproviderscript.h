@@ -37,6 +37,7 @@ namespace Scripting {
 };
 class QScriptEngine;
 class QScriptProgram;
+class QFileInfo;
 class ScriptThread;
 
 /** @brief Stores information about a departure/arrival/journey/stop suggestion. */
@@ -183,6 +184,11 @@ protected:
     virtual bool runTests( QString *errorMessage = 0 ) const;
 
 private:
+    static bool checkIncludedFiles( const QSharedPointer<KConfig> &cache,
+                                    const QString &providerId = QString() );
+    static bool checkIncludedFile( const QSharedPointer<KConfig> &cache, const QFileInfo &fileInfo,
+                                   const QString &providerId = QString() );
+
     ScriptState m_scriptState; // The state of the script
     QList<Enums::ProviderFeature> m_scriptFeatures; // Caches the features the script provides
     ScriptThread *m_thread;
