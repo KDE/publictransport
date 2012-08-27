@@ -210,11 +210,11 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
         // Check stored feature strings and re-read features if an invalid string was found
         bool ok;
         QStringList featureStrings = group.readEntry("features", QStringList());
-        featureStrings.removeOne("(none)");
+        const bool featureListIsEmpty = featureStrings.removeOne("(none)");
         QList< Enums::ProviderFeature > features =
                 ServiceProviderGlobal::featuresFromFeatureStrings( featureStrings, &ok );
 
-        if ( !featureStrings.isEmpty() && ok ) {
+        if ( (featureListIsEmpty || !featureStrings.isEmpty()) && ok ) {
             dataServiceProvider.insert( "features", featureStrings );
             dataServiceProvider.insert( "featureNames",
                                         ServiceProviderGlobal::featureNames(features) );
