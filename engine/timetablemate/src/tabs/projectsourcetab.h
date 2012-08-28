@@ -27,6 +27,7 @@ class ProjectSourceTab : public AbstractDocumentTab {
     Q_OBJECT
 public:
     static ProjectSourceTab *create( Project *project, QWidget *parent );
+    virtual ~ProjectSourceTab();
     virtual inline TabType type() const { return Tabs::ProjectSource; };
 
     /** @brief Saves changes. */

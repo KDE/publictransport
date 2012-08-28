@@ -39,6 +39,10 @@ ProjectSourceTab::ProjectSourceTab( Project *project, KTextEditor::Document *doc
 {
 }
 
+ProjectSourceTab::~ProjectSourceTab()
+{
+}
+
 ProjectSourceTab *ProjectSourceTab::create( Project *project, QWidget *parent )
 {
     // Create script document

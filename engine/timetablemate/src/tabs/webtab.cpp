@@ -117,6 +117,11 @@ WebTab::WebTab( Project *project, QWidget *parent )
     layoutWeb->addWidget( m_webView );
 }
 
+WebTab::~WebTab()
+{
+    delete m_webView;
+}
+
 void WebTab::slotLoadStarted()
 {
     emit canStopChanged( true );

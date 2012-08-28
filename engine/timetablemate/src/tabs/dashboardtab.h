@@ -30,6 +30,7 @@ class DashboardTab : public AbstractTab {
     Q_OBJECT
 public:
     static DashboardTab *create( Project *project, QWidget *parent );
+    virtual ~DashboardTab();
     virtual inline TabType type() const { return Tabs::Dashboard; };
 
     QDeclarativeView *qmlView() const { return m_qmlView; };

@@ -34,6 +34,8 @@ class QWebInspector;
 class WebTab : public AbstractTab {
     Q_OBJECT
 public:
+    virtual ~WebTab();
+
     static WebTab *create( Project *project, QWidget *parent );
     virtual inline TabType type() const { return Tabs::Web; };
 

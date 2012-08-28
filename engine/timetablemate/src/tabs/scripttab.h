@@ -44,6 +44,8 @@ class ScriptTab : public AbstractDocumentTab {
     Q_OBJECT
 public:
     static ScriptTab *create( Project *project, QWidget *parent );
+    virtual ~ScriptTab();
+
     virtual inline TabType type() const { return Tabs::Script; };
     virtual QIcon icon() const;
 

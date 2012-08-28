@@ -89,6 +89,10 @@ DashboardTab::DashboardTab( Project *project, QWidget *parent )
     setWidget( container );
 }
 
+DashboardTab::~DashboardTab()
+{
+}
+
 DashboardTab *DashboardTab::create( Project *project, QWidget *parent )
 {
     DashboardTab *tab = new DashboardTab( project, parent );

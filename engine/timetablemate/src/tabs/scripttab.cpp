@@ -70,6 +70,10 @@ ScriptTab::ScriptTab( Project *project, KTextEditor::Document *document, QWidget
     connect( project->debugger(), SIGNAL(stopped()), this, SLOT(removeExecutionMarker()) );
 }
 
+ScriptTab::~ScriptTab()
+{
+}
+
 void ScriptTab::setExecutionPosition( int executionLine, int column )
 {
     KTextEditor::View *view = document()->activeView();
