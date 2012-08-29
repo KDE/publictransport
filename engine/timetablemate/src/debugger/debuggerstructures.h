@@ -64,7 +64,8 @@ enum DebugFlag {
     InterruptOnExceptions   = 0x0002,
     InterruptOnBreakpoints  = 0x0004,
 
-    DefaultDebugFlags = InterruptOnExceptions | InterruptOnBreakpoints
+    InterruptOnExceptionsAndBreakpoints = InterruptOnExceptions | InterruptOnBreakpoints,
+    DefaultDebugFlags = InterruptOnExceptionsAndBreakpoints
 };
 Q_DECLARE_FLAGS( DebugFlags, DebugFlag );
 

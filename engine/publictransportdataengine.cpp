@@ -684,7 +684,10 @@ void PublicTransportEngine::requestAdditionalData( const QString &sourceName, in
     const QDateTime dateTime = item[ "DepartureDateTime" ].toDateTime();
     const QString transportLine = item[ "TransportLine" ].toString();
     const QString target = item[ "Target" ].toString();
-    if ( !dateTime.isValid() || transportLine.isEmpty() || target.isEmpty() ) {
+    const QString routeDataUrl = item[ "RouteDataUrl" ].toString();
+    if ( routeDataUrl.isEmpty() &&
+         (!dateTime.isValid() || transportLine.isEmpty() || target.isEmpty()) )
+    {
         kWarning() << "Item to update is invalid:" << dateTime << transportLine << target;
         return;
     }
@@ -692,7 +695,8 @@ void PublicTransportEngine::requestAdditionalData( const QString &sourceName, in
     // Found data of the timetable item to update
     const SourceData sourceData( sourceName );
     provider->requestAdditionalData( AdditionalDataRequest(sourceName, itemNumber,
-            sourceData.request->stop, dateTime, transportLine, target, sourceData.request->city) );
+            sourceData.request->stop, dateTime, transportLine, target, sourceData.request->city,
+            routeDataUrl) );
 }
 
 void PublicTransportEngine::forceUpdate()

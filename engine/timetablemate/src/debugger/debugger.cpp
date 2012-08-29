@@ -83,7 +83,7 @@ Debugger::Debugger( QObject *parent )
     connect( m_debugger, SIGNAL(interrupted()), this, SLOT(slotInterrupted()) );
     connect( m_debugger, SIGNAL(continued(bool)), this, SLOT(slotContinued(bool)) );
     connect( m_debugger, SIGNAL(started()), this, SLOT(slotStarted()), Qt::QueuedConnection );
-    connect( m_debugger, SIGNAL(stopped()), this, SLOT(slotStopped()), Qt::QueuedConnection );
+    connect( m_debugger, SIGNAL(stopped(bool)), this, SLOT(slotStopped(bool)), Qt::QueuedConnection );
     connect( m_debugger, SIGNAL(exception(int,QString,QString)),
              this, SIGNAL(exception(int,QString,QString)) );
     connect( m_debugger, SIGNAL(output(QString,QScriptContextInfo)),
@@ -165,7 +165,7 @@ void Debugger::slotStarted()
     }
 }
 
-void Debugger::slotStopped()
+void Debugger::slotStopped( bool aborted )
 {
     if ( !m_running ) {
         return;
@@ -174,7 +174,7 @@ void Debugger::slotStopped()
     if ( m_runningJobs.isEmpty() ) {
         // No more running jobs
         m_running = false;
-    } else if ( m_debugger->state() == Aborting || m_debugger->wasLastRunAborted() ) {
+    } else if ( aborted || m_debugger->state() == Aborting || m_debugger->wasLastRunAborted() ) {
         // Execution was aborted
         m_running = false;
     } else if ( m_runningJobs.count() == 1 ) {
@@ -235,6 +235,26 @@ void Debugger::slotContinued( bool willInterruptAfterNextStatement )
 
 void Debugger::jobStarted( ThreadWeaver::Job *job )
 {
+    LoadScriptJob *loadScriptJob = qobject_cast< LoadScriptJob* >( job );
+    TimetableDataRequestJob *runScriptJob = qobject_cast< TimetableDataRequestJob* >( job );
+    CallScriptFunctionJob *callFunctionJob = qobject_cast< CallScriptFunctionJob* >( job );
+    ExecuteConsoleCommandJob *consoleCommandJob = qobject_cast< ExecuteConsoleCommandJob* >( job );
+    EvaluateInContextJob *evaluateInContextJob = qobject_cast< EvaluateInContextJob* >( job );
+    TestFeaturesJob *testJob = qobject_cast< TestFeaturesJob* >( job );
+    if ( loadScriptJob ) {
+        emit loadScriptStarted( loadScriptJob );
+    } else if ( runScriptJob ) {
+        emit requestTimetableDataStarted( runScriptJob );
+    } else if ( callFunctionJob ) {
+        emit callScriptFunctionStarted( callFunctionJob );
+    } else if ( consoleCommandJob ) {
+        emit commandExecutionStarted( consoleCommandJob );
+    } else if ( evaluateInContextJob ) {
+        emit evaluationStarted( evaluateInContextJob );
+    } else if ( testJob ) {
+        emit testFeaturesStarted( testJob );
+    }
+
     m_runningJobs << job;
 }
 
@@ -323,7 +343,8 @@ void Debugger::evaluateInContext( const QString &program, const QString &context
     return;
 }
 
-bool Debugger::loadScript( const QString &program, const ServiceProviderData *data )
+bool Debugger::loadScript( const QString &program, const ServiceProviderData *data,
+                           DebugFlags debugFlags )
 {
     if ( m_loadScriptJob ) {
         kDebug() << "Script already gets loaded, please wait...";
@@ -340,18 +361,18 @@ bool Debugger::loadScript( const QString &program, const ServiceProviderData *da
     m_script = new QScriptProgram( program, data->scriptFileName() );
     m_data = data;
     m_lastScriptError = NoScriptError;
-    enqueueNewLoadScriptJob();
+    enqueueNewLoadScriptJob( debugFlags );
     return true;
 }
 
-LoadScriptJob *Debugger::enqueueNewLoadScriptJob()
+LoadScriptJob *Debugger::enqueueNewLoadScriptJob( DebugFlags debugFlags )
 {
     Q_ASSERT( m_data );
     createScriptObjects( m_data );
     m_loadScriptJob = new LoadScriptJob( m_debugger, *m_data, m_engineMutex, m_script,
                                          m_scriptHelper, m_scriptResult, m_scriptNetwork,
                                          m_scriptStorage, m_scriptDataStreamPrototype,
-                                         ResultObject::staticMetaObject, this );
+                                         ResultObject::staticMetaObject, debugFlags, this );
     enqueueJob( m_loadScriptJob );
     return m_loadScriptJob;
 }
@@ -540,7 +561,8 @@ void Debugger::runAfterScriptIsLoaded( ThreadWeaver::Job *dependendJob )
         // If the script is not loaded (still in initializing mode, error or modified)
         // create a job to load it and make the run script job dependend
         if ( !m_loadScriptJob ) {
-            m_loadScriptJob = enqueueNewLoadScriptJob();
+            TimetableDataRequestJob *job = qobject_cast< TimetableDataRequestJob* >( dependendJob );
+            m_loadScriptJob = enqueueNewLoadScriptJob( job ? job->debugFlags() : NoDebugFlags );
         }
 
         // Do not enqueue the dependend job, only add the LoadScriptJob as dependency

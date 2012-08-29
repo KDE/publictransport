@@ -66,6 +66,7 @@ namespace Debugger {
     class BreakpointModel;
     class Breakpoint;
     class ScriptRunData;
+    class TimetableDataRequestJob;
 }
 
 class KActionMenu;
@@ -745,8 +746,11 @@ signals:
     void savePathInfoStringChanged( const QString &newSavePathInfoString );
     void debuggerRunningChanged( bool debuggerRunning );
     void testRunningChanged( bool testRunning );
-    void outputChanged( const QString &output );
+    void outputChanged();
     void consoleTextChanged( const QString &consoleText );
+
+    void outputCleared();
+    void outputAppended( const QString &newOutput );
 
     /** @brief Emitted when the @p title and/or @p icon for @p tabWidget has changed. */
     void tabTitleChanged( QWidget *tabWidget, const QString &title, const QIcon &icon );
@@ -931,7 +935,7 @@ public slots:
      * @brief Add @p output to the projects output.
      * @see output
      **/
-    void appendOutput( const QString &output );
+    void appendOutput( const QString &output, const QColor &color = QColor() );
 
     /**
      * @brief Clear collected output.
@@ -958,6 +962,8 @@ protected slots:
     void slotModifiedStateChanged();
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    void requestTimetableDataStarted( TimetableDataRequestJob *job );
+
     void loadScriptResult( ScriptErrorType lastScriptError,
                            const QString &lastScriptErrorString,
                            const QStringList &globalFunctions );

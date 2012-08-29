@@ -56,8 +56,10 @@ OutputDockWidget::OutputDockWidget( ProjectModel *projectModel, KActionMenu *sho
     connect( projectModel, SIGNAL(activeProjectAboutToChange(Project*,Project*)),
              this, SLOT(activeProjectAboutToChange(Project*,Project*)) );
     if ( projectModel->activeProject() ) {
-        connect( projectModel->activeProject(), SIGNAL(outputChanged(QString)),
-                 this, SLOT(setOutput(QString)) );
+        connect( projectModel->activeProject(), SIGNAL(outputAppended(QString)),
+                 this, SLOT(outputAppended(QString)) );
+        connect( projectModel->activeProject(), SIGNAL(outputCleared()),
+                 m_outputWidget, SLOT(clear()) );
     }
 }
 
@@ -78,16 +80,24 @@ void OutputDockWidget::showContextMenu( const QPoint &pos )
 void OutputDockWidget::activeProjectAboutToChange( Project *project, Project *previousProject )
 {
     if ( previousProject ) {
-        disconnect( previousProject, SIGNAL(outputChanged(QString)),
-                    this, SLOT(setOutput(QString)) );
+        disconnect( previousProject, SIGNAL(outputAppended(QString)),
+                    this, SLOT(outputAppended(QString)) );
+        disconnect( previousProject, SIGNAL(outputCleared()), m_outputWidget, SLOT(clear()) );
     }
 
     if ( project ) {
         setOutput( project->output() );
-        connect( project, SIGNAL(outputChanged(QString)), this, SLOT(setOutput(QString)) );
+        connect( project, SIGNAL(outputAppended(QString)), this, SLOT(outputAppended(QString)) );
+        connect( project, SIGNAL(outputCleared()), m_outputWidget, SLOT(clear()) );
     } else {
         m_outputWidget->clear();
     }
+}
+
+void OutputDockWidget::outputAppended( const QString &html )
+{
+    m_outputWidget->appendHtml( html );
+    m_outputWidget->ensureCursorVisible();
 }
 
 void OutputDockWidget::setOutput( const QString &html )

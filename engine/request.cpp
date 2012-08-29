@@ -131,6 +131,7 @@ QScriptValue AdditionalDataRequest::toScriptValue( QScriptEngine *engine ) const
     value.setProperty( QLatin1String("transportLine"), transportLine );
     value.setProperty( QLatin1String("target"), target );
     value.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
+    value.setProperty( QLatin1String("routeDataUrl"), routeDataUrl );
     return value;
 }
 

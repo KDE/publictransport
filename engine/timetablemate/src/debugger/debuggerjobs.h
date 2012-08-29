@@ -162,15 +162,18 @@ protected:
                             Scripting::Helper *scriptHelper, Scripting::ResultObject *scriptResult,
                             Scripting::Network *scriptNetwork, Scripting::Storage *scriptStorage,
                             Scripting::DataStreamPrototype *dataStreamPrototype,
-                            const QMetaObject &enums, QObject* parent = 0 )
+                            const QMetaObject &enums, DebugFlags debugFlags = DefaultDebugFlags,
+                            QObject* parent = 0 )
             : DebuggerJob(debugger, data, engineMutex, parent),
               m_script(script), m_scriptHelper(scriptHelper), m_scriptResult(scriptResult),
               m_scriptNetwork(scriptNetwork), m_scriptStorage(scriptStorage),
-              m_dataStreamPrototype(dataStreamPrototype), m_enums(enums) {};
+              m_dataStreamPrototype(dataStreamPrototype), m_enums(enums),
+              m_debugFlags(debugFlags) {};
 
     virtual void debuggerRun();
     bool loadScriptObjects();
     QStringList globalFunctions() const { return m_globalFunctions; };
+    DebugFlags debugFlags() const { return m_debugFlags; };
 
 private:
     QScriptProgram *m_script;
@@ -181,6 +184,7 @@ private:
     Scripting::DataStreamPrototype *const m_dataStreamPrototype;
     const QMetaObject m_enums;
     QStringList m_globalFunctions;
+    const DebugFlags m_debugFlags;
 };
 
 /**

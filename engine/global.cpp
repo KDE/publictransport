@@ -166,9 +166,9 @@ QString Global::vehicleTypeToIcon( const Enums::VehicleType& vehicleType )
 }
 
 Enums::TimetableInformation Global::timetableInformationFromString(
-    const QString& sTimetableInformation )
+        const QString& sTimetableInformation )
 {
-    QString sInfo = sTimetableInformation.toLower();
+    const QString sInfo = sTimetableInformation.toLower();
     if ( sInfo == QLatin1String("nothing") ) {
         return Enums::Nothing;
     } else if ( sInfo == QLatin1String("departuredatetime") ) {
@@ -225,6 +225,8 @@ Enums::TimetableInformation Global::timetableInformationFromString(
         return Enums::RouteNews;
     } else if ( sInfo == QLatin1String("routesubjourneys") ) {
         return Enums::RouteSubJourneys;
+    } else if ( sInfo == QLatin1String("routedataurl") ) {
+        return Enums::RouteDataUrl;
     } else if ( sInfo == QLatin1String("operator") ) {
         return Enums::Operator;
     } else if ( sInfo == QLatin1String("duration") ) {
@@ -314,6 +316,7 @@ bool Global::checkTimetableInformation( Enums::TimetableInformation info, const 
     case Enums::Pricing:
     case Enums::StopName:
     case Enums::StopID:
+    case Enums::RouteDataUrl:
         return !value.toString().trimmed().isEmpty();
     case Enums::StopLongitude:
     case Enums::StopLatitude:

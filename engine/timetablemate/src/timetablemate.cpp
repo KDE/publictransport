@@ -1393,6 +1393,11 @@ void TimetableMate::debugStopped()
 void TimetableMate::uncaughtException( int lineNumber, const QString &errorMessage,
                                        const QString &fileName )
 {
+    // Do not show messages while testing, results are shown in the test dock
+    if ( m_projectModel->activeProject()->isTestRunning() ) {
+        return;
+    }
+
     infoMessage( i18nc("@info", "Uncaught exception in <filename>%1</filename> at %2: "
                        "<message>%3</message>",
                        QFileInfo(fileName).fileName(), lineNumber, errorMessage),

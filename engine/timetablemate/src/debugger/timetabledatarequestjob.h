@@ -76,6 +76,8 @@ public:
 
     QString functionName() const;
 
+    DebugFlags debugFlags() const { return m_debugFlags; };
+
 signals:
     void asynchronousRequestWaitFinished( int statusCode = 200, int size = 0 );
     void synchronousRequestWaitFinished( int statusCode = 200, int waitingTime = 0, int size = 0 );
@@ -102,6 +104,8 @@ protected slots:
     void synchronousRequestFinished( const QString &url, const QByteArray &data = QByteArray(),
                                      bool cancelled = false, int statusCode = 200,
                                      int waitingTime = 0, int size = 0 );
+
+    void scriptStopped( bool aborted );
 
 protected:
     /**

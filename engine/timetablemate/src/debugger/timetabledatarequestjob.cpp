@@ -252,6 +252,9 @@ void CallScriptFunctionJob::debuggerRun()
     const DebugFlags debugFlags = m_debugFlags;
     m_mutex->unlockInline();
 
+    // Wait for the debugger to get ready
+    debugger->finish();
+
     m_engineMutex->lockInline();
     engine->clearExceptions();
 
@@ -295,21 +298,22 @@ void CallScriptFunctionJob::debuggerRun()
     connect( scriptResult, SIGNAL(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)),
              this, SLOT(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)) );
 
+    connect( debugger, SIGNAL(stopped(bool)), this, SLOT(scriptStopped(bool)) );
+
+    debugger->setExecutionControlType( debugFlags.testFlag(InterruptAtStart)
+                                       ? ExecuteInterrupt : ExecuteRun );
+    debugger->setDebugFlags( debugFlags );
+
     // Call script function
-    if ( debugFlags.testFlag(InterruptAtStart) ) {
-        debugger->setExecutionControlType( ExecuteInterrupt );
-    } else if ( debugFlags.testFlag(InterruptOnExceptions) ) {
-        debugger->setExecutionControlType( ExecuteContinue );
-    }
     const QScriptValueList arguments = createArgumentScriptValues();
-    QScriptValue returnValue = function.call( QScriptValue(), arguments );
+    const QScriptValue returnValue = function.call( QScriptValue(), arguments );
     m_engineMutex->unlockInline();
 
     // The called function returned, but asynchronous network requests may have been started.
     // Wait for all network requests to finish, because slots in the script may get called
     const int finishWaitTime = 500;
     int finishWaitCounter = 0;
-    while ( !debugger->wasLastRunAborted() && scriptNetwork->hasRunningRequests() &&
+    while ( m_success && !debugger->wasLastRunAborted() && scriptNetwork->hasRunningRequests() &&
             finishWaitCounter < 20 )
     {
         QEventLoop loop;
@@ -332,7 +336,7 @@ void CallScriptFunctionJob::debuggerRun()
 
     // Waiting for script execution to finish
     finishWaitCounter = 0;
-    while ( !debugger->wasLastRunAborted() && m_debugger->isRunning() && finishWaitCounter < 20 ) {
+    while ( m_success && !debugger->wasLastRunAborted() && m_debugger->isRunning() && finishWaitCounter < 20 ) {
         QEventLoop loop;
         connect( m_debugger, SIGNAL(stopped()), &loop, SLOT(quit()) );
 //         connect( this, SIGNAL(destroyed(QObject*)), &loop, SLOT(quit()) );
@@ -357,7 +361,7 @@ void CallScriptFunctionJob::debuggerRun()
 //             !m_scriptResult->isHintGiven( ResultObject::NoDelaysForStop );
 
     bool locked;
-    if ( finishedSuccessfully || debugger->wasLastRunAborted() ) {
+    if ( finishedSuccessfully || debugger->wasLastRunAborted() || !m_success ) {
         // Script finished or was aborted
         locked = m_engineMutex->tryLock( 250 );
     } else {
@@ -379,9 +383,9 @@ void CallScriptFunctionJob::debuggerRun()
                             functionName.toUtf8().constData(),
                             engine->uncaughtException().toString().toUtf8().constData() );
         handleError( engine, i18nc("@info/plain", "Error in the script at line %1 in function "
-                                "'%2': <message>%3</message>.",
-                                engine->uncaughtExceptionLineNumber(), functionName,
-                                engine->uncaughtException().toString()) );
+                                   "'%2': <message>%3</message>.",
+                                   debugger->uncaughtExceptionLineNumber(), functionName,
+                                   debugger->uncaughtException().toString()) );
         m_debugger->debugInterrupt(); // TEST is this needed?
         return;
     }
@@ -393,12 +397,13 @@ void CallScriptFunctionJob::debuggerRun()
     m_mutex->lockInline();
     m_returnValue = returnValue;
     if ( functionName == ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA ) {
-        const QVariantMap map = m_returnValue.toVariant().toMap();
+        const QVariantMap map = returnValue.toVariant().toMap();
         TimetableData data;
         for ( QVariantMap::ConstIterator it = map.constBegin(); it != map.constEnd(); ++it ) {
             data[ Global::timetableInformationFromString(it.key()) ] = it.value();
         }
         if ( !data.isEmpty() ) {
+            kDebug() << data.count() << "entries";
             finish( QList<TimetableData>() << data );
         }
     } else {
@@ -418,7 +423,9 @@ void CallScriptFunctionJob::debuggerRun()
     delete scriptNetwork;
 
     QMutexLocker locker( m_mutex );
-    if ( allNetworkRequestsFinished && finishedSuccessfully ) {
+    if ( !m_success ) {
+        return;
+    } else if ( allNetworkRequestsFinished && finishedSuccessfully ) {
         // No uncaught exceptions, all network requests finished
         if ( debugger->wasLastRunAborted() ) {
             m_success = false;
@@ -440,6 +447,22 @@ void CallScriptFunctionJob::debuggerRun()
         m_explanation = i18nc("@info/plain", "The script did not finish in time, "
                                "there may be an infinite loop.");
         m_success = false;
+    }
+}
+
+void CallScriptFunctionJob::scriptStopped( bool aborted )
+{
+    if ( aborted ) {
+        m_mutex->lockInline();
+        DebuggerAgent *debugger = m_debugger;
+        QScriptEngine *engine = debugger->engine();
+        const QString functionName = m_functionName;
+        m_mutex->unlockInline();
+
+        handleError( engine, i18nc("@info/plain", "Error in the script at line %1 in function "
+                                   "'%2': <message>%3</message>.",
+                                   debugger->uncaughtExceptionLineNumber(), functionName,
+                                   debugger->uncaughtException().toString()) );
     }
 }
 

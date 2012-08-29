@@ -152,8 +152,8 @@ void LoadScriptJob::debuggerRun()
 
     DebuggerAgent *debugger = m_debugger;
     QScriptEngine *engine = m_debugger->engine();
-//     const ServiceProviderData data = m_data;
     QScriptProgram script = *m_script;
+    DebugFlags debugFlags = m_debugFlags;
     m_mutex->unlockInline();
 
     debugger->setMainScriptFileName( m_data.scriptFileName() );
@@ -167,13 +167,16 @@ void LoadScriptJob::debuggerRun()
 
     // Get first lines of script code until the first statement after any previous include() calls
     QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
+
+    debugger->setExecutionControlType( debugFlags.testFlag(InterruptAtStart)
+                                       ? ExecuteInterrupt : ExecuteRun );
+    debugger->setDebugFlags( debugFlags );
+
+    m_engineMutex->lockInline();
     QScriptValue includeFunction = engine->globalObject().property("include");
     includeFunction.setData( maxIncludeLine(script.sourceCode()) );
     engine->globalObject().setProperty( "include", includeFunction, flags );
 
-    debugger->setExecutionControlType( ExecuteRun );
-
-    m_engineMutex->lockInline();
     // Evaluate the script
     QScriptValue returnValue = engine->evaluate( script );
     const QString functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;

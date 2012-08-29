@@ -110,6 +110,15 @@ public:
     /** @brief Whether or not the script currently gets aborted. */
     bool isAborting() const;
 
+    /**
+     * @brief Blocks until the debugger has been completely shut down.
+     *
+     * If the debugger is not running, this function returns immediately.
+     * This function should be called before starting another execution to ensure that the debugger
+     * state stays clean. Otherwise there may be crashes and unexpected behaviour.
+     **/
+    void finish() const;
+
     QString mainScriptFileName() const;
     void setMainScriptFileName( const QString &mainScriptFileName );
 
@@ -197,7 +206,7 @@ signals:
     void started();
 
     /** @brief The script finished and is no longer running */
-    void stopped();
+    void stopped( bool aborted = false );
 
     /** @see isInterrupted() */
     void positionChanged( int lineNumber, int columnNumber, int oldLineNumber, int oldColumnNumber );

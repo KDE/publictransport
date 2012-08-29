@@ -42,6 +42,7 @@ public:
 
 protected slots:
     void setOutput( const QString &html );
+    void outputAppended( const QString &html );
     void showContextMenu( const QPoint &pos );
 
     void activeProjectAboutToChange( Project *project, Project *previousProject );

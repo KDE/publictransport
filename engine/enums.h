@@ -225,6 +225,12 @@ public:
          **/
         RouteSubJourneys = 35,
 
+        /**
+         * An URL to a document, which contains route data for a specific train/vehicle.
+         * For HAFAS providers this is a "traininfo.exe"-URL.
+         **/
+        RouteDataUrl = 40,
+
         // Journey information
         Duration = 50, /**< The duration of a journey. */
         StartStopName = 51, /**< The name of the starting stop of a journey. */
@@ -380,7 +386,8 @@ public:
         * By feet, ie. no vehicle. Used for journeys, eg. from platform A to platform B when changing
         * the vehicle.
         **/
-        Feet = 50,
+        Footway = 50,
+        Feet = Footway, /**< DEPRECATED */
 
         /** @image html hi16-app-vehicle_type_ferry.png A ferry. */
         Ferry = 100,

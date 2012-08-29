@@ -157,6 +157,20 @@ bool DebuggerAgent::wasLastRunAborted() const
     return m_state == NotRunning && m_lastRunAborted;
 }
 
+void DebuggerAgent::finish() const
+{
+    m_mutex->lockInline();
+    const DebuggerState state = m_state;
+    m_mutex->unlockInline();
+
+    if ( state != NotRunning ) {
+        kDebug() << "Wait until the previous script run is finished";
+        QEventLoop loop;
+        connect( this, SIGNAL(stopped()), &loop, SLOT(quit()) );
+        loop.exec();
+    }
+}
+
 NextEvaluatableLineHint DebuggerAgent::canBreakAt( int lineNumber, const QStringList &programLines )
 {
     kDebug() << "canBreakAt(" << lineNumber << "), code lines:" << programLines.count();
@@ -832,6 +846,7 @@ void DebuggerAgent::abortDebugger()
     switch ( m_state ) {
     case Aborting:
         kDebug() << "Is already aborting";
+        m_mutex->unlockInline();
         return;
     case NotRunning:
         if ( m_injectedScriptState == InjectedScriptEvaluating ) {
@@ -850,6 +865,7 @@ void DebuggerAgent::abortDebugger()
         m_mutex->unlockInline();
 
         setState( Aborting );
+        engine()->abortEvaluation();
         break;
     }
 
@@ -1227,6 +1243,7 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
     // Lock member variables and initialize
     m_mutex->lockInline();
     ExecutionControl executionControl = m_executionControl;
+    const bool isAborting = executionControl == ExecuteAbort || m_state == Aborting;
     DEBUGGER_DEBUG("Execution type:" << executionControl << "  line" << lineNumber << "col" << columnNumber);
     const bool injectedProgram = m_injectedScriptState == InjectedScriptEvaluating;
     if ( !injectedProgram && m_state == NotRunning ) {
@@ -1241,7 +1258,7 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
     DebuggerState state = m_state;
 
     // Decide if execution should be interrupted (breakpoints, execution control value, eg. step into).
-    if ( !injectedProgram ) {
+    if ( !injectedProgram && !isAborting ) {
         // Update current execution position,
         // before emitting breakpointReached() and positionChanged()
         m_currentScriptId = scriptId;
@@ -1285,6 +1302,10 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
                         applyExecutionControl( executionControl, currentContext );
                 m_mutex->unlockInline();
             }
+        } else {
+            m_executionControl = executionControl =
+                    applyExecutionControl( executionControl, currentContext );
+            m_mutex->unlockInline();
         }
 
         if ( executionControl == ExecuteInterrupt ) {
@@ -1580,13 +1601,14 @@ void DebuggerAgent::fireup()
     // First lock the engine (m_engineMutex), then the agents member variables (m_mutex),
     // otherwise m_mutex would lock as long as m_engineMutex does
     m_engineMutex->lockInline();
-    m_mutex->lockInline();
-    m_globalObject = engine()->globalObject();
-    m_lastRunAborted = false;
+    const QScriptValue globalObject = engine()->globalObject();
     m_engineMutex->unlockInline();
 
     setState( Running );
-//     m_functionDepth = 0;
+
+    m_mutex->lockInline();
+    m_globalObject = globalObject;
+    m_lastRunAborted = false;
     m_hasUncaughtException = false;
     m_uncaughtExceptionLineNumber = -1;
     m_checkRunningTimer->start( CHECK_RUNNING_INTERVAL );
@@ -1622,8 +1644,6 @@ void DebuggerAgent::shutdown()
         emit aborted();
     }
     engine()->clearExceptions();
-    setState( NotRunning );
-    emit stopped();
 
     if ( isPositionChanged ) {
         const int oldLineNumber = m_lineNumber;
@@ -1636,6 +1656,9 @@ void DebuggerAgent::shutdown()
 
         emit positionChanged( -1, -1, oldLineNumber, oldColumnNumber );
     }
+
+    setState( NotRunning );
+    emit stopped( oldState == Aborting );
 }
 
 void DebuggerAgent::exceptionCatch( qint64 scriptId, const QScriptValue &exception )
@@ -1672,9 +1695,7 @@ void DebuggerAgent::exceptionThrow( qint64 scriptId, const QScriptValue &excepti
             doInterrupt();
         }
 
-        // Continue execution
-        m_engineMutex->lockInline();
-        engine()->clearExceptions();
+        abortDebugger();
     }
 }
 

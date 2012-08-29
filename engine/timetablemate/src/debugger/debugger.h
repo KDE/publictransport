@@ -245,7 +245,8 @@ public:
      * @return @c True if a LoadScriptJob was started or is already running,
      *   @c false if the script was already loaded and did not change.
      **/
-    bool loadScript( const QString &program, const ServiceProviderData *data );
+    bool loadScript( const QString &program, const ServiceProviderData *data,
+                     DebugFlags debugFlags = DefaultDebugFlags );
 
     /**
      * @brief Checks whether script execution can be interrupted at @p lineNumber.
@@ -415,6 +416,13 @@ signals:
     void informationMessage( const QString &message );
     void errorMessage( const QString &message );
 
+    void loadScriptStarted( LoadScriptJob *job );
+    void requestTimetableDataStarted( TimetableDataRequestJob *job );
+    void callScriptFunctionStarted( CallScriptFunctionJob *job );
+    void commandExecutionStarted( ExecuteConsoleCommandJob *job );
+    void evaluationStarted( EvaluateInContextJob *job );
+    void testFeaturesStarted( TestFeaturesJob *job );
+
     /**
      * @brief A LoadScriptJob is done.
      *
@@ -528,7 +536,7 @@ protected slots:
     void jobDestroyed( QObject *job );
 
     void slotStarted();
-    void slotStopped();
+    void slotStopped( bool aborted = false );
     void slotInterrupted();
     void slotContinued( bool willInterruptAfterNextStatement = false );
     void slotAborted();
@@ -538,7 +546,7 @@ protected slots:
     void timeout();
 
 private:
-    LoadScriptJob *enqueueNewLoadScriptJob();
+    LoadScriptJob *enqueueNewLoadScriptJob( DebugFlags debugFlags = NoDebugFlags );
     void runAfterScriptIsLoaded( ThreadWeaver::Job *dependendJob );
     void createScriptObjects( const ServiceProviderData *data );
     void assignDebuggerQueuePolicy( DebuggerJob *job );

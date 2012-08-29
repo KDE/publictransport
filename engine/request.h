@@ -122,10 +122,10 @@ struct StopSuggestionRequest : public AbstractRequest {
 
 struct StopSuggestionFromGeoPositionRequest : public StopSuggestionRequest {
     /** @brief The longitude of the stop. */
-    float longitude;
+    qreal longitude;
 
     /** @brief The latitude of the stop. */
-    float latitude;
+    qreal latitude;
 
     /** @brief Maximal distance in meters from the position at longitude/latitude. */
     int distance;
@@ -133,10 +133,10 @@ struct StopSuggestionFromGeoPositionRequest : public StopSuggestionRequest {
     StopSuggestionFromGeoPositionRequest( const QString &sourceName = QString(),
                                           ParseDocumentMode parseMode = ParseForStopSuggestions )
         : StopSuggestionRequest(sourceName, parseMode),
-          longitude(0.0), latitude(0.0), distance(500) {};
+          longitude(0.0), latitude(0.0), distance(5000) {};
     StopSuggestionFromGeoPositionRequest( const QString &sourceName,
-                                          float longitude, float latitude, int maxCount = 200,
-                                          int distance = 500,
+                                          qreal longitude, qreal latitude, int maxCount = 200,
+                                          int distance = 5000,
                                           ParseDocumentMode parseMode = ParseForStopSuggestions )
         : StopSuggestionRequest(sourceName, QString(), maxCount, QString(), parseMode),
           longitude(longitude), latitude(latitude), distance(distance) {};
@@ -257,6 +257,7 @@ struct AdditionalDataRequest : public AbstractRequest {
     int itemNumber;
     QString transportLine;
     QString target;
+    QString routeDataUrl;
 
     AdditionalDataRequest( const QString &sourceName = QString(),
                            ParseDocumentMode parseMode = ParseForAdditionalData )
@@ -264,12 +265,15 @@ struct AdditionalDataRequest : public AbstractRequest {
     AdditionalDataRequest( const QString &sourceName, int itemNumber, const QString &stop,
                            const QDateTime &dateTime, const QString &transportLine,
                            const QString &target, const QString &city = QString(),
+                           const QString &routeDataUrl = QString(),
                            ParseDocumentMode parseMode = ParseForAdditionalData )
         : AbstractRequest(sourceName, stop, dateTime, 1, city, parseMode),
-          itemNumber(itemNumber), transportLine(transportLine), target(target) {};
+          itemNumber(itemNumber), transportLine(transportLine), target(target),
+          routeDataUrl(routeDataUrl) {};
     AdditionalDataRequest( const AdditionalDataRequest &other )
         : AbstractRequest(other), itemNumber(other.itemNumber),
-          transportLine(other.transportLine), target(other.target) {};
+          transportLine(other.transportLine), target(other.target),
+          routeDataUrl(other.routeDataUrl) {};
 
     virtual AbstractRequest *clone() const { return new AdditionalDataRequest(*this); };
 
