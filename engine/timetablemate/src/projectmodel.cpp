@@ -38,6 +38,7 @@
 #include <KGlobalSettings>
 #include <KDebug>
 #include <KDialog>
+#include <KColorScheme>
 
 // Qt includes
 #include <QFileInfo>
@@ -220,8 +221,8 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
         case Qt::FontRole:
             switch ( projectItem->type() ) {
             case ProjectModelItem::ProjectSourceItem:
-                if ( projectItem->project()->projectSourceTab() &&
-                     projectItem->project()->projectSourceTab()->isModified() )
+                if ( project->projectSourceTab() &&
+                     project->projectSourceTab()->isModified() )
                 {
                     QFont font = KGlobalSettings::generalFont();
                     font.setItalic( true );
@@ -231,8 +232,8 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                 }
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
             case ProjectModelItem::ScriptItem:
-                if ( projectItem->project()->scriptTab() &&
-                     projectItem->project()->scriptTab()->isModified() )
+                if ( project->scriptTab() &&
+                     project->scriptTab()->isModified() )
                 {
                     QFont font = KGlobalSettings::generalFont();
                     font.setItalic( true );
@@ -268,6 +269,20 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                 return font;
             } else {
                 return KGlobalSettings::generalFont();
+            }
+        case Qt::ForegroundRole:
+            switch ( project->testModel()->completeState() ) {
+            case TestModel::TestFinishedSuccessfully:
+                return KColorScheme(QPalette::Active).foreground(KColorScheme::PositiveText);
+            case TestModel::TestFinishedWithWarnings:
+                return KColorScheme(QPalette::Active).foreground(KColorScheme::NeutralText);
+            case TestModel::TestFinishedWithErrors:
+            case TestModel::TestCouldNotBeStarted:
+                return KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText);
+            case TestModel::TestNotStarted:
+            case TestModel::TestIsRunning:
+            default:
+                return KColorScheme(QPalette::Active).foreground();
             }
         }
     }
@@ -372,6 +387,7 @@ void ProjectModel::appendProject( Project *project )
 
     project->setProjectModel( this );
     connect( project, SIGNAL(modifiedStateChanged(bool)), this, SLOT(slotProjectModified()) );
+    connect( project->testModel(), SIGNAL(testResultsChanged()), this, SLOT(slotProjectModified()) );
     connect( this, SIGNAL(activeProjectChanged(Project*,Project*)),
              project, SLOT(slotActiveProjectChanged(Project*,Project*)) );
     connect( project, SIGNAL(setAsActiveProjectRequest()), this, SLOT(setAsActiveProjectRequest()) );
@@ -438,6 +454,12 @@ ProjectModelItem::Type ProjectModelItem::projectItemTypeFromTabType( TabType tab
 void ProjectModel::slotProjectModified()
 {
     Project *project = qobject_cast< Project* >( sender() );
+    if ( !project ) {
+        TestModel *testModel = qobject_cast< TestModel* >( sender() );
+        Q_ASSERT( testModel );
+
+        project = testModel->project();
+    }
     Q_ASSERT( project );
 
     // Inform about changes in the project root item

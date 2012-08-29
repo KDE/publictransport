@@ -20,6 +20,9 @@
 // Header
 #include "testmodel.h"
 
+// Own includes
+#include "project.h"
+
 // Public Transport engine includes
 #include <engine/script/serviceproviderscript.h>
 
@@ -44,12 +47,18 @@ TestModel::TestModel( QObject *parent ) : QAbstractItemModel( parent )
 {
 }
 
+Project *TestModel::project() const
+{
+    return qobject_cast< Project* >( QObject::parent() );
+}
+
 void TestModel::markTestCaseAsUnstartable( TestModel::TestCase testCase,
                                            const QString &errorMessage, const QString &tooltip,
                                            QAction *solution )
 {
     m_unstartableTestCases[ testCase ] = TestCaseData( errorMessage, tooltip, solution );
     emit dataChanged( indexFromTestCase(testCase, 0), indexFromTestCase(testCase, ColumnCount - 1) );
+    emit testResultsChanged();
 }
 
 void TestModel::markTestAsStarted( TestModel::Test test )
@@ -121,6 +130,8 @@ void TestModel::testChanged( TestModel::Test test )
 
     TestCase testCase = testCaseOfTest( test );
     emit dataChanged( indexFromTestCase(testCase, 0), indexFromTestCase(testCase, ColumnCount - 1) );
+
+    emit testResultsChanged();
 }
 
 void TestModel::clear()
@@ -131,6 +142,8 @@ void TestModel::clear()
     m_unstartableTestCases.clear();
     m_testData.clear();
     emit dataChanged( index(0, 0), index(TestCaseCount - 1, ColumnCount - 1) );
+
+    emit testResultsChanged();
 }
 
 bool TestModel::isEmpty() const

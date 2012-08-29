@@ -31,6 +31,7 @@
 // Qt inlcudes
 #include <QAbstractItemModel>
 
+class Project;
 class AbstractRequest;
 class QAction;
 
@@ -163,6 +164,8 @@ public:
     /** @brief Constructor. */
     explicit TestModel( QObject *parent = 0 );
 
+    Q_INVOKABLE Project *project() const;
+
     Q_INVOKABLE virtual int columnCount( const QModelIndex &parent = QModelIndex() ) const {
             Q_UNUSED(parent); return ColumnCount; };
     Q_INVOKABLE virtual int rowCount( const QModelIndex &parent = QModelIndex() ) const;
@@ -256,6 +259,9 @@ public:
 
     /** @brief Get a description for @p test. */
     Q_INVOKABLE static QString descriptionForTest( Test test );
+
+signals:
+    void testResultsChanged();
 
 protected:
     static QAction *actionFromIndex( const QModelIndex &index );
