@@ -371,6 +371,12 @@ void TimetableMate::readProperties( const KConfigGroup &config )
         // Show dashboard of the active project, if no tabs were restored
         m_projectModel->activeProject()->showDashboardTab();
     }
+
+    if ( m_projectModel->activeProject() && m_projectsDock ) {
+        // Expand active project item
+        m_projectsDock->projectsWidget()->expand(
+                m_projectModel->indexFromProject(m_projectModel->activeProject()) );
+    }
 }
 
 void TimetableMate::initialize()
@@ -1425,15 +1431,13 @@ void TimetableMate::fileNew()
     newProject->loadProject();
     m_projectModel->appendProject( newProject );
     newProject->showDashboardTab();
+
+    // Expand new project item
+    m_projectsDock->projectsWidget()->expand( m_projectModel->indexFromProject(newProject) );
 }
 
 void TimetableMate::projectAdded( Project *project )
 {
-    // Expand project item
-    if ( m_projectsDock ) {
-        m_projectsDock->projectsWidget()->expand( m_projectModel->indexFromProject(project) );
-    }
-
     // Connect new project
     connect( project, SIGNAL(tabTitleChanged(QWidget*,QString,QIcon)),
              this, SLOT(tabTitleChanged(QWidget*,QString,QIcon)) );
@@ -1688,6 +1692,10 @@ void TimetableMate::fileOpen() {
 
     foreach ( const QString &fileName, fileNames ) {
         open( KUrl(fileName) );
+
+        // Expand manually opened project item
+        m_projectsDock->projectsWidget()->expand(
+                m_projectModel->index(m_projectModel->rowCount() - 1, 0) );
     }
 }
 
