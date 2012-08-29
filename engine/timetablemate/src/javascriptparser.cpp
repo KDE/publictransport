@@ -53,7 +53,7 @@ bool CodeNode::isInRange( int lineNumber, int column ) const
     } else if ( lineNumber == endLine() )  {
         // lineNumber is at the end of a multiline node
         return column == -1 || column <= m_colEnd;
-    } else if ( lineNumber >= m_line && lineNumber <= endLine() ) {
+    } else if ( lineNumber > m_line && lineNumber < endLine() ) {
         // lineNumber is inside a multiline node
         return true;
     } else {
@@ -364,13 +364,13 @@ CodeNode::Ptr JavaScriptParser::parseStatement()
         return CodeNode::Ptr( 0 );
     }
     Token *firstToken = currentToken();
-    if ( m_lastToken == firstToken ) {
-        moveToNextToken();
-        if ( atEnd() ) {
-            return CodeNode::Ptr( 0 );
-        }
-        firstToken = currentToken();
-    }
+//     if ( m_lastToken == firstToken ) {
+//         moveToNextToken();
+//         if ( atEnd() ) {
+//             return CodeNode::Ptr( 0 );
+//         }
+//         firstToken = currentToken();
+//     }
     m_lastToken = firstToken;
 
     QString text;
@@ -493,23 +493,64 @@ CodeNode::Ptr JavaScriptParser::parseFunction()
     if ( atEnd() ) {
         return CodeNode::Ptr( 0 );
     }
-//     m_lastToken = currentToken();
-//     if ( atEnd() ) {
-//         return CodeNode::Ptr( 0 );
-//     }
 
+    QList<Token*>::ConstIterator lastIt = m_it;
     Token *firstToken = currentToken();
-    if ( firstToken->text != "function" || !tryMoveToNextToken() ) {
+    bool isAnonymous = false;
+    QString name;
+    if ( firstToken->text != "function" ) {
+        if ( firstToken->text == QLatin1String("var") ) {
+            if ( !tryMoveToNextToken() || !currentToken()->isName ) {
+                m_it = lastIt;
+                return CodeNode::Ptr( 0 );
+            }
+            name = currentToken()->text;
+
+            if ( !tryMoveToNextToken() || currentToken()->text != QLatin1String("=") ) {
+                m_it = lastIt;
+                return CodeNode::Ptr( 0 );
+            }
+            if ( !tryMoveToNextToken() || currentToken()->text != QLatin1String("function") ) {
+                m_it = lastIt;
+                return CodeNode::Ptr( 0 );
+            }
+            isAnonymous = true;
+        } else if ( firstToken->isName ) {
+            name = currentToken()->text;
+
+            if ( !tryMoveToNextToken() || (currentToken()->text != QLatin1String("=") &&
+                                           currentToken()->text != QLatin1String(":")) )
+            {
+                m_it = lastIt;
+                return CodeNode::Ptr( 0 );
+            }
+            if ( !tryMoveToNextToken() || currentToken()->text != QLatin1String("function") ) {
+                m_it = lastIt;
+                return CodeNode::Ptr( 0 );
+            }
+            isAnonymous = true;
+        } else {
+            return CodeNode::Ptr( 0 );
+        }
+    }
+    if ( !tryMoveToNextToken() ) {
+        m_it = lastIt;
         return CodeNode::Ptr( 0 );
     }
 
     // Parse function name if any
-    QString name;
-    if ( !currentToken()->isChar('(') ) {
+    if ( currentToken()->isChar('(') ) {
+        // Is an anonymous function declaration
+        if ( !isAnonymous ) {
+            name = "<anonymous>";
+            isAnonymous = true;
+        }
+    } else if ( !isAnonymous ) {
         name = currentToken()->text;
-        if ( !tryMoveToNextToken() ) {
+        if ( !tryMoveToNextToken() ) { m_it = lastIt;
             return CodeNode::Ptr( 0 );
         }
+        isAnonymous = false;
     }
 
     // Parse arguments
@@ -518,6 +559,7 @@ CodeNode::Ptr JavaScriptParser::parseFunction()
         bool argumentNameExpected = true;
         bool isComma = false;
         if ( !tryMoveToNextToken() ) {
+            m_it = lastIt;
             return CodeNode::Ptr( 0 );
         }
 
@@ -542,6 +584,7 @@ CodeNode::Ptr JavaScriptParser::parseFunction()
 
             argumentNameExpected = !argumentNameExpected;
             if ( !tryMoveToNextToken() ) {
+                m_it = lastIt;
                 return CodeNode::Ptr( 0 );
             }
         }
@@ -554,6 +597,7 @@ CodeNode::Ptr JavaScriptParser::parseFunction()
         // Read definition block
         BlockNode::Ptr definition( 0 );
         if ( !tryMoveToNextToken() ) {
+                m_it = lastIt;
             return CodeNode::Ptr( 0 );
         }
         if ( /*tryMoveToNextToken() &&*/ !(definition = parseBlock()) ) {
@@ -562,12 +606,13 @@ CodeNode::Ptr JavaScriptParser::parseFunction()
         }
 
         return FunctionNode::Ptr( new FunctionNode(name, firstToken->line, firstToken->posStart,
-                                               m_lastToken->posEnd, arguments, definition) );
+                                        m_lastToken->posEnd, arguments, definition, isAnonymous) );
     } else {
         setErrorState( i18nc("@info/plain", "Expected '('."),
                 currentToken()->line, currentToken()->posStart );
         moveToNextToken();
 
+        m_it = lastIt;
         return CodeNode::Ptr( 0 );
     }
 }
@@ -619,7 +664,7 @@ QList< CodeNode::Ptr > JavaScriptParser::parse()
 
     // Get token from the code, with line number and column begin/end
     m_token.clear();
-    QString alpha( "abcdefghijklmnopqrstuvwxyz" );
+    QString alpha( "abcdefghijklmnopqrstuvwxyz_" );
     QRegExp rxTokenBegin( "[^\\s]" );
     QRegExp rxTokenEnd( "\\s|[-=#!$%&~;:,<>^`´/\\.\\+\\*\\\\\\(\\)\\{\\}\\[\\]'\"\\?\\|]" );
     QStringList lines2 = m_code.split( '\n' );
@@ -811,9 +856,9 @@ FunctionCallNode::FunctionCallNode( const QString &object, const QString &functi
 
 FunctionNode::FunctionNode( const QString& text, int line, int colStart, int colEnd,
                             const QList< ArgumentNode::Ptr > &arguments,
-                            const BlockNode::Ptr &definition )
+                            const BlockNode::Ptr &definition, bool isAnonymous )
         : MultilineNode( text, line, colStart, definition ? definition->endLine() : line, colEnd ),
-        m_arguments(arguments), m_definition(definition)
+        m_arguments(arguments), m_definition(definition), m_anonymous(isAnonymous)
 {
     if ( m_text.isEmpty() ) {
         m_text = i18nc("@info/plain Display name for anonymous JavaScript functions", "[anonymous]");

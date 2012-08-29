@@ -72,7 +72,7 @@ void JavaScriptModel::needTextHint( const KTextEditor::Cursor &position, QString
     }
 
     CodeNode::Ptr node = nodeFromLineNumber( position.line() + 1, position.column(), MatchChildren );
-    if ( !node || node->line() != position.line() + 1 ) {
+    if ( !node /*|| node->line() != position.line() + 1*/ ) {
         return;
     }
 
@@ -93,7 +93,8 @@ void JavaScriptModel::needTextHint( const KTextEditor::Cursor &position, QString
             }
             text.append( "<b>" + nodeTypeName(currentNode->type()) + "</b>" );
             if ( !currentNode->text().isEmpty() && currentNode->text().length() < 60 ) {
-                text.append( " (<tt>" + currentNode->text() + "</tt>)" );
+                text.append( " (<tt>" +
+                        currentNode->text().replace("<", "&lt;").replace(">", "&gt;") + "</tt>)" );
             }
             if ( !currentNode->children().isEmpty() ) {
                 text.append( ", " + i18ncp("@info", "%1 child element", "%1 child elements",
@@ -357,8 +358,17 @@ QVariant JavaScriptModel::data( const QModelIndex& index, int role ) const
     FunctionNode *function = dynamic_cast< FunctionNode* >( item );
     if ( function ) {
         switch ( role ) {
-        case Qt::DisplayRole:
-            return function->toStringSignature();
+        case Qt::DisplayRole: {
+            QString indentation;
+            CodeNode *parent = function->parent();
+            while ( parent ) {
+                if ( dynamic_cast<FunctionNode*>(parent) ) {
+                    indentation += "    ";
+                }
+                parent = parent->parent();
+            }
+            return indentation + function->toStringSignature();
+        }
         case Qt::DecorationRole:
             return KIcon("code-function");
         }
@@ -406,12 +416,31 @@ void JavaScriptModel::appendNodes( const QList< CodeNode::Ptr > nodes )
     updateFirstEmptyNodeName();
 }
 
+QList< CodeNode::Ptr > childFunctions( const CodeNode::Ptr &node )
+{
+    QList< CodeNode::Ptr > flatNodes;
+    foreach ( const CodeNode::Ptr &child, node->children() ) {
+        FunctionNode::Ptr function = child.dynamicCast< FunctionNode >();
+        if ( function && function->isAnonymous() ) {
+            flatNodes << function;
+        }
+
+        flatNodes << childFunctions( child );
+    }
+    return flatNodes;
+}
+
 void JavaScriptModel::setNodes( const QList< CodeNode::Ptr > nodes )
 {
     clear();
 
-    beginInsertRows( QModelIndex(), 0, nodes.count() - 1 );
-    m_nodes = nodes;
+    QList< CodeNode::Ptr > flatNodes = QList< CodeNode::Ptr >() << nodes;
+    foreach ( const CodeNode::Ptr &node, nodes ) {
+        flatNodes << childFunctions( node );
+    }
+
+    beginInsertRows( QModelIndex(), 0, flatNodes.count() - 1 );
+    m_nodes = flatNodes;
     endInsertRows();
 
     updateFirstEmptyNodeName();
@@ -423,7 +452,16 @@ QStringList JavaScriptModel::functionNames() const
     foreach ( const CodeNode::Ptr &node, m_nodes ) {
         FunctionNode::Ptr function = node.dynamicCast< FunctionNode >();
         if ( function ) {
-            functions << function->text();
+            functions << function->name();
+        } else {
+            // Also add anynomous function declarations, they may be childs of StatementNode's,
+            // eg. "var test = function(){};"
+            foreach ( const CodeNode::Ptr &child, node->children() ) {
+                FunctionNode::Ptr function = node.dynamicCast< FunctionNode >();
+                if ( function->isAnonymous() ) {
+                    functions << function->name();
+                }
+            }
         }
     }
     return functions;

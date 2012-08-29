@@ -342,7 +342,8 @@ public:
     typedef QSharedPointer<FunctionNode> Ptr;
 
     FunctionNode( const QString &text, int line, int colStart, int colEnd,
-                  const QList< ArgumentNode::Ptr > &arguments, const BlockNode::Ptr &definition );
+                  const QList< ArgumentNode::Ptr > &arguments, const BlockNode::Ptr &definition,
+                  bool isAnonymous = false );
 
     virtual NodeType type() const { return Function; };
     virtual QString id() const;
@@ -352,10 +353,12 @@ public:
     virtual QList< ArgumentNode::Ptr > arguments() const { return m_arguments; };
     virtual BlockNode::Ptr definition() const { return m_definition; };
     inline QString name() const { return text(); };
+    inline bool isAnonymous() const { return m_anonymous; };
 
 private:
     QList< ArgumentNode::Ptr > m_arguments;
     BlockNode::Ptr m_definition;
+    bool m_anonymous;
 };
 
 /** @brief Parses java script code. */
