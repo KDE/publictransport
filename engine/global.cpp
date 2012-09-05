@@ -386,24 +386,35 @@ QString Global::decodeHtmlEntities( const QString& html )
               .replace( QLatin1String("&Uuml;"), QLatin1String("Ü") );
 }
 
-QString Global::encodeHtmlEntities( const QString &html )
+QString Global::encodeHtmlEntities( const QString &html, HtmlEntityEncodeFlags flags )
 {
     if ( html.isEmpty() ) {
         return html;
     }
 
     QString ret = html;
-    return ret.replace( QLatin1String(" "), QLatin1String("&nbsp;") )
-              .replace( QLatin1String("&"), QLatin1String("&amp;") )
-              .replace( QLatin1String("<"), QLatin1String("&lt;") )
-              .replace( QLatin1String(">"), QLatin1String("&gt;") )
-              .replace( QLatin1String("ß"), QLatin1String("&szlig;") )
-              .replace( QLatin1String("ä"), QLatin1String("&auml;") )
-              .replace( QLatin1String("Ä"), QLatin1String("&Auml;") )
-              .replace( QLatin1String("ö"), QLatin1String("&ouml;") )
-              .replace( QLatin1String("Ö"), QLatin1String("&Ouml;") )
-              .replace( QLatin1String("ü"), QLatin1String("&uuml;") )
-              .replace( QLatin1String("Ü"), QLatin1String("&Uuml;") );
+    if ( flags.testFlag(EncodeLessThan) ) {
+        ret.replace( QLatin1String("<"), QLatin1String("&lt;") );
+    }
+    if ( flags.testFlag(EncodeGreaterThan) ) {
+        ret.replace( QLatin1String(">"), QLatin1String("&gt;") );
+    }
+    if ( flags.testFlag(EncodeAmpersand) ) {
+        ret.replace( QLatin1String("&"), QLatin1String("&amp;") );
+    }
+    if ( flags.testFlag(EncodeUmlauts) ) {
+        ret.replace( QLatin1String("ß"), QLatin1String("&szlig;") )
+           .replace( QLatin1String("ä"), QLatin1String("&auml;") )
+           .replace( QLatin1String("Ä"), QLatin1String("&Auml;") )
+           .replace( QLatin1String("ö"), QLatin1String("&ouml;") )
+           .replace( QLatin1String("Ö"), QLatin1String("&Ouml;") )
+           .replace( QLatin1String("ü"), QLatin1String("&uuml;") )
+           .replace( QLatin1String("Ü"), QLatin1String("&Uuml;") );
+    }
+    if ( flags.testFlag(EncodeSpace) ) {
+        ret.replace( QLatin1String(" "), QLatin1String("&nbsp;") );
+    }
+    return ret;
 }
 
 QString Global::decodeHtml( const QByteArray& document, const QByteArray& fallbackCharset )

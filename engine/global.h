@@ -28,6 +28,21 @@
 
 class Global {
 public:
+    enum HtmlEntityEncodeFlag {
+        EncodeNothing       = 0x00,
+
+        EncodeLessThan      = 0x01,
+        EncodeGreaterThan   = 0x02,
+        EncodeAmpersand     = 0x04,
+        EncodeUmlauts       = 0x08,
+        EncodeSpace         = 0x10,
+
+        EncodeLessAndGreaterThan = EncodeLessThan | EncodeGreaterThan,
+        EncodeAllButSpace = EncodeLessAndGreaterThan | EncodeAmpersand | EncodeUmlauts,
+        EncodeEverything = EncodeAllButSpace | EncodeSpace
+    };
+    Q_DECLARE_FLAGS( HtmlEntityEncodeFlags, HtmlEntityEncodeFlag )
+
     Global() {};
 
     /** @brief Gets the VehicleType enumerable for the given string. */
@@ -55,7 +70,8 @@ public:
     static QString decodeHtmlEntities( const QString& html );
 
     /** @brief Encodes HTML entities in @p html, e.g. "<" is replaced by "&lt;". */
-    static QString encodeHtmlEntities( const QString& html );
+    static QString encodeHtmlEntities( const QString& html,
+                                       HtmlEntityEncodeFlags flags = EncodeAllButSpace );
 
     /**
      * @brief Decodes the given HTML document.
@@ -69,5 +85,6 @@ public:
     /** @brief Decode @p document using @p charset. */
     static QString decode( const QByteArray& document, const QByteArray& charset = QByteArray() );
 };
+Q_DECLARE_OPERATORS_FOR_FLAGS( Global::HtmlEntityEncodeFlags )
 
 #endif // Multiple inclusion guard
