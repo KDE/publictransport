@@ -158,6 +158,9 @@ public:
     /** @brief The type of the service provider (scripted, GTFS, ...) */
     Enums::ServiceProviderType type() const { return m_serviceProviderType; };
 
+    /** @brief Whether or not this object contains valid data. */
+    bool isValid() const { return m_serviceProviderType != Enums::InvalidProvider; };
+
     /** @brief Convenience function that uses ServiceProviderGlobal::typeToString(). */
     QString typeString() const;
 

@@ -58,8 +58,7 @@ const char *ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA = "getAddit
 
 ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, QObject *parent,
                                               const QSharedPointer<KConfig> &cache )
-        : ServiceProvider(data, parent), m_thread(0), m_script(0), m_scriptStorage(0),
-          m_mutex(new QMutex)
+        : ServiceProvider(data, parent), m_thread(0), m_mutex(new QMutex)
 {
     m_scriptState = WaitingForScriptUsage;
     m_scriptFeatures = readScriptFeatures( cache.isNull() ? ServiceProviderGlobal::cache() : cache );
@@ -83,7 +82,6 @@ ServiceProviderScript::~ServiceProviderScript()
     // Wait for running jobs to finish for proper cleanup
 //     ThreadWeaver::Weaver::instance()->requestAbort();
 //     ThreadWeaver::Weaver::instance()->finish(); // This prevents crashes on exit of the engine
-    delete m_script;
     delete m_mutex;
 }
 
@@ -94,10 +92,6 @@ QStringList ServiceProviderScript::allowedExtensions()
 
 bool ServiceProviderScript::lazyLoadScript()
 {
-    if ( m_script ) {
-        return true;
-    }
-
     // Read script
     QFile scriptFile( m_data->scriptFileName() );
     if ( !scriptFile.open(QIODevice::ReadOnly) ) {
@@ -110,8 +104,7 @@ bool ServiceProviderScript::lazyLoadScript()
     scriptFile.close();
 
     // Initialize the script
-    m_script = new QScriptProgram( scriptContents, m_data->scriptFileName() );
-    m_scriptStorage = new Storage( m_data->id(), this );
+    m_objects.createObjects( m_data, QScriptProgram(scriptContents, m_data->scriptFileName()) );
 
     return true;
 }
@@ -243,42 +236,9 @@ QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
             }
         }
         if ( ok ) {
-            QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
-            QScriptValue includeFunction = engine.newFunction( include, 1 );
-            includeFunction.setData( maxIncludeLine(m_script->sourceCode()) );
-            engine.globalObject().setProperty( "include", includeFunction, flags );
+            m_objects.attachToEngine( &engine );
 
-            // TODO: Add a class to load all needed script objects like here
-            QScopedPointer< ServiceProviderData > data( new ServiceProviderData(*m_data) );
-            QScopedPointer< Scripting::Helper > helper( new Scripting::Helper(m_data->id()) );
-            QScopedPointer< Scripting::Network > network( new Scripting::Network(m_data->fallbackCharset()) );
-            QScopedPointer< Scripting::Storage > storage( new Scripting::Storage(m_data->id()) );
-            QScopedPointer< Scripting::ResultObject > resultObject( new Scripting::ResultObject() );
-
-            engine.globalObject().setProperty( "provider", engine.newQObject(data.data()), flags );
-            engine.globalObject().setProperty( "helper", engine.newQObject(helper.data()), flags );
-            engine.globalObject().setProperty( "PublicTransport",
-                    engine.newQMetaObject(&Enums::staticMetaObject), flags );
-            engine.globalObject().setProperty( "network", engine.newQObject(network.data()), flags );
-            engine.globalObject().setProperty( "storage", engine.newQObject(storage.data()), flags );
-            engine.globalObject().setProperty( "result", engine.newQObject(resultObject.data()), flags );
-            engine.globalObject().setProperty( "enum",
-                    engine.newQMetaObject(&ResultObject::staticMetaObject), flags );
-
-            if ( !engine.globalObject().property("DataStream").isValid() ) {
-                qRegisterMetaType< QIODevice* >( "QIODevice*" );
-                qRegisterMetaType< DataStreamPrototype* >( "DataStreamPrototype*" );
-                qScriptRegisterMetaType< DataStreamPrototypePtr >( &engine,
-                        dataStreamToScript, dataStreamFromScript );
-
-                DataStreamPrototype *dataStream = new DataStreamPrototype( &engine );
-                QScriptValue stream = engine.newQObject( dataStream );
-                QScriptValue streamConstructor = engine.newFunction( constructStream );
-                engine.setDefaultPrototype( qMetaTypeId<DataStreamPrototype*>(), stream );
-                engine.globalObject().setProperty( "DataStream", streamConstructor, flags );
-            }
-
-            engine.evaluate( *m_script );
+            engine.evaluate( m_objects.scriptProgram );
             QVariantList result;
             if ( !engine.hasUncaughtException() ) {
                 result = engine.globalObject().property(
@@ -607,7 +567,7 @@ void ServiceProviderScript::requestDepartures( const DepartureRequest &request )
         return;
     }
 
-    DepartureJob *job = new DepartureJob( m_script, m_data, m_scriptStorage, request, this );
+    DepartureJob *job = new DepartureJob( m_objects, request, this );
     connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );
@@ -624,7 +584,7 @@ void ServiceProviderScript::requestArrivals( const ArrivalRequest &request )
         return;
     }
 
-    ArrivalJob *job = new ArrivalJob( m_script, m_data, m_scriptStorage, request, this );
+    ArrivalJob *job = new ArrivalJob( m_objects, request, this );
     connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );
@@ -641,7 +601,7 @@ void ServiceProviderScript::requestJourneys( const JourneyRequest &request )
         return;
     }
 
-    JourneyJob *job = new JourneyJob( m_script, m_data, m_scriptStorage, request, this );
+    JourneyJob *job = new JourneyJob( m_objects, request, this );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequest,bool)),
              this, SLOT(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequest,bool)) );
@@ -656,8 +616,7 @@ void ServiceProviderScript::requestStopSuggestions( const StopSuggestionRequest 
         return;
     }
 
-    StopSuggestionsJob *job = new StopSuggestionsJob( m_script, m_data, m_scriptStorage,
-                                                      request, this );
+    StopSuggestionsJob *job = new StopSuggestionsJob( m_objects, request, this );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)),
              this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)) );
@@ -674,7 +633,7 @@ void ServiceProviderScript::requestStopSuggestionsFromGeoPosition(
     }
 
     StopSuggestionsFromGeoPositionJob *job = new StopSuggestionsFromGeoPositionJob(
-            m_script, m_data, m_scriptStorage, request, this );
+            m_objects, request, this );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)),
              this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)) );
@@ -689,8 +648,7 @@ void ServiceProviderScript::requestAdditionalData( const AdditionalDataRequest &
         return;
     }
 
-    AdditionalDataJob *job = new AdditionalDataJob( m_script, m_data, m_scriptStorage,
-                                                    request, this );
+    AdditionalDataJob *job = new AdditionalDataJob( m_objects, request, this );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(additionalDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)),
              this, SLOT(additionDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)) );

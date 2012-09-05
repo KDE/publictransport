@@ -28,6 +28,7 @@
 // Own includes
 #include "../serviceprovider.h" // Base class
 #include "scripting.h"
+#include "scriptobjects.h"
 
 namespace ThreadWeaver {
     class Job;
@@ -193,8 +194,8 @@ private:
     QList<Enums::ProviderFeature> m_scriptFeatures; // Caches the features the script provides
     ScriptThread *m_thread;
     QHash< QString, PublicTransportInfoList > m_publishedData;
-    QScriptProgram *m_script;
-    Storage *m_scriptStorage;
+
+    ScriptObjects m_objects;
     QMutex *m_mutex;
     QString m_errorMessage;
 };

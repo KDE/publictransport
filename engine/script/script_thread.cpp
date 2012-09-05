@@ -42,15 +42,12 @@
 #include <QEventLoop>
 #include <QFileInfo>
 
-// static int thread_count = 0;
-ScriptJob::ScriptJob( QScriptProgram *script, const ServiceProviderData* data,
-                      Storage *scriptStorage, QObject* parent )
-    : ThreadWeaver::Job( parent ),
-      m_engine(0), m_script(script),
-      m_scriptStorage(scriptStorage), m_scriptNetwork(0), m_scriptResult(0),
-      m_eventLoop(0), m_published(0), m_success(true), m_data(*data)
+ScriptJob::ScriptJob( const ScriptObjects &objects, QObject* parent )
+    : ThreadWeaver::Job( parent ), m_engine(0), m_objects(objects), m_eventLoop(0),
+      m_published(0), m_success(true)
 {
-//     kDebug() << "Thread count:" << ++thread_count;
+    Q_ASSERT_X( objects.isValid(), "ScriptJob constructor", "Needs valid script objects" );
+
     qRegisterMetaType<DepartureRequest>( "DepartureRequest" );
     qRegisterMetaType<ArrivalRequest>( "ArrivalRequest" );
     qRegisterMetaType<JourneyRequest>( "JourneyRequest" );
@@ -60,7 +57,6 @@ ScriptJob::ScriptJob( QScriptProgram *script, const ServiceProviderData* data,
 
 ScriptJob::~ScriptJob()
 {
-//     kDebug() << "Thread count:" << --thread_count;
     if ( !m_engine ) {
         return;
     }
@@ -69,13 +65,10 @@ ScriptJob::~ScriptJob()
         m_eventLoop->quit();
     }
 
-    m_scriptNetwork->abortAllRequests();
+    m_objects.scriptNetwork->abortAllRequests();
     m_engine->abortEvaluation();
     m_engine->deleteLater();
     m_engine = 0;
-
-//     m_scriptNetwork->clear();
-//     m_scriptResult->clear();
 }
 
 
@@ -120,7 +113,7 @@ void ScriptJob::run()
 //                 delete m_scriptResult.data();
 //                 return;
 
-    if ( !loadScript(m_script) ) {
+    if ( !loadScript(&m_objects.scriptProgram) ) {
         kDebug() << "Script could not be loaded correctly";
         return;
     }
@@ -157,13 +150,11 @@ void ScriptJob::run()
         m_errorString = "Unknown parse mode";
         m_success = false;
     } else {
-        if ( m_scriptNetwork.isNull() ) {
+        if ( m_objects.scriptNetwork.isNull() ) {
             // TODO TEST
             kDebug() << "Deleted ------------------------------------------------";
             m_engine->deleteLater();
             m_engine = 0;
-//             m_scriptNetwork.clear();
-//             m_scriptResult.clear();
             m_success = false;
             return;
         }
@@ -186,8 +177,6 @@ void ScriptJob::run()
                                   m_engine->uncaughtException().toString());
             m_engine->deleteLater();
             m_engine = 0;
-//             m_scriptNetwork.clear();
-//             m_scriptResult.clear();
             m_success = false;
             return;
         }
@@ -195,23 +184,23 @@ void ScriptJob::run()
         GlobalTimetableInfo globalInfo;
         globalInfo.requestDate = QDate::currentDate();
         globalInfo.delayInfoAvailable =
-                !m_scriptResult->isHintGiven( ResultObject::NoDelaysForStop );
+                !m_objects.scriptResult->isHintGiven( ResultObject::NoDelaysForStop );
 
         // Update last download URL
         // TODO Store all URLs
-        m_lastUrl = m_scriptNetwork->lastUrl();
+        m_lastUrl = m_objects.scriptNetwork->lastUrl();
 
-        while ( m_scriptNetwork->hasRunningRequests() || m_engine->isEvaluating() ) {
+        while ( m_objects.scriptNetwork->hasRunningRequests() || m_engine->isEvaluating() ) {
             // Wait for running requests to finish
             m_eventLoop = new QEventLoop();
             ScriptAgent agent( m_engine );
             QTimer::singleShot( 30000, m_eventLoop, SLOT(quit()) );
             connect( this, SIGNAL(destroyed(QObject*)), m_eventLoop, SLOT(quit()) );
             connect( &agent, SIGNAL(scriptFinished()), m_eventLoop, SLOT(quit()) );
-            connect( m_scriptNetwork.data(), SIGNAL(allRequestsFinished()),
+            connect( m_objects.scriptNetwork.data(), SIGNAL(allRequestsFinished()),
                      m_eventLoop, SLOT(quit()) );
 
-            kDebug() << "Waiting for script to finish..." << m_scriptNetwork->hasRunningRequests()
+            kDebug() << "Waiting for script to finish..." << m_objects.scriptNetwork->hasRunningRequests()
                      << m_engine->isEvaluating() << thread();
             m_eventLoop->exec( QEventLoop::ExcludeUserInputEvents );
             delete m_eventLoop;
@@ -220,46 +209,46 @@ void ScriptJob::run()
 
         // Inform about script run time
         kDebug() << " > Script finished after" << (time.elapsed() / 1000.0)
-                    << "seconds: " << m_data.scriptFileName() << thread() << request()->parseMode;
+                    << "seconds: " << m_objects.data.scriptFileName() << thread() << request()->parseMode;
 
         // If data for the current job has already been published, do not emit
         // completed with an empty resultset
-        if ( m_published == 0 || m_scriptResult->count() > m_published ) {
+        if ( m_published == 0 || m_objects.scriptResult->count() > m_published ) {
             const bool couldNeedForcedUpdate = m_published > 0;
             switch ( request()->parseMode ) {
             case ParseForDepartures:
-                emit departuresReady( m_scriptResult->data().mid(m_published),
-                        m_scriptResult->features(), m_scriptResult->hints(),
-                        m_scriptNetwork->lastUrl(), globalInfo,
+                emit departuresReady( m_objects.scriptResult->data().mid(m_published),
+                        m_objects.scriptResult->features(), m_objects.scriptResult->hints(),
+                        m_objects.scriptNetwork->lastUrl(), globalInfo,
                         *dynamic_cast<const DepartureRequest*>(request()),
                         couldNeedForcedUpdate );
                 break;
             case ParseForArrivals: {
-                emit arrivalsReady( m_scriptResult->data().mid(m_published),
-                        m_scriptResult->features(), m_scriptResult->hints(),
-                        m_scriptNetwork->lastUrl(), globalInfo,
+                emit arrivalsReady( m_objects.scriptResult->data().mid(m_published),
+                        m_objects.scriptResult->features(), m_objects.scriptResult->hints(),
+                        m_objects.scriptNetwork->lastUrl(), globalInfo,
                         *dynamic_cast< const ArrivalRequest* >(request()),
                         couldNeedForcedUpdate );
                 break;
             }
             case ParseForJourneysByDepartureTime:
             case ParseForJourneysByArrivalTime:
-                emit journeysReady( m_scriptResult->data().mid(m_published),
-                        m_scriptResult->features(), m_scriptResult->hints(),
-                        m_scriptNetwork->lastUrl(), globalInfo,
+                emit journeysReady( m_objects.scriptResult->data().mid(m_published),
+                        m_objects.scriptResult->features(), m_objects.scriptResult->hints(),
+                        m_objects.scriptNetwork->lastUrl(), globalInfo,
                         *dynamic_cast<const JourneyRequest*>(request()),
                         couldNeedForcedUpdate );
                 break;
             case ParseForStopSuggestions:
-                emit stopSuggestionsReady( m_scriptResult->data().mid(m_published),
-                        m_scriptResult->features(), m_scriptResult->hints(),
-                        m_scriptNetwork->lastUrl(), globalInfo,
+                emit stopSuggestionsReady( m_objects.scriptResult->data().mid(m_published),
+                        m_objects.scriptResult->features(), m_objects.scriptResult->hints(),
+                        m_objects.scriptNetwork->lastUrl(), globalInfo,
                         *dynamic_cast<const StopSuggestionRequest*>(request()),
                         couldNeedForcedUpdate );
                 break;
 
             case ParseForAdditionalData: {
-                const QList< TimetableData > data = m_scriptResult->data();
+                const QList< TimetableData > data = m_objects.scriptResult->data();
                 if ( data.isEmpty() ) {
                     kDebug() << "The script didn't find any new data" << request()->sourceName;
                     m_errorString = i18nc("@info/plain",
@@ -269,8 +258,8 @@ void ScriptJob::run()
                 } else if ( data.count() > 1 ) {
                     kWarning() << "The script added more than one result set, only the first gets used";
                 }
-                emit additionalDataReady( data.first(), m_scriptResult->features(),
-                        m_scriptResult->hints(), m_scriptNetwork->lastUrl(), globalInfo,
+                emit additionalDataReady( data.first(), m_objects.scriptResult->features(),
+                        m_objects.scriptResult->hints(), m_objects.scriptNetwork->lastUrl(), globalInfo,
                         *dynamic_cast<const AdditionalDataRequest*>(request()),
                         couldNeedForcedUpdate );
                 break;
@@ -283,8 +272,8 @@ void ScriptJob::run()
         }
 
         // Cleanup
-        m_scriptResult->clear();
-        m_scriptStorage->checkLifetime();
+        m_objects.scriptResult->clear();
+        m_objects.scriptStorage->checkLifetime();
 
         if ( m_engine->hasUncaughtException() ) {
             kDebug() << "Error in the script when calling function" << functionName
@@ -297,7 +286,6 @@ void ScriptJob::run()
                                   m_engine->uncaughtException().toString());
             m_engine->deleteLater();
             m_engine = 0;
-//             m_scriptNetwork.clear();
             m_success = false;
             return;
         }
@@ -379,8 +367,6 @@ QScriptValue include( QScriptContext *context, QScriptEngine *engine )
             context->throwError( i18nc("@info/plain", "<icode>include()</icode> calls must be the first statements") );
             return engine->undefinedValue();
         }
-    } else {
-        kWarning() << "No include data for source file" << contextInfo.fileName() << includeData;
     }
 
     // Get argument and check that it's not pointing to another directory
@@ -470,7 +456,7 @@ bool ScriptJob::loadScript( QScriptProgram *script )
 {
     // Create script engine
     m_engine = new QScriptEngine();
-    foreach ( const QString &extension, m_data.scriptExtensions() ) {
+    foreach ( const QString &extension, m_objects.data.scriptExtensions() ) {
         if ( !importExtension(m_engine, extension) ) {
             m_errorString = i18nc("@info/plain", "Could not load script extension "
                                   "<resource>%1</resource>.", extension);
@@ -481,51 +467,13 @@ bool ScriptJob::loadScript( QScriptProgram *script )
         }
     }
 
-    QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
-    m_engine->globalObject().setProperty( "provider", m_engine->newQObject(&m_data), flags );
-
-    QScriptValue includeFunction = m_engine->globalObject().property("include");
-    if ( !includeFunction.isValid() ) {
-        includeFunction = m_engine->newFunction( include, 1 );
-    }
-    QVariantHash includeData;
-    includeData[ script->fileName() ] = maxIncludeLine( script->sourceCode() );
-    includeFunction.setData( qScriptValueFromValue(m_engine, includeData) );
-    m_engine->globalObject().setProperty( "include", includeFunction, flags );
-
-    // Process events every 100ms
-//     m_engine->setProcessEventsInterval( 100 );
-
-    // Register classes for use in the script
-    qScriptRegisterMetaType< NetworkRequestPtr >( m_engine,
-            networkRequestToScript, networkRequestFromScript );
-
-    qRegisterMetaType< QIODevice* >( "QIODevice*" );
-    qRegisterMetaType< DataStreamPrototype* >( "DataStreamPrototype*" );
-    qScriptRegisterMetaType< DataStreamPrototypePtr >( m_engine,
-            dataStreamToScript, dataStreamFromScript );
-
-    // Create objects for the script
-    Helper *scriptHelper = new Helper( m_data.id(), m_engine );
-    m_scriptNetwork = QSharedPointer<Network>( new Network(m_data.fallbackCharset(), m_engine) );
-    m_scriptResult = QSharedPointer<ResultObject>( new ResultObject(m_engine) );
-    connect( m_scriptResult.data(), SIGNAL(publish()), this, SLOT(publish()) );
-
-    DataStreamPrototype *dataStream = new DataStreamPrototype( m_engine );
-    QScriptValue streamConstructor = m_engine->newFunction( constructStream );
-    QScriptValue streamMeta = m_engine->newQMetaObject( &DataStreamPrototype::staticMetaObject,
-                                                        streamConstructor );
-    m_engine->globalObject().setProperty( "DataStream", streamMeta, flags );
-
-    // Make the objects available to the script
-    m_engine->globalObject().setProperty( "helper", m_engine->newQObject(scriptHelper), flags );
-    m_engine->globalObject().setProperty( "network", m_engine->newQObject(m_scriptNetwork.data()), flags );
-    m_engine->globalObject().setProperty( "storage", m_engine->newQObject(m_scriptStorage), flags );
-    m_engine->globalObject().setProperty( "result", m_engine->newQObject(m_scriptResult.data()), flags );
-    m_engine->globalObject().setProperty( "enum",
-            m_engine->newQMetaObject(&ResultObject::staticMetaObject), flags );
-    m_engine->globalObject().setProperty( "PublicTransport",
-            m_engine->newQMetaObject(&Enums::staticMetaObject), flags );
+    // Set Network object to null, because a new Network object needs to be created for each
+    // thread, otherwise in Network::createRequest() it would try to create the NetworkRequest
+    // with a parent in another thread (ie. the Network object)
+    m_objects.scriptNetwork = QSharedPointer< Network >( 0 );
+    m_objects.createObjects();
+    m_objects.attachToEngine( m_engine );
+    connect( m_objects.scriptResult.data(), SIGNAL(publish()), this, SLOT(publish()) );
 
     // Load the script program
     m_engine->evaluate( *script );
@@ -538,8 +486,6 @@ bool ScriptJob::loadScript( QScriptProgram *script )
                               m_engine->uncaughtException().toString());
         m_engine->deleteLater();
         m_engine = 0;
-//         m_scriptNetwork.clear();
-//         m_scriptResult.clear();
         m_success = false;
         return false;
     } else {
@@ -550,35 +496,35 @@ bool ScriptJob::loadScript( QScriptProgram *script )
 void ScriptJob::publish()
 {
     // Only publish, if there is data which is not already published
-    if ( m_scriptResult->count() > m_published ) {
+    if ( m_objects.scriptResult->count() > m_published ) {
         GlobalTimetableInfo globalInfo;
-        QList< TimetableData > data = m_scriptResult->data().mid( m_published );
+        QList< TimetableData > data = m_objects.scriptResult->data().mid( m_published );
         const bool couldNeedForcedUpdate = m_published > 0;
         switch ( request()->parseMode ) {
         case ParseForDepartures:
-            emit departuresReady( m_scriptResult->data().mid(m_published),
-                    m_scriptResult->features(), m_scriptResult->hints(),
-                    m_scriptNetwork->lastUrl(), globalInfo,
+            emit departuresReady( m_objects.scriptResult->data().mid(m_published),
+                    m_objects.scriptResult->features(), m_objects.scriptResult->hints(),
+                    m_objects.scriptNetwork->lastUrl(), globalInfo,
                     *dynamic_cast<const DepartureRequest*>(request()), couldNeedForcedUpdate );
             break;
         case ParseForArrivals:
-            emit arrivalsReady( m_scriptResult->data().mid(m_published),
-                    m_scriptResult->features(), m_scriptResult->hints(),
-                    m_scriptNetwork->lastUrl(), globalInfo,
+            emit arrivalsReady( m_objects.scriptResult->data().mid(m_published),
+                    m_objects.scriptResult->features(), m_objects.scriptResult->hints(),
+                    m_objects.scriptNetwork->lastUrl(), globalInfo,
                     *dynamic_cast<const ArrivalRequest*>(request()), couldNeedForcedUpdate );
             break;
         case ParseForJourneysByDepartureTime:
         case ParseForJourneysByArrivalTime:
-            emit journeysReady( m_scriptResult->data().mid(m_published),
-                    m_scriptResult->features(), m_scriptResult->hints(),
-                    m_scriptNetwork->lastUrl(), globalInfo,
+            emit journeysReady( m_objects.scriptResult->data().mid(m_published),
+                    m_objects.scriptResult->features(), m_objects.scriptResult->hints(),
+                    m_objects.scriptNetwork->lastUrl(), globalInfo,
                     *dynamic_cast<const JourneyRequest*>(request()),
                     couldNeedForcedUpdate );
             break;
         case ParseForStopSuggestions:
-            emit stopSuggestionsReady( m_scriptResult->data().mid(m_published),
-                    m_scriptResult->features(), m_scriptResult->hints(),
-                    m_scriptNetwork->lastUrl(), globalInfo,
+            emit stopSuggestionsReady( m_objects.scriptResult->data().mid(m_published),
+                    m_objects.scriptResult->features(), m_objects.scriptResult->hints(),
+                    m_objects.scriptNetwork->lastUrl(), globalInfo,
                     *dynamic_cast<const StopSuggestionRequest*>(request()),
                     couldNeedForcedUpdate );
             break;
@@ -597,9 +543,9 @@ public:
     DepartureRequest request;
 };
 
-DepartureJob::DepartureJob( QScriptProgram* script, const ServiceProviderData* info,
-        Storage* scriptStorage, const DepartureRequest& request, QObject* parent )
-        : ScriptJob(script, info, scriptStorage, parent), d(new DepartureJobPrivate(request))
+DepartureJob::DepartureJob(  const ScriptObjects &objects, const DepartureRequest& request,
+                             QObject* parent )
+        : ScriptJob(objects, parent), d(new DepartureJobPrivate(request))
 {
 }
 
@@ -620,9 +566,9 @@ public:
     ArrivalRequest request;
 };
 
-ArrivalJob::ArrivalJob( QScriptProgram* script, const ServiceProviderData* info,
-        Storage* scriptStorage, const ArrivalRequest& request, QObject* parent )
-        : ScriptJob(script, info, scriptStorage, parent), d(new ArrivalJobPrivate(request))
+ArrivalJob::ArrivalJob( const ScriptObjects &objects, const ArrivalRequest& request,
+                        QObject* parent )
+        : ScriptJob(objects, parent), d(new ArrivalJobPrivate(request))
 {
 }
 
@@ -643,9 +589,9 @@ public:
     JourneyRequest request;
 };
 
-JourneyJob::JourneyJob( QScriptProgram* script, const ServiceProviderData* info,
-        Storage* scriptStorage, const JourneyRequest& request, QObject* parent )
-        : ScriptJob(script, info, scriptStorage, parent), d(new JourneyJobPrivate(request))
+JourneyJob::JourneyJob( const ScriptObjects &objects, const JourneyRequest& request,
+                        QObject* parent )
+        : ScriptJob(objects, parent), d(new JourneyJobPrivate(request))
 {
 }
 
@@ -665,9 +611,9 @@ public:
     StopSuggestionRequest request;
 };
 
-StopSuggestionsJob::StopSuggestionsJob( QScriptProgram* script, const ServiceProviderData* info,
-        Storage* scriptStorage, const StopSuggestionRequest& request, QObject* parent )
-        : ScriptJob(script, info, scriptStorage, parent), d(new StopSuggestionsJobPrivate(request))
+StopSuggestionsJob::StopSuggestionsJob( const ScriptObjects &objects,
+                                        const StopSuggestionRequest& request, QObject* parent )
+        : ScriptJob(objects, parent), d(new StopSuggestionsJobPrivate(request))
 {
 }
 
@@ -688,11 +634,10 @@ public:
     StopSuggestionFromGeoPositionRequest request;
 };
 
-StopSuggestionsFromGeoPositionJob::StopSuggestionsFromGeoPositionJob( QScriptProgram* script,
-        const ServiceProviderData* info, Storage* scriptStorage,
-        const StopSuggestionFromGeoPositionRequest& request, QObject* parent )
-        : ScriptJob(script, info, scriptStorage, parent),
-          d(new StopSuggestionsFromGeoPositionJobPrivate(request))
+StopSuggestionsFromGeoPositionJob::StopSuggestionsFromGeoPositionJob(
+        const ScriptObjects &objects, const StopSuggestionFromGeoPositionRequest& request,
+        QObject* parent )
+        : ScriptJob(objects, parent), d(new StopSuggestionsFromGeoPositionJobPrivate(request))
 {
 }
 
@@ -712,9 +657,9 @@ public:
     AdditionalDataRequest request;
 };
 
-AdditionalDataJob::AdditionalDataJob( QScriptProgram *script, const ServiceProviderData *info,
-        Storage *scriptStorage, const AdditionalDataRequest &request, QObject *parent )
-        : ScriptJob(script, info, scriptStorage, parent), d(new AdditionalDataJobPrivate(request))
+AdditionalDataJob::AdditionalDataJob( const ScriptObjects &objects,
+                                      const AdditionalDataRequest &request, QObject *parent )
+        : ScriptJob(objects, parent), d(new AdditionalDataJobPrivate(request))
 {
 }
 

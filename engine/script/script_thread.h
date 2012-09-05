@@ -28,6 +28,7 @@
 // Own includes
 #include "enums.h"
 #include "scripting.h"
+#include "scriptobjects.h"
 #include "serviceproviderdata.h"
 
 // KDE includes
@@ -125,8 +126,7 @@ public:
      * @param data Information about the service provider.
      * @param scriptStorage The shared Storage object.
      **/
-    explicit ScriptJob( QScriptProgram *script, const ServiceProviderData *data,
-                        Storage *scriptStorage, QObject* parent = 0 );
+    explicit ScriptJob( const ScriptObjects &objects, QObject* parent = 0 );
 
     /** @brief Destructor. */
     virtual ~ScriptJob();
@@ -192,17 +192,11 @@ protected:
     virtual bool success() const { return m_success; };
 
     QScriptEngine *m_engine;
-    QScriptProgram *m_script;
-    Storage *m_scriptStorage;
-    QSharedPointer<Network> m_scriptNetwork;
-    QSharedPointer<ResultObject> m_scriptResult;
+    ScriptObjects m_objects;
     QEventLoop *m_eventLoop;
-
     int m_published;
     bool m_success;
     QString m_errorString;
-
-    ServiceProviderData m_data;
     QString m_lastUrl;
 };
 
@@ -211,9 +205,8 @@ class DepartureJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit DepartureJob( QScriptProgram* script, const ServiceProviderData* info,
-                           Storage* scriptStorage, const DepartureRequest& request,
-                           QObject* parent = 0);
+    explicit DepartureJob( const ScriptObjects &objects,
+                           const DepartureRequest& request, QObject* parent = 0);
 
     virtual ~DepartureJob();
 
@@ -228,9 +221,8 @@ class ArrivalJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit ArrivalJob( QScriptProgram* script, const ServiceProviderData* info,
-                         Storage* scriptStorage, const ArrivalRequest& request,
-                         QObject* parent = 0);
+    explicit ArrivalJob( const ScriptObjects &objects,
+                         const ArrivalRequest& request, QObject* parent = 0);
 
     virtual ~ArrivalJob();
 
@@ -245,9 +237,8 @@ class JourneyJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit JourneyJob( QScriptProgram* script, const ServiceProviderData* info,
-                         Storage* scriptStorage, const JourneyRequest& request,
-                         QObject* parent = 0);
+    explicit JourneyJob( const ScriptObjects &objects,
+                         const JourneyRequest& request, QObject* parent = 0);
 
     virtual ~JourneyJob();
 
@@ -262,9 +253,8 @@ class StopSuggestionsJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit StopSuggestionsJob( QScriptProgram* script, const ServiceProviderData* info,
-                                 Storage* scriptStorage, const StopSuggestionRequest& request,
-                                 QObject* parent = 0);
+    explicit StopSuggestionsJob( const ScriptObjects &objects,
+                                 const StopSuggestionRequest& request, QObject* parent = 0);
 
     virtual ~StopSuggestionsJob();
 
@@ -279,8 +269,7 @@ class StopSuggestionsFromGeoPositionJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit StopSuggestionsFromGeoPositionJob(
-            QScriptProgram* script, const ServiceProviderData* info, Storage* scriptStorage,
+    explicit StopSuggestionsFromGeoPositionJob( const ScriptObjects &objects,
             const StopSuggestionFromGeoPositionRequest& request, QObject* parent = 0);
 
     virtual ~StopSuggestionsFromGeoPositionJob();
@@ -296,9 +285,8 @@ class AdditionalDataJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit AdditionalDataJob( QScriptProgram* script, const ServiceProviderData* info,
-                                Storage* scriptStorage, const AdditionalDataRequest& request,
-                                QObject* parent = 0);
+    explicit AdditionalDataJob( const ScriptObjects &objects,
+                                const AdditionalDataRequest& request, QObject* parent = 0);
     virtual ~AdditionalDataJob();
 
     virtual const AbstractRequest* request() const;

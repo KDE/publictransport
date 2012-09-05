@@ -4,6 +4,7 @@ set ( script_SRCS
     script/serviceproviderscript.cpp
     script/script_thread.cpp
     script/scripting.cpp
+    script/scriptobjects.cpp
 )
 
 # Add sources of this directory to the sources list of the parent directories CMakeLists.txt
