@@ -1055,7 +1055,6 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
     m_runningSources.removeOne( nonAmbiguousName );
     QVariantHash dataSource;
     QVariantList departuresData;
-    int id = 0;
     foreach( const DepartureInfoPtr &departureInfo, items ) {
         QVariantHash departureData;
         TimetableData departure = departureInfo->data();

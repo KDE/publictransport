@@ -164,6 +164,10 @@ Frame *Debugger::BacktraceModel::topFrame()
 
 bool BacktraceModel::removeRows( int row, int count, const QModelIndex &parent )
 {
+    if ( count == 0 ) {
+        return true;
+    }
+
     // Remove the frames from the model
     row = rowToIndex( row );
     beginRemoveRows( parent, row, row + count - 1 );

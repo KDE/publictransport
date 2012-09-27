@@ -414,23 +414,23 @@ public:
     static inline QString toString( TimetableInformation timetableInformation ) {
         const int index = staticMetaObject.indexOfEnumerator("TimetableInformation");
         return QLatin1String(staticMetaObject.enumerator(index).valueToKey(timetableInformation));
-    }
+    };
     static inline QString toString( ServiceProviderType providerType ) {
         const int index = staticMetaObject.indexOfEnumerator("ServiceProviderType");
         return QLatin1String(staticMetaObject.enumerator(index).valueToKey(providerType));
-    }
+    };
     static inline QString toString( ProviderFeature feature ) {
         const int index = staticMetaObject.indexOfEnumerator("ProviderFeature");
         return QLatin1String(staticMetaObject.enumerator(index).valueToKey(feature));
-    }
+    };
     static inline QString toString( VehicleType vehicleType ) {
         const int index = staticMetaObject.indexOfEnumerator("VehicleType");
         return QLatin1String(staticMetaObject.enumerator(index).valueToKey(vehicleType));
-    }
+    };
     static inline QString toString( LineService lineService ) {
         const int index = staticMetaObject.indexOfEnumerator("LineService");
         return QLatin1String(staticMetaObject.enumerator(index).valueToKey(lineService));
-    }
+    };
     static TimetableInformation stringToTimetableInformation( const char *timetableInformation ) {
         const int index = staticMetaObject.indexOfEnumerator("TimetableInformation");
         const int value = staticMetaObject.enumerator(index).keyToValue(timetableInformation);

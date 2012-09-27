@@ -235,7 +235,7 @@ StopSettingsDialog* StopWidget::createStopSettingsDialog()
 void StopWidget::editSettings()
 {
     Q_D( StopWidget );
-    QPointer<StopSettingsDialog> dlg = createStopSettingsDialog();
+    QPointer<StopSettingsDialog> dlg( createStopSettingsDialog() );
     int result = dlg->exec();
     if ( result == KDialog::Accepted ) {
         setStopSettings( dlg->stopSettings() );
