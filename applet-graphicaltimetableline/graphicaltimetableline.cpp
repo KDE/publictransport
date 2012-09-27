@@ -427,8 +427,8 @@ void GraphicalTimetableLine::dataUpdated( const QString& sourceName,
     QVariantList departuresData = data.contains("departures") ? data["departures"].toList()
                                                               : data["arrivals"].toList();
     kDebug() << "  - " << departuresData.count() << "departures to be processed";
-    foreach ( const QVariant departure, departuresData ) {
-        QVariantHash departureHash = departure.toHash();
+    foreach ( const QVariant &departureVariant, departuresData ) {
+        const QVariantHash departureHash = departureVariant.toHash();
         VehicleType vehicleType = static_cast<VehicleType>( departureHash["TypeOfVehicle"].toInt() );
         if ( !m_vehicleTypes.contains(vehicleType) ) {
             continue; // Fitlered
