@@ -58,7 +58,8 @@ const char *ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA = "getAddit
 
 ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, QObject *parent,
                                               const QSharedPointer<KConfig> &cache )
-        : ServiceProvider(data, parent), m_thread(0), m_mutex(new QMutex)
+        : ServiceProvider(data, parent),
+          m_scriptStorage(QSharedPointer<Storage>(new Storage(data->id())))
 {
     m_scriptState = WaitingForScriptUsage;
     m_scriptFeatures = readScriptFeatures( cache.isNull() ? ServiceProviderGlobal::cache() : cache );
@@ -70,19 +71,13 @@ ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, Q
     qRegisterMetaType< ParseDocumentMode >( "ParseDocumentMode" );
     qRegisterMetaType< ResultObject::Features >( "ResultObject::Features" );
     qRegisterMetaType< ResultObject::Hints >( "ResultObject::Hints" );
-
-    // FIXME: Unfortunately this crashes with multiple QScriptEngine's importing the same extension
-    // in different threads, ie. at the same time...
-    // Maybe it helps to protect the importExtension() function
-//     ThreadWeaver::Weaver::instance()->setMaximumNumberOfThreads( 1 );
 }
 
 ServiceProviderScript::~ServiceProviderScript()
 {
     // Wait for running jobs to finish for proper cleanup
-//     ThreadWeaver::Weaver::instance()->requestAbort();
-//     ThreadWeaver::Weaver::instance()->finish(); // This prevents crashes on exit of the engine
-    delete m_mutex;
+    ThreadWeaver::Weaver::instance()->requestAbort();
+    ThreadWeaver::Weaver::instance()->finish(); // This prevents crashes on exit of the engine
 }
 
 QStringList ServiceProviderScript::allowedExtensions()
@@ -468,7 +463,6 @@ void ServiceProviderScript::journeysReady( const QList<TimetableData> &data,
                                 m_data->defaultVehicleType(), &globalInfo, features, hints );
         PublicTransportInfoList results =
                 (m_publishedData[request.sourceName] << newResults);
-//         Q_ASSERT( request.parseMode == ParseForJourneys );
         JourneyInfoList journeys;
         foreach( const PublicTransportInfoPtr &info, results ) {
             journeys << info.dynamicCast<JourneyInfo>();
@@ -485,14 +479,14 @@ void ServiceProviderScript::stopSuggestionsReady( const QList<TimetableData> &da
 {
     Q_UNUSED( couldNeedForcedUpdate );
 //     TODO use hints
-    kDebug() << "***** Received" << data.count() << "items";
+    kDebug() << "Received" << data.count() << "items";
 
     // Create PublicTransportInfo objects for new data and combine with already published data
     PublicTransportInfoList newResults;
     ResultObject::dataList( data, &newResults, request.parseMode,
                             m_data->defaultVehicleType(), &globalInfo, features, hints );
     PublicTransportInfoList results( m_publishedData[request.sourceName] << newResults );
-    kDebug() << "RESULTS:" << results;
+    kDebug() << "Results:" << results;
 
     StopInfoList stops;
     foreach( const PublicTransportInfoPtr &info, results ) {
@@ -514,13 +508,6 @@ void ServiceProviderScript::additionDataReady( const TimetableData &data,
                            i18nc("@info/plain", "No additional data found."),
                            url, &request );
     } else {
-        // Create PublicTransportInfo objects for new data and combine with already published data
-//         PublicTransportInfoList newResults;
-//         ResultObject::dataList( data, &newResults, request.parseMode,
-//                                 m_data->defaultVehicleType(), &globalInfo, features, hints );
-//         PublicTransportInfoList results =
-//                 (m_publishedData[request.sourceName] << newResults);
-
         kDebug() << "Additional data is ready:" << data;
         emit additionalDataReceived( this, url, data, request );
     }
@@ -531,16 +518,17 @@ void ServiceProviderScript::jobStarted( ThreadWeaver::Job* job )
     ScriptJob *scriptJob = qobject_cast< ScriptJob* >( job );
     Q_ASSERT( scriptJob );
 
-    const QString sourceName = scriptJob->request()->sourceName;
-    Q_ASSERT ( !m_publishedData.contains(sourceName) ); // TODO
-//     {
-//         qDebug() << "------------------------------------------------------------------------";
-//         qDebug() << "------------------------------------------------------------------------";
-//         kWarning() << "The source" << sourceName << "gets filled with data from multiple threads";
-//         qDebug() << "------------------------------------------------------------------------";
-//         qDebug() << "------------------------------------------------------------------------";
-//     }
-    m_publishedData[ sourceName ].clear();
+    // Warn if there is published data for the request,
+    // but not for additional data requests because they point to existing departure data sources.
+    // There may be multiple AdditionalDataJob requests for the same data source but different
+    // timetable items in the source.
+    if ( !qobject_cast<AdditionalDataJob*>(scriptJob) &&
+         m_publishedData.contains(scriptJob->request()->sourceName) &&
+         !m_publishedData[scriptJob->request()->sourceName].isEmpty() )
+    {
+        kWarning() << "Data source already exists for job"
+                   << scriptJob << scriptJob->request()->sourceName;
+    }
 }
 
 void ServiceProviderScript::jobDone( ThreadWeaver::Job* job )
@@ -550,6 +538,7 @@ void ServiceProviderScript::jobDone( ThreadWeaver::Job* job )
 
     const QString sourceName = scriptJob->request()->sourceName;
     PublicTransportInfoList results = m_publishedData.take( sourceName );
+
     scriptJob->deleteLater();
 }
 
@@ -564,102 +553,75 @@ void ServiceProviderScript::jobFailed( ThreadWeaver::Job* job )
 
 void ServiceProviderScript::requestDepartures( const DepartureRequest &request )
 {
-    if ( !lazyLoadScript() ) {
-        kDebug() << "Failed to load script!";
-        return;
+    if ( lazyLoadScript() ) {
+        DepartureJob *job = new DepartureJob( m_scriptData, m_scriptStorage, request, this );
+        connect( job, SIGNAL(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)),
+                this, SLOT(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)) );
+        enqueue( job );
     }
-
-    DepartureJob *job = new DepartureJob( m_scriptData, request, this );
-    connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)),
-             this, SLOT(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)) );
-    ThreadWeaver::Weaver::instance()->enqueue( job );
-    return;
 }
 
 void ServiceProviderScript::requestArrivals( const ArrivalRequest &request )
 {
-    if ( !lazyLoadScript() ) {
-        kDebug() << "Failed to load script!";
-        return;
+    if ( lazyLoadScript() ) {
+        ArrivalJob *job = new ArrivalJob( m_scriptData, m_scriptStorage, request, this );
+        connect( job, SIGNAL(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,ArrivalRequest,bool)),
+                 this, SLOT(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,ArrivalRequest,bool)) );
+        enqueue( job );
     }
-
-    ArrivalJob *job = new ArrivalJob( m_scriptData, request, this );
-    connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,ArrivalRequest,bool)),
-             this, SLOT(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,ArrivalRequest,bool)) );
-    ThreadWeaver::Weaver::instance()->enqueue( job );
-    return;
 }
 
 void ServiceProviderScript::requestJourneys( const JourneyRequest &request )
 {
-    if ( !lazyLoadScript() ) {
-        kDebug() << "Failed to load script!";
-        return;
+    if ( lazyLoadScript() ) {
+        JourneyJob *job = new JourneyJob( m_scriptData, m_scriptStorage, request, this );
+        connect( job, SIGNAL(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequest,bool)),
+                 this, SLOT(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequest,bool)) );
+        enqueue( job );
     }
-
-    JourneyJob *job = new JourneyJob( m_scriptData, request, this );
-    connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequest,bool)),
-             this, SLOT(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequest,bool)) );
-    ThreadWeaver::Weaver::instance()->enqueue( job );
-    return;
 }
 
 void ServiceProviderScript::requestStopSuggestions( const StopSuggestionRequest &request )
 {
-    if ( !lazyLoadScript() ) {
-        kDebug() << "Failed to load script!";
-        return;
+    if ( lazyLoadScript() ) {
+        StopSuggestionsJob *job = new StopSuggestionsJob( m_scriptData, m_scriptStorage, request, this );
+        connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)),
+                 this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)) );
+        enqueue( job );
     }
-
-    StopSuggestionsJob *job = new StopSuggestionsJob( m_scriptData, request, this );
-    connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)),
-             this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)) );
-    ThreadWeaver::Weaver::instance()->enqueue( job );
-    return;
 }
 
 void ServiceProviderScript::requestStopSuggestionsFromGeoPosition(
         const StopSuggestionFromGeoPositionRequest &request )
 {
-    if ( !lazyLoadScript() ) {
-        kDebug() << "Failed to load script!";
-        return;
+    if ( lazyLoadScript() ) {
+        StopSuggestionsFromGeoPositionJob *job = new StopSuggestionsFromGeoPositionJob(
+                m_scriptData, m_scriptStorage, request, this );
+        connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)),
+                 this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)) );
+        enqueue( job );
     }
-
-    StopSuggestionsFromGeoPositionJob *job = new StopSuggestionsFromGeoPositionJob(
-            m_scriptData, request, this );
-    connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)),
-             this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)) );
-    ThreadWeaver::Weaver::instance()->enqueue( job );
-    return;
 }
 
 void ServiceProviderScript::requestAdditionalData( const AdditionalDataRequest &request )
 {
-    if ( !lazyLoadScript() ) {
-        kDebug() << "Failed to load script!";
-        return;
+    if ( lazyLoadScript() ) {
+        AdditionalDataJob *job = new AdditionalDataJob( m_scriptData, m_scriptStorage, request, this );
+        connect( job, SIGNAL(additionalDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)),
+                 this, SLOT(additionDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)) );
+        enqueue( job );
     }
+}
 
-    AdditionalDataJob *job = new AdditionalDataJob( m_scriptData, request, this );
+void ServiceProviderScript::enqueue( ScriptJob *job )
+{
+    connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(additionalDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)),
-             this, SLOT(additionDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)) );
+    connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );
     ThreadWeaver::Weaver::instance()->enqueue( job );
-    return;
 }
 
 void ServiceProviderScript::import( const QString &import, QScriptEngine *engine )
 {
-    QMutexLocker locker( m_mutex );
     engine->importExtension( import );
 }

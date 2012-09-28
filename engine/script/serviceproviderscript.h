@@ -30,16 +30,16 @@
 #include "scripting.h"
 #include "scriptobjects.h"
 
-namespace ThreadWeaver {
-    class Job;
-};
+class ScriptJob;
 namespace Scripting {
     class Storage;
+};
+namespace ThreadWeaver {
+    class Job;
 };
 class QScriptEngine;
 class QScriptProgram;
 class QFileInfo;
-class ScriptThread;
 
 /** @brief Stores information about a departure/arrival/journey/stop suggestion. */
 typedef QHash<Enums::TimetableInformation, QVariant> TimetableData;
@@ -184,6 +184,8 @@ protected:
     /** @brief Run script provider specific tests. */
     virtual bool runTests( QString *errorMessage = 0 ) const;
 
+    void enqueue( ScriptJob *job );
+
 private:
     static bool checkIncludedFiles( const QSharedPointer<KConfig> &cache,
                                     const QString &providerId = QString() );
@@ -192,11 +194,10 @@ private:
 
     ScriptState m_scriptState; // The state of the script
     QList<Enums::ProviderFeature> m_scriptFeatures; // Caches the features the script provides
-    ScriptThread *m_thread;
     QHash< QString, PublicTransportInfoList > m_publishedData;
 
     ScriptData m_scriptData;
-    QMutex *m_mutex;
+    QSharedPointer< Storage > m_scriptStorage;
     QString m_errorMessage;
 };
 

@@ -38,6 +38,7 @@
 #include <QScriptEngineAgent> // Base class
 #include <QPointer>
 
+class QMutex;
 struct AbstractRequest;
 struct DepartureRequest;
 struct ArrivalRequest;
@@ -126,7 +127,8 @@ public:
      * @param data Information about the service provider.
      * @param scriptStorage The shared Storage object.
      **/
-    explicit ScriptJob( const ScriptData &data, QObject* parent = 0 );
+    explicit ScriptJob( const ScriptData &data, const QSharedPointer< Storage > &scriptStorage,
+                        QObject* parent = 0 );
 
     /** @brief Destructor. */
     virtual ~ScriptJob();
@@ -134,14 +136,17 @@ public:
     /** @brief Return a pointer to the object containing inforamtion about the request of this job. */
     virtual const AbstractRequest* request() const = 0;
 
+    /** @brief Overwritten from ThreadWeaver::Job to return whether or not the job was successful. */
+    virtual bool success() const;
+
     /** @brief Return the number of items which are already published. */
-    int publishedItems() const { return m_published; };
+    int publishedItems() const;
 
     /** @brief Return a string describing the error, if success() returns false. */
-    QString errorString() const { return m_errorString; };
+    QString errorString() const;
 
     /** @brief Return the URL of the last finished request. */
-    QString lastDownloadUrl() const { return m_lastUrl; };
+    QString lastDownloadUrl() const;
 
 signals:
     /** @brief Signals ready TimetableData items. */
@@ -176,7 +181,6 @@ signals:
                               const AdditionalDataRequest &request,
                               bool couldNeedForcedUpdate = false );
 
-
 protected slots:
     /** @brief Handle the ResultObject::publish() signal by emitting dataReady(). */
     void publish();
@@ -188,14 +192,19 @@ protected:
     /** @brief Load @p script into the engine and insert some objects/functions. */
     bool loadScript( QScriptProgram *script );
 
-    /** @brief Overwritten from ThreadWeaver::Job to return whether or not the job was successful. */
-    virtual bool success() const { return m_success; };
+    bool waitFor( QObject *sender, const char *signal, WaitForType type );
+
+    bool hasDataToBePublished() const;
+
+    void handleError( const QString &errorMessage );
 
     QScriptEngine *m_engine;
+    QMutex *m_mutex;
     ScriptData m_data;
     ScriptObjects m_objects;
     QEventLoop *m_eventLoop;
     int m_published;
+    bool m_quit;
     bool m_success;
     QString m_errorString;
     QString m_lastUrl;
@@ -206,8 +215,8 @@ class DepartureJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit DepartureJob( const ScriptData &data, const DepartureRequest& request,
-                           QObject* parent = 0);
+    explicit DepartureJob( const ScriptData &data, const QSharedPointer< Storage > &scriptStorage,
+                           const DepartureRequest& request, QObject* parent = 0);
 
     virtual ~DepartureJob();
 
@@ -222,8 +231,8 @@ class ArrivalJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit ArrivalJob( const ScriptData &data, const ArrivalRequest& request,
-                         QObject* parent = 0);
+    explicit ArrivalJob( const ScriptData &data, const QSharedPointer< Storage > &scriptStorage,
+                         const ArrivalRequest& request, QObject* parent = 0);
 
     virtual ~ArrivalJob();
 
@@ -238,8 +247,8 @@ class JourneyJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit JourneyJob( const ScriptData &data, const JourneyRequest& request,
-                         QObject* parent = 0);
+    explicit JourneyJob( const ScriptData &data, const QSharedPointer< Storage > &scriptStorage,
+                         const JourneyRequest& request, QObject* parent = 0);
 
     virtual ~JourneyJob();
 
@@ -254,7 +263,9 @@ class StopSuggestionsJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit StopSuggestionsJob( const ScriptData &data, const StopSuggestionRequest& request,
+    explicit StopSuggestionsJob( const ScriptData &data,
+                                 const QSharedPointer< Storage > &scriptStorage,
+                                 const StopSuggestionRequest& request,
                                  QObject* parent = 0);
 
     virtual ~StopSuggestionsJob();
@@ -271,6 +282,7 @@ class StopSuggestionsFromGeoPositionJob : public ScriptJob {
 
 public:
     explicit StopSuggestionsFromGeoPositionJob( const ScriptData &data,
+            const QSharedPointer< Storage > &scriptStorage,
             const StopSuggestionFromGeoPositionRequest& request, QObject* parent = 0);
 
     virtual ~StopSuggestionsFromGeoPositionJob();
@@ -286,7 +298,9 @@ class AdditionalDataJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit AdditionalDataJob( const ScriptData &data, const AdditionalDataRequest& request,
+    explicit AdditionalDataJob( const ScriptData &data,
+                                const QSharedPointer< Storage > &scriptStorage,
+                                const AdditionalDataRequest& request,
                                 QObject* parent = 0);
     virtual ~AdditionalDataJob();
 

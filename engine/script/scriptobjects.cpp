@@ -65,10 +65,10 @@ void ScriptObjects::createObjects( const ScriptData &data )
     if ( !storage ) {
         storage = QSharedPointer< Storage >( new Storage(data.provider.id()) );
     }
-    if ( network.isNull() ) {
+    if ( !network ) {
         network = QSharedPointer< Network >( new Network(data.provider.fallbackCharset()) );
     }
-    if ( result.isNull() ) {
+    if ( !result ) {
         result = QSharedPointer< ResultObject >( new ResultObject() );
     }
     if ( !helper ) {

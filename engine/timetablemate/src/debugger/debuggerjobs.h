@@ -227,13 +227,6 @@ public:
     void moveScriptObjectsToThread( QThread *thread );
     void gotScriptObjectsBack();
 
-    enum WaitForType {
-        WaitForNothing, /**< Wait for the signal only. */
-        WaitForNetwork, /**< Wait for all running network requests to finish. */
-        WaitForInterrupt, /**< Wait for the next interrupt. */
-        WaitForScriptFinish /**< Wait until script execution is finished. */
-    };
-
     bool waitFor( QObject *sender, const char *signal, WaitForType type = WaitForNothing );
 
     virtual void connectScriptObjects( bool doConnect = true );

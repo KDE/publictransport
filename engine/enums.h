@@ -472,6 +472,14 @@ enum ParseDocumentMode {
     ParseForAdditionalData /**< Parsing for additional data. */
 };
 
+/** @brief Enumerables describing for what to wait in ScriptJob/DebuggerJob::waitFor(). */
+enum WaitForType {
+    WaitForNothing, /**< Wait for the signal only. */
+    WaitForNetwork, /**< Wait for all running network requests to finish. */
+    WaitForInterrupt, /**< Wait for the next interrupt. */
+    WaitForScriptFinish /**< Wait until script execution is finished. */
+};
+
 /* Functions for nicer debug output */
 inline QDebug &operator <<( QDebug debug, ParseDocumentMode parseDocumentMode )
 {
