@@ -31,6 +31,7 @@
 // Qt includes
 #include <QQueue>
 
+class QProgressBar;
 class Project;
 class ProjectModel;
 
@@ -233,7 +234,7 @@ protected slots:
     void debugAborted();
 
     /** @brief Script execution was interrupted in the currently active project. */
-    void debugInterrupted();
+    void debugInterrupted( int lineNumber, const QString &fileName, const QDateTime &timestamp );
 
     /** @brief Script execution was continued after an interrupt in the currently active project. */
     void debugContinued();
@@ -255,6 +256,10 @@ protected slots:
 
     void projectSaveLocationChanged( const QString &newXmlFilePath, const QString &oldXmlFilePath );
 
+    void updateProgress( int finishedTests, int totalTests );
+
+    void hideProgress();
+
 protected:
     virtual bool queryClose();
 
@@ -275,6 +280,20 @@ private:
         MoveToTab,
         LeaveTab,
         CloseTab
+    };
+
+    // Data for a progress bar shown in the bottom right in a fixed tool bar.
+    // The timer is used to hide the progress bar again.
+    // Currently used for tests.
+    struct ProgressBarData {
+        ProgressBarData( QToolBar *progressToolBar, QProgressBar *progressBar )
+                : progressToolBar(progressToolBar), progressBar(progressBar),
+                  progressBarTimer(0) {};
+        ~ProgressBarData();
+
+        QToolBar *progressToolBar;
+        QProgressBar *progressBar;
+        QTimer *progressBarTimer;
     };
 
     void setupActions();
@@ -319,6 +338,9 @@ private:
     DockToolBar *m_leftDockBar;
     DockToolBar *m_rightDockBar;
     DockToolBar *m_bottomDockBar;
+
+    // Data for a fixed tool bar with a progress bar in it, shown in the bottom right corner
+    ProgressBarData *m_progressBar;
 
     // Dock widgets
     DocumentationDockWidget *m_documentationDock;

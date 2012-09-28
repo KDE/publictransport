@@ -195,7 +195,7 @@ private:
     ScriptThread *m_thread;
     QHash< QString, PublicTransportInfoList > m_publishedData;
 
-    ScriptObjects m_objects;
+    ScriptData m_scriptData;
     QMutex *m_mutex;
     QString m_errorMessage;
 };

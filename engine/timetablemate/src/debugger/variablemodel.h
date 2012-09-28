@@ -285,6 +285,7 @@ struct VariableChange {
     VariableChange( VariableChangeType type,
                     const QStack< QList<VariableTreeData> > &newVariableStack )
             : type(type), variableStack(newVariableStack) {};
+    virtual ~VariableChange() {};
 
     static VariableChange fromContext( QScriptContext *context );
 

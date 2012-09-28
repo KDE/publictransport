@@ -21,11 +21,9 @@
 #include "project.h"
 
 // Own includes
+#include "debug_config.h"
 #include "projectmodel.h"
 #include "projectsettingsdialog.h"
-#include "javascriptmodel.h"
-#include "javascriptcompletionmodel.h"
-#include "javascriptparser.h"
 #include "serviceproviderdatawriter.h"
 #include "serviceproviderdatatester.h"
 #include "testmodel.h"
@@ -37,7 +35,6 @@
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     #include "tabs/scripttab.h"
 #endif
-#include "docks/breakpointdockwidget.h"
 #include "debugger/debugger.h"
 #include "debugger/backtracemodel.h"
 #include "debugger/breakpointmodel.h"
@@ -50,20 +47,23 @@
 #include <engine/serviceproviderglobal.h>
 #include <engine/script/serviceproviderscript.h>
 #include <engine/request.h>
+#include <engine/global.h>
 
 // KDE includes
 #include <KUrlComboBox>
 #include <KLineEdit>
+#include <KDoubleNumInput>
+#include <KDateTimeWidget>
 #include <KWebView>
-#include <KAction>
-#include <KActionMenu>
-#include <KMenu>
 #include <KMessageBox>
 #include <KFileDialog>
 #include <KInputDialog>
 #include <KIcon>
+#include <KMenu>
+#include <KAction>
+#include <KActionMenu>
 #include <KStandardDirs>
-#include <KDateTimeWidget>
+#include <KColorScheme>
 #include <KLocale>
 #include <KLocalizedString>
 #include <KAuth/ActionReply>
@@ -73,8 +73,6 @@
 #include <KTextEditor/TemplateInterface>
 #include <KTextEditor/MarkInterface>
 #include <ThreadWeaver/WeaverInterface>
-#include <KDoubleNumInput>
-#include <KColorScheme>
 #include <marble/LatLonEdit.h>
 
 // Qt includes
@@ -115,15 +113,17 @@ public:
         ScriptLoaded
     };
 
-    ProjectPrivate( Project *project ) : state(Project::Uninitialized),
+    ProjectPrivate( const WeaverInterfacePointer &weaver, Project *project )
+        : state(Project::Uninitialized),
           projectModel(0), projectSourceBufferModified(false),
           dashboardTab(0), projectSourceTab(0), plasmaPreviewTab(0), webTab(0),
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
           scriptState(ScriptNotLoaded), scriptTab(0),
-          debugger(new Debugger::Debugger(project)),
+          debugger(new Debugger::Debugger(weaver, project)),
 #endif
           provider(ServiceProvider::createInvalidProvider(project)),
-          testModel(new TestModel(project)), testState(NoTestRunning), q_ptr(project)
+          testModel(new TestModel(project)), testState(NoTestRunning),
+          suppressMessages(false), enableQuestions(true), q_ptr(project)
     {
     };
 
@@ -173,6 +173,7 @@ public:
             break;
         case Project::ScriptQtScriptTemplate:
             templateText +=
+            // TODO
                     "\n// This function gets called to determine the features of the service provider\n"
                     "function features() {\n" // TODO
                     "    // Return a list of TimetableInformation values, that are used by this script.\n"
@@ -246,11 +247,9 @@ public:
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Q_Q( Project );
         if ( enable ) {
-            kDebug() << "Enable debugger information messages";
             q->connect( debugger, SIGNAL(informationMessage(QString)), q, SIGNAL(informationMessage(QString)) );
             q->connect( debugger, SIGNAL(errorMessage(QString)), q, SLOT(emitErrorMessage(QString)) );
         } else {
-            kDebug() << "Disable debugger information messages";
             q->disconnect( debugger, SIGNAL(informationMessage(QString)), q, SIGNAL(informationMessage(QString)) );
             q->disconnect( debugger, SIGNAL(errorMessage(QString)), q, SLOT(emitErrorMessage(QString)) );
         }
@@ -265,24 +264,27 @@ public:
         Q_Q( Project );
 
         // Connect to signals of the debugger
-        q->connect( debugger, SIGNAL(interrupted()), q, SLOT(debugInterrupted()) );
-        q->connect( debugger, SIGNAL(continued(bool)), q, SLOT(debugContinued()) );
+        q->connect( debugger, SIGNAL(interrupted(int,QString,QDateTime)),
+                    q, SLOT(debugInterrupted(int,QString,QDateTime)) );
+        q->connect( debugger, SIGNAL(continued(QDateTime,bool)), q, SLOT(debugContinued()) );
         q->connect( debugger, SIGNAL(started()), q, SLOT(debugStarted()) );
         q->connect( debugger, SIGNAL(stopped(ScriptRunData)), q, SLOT(debugStopped(ScriptRunData)) );
         q->connect( debugger, SIGNAL(aborted()), q, SLOT(debugAborted()) );
         enableDebuggerInformationMessages();
 
-        q->connect( debugger, SIGNAL(loadScriptResult(ScriptErrorType,QString,QStringList)),
-                    q, SLOT(loadScriptResult(ScriptErrorType,QString,QStringList)) );
-        q->connect( debugger, SIGNAL(requestTimetableDataStarted(TimetableDataRequestJob*)),
-                    q, SLOT(requestTimetableDataStarted(TimetableDataRequestJob*)) );
-        q->connect( debugger, SIGNAL(requestTimetableDataResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QScriptValue)),
-                    q, SLOT(functionCallResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QScriptValue)) );
+        q->connect( debugger, SIGNAL(jobStarted(JobType,QString,QString)),
+                    q, SLOT(jobStarted(JobType,QString,QString)) );
+        q->connect( debugger, SIGNAL(jobDone(JobType,QString,QString,DebuggerJobResult)),
+                    q, SLOT(jobDone(JobType,QString,QString,DebuggerJobResult)) );
+        q->connect( debugger, SIGNAL(loadScriptResult(ScriptErrorType,QString,QStringList,QStringList)),
+                    q, SLOT(loadScriptResult(ScriptErrorType,QString,QStringList,QStringList)) );
+        q->connect( debugger, SIGNAL(requestTimetableDataResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QVariant)),
+                    q, SLOT(functionCallResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QVariant)) );
 
         q->connect( debugger, SIGNAL(output(QString,QScriptContextInfo)),
                     q, SLOT(scriptOutput(QString,QScriptContextInfo)) );
-        q->connect( debugger, SIGNAL(scriptErrorReceived(QString,QScriptContextInfo,QString)),
-                    q, SLOT(scriptErrorReceived(QString,QScriptContextInfo,QString)) );
+        q->connect( debugger, SIGNAL(scriptMessageReceived(QString,QScriptContextInfo,QString,Helper::ErrorSeverity)),
+                    q, SLOT(scriptMessageReceived(QString,QScriptContextInfo,QString,Helper::ErrorSeverity)) );
         q->connect( debugger, SIGNAL(exception(int,QString,QString)),
                     q, SLOT(scriptException(int,QString,QString)) );
         q->connect( debugger, SIGNAL(evaluationResult(EvaluationResult)),
@@ -355,14 +357,16 @@ public:
             return false;
         }
 
+        setXmlFilePath( projectSourceFile );
+        state = Project::ProjectSuccessfullyLoaded;
+        scriptState = ScriptNotLoaded;
+
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         // Load script file referenced by the XML
         loadScript();
 #endif
 
-        setXmlFilePath( projectSourceFile );
-        state = Project::ProjectSuccessfullyLoaded;
-        scriptState = ScriptNotLoaded;
+        q->scriptSaved();
         return true;
     };
 
@@ -863,7 +867,8 @@ public:
 
         case Project::RunToCursor:
             // Only enabled if the debugger is interrupted or not running
-            return debugger->state() != Running;
+            return debugger->state() != Running &&
+                    debugger->scriptState() == Debugger::Debugger::ScriptLoaded;
 
         case Project::AbortDebugger:
             // Only enabled if the debugger is running or interrupted
@@ -904,7 +909,8 @@ public:
         case Project::DebugGetJourneys:
 #endif
             // Only enabled if the debugger and the test are both currently not running
-            return !isTestRunning() && !isDebuggerRunning();
+            return !isTestRunning() && !isDebuggerRunning() &&
+                    debugger->scriptState() == Debugger::Debugger::ScriptLoaded;
 
         default:
             kDebug() << "Unknown project action" << projectAction;
@@ -950,9 +956,11 @@ public:
     {
         foreach ( Project::ProjectAction actionType, actionTypes ) {
             const bool enabled = isActionEnabled( actionType );
-            QList< QAction* > actions = externProjectActions.values( actionType );
+            QList< QPointer<QAction> > actions = externProjectActions.values( actionType );
             foreach ( QAction *action, actions ) {
-                action->setEnabled( enabled );
+                if ( action ) {
+                    action->setEnabled( enabled );
+                }
             }
         }
     };
@@ -986,11 +994,11 @@ public:
         ActivateProjectForDebugging
     };
 
-    // Asks if the project should be activated
+    // Asks if the project should be activated (if disableQuestions is false)
     bool askForProjectActivation( ProjectActivationReason reason )
     {
         Q_Q( Project );
-        if ( isActiveProject() ) {
+        if ( isActiveProject() || !enableQuestions ) {
             return true;
         }
 
@@ -1031,14 +1039,9 @@ public:
     void callScriptFunction( AbstractRequest *request,
                              Debugger::DebugFlags debugFlags = Debugger::InterruptOnExceptions )
     {
-        Q_Q( Project );
-        if ( !askForProjectActivation(ActivateProjectForDebugging) ) {
-            return;
+        if ( askForProjectActivation(ActivateProjectForDebugging) ) {
+            debugger->requestTimetableData( request, QString(), debugFlags );
         }
-
-        const QString &text = q->scriptText();
-        debugger->loadScript( text, provider->data(), debugFlags );
-        debugger->requestTimetableData( request, debugFlags );
     };
 
     // Call script function getTimetable() in the given @p debugMode
@@ -1089,24 +1092,29 @@ public:
 #endif // BUILD_PROVIDER_TYPE_SCRIPT
 
     // Called before testing starts
-    bool beginTesting()
+    bool beginTesting( const QList< TestModel::Test > &tests )
     {
         Q_Q( Project );
         if ( isTestRunning() ) {
             // Test is already running
+            kWarning() << "Test is already running" << data()->id();
             return true;
         }
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         if ( !checkSyntax(q->scriptText()) ) {
             // Do not start the test if the syntax is invalid
-            // TODO extra test for the syntax check?
+            // TODO extra test for the syntax check? enough to test in LoadScriptJob?
             return false;
         }
+
+        DEBUGGER_JOB_SYNCHRONIZATION("Testing begins" << data()->id());
 #endif
 
         pendingTests.clear();
         testState = TestsRunning;
+        finishedTests.clear();
+        startedTests = tests;
         updateProjectActions( QList<Project::ProjectActionGroup>() << Project::TestActionGroup
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
                                                                    << Project::RunActionGroup,
@@ -1132,6 +1140,7 @@ public:
         }
 
         const TestModel::TestState state = testModel->completeState();
+        DEBUGGER_JOB_SYNCHRONIZATION("Testing finished" << data()->id());
         pendingTests.clear();
         testState = NoTestRunning;
         updateProjectActions( QList<Project::ProjectActionGroup>() << Project::TestActionGroup
@@ -1146,52 +1155,80 @@ public:
 
         switch ( state ) {
         case TestModel::TestFinishedSuccessfully:
-            q->emit informationMessage( i18nc("@info", "Test finished successfully"),
+            q->emit informationMessage( i18nc("@info", "Test of %1 finished successfully",
+                                              data()->id()),
                     KMessageWidget::Positive, 4000,
                     QList<QAction*>() << q->projectAction(Project::ShowPlasmaPreview) );
             break;
         case TestModel::TestFinishedWithErrors:
-            q->emit informationMessage( i18nc("@info", "Test finished with errors"),
+            q->emit informationMessage( i18nc("@info", "Test of %1 finished with errors",
+                                              data()->id()),
                                         KMessageWidget::Error, 4000 );
             break;
         case TestModel::TestFinishedWithWarnings:
-            q->emit informationMessage( i18nc("@info", "Test finished with warnings"),
+            q->emit informationMessage( i18nc("@info", "Test of %1 finished with warnings",
+                                              data()->id()),
                                         KMessageWidget::Warning, 4000 );
             break;
         case TestModel::TestCouldNotBeStarted:
-            q->emit informationMessage( i18nc("@info", "Test could not be started"),
+            q->emit informationMessage( i18nc("@info", "Test of %1 could not be started",
+                                              data()->id()),
                                         KMessageWidget::Error, 4000 );
+            break;
+        case TestModel::TestAborted:
+            q->emit informationMessage( i18nc("@info", "Test of %1 was aborted", data()->id()),
+                                        KMessageWidget::Error, 4000 );
+            break;
+        case TestModel::TestCaseNotFinished:
+            q->emit informationMessage( i18nc("@info", "Test of %1 case not finished",
+                                              data()->id()),
+                                        KMessageWidget::Information, 4000 );
             break;
         default:
             kWarning() << "Unexpected test state" << state;
             break;
         }
-        q->emit testFinished( state == TestModel::TestFinishedSuccessfully );
         q->emit testRunningChanged( false );
+        q->emit testFinished( state == TestModel::TestFinishedSuccessfully );
+
+        finishedTests.clear();
+        startedTests.clear();
     };
 
     // Cancels all running/pending tests
     void abortTests()
     {
+        Q_Q( Project );
         if ( !isTestRunning() ) {
             return;
         }
 
         testState = TestsGetAborted;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        foreach ( ThreadWeaver::Job *testJob, pendingTests ) {
-            if ( !debugger->weaver()->dequeue(testJob) ) {
-                testJob->requestAbort();
+        DEBUGGER_JOB_SYNCHRONIZATION("Abort tests" << data()->id());
+        for ( QHash<TestModel::Test, ThreadWeaver::Job*>::ConstIterator it = pendingTests.constBegin();
+              it != pendingTests.constEnd(); ++it )
+        {
+            if ( !debugger->weaver()->dequeue(*it) ) {
+                (*it)->requestAbort();
             }
         }
 
-        if ( !debugger->weaver()->isIdle() ) {
-            while ( !pendingTests.isEmpty() ) {
-                DebuggerJob *job = qobject_cast< DebuggerJob* >( pendingTests.takeFirst() );
-                job->debugger()->engine()->abortEvaluation();
-            }
-        }
+        debugger->abortDebugger();
+        debugger->finish();
 #endif
+        QList< TestModel::Test >::ConstIterator it = dependendTests.constBegin();
+        while ( it != dependendTests.constEnd() ) {
+            testModel->setTestState( *it,
+                    TestModel::TestAborted,
+                    i18nc("@info/plain", "Test was aborted"),
+                    i18nc("@info", "<title>Test was aborted</title> "
+                        "<para>The test was aborted while it was running, no results available.</para>"),
+                    q->projectAction(Project::ShowProjectSettings) );
+            ++it;
+        }
+        dependendTests.clear();
+
         endTesting();
     };
 
@@ -1201,7 +1238,7 @@ public:
         Q_Q( Project );
         const ServiceProviderData *data = provider->data();
         if ( !data->hasSampleCoordinates() ) {
-            testModel->addTestResult( TestModel::StopSuggestionFromGeoPositionTest,
+            testModel->setTestState( TestModel::StopSuggestionFromGeoPositionTest,
                     TestModel::TestCouldNotBeStarted,
                     i18nc("@info/plain", "Missing sample coordinates"),
                     i18nc("@info", "<title>Missing sample stop coordinates</title> "
@@ -1209,6 +1246,7 @@ public:
                         "position. Open the project settings and add one or more "
                         "<interface>Sample Stop Coordinates</interface></para>"),
                     q->projectAction(Project::ShowProjectSettings) );
+            testFinished( TestModel::StopSuggestionFromGeoPositionTest );
             return false;
         }
 #endif
@@ -1249,12 +1287,13 @@ public:
         Q_Q( Project );
         const ServiceProviderData *data = provider->data();
         if ( data->sampleStopNames().count() < 2 ) {
-            testModel->addTestResult( TestModel::JourneyTest, TestModel::TestCouldNotBeStarted,
+            testModel->setTestState( TestModel::JourneyTest, TestModel::TestCouldNotBeStarted,
                     i18nc("@info/plain", "To test journeys at least two sample stop names are needed"),
                     i18nc("@info", "<title>To test journeys at least two sample stop names are needed</title> "
                         "<para>Cannot run journey test. Open the project settings and add "
                         "another stop name to the <interface>Sample Stop Names</interface></para>"),
                     q->projectAction(Project::ShowProjectSettings) );
+            testFinished( TestModel::JourneyTest );
             return false;
         }
 #endif
@@ -1273,15 +1312,22 @@ public:
                 // A required test is not finished, add it to the dependend test list
                 // and start it when all required tests are done
                 dependendTests << test;
+
+                // Required test is not finished
+                testModel->setTestState( test, TestModel::TestDelegated,
+                        i18nc("@info/plain", "Waiting for required test \"%1\"",
+                              TestModel::nameForTest(requiredTest)),
+                        QString(), q->projectAction(Project::ShowScript) );
                 return true;
             } else if ( testModel->testState(requiredTest) == TestModel::TestFinishedWithErrors ) {
-                testModel->addTestResult( test, TestModel::TestCouldNotBeStarted,
+                testModel->setTestState( test, TestModel::TestCouldNotBeStarted,
                         i18nc("@info/plain", "Required test \"%1\" was not successful",
                               TestModel::nameForTest(requiredTest)),
                         i18nc("@info", "<title>Dependency not met</title> "
                               "<para>This test depends on the \"%1\" test, but it was not "
                               "successful.</para>", TestModel::nameForTest(requiredTest)),
                         q->projectAction(Project::ShowScript) );
+                testFinished( test );
                 return false;
             }
         }
@@ -1348,6 +1394,8 @@ public:
                             "stop IDs, add 'RouteStops' or 'StopID' to the return value, etc.</para>",
                             function);
             break;
+        case TestModel::LoadScriptTest:
+            break;
         default:
             kWarning() << "Invalid test" << test;
             return false;
@@ -1355,23 +1403,41 @@ public:
 
         // Check if the function that should be run is implemented in the script
         const QStringList functions = q->scriptFunctions();
-        const bool hasRequiredFunction = functions.contains( function );
+        const bool hasRequiredFunction = function.isEmpty() || functions.contains(function);
         if ( !hasRequiredFunction ) {
             // Function is not implemented
-            testModel->addTestResult( test, TestModel::TestCouldNotBeStarted, shortMessage,
-                                      message, q->projectAction(Project::ShowScript) );
+            TestModel::TestState state = test == TestModel::DepartureTest
+                    ? TestModel::TestCouldNotBeStarted : TestModel::TestDisabled;
+            testModel->setTestState( test, state, shortMessage, message,
+                                     q->projectAction(Project::ShowScript) );
+            testFinished( test );
             return false;
         } else {
-            // Function is implemented, ensure, that the current version of the script is loaded
-            const ServiceProviderData *data = provider->data();
-            debugger->loadScript( q->scriptText(), data, NoDebugFlags );
-
             // Create job
             DebuggerJob *job;
-            QString testName;
-            if ( test == TestModel::FeaturesTest ) {
-                job = debugger->createTestFeaturesJob( NoDebugFlags );
-                testName = "TEST_FEATURES";
+            if ( test == TestModel::LoadScriptTest ) {
+                job = debugger->getLoadScriptJob( q->scriptText(), data() );
+                if ( !job ) {
+                    // Script already loaded and not changed
+                    testModel->setTestState( test, TestModel::TestFinishedSuccessfully,
+                                             i18nc("@info/plain", "Script successfully loaded") );
+                    testFinished( test );
+                    startTests( takeStartableDependentTests(test) );
+                    return true;
+                } else if ( debugger->isLoadScriptJobRunning() && !job->isFinished() ) {
+                    job->setObjectName( "TEST_LOAD" );
+
+                    // The started signal of the LoadScriptJob was already sent, update test model
+                    pendingTests.insert( test, job );
+                    job->setUseCase( TestModel::nameForTest(test) );
+                    q->testJobStarted( test, job->type(), job->useCase() );
+                    return true;
+                } else {
+                    job->setObjectName( "TEST_LOAD" );
+                }
+            } else if ( test == TestModel::FeaturesTest ) {
+                job = debugger->createTestFeaturesJob( QString(), NeverInterrupt );
+                job->setObjectName( "TEST_FEATURES" );
             } else {
                 // The number of items to request for testing, lower values mean higher performance,
                 // higher values can mean better test results, eg. showing rare errors
@@ -1382,35 +1448,28 @@ public:
                 switch ( test ) {
                 case TestModel::DepartureTest:
                     request = new DepartureRequest( "TEST_DEPARTURES",
-                            data->sampleStopNames().first(), QDateTime::currentDateTime(),
-                            testItemCount, data->sampleCity() );
+                            data()->sampleStopNames().first(), QDateTime::currentDateTime(),
+                            testItemCount, data()->sampleCity() );
                     break;
-                case TestModel::ArrivalTest:
-                    request = new ArrivalRequest( "TEST_ARRIVALS",
-                            data->sampleStopNames().first(), QDateTime::currentDateTime(),
-                            testItemCount, data->sampleCity() );
-                    break;
-                case TestModel::AdditionalDataTest: {
-                    if ( !testModel->isTestFinished(TestModel::DepartureTest) ) {
-                        bool departureTestIsEnqueued =
-                                testModel->testState(TestModel::DepartureTest) == TestModel::TestIsRunning;
-                        if ( !departureTestIsEnqueued ) {
-                            foreach ( ThreadWeaver::Job *testJob, pendingTests ) {
-                                TimetableDataRequestJob *requestJob =
-                                        qobject_cast<TimetableDataRequestJob*>(testJob);
-                                if ( requestJob &&
-                                     requestJob->request()->parseMode == ParseForDepartures )
-                                {
-                                    departureTestIsEnqueued = true;
-                                    break;
-                                }
-                            }
-                        }
+                case TestModel::ArrivalTest: {
+                    if ( !isTestFinishedOrPending(TestModel::FeaturesTest) ) {
+                        kWarning() << "First start the features test";
+                        return false;
+                    }
+                    if ( !hasFeature(test, Enums::ProvidesArrivals) ) {
+                        return false;
+                    }
 
-                        if ( !departureTestIsEnqueued ) {
-                            kWarning() << "First start the departure test";
-                            return false;
-                        }
+                    request = new ArrivalRequest( "TEST_ARRIVALS",
+                            data()->sampleStopNames().first(), QDateTime::currentDateTime(),
+                            testItemCount, data()->sampleCity() );
+                    break;
+                }
+                case TestModel::AdditionalDataTest: {
+                    if ( !isTestFinishedOrPending(TestModel::DepartureTest) )
+                    {
+                        kWarning() << "First start the departure test";
+                        return false;
                     }
 
                     const QList< TimetableData > results =
@@ -1432,37 +1491,43 @@ public:
                 }   break;
                 case TestModel::StopSuggestionTest:
                     request = new StopSuggestionRequest( "TEST_STOP_SUGGESTIONS",
-                            data->sampleStopNames().first().left(4), testItemCount, data->sampleCity() );
+                            data()->sampleStopNames().first().left(4), testItemCount,
+                            data()->sampleCity() );
                     break;
                 case TestModel::StopSuggestionFromGeoPositionTest:
+                    if ( !isTestFinishedOrPending(TestModel::FeaturesTest) ) {
+                        kWarning() << "First start the features test";
+                        return false;
+                    }
+                    if ( !hasFeature(test, Enums::ProvidesStopSuggestionsByPosition) ) {
+                        return false;
+                    }
+
                     request = new StopSuggestionFromGeoPositionRequest(
                             "TEST_STOP_SUGGESTIONS_FROMGEOPOSITION",
-                            data->sampleLongitude(), data->sampleLatitude(), testItemCount );
+                            data()->sampleLongitude(), data()->sampleLatitude(), testItemCount );
                     break;
                 case TestModel::JourneyTest:
                     request = new JourneyRequest( "TEST_JOURNEYS",
-                            data->sampleStopNames().first(), data->sampleStopNames()[1],
+                            data()->sampleStopNames().first(), data()->sampleStopNames()[1],
                             QDateTime::currentDateTime(), testItemCount, QString(),
-                            data->sampleCity() );
+                            data()->sampleCity() );
                     break;
                 default:
                     kWarning() << "Invalid test" << test;
                     return false;
                 }
-                testName = request->sourceName;
 
                 // Create job
-                job = debugger->createTimetableDataRequestJob( request, NoDebugFlags );
-                testName = request->sourceName;
+                job = debugger->createTimetableDataRequestJob( request, QString(), NeverInterrupt );
+                job->setObjectName( request->sourceName );
                 delete request;
             }
 
-            // Connect job and try to enqueue it
-            q->connect( job, SIGNAL(started(ThreadWeaver::Job*)),
-                        q, SLOT(testJobStarted(ThreadWeaver::Job*)) );
-            q->connect( job, SIGNAL(done(ThreadWeaver::Job*)),
-                        q, SLOT(testJobDone(ThreadWeaver::Job*)) );
-            if ( !debugger->enqueueJob(job, false) ) {
+            job->setUseCase( TestModel::nameForTest(test) );
+
+            // Try to enqueue the job
+            if ( !debugger->enqueueJob(job) ) {
                 // The job could not be enqueued
                 delete job;
                 testModel->markTestCaseAsUnstartable( TestModel::ScriptExecutionTestCase );
@@ -1470,12 +1535,72 @@ public:
                 return false;
             } else {
                 // The job was successfully enqueued
-                pendingTests << job;
+                pendingTests.insert( test, job );
                 return true;
             }
         }
     };
 #endif // BUILD_PROVIDER_TYPE_SCRIPT
+
+    void startTests( const QList< TestModel::Test > &tests )
+    {
+        foreach ( TestModel::Test test, tests ) {
+            startTest( test );
+            if ( testState == ProjectPrivate::TestsGetAborted ) {
+                break;
+            }
+        }
+    };
+
+    bool startTest( TestModel::Test test )
+    {
+        bool finishedAfterThisTest = false;
+        if ( !isTestRunning() ) {
+            if ( !beginTesting(QList<TestModel::Test>() << test) ) {
+                // Test could not be started
+                return false;
+            }
+
+            // Test started, only running one test
+            finishedAfterThisTest = true;
+        }
+
+        bool success;
+        const TestModel::TestCase testCase = TestModel::testCaseOfTest( test );
+        switch ( testCase ) {
+        case TestModel::ServiceProviderDataTestCase: {
+            testModel->markTestAsStarted( test );
+
+            QString errorMessage, tooltip;
+            success = ServiceProviderDataTester::runServiceProviderDataTest(
+                    test, provider->data(), &errorMessage, &tooltip );
+            testModel->setTestState( test, success ? TestModel::TestFinishedSuccessfully
+                                                   : TestModel::TestFinishedWithErrors,
+                                     errorMessage, tooltip/*, projectAction(ShowProjectSettings)*/ );
+            testFinished( test );
+        } break;
+
+    #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        case TestModel::ScriptExecutionTestCase:
+            success = startScriptExecutionTest( test );
+            break;
+    #endif
+
+        default:
+            kWarning() << "Unknown test" << test;
+            success = false;
+            break;
+        }
+
+        if ( finishedAfterThisTest && testCase != TestModel::ScriptExecutionTestCase ) {
+            endTesting();
+        } else if ( !success ) {
+            // Test could not be started
+            startTests( takeStartableDependentTests(test) );
+        }
+
+        return success;
+    };
 
     bool save( QWidget *parent, const QString &xmlFilePath, bool useAsNewSavePath = true )
     {
@@ -1745,6 +1870,120 @@ public:
         }
     };
 
+    // Check if the features test result contains all given features,
+    // and add error test results for the given test if a feature is not available
+    bool hasFeatures( TestModel::Test test, const QList< Enums::ProviderFeature > &features ) {
+        Q_Q( Project );
+        const QList< TimetableData > featuresResults =
+                testModel->testResults( TestModel::FeaturesTest );
+        if ( featuresResults.isEmpty() ) {
+            kWarning() << "No results in features test";
+            QStringList featureStrings;
+            foreach ( Enums::ProviderFeature feature, features ) {
+                featureStrings << Enums::toString( feature );
+            }
+            testModel->setTestState( test, TestModel::TestFinishedWithWarnings,
+                    i18nc("@info/plain", "Feature function needed"),
+                    i18nc("@info", "<title>Feature function needed</title> "
+                    "<para>The <icode>features()</icode> function is needed to indicate support "
+                    "for this test. It should return at least these features for this test to run: "
+                    "%1.</para>", featureStrings.join(", ")),
+                    q->projectAction(Project::ShowScript) );
+            return false;
+        }
+
+        // Read features from the test result
+        // and remove available features from the list of features to check
+        QList< Enums::ProviderFeature > featuresToCheck = features;
+        const QVariantList featuresList =
+                featuresResults.first()[Enums::Nothing].toList();
+        foreach ( const QVariant &featureVariant, featuresList ) {
+            const Enums::ProviderFeature feature =
+                    static_cast< Enums::ProviderFeature >( featureVariant.toInt() );
+            if ( featuresToCheck.removeOne(feature) && featuresToCheck.isEmpty() ) {
+                break;
+            }
+        }
+
+        // Remaining features are not available
+        if ( !featuresToCheck.isEmpty() ) {
+            const Enums::ProviderFeature feature = featuresToCheck.first();
+            testModel->setTestState( test, TestModel::TestDisabled,
+                    i18nc("@info/plain", "Feature \"%1\" not supported", Enums::toString(feature)),
+                    i18nc("@info", "<title>Feature \"%1\" not supported</title> "
+                    "<para>The <icode>features()</icode> function did not return "
+                    "<icode>PublicTransport.%1</icode>.</para>", Enums::toString(feature)),
+                    q->projectAction(Project::ShowScript) );
+            testFinished( test );
+            return false;
+        }
+
+        return true;
+    };
+
+    inline bool hasFeature( TestModel::Test test, Enums::ProviderFeature feature ) {
+        return hasFeatures( test, QList<Enums::ProviderFeature>() << feature );
+    };
+
+    bool isTestFinishedOrPending( TestModel::Test test ) const {
+        return testModel->isTestFinished(test) || // Test is finished
+               testModel->testState(test) == TestModel::TestIsRunning || // Test is running
+               pendingTests.contains(test); // Test waits to be started
+    };
+
+    QList< TestModel::Test > takeStartableDependentTests(
+            TestModel::Test finishedTest = TestModel::InvalidTest )
+    {
+        QList< TestModel::Test > tests;
+        QList<TestModel::Test>::Iterator it = dependendTests.begin();
+        while ( it != dependendTests.end() ) {
+            const QList< TestModel::Test > requiredTests = TestModel::testIsDependedOf( *it );
+            if ( requiredTests.contains(finishedTest) ) {
+                // A required test was finished
+                bool allFinished = true;
+                foreach ( TestModel::Test requiredTest, requiredTests ) {
+                    if ( !testModel->isTestFinished(requiredTest) && finishedTest != requiredTest ) {
+                        // A required test in the list is not finished
+                        // and it's not the job that has just finished
+                        allFinished = false;
+                        break;
+                    }
+                }
+                if ( allFinished ) {
+                    tests << *it;
+                    it = dependendTests.erase( it );
+                    continue;
+                }
+            }
+            ++it;
+        }
+        if ( !tests.isEmpty() ) {
+            DEBUGGER_JOB_SYNCHRONIZATION("All requirements for tests" << tests
+                                         << "are finished with test" << finishedTest);
+        }
+        return tests;
+    };
+
+    void testFinished( TestModel::Test test )
+    {
+    #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        Q_Q( Project );
+        finishedTests << test;
+//         Q_ASSERT( !startedTests.isEmpty() );
+        q->emit testProgress( finishedTests, startedTests );
+
+        if ( !debugger->isRunning() && finishedTests.count() >= startedTests.count() &&
+             pendingTests.isEmpty() && dependendTests.isEmpty() )
+        {
+            // The last pending test has finished
+            DEBUGGER_JOB_SYNCHRONIZATION("The last pending test has finished");
+            endTesting();
+        }
+
+        startTests( takeStartableDependentTests(test) );
+    #endif
+    };
+
     Project::State state;
     ProjectModel *projectModel;
 
@@ -1775,29 +2014,32 @@ public:
     QMultiHash< Project::ProjectAction, QAction* > projectActions;
 
     // Store pointers to project actions, to update their enabled state on changes
-    QMultiHash< Project::ProjectAction, QAction* > externProjectActions;
+    QMultiHash< Project::ProjectAction, QPointer<QAction> > externProjectActions;
 
     TestModel *testModel;
     TestState testState;
-    QList< ThreadWeaver::Job* > pendingTests;
+    QHash< TestModel::Test, ThreadWeaver::Job* > pendingTests;
     QList< TestModel::Test > dependendTests;
+    QList< TestModel::Test > finishedTests;
+    QList< TestModel::Test > startedTests;
 
     // Collects output/console text for the project
     QString output;
     QString consoleText;
 
-    // The reason for starting script execution, eg. running a test
-    QString executionReason;
-
     QString lastError;
     QStringList globalFunctions;
+    QStringList includedFiles;
+    bool suppressMessages;
+    bool enableQuestions;
 
 private:
     Project *q_ptr;
     Q_DECLARE_PUBLIC( Project )
 };
 
-Project::Project( QWidget *parent ) : QObject( parent ), d_ptr(new ProjectPrivate(this))
+Project::Project( const WeaverInterfacePointer &weaver, QWidget *parent )
+        : QObject( parent ), d_ptr(new ProjectPrivate(weaver, this))
 {
     qRegisterMetaType< ProjectActionData >( "ProjectActionData" );
     d_ptr->initialize();
@@ -1805,10 +2047,15 @@ Project::Project( QWidget *parent ) : QObject( parent ), d_ptr(new ProjectPrivat
 
 Project::~Project()
 {
+    Q_D( Project );
     if ( isModified() ) {
         kWarning() << "Destroying project with modifications";
     }
 
+    disconnect( d->debugger, 0, this, 0 );
+    d->debugger->weaver()->requestAbort();
+    d->debugger->abortDebugger();
+    d->debugger->finish();
     delete d_ptr;
 }
 
@@ -1877,21 +2124,42 @@ void Project::scriptOutput( const QString &message, const QScriptContextInfo &co
     }
 }
 
-void Project::scriptErrorReceived( const QString &errorMessage,
+void Project::scriptMessageReceived( const QString &errorMessage,
                                    const QScriptContextInfo &context,
-                                   const QString &failedParseText )
+                                   const QString &failedParseText,
+                                   Helper::ErrorSeverity severity )
 {
     Q_UNUSED( failedParseText );
-    if ( context.fileName() != scriptFileName() ) {
-        appendOutput( i18nc("@info %2 is the script file name",
-                            "<emphasis strong='1'>Error in line %1 (%2):</emphasis> <message>%3</message>",
-                            context.lineNumber(), QFileInfo(context.fileName()).fileName(),
-                            errorMessage),
-                      KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText).color() );
+    QColor color;
+    QString type;
+    switch ( severity ) {
+    case Helper::Warning:
+        color = KColorScheme( QPalette::Active ).foreground( KColorScheme::NeutralText ).color();
+        type = i18nc("@info/plain", "Warning");
+        break;
+    case Helper::Fatal:
+        color = KColorScheme( QPalette::Active ).foreground( KColorScheme::NegativeText ).color();
+        type = i18nc("@info/plain", "Error");
+        break;
+    case Helper::Information:
+    default:
+        type = i18nc("@info/plain", "Information");
+        color = KColorScheme( QPalette::Active ).foreground( KColorScheme::InactiveText ).color();
+        break;
+    }
+    if ( context.lineNumber() < 0 ) {
+        // Received a message about repeated messages
+        appendOutput( errorMessage, color );
+    } else if ( !context.fileName().isEmpty() && context.fileName() != scriptFileName() ) {
+        appendOutput( i18nc("@info %1 is the translation of 'Error'/'Warning'/'Information', "
+                            "%3 is the script file name",
+                            "<emphasis strong='1'>%1 in line %2 (%3):</emphasis> <message>%4</message>",
+                            type, context.lineNumber(), QFileInfo(context.fileName()).fileName(),
+                            errorMessage), color );
     } else {
-        appendOutput( i18nc("@info", "<emphasis strong='1'>Error in line %1:</emphasis> <message>%2</message>",
-                            context.lineNumber(), errorMessage),
-                      KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText).color() );
+        appendOutput( i18nc("@info %1 is the translation of 'Error'/'Warning'/'Information'",
+                            "<emphasis strong='1'>%1 in line %2:</emphasis> <message>%3</message>",
+                            type, context.lineNumber(), errorMessage), color );
     }
 }
 #endif
@@ -1920,27 +2188,6 @@ void Project::appendToConsole( const QString &text )
     }
     d->consoleText.append( text );
     emit consoleTextChanged( d->consoleText );
-}
-
-void Project::commandExecutionResult( const QString &returnValue, bool error )
-{
-    Q_UNUSED( error );
-    appendToConsole( returnValue );
-}
-
-void Project::evaluationResult( const EvaluationResult &result )
-{
-    if ( result.error ) {
-        if ( result.backtrace.isEmpty() ) {
-            appendToConsole( i18nc("@info", "Error: <message>%1</message>", result.errorMessage) );
-        } else {
-            appendToConsole( i18nc("@info", "Error: <message>%1</message><nl />"
-                                   "Backtrace: <message>%2</message>",
-                                   result.errorMessage, result.backtrace.join("<br />")) );
-        }
-    } else {
-        appendToConsole( result.returnValue.toString() );
-    }
 }
 
 Project::State Project::state() const
@@ -1978,6 +2225,19 @@ ScriptTab *Project::scriptTab() const
 {
     Q_D( const Project );
     return d->scriptTab;
+}
+
+ScriptTab *Project::scriptTab( const QString &filePath ) const
+{
+    Q_D( const Project );
+    foreach ( ScriptTab *externalScriptTab, d->externalScriptTabs ) {
+        if ( externalScriptTab->fileName() == filePath ) {
+            return externalScriptTab;
+        }
+    }
+
+    // External script is not opened in a tab
+    return 0;
 }
 
 QList< ScriptTab * > Project::externalScriptTabs() const
@@ -2066,6 +2326,7 @@ void Project::setProjectModel( ProjectModel *projectModel )
 {
     Q_D( Project );
     d->projectModel = projectModel;
+    scriptSaved();
 }
 
 const char *Project::projectActionName( Project::ProjectAction actionType )
@@ -2969,6 +3230,8 @@ ScriptTab *Project::showScriptTab( QWidget *parent )
     } else {
         d->scriptTab = createScriptTab( d->parentWidget(parent) );
         if ( d->scriptTab ) {
+            connect( d->scriptTab->document(), SIGNAL(documentSavedOrUploaded(KTextEditor::Document*,bool)),
+                     this, SLOT(scriptSaved()) );
             emit tabOpenRequest( d->scriptTab );
         }
     }
@@ -2991,7 +3254,6 @@ ScriptTab *Project::showExternalScriptTab( const QString &_filePath, QWidget *pa
     } else if ( !filePath.contains('/') ) {
         filePath.prepend( path() + '/' );
     }
-    kDebug() << filePath;
 
     ScriptTab *tab = externalScriptTab( filePath );
     if ( tab ) {
@@ -2999,11 +3261,23 @@ ScriptTab *Project::showExternalScriptTab( const QString &_filePath, QWidget *pa
     } else {
         tab = createExternalScriptTab( filePath, d->parentWidget(parent) );
         if ( tab ) {
+            connect( tab->document(), SIGNAL(documentSavedOrUploaded(KTextEditor::Document*,bool)),
+                     this, SLOT(scriptSaved()) );
             d->externalScriptTabs << tab;
             emit tabOpenRequest( tab );
         }
     }
     return tab;
+}
+
+void Project::scriptSaved()
+{
+    Q_D( Project );
+    if ( d->data()->isValid() ) {
+        d->debugger->loadScript( scriptText(), d->data() );
+        d->testModel->markTestsAsOutdated(
+                TestModel::testsOfTestCase(TestModel::ScriptExecutionTestCase) );
+    }
 }
 
 ScriptTab *Project::showExternalScriptActionTriggered( QWidget *parent )
@@ -3181,57 +3455,32 @@ QStringList Project::scriptFunctions()
 {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( Project );
-    loadScriptSynchronous();
     return d->globalFunctions;
 #else
     return QStringList();
 #endif
 }
 
+QStringList Project::includedFiles()
+{
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    Q_D( Project );
+    return d->includedFiles;
+#else
+    return QStringList();
+#endif
+}
+
+void Project::startTests( const QList< TestModel::Test > &tests )
+{
+    Q_D( Project );
+    return d->startTests( tests );
+}
+
 bool Project::startTest( TestModel::Test test )
 {
     Q_D( Project );
-    bool finishedAfterThisTest = false;
-    if ( !isTestRunning() ) {
-        if ( !d->beginTesting() ) {
-            // Test could not be started
-            return false;
-        } else {
-            // Test started, only running one test
-            finishedAfterThisTest = true;
-        }
-    }
-
-    bool success;
-    const TestModel::TestCase testCase = TestModel::testCaseOfTest( test );
-    switch ( testCase ) {
-    case TestModel::ServiceProviderDataTestCase: {
-        d->testModel->markTestAsStarted( test );
-
-        QString errorMessage, tooltip;
-        success = ServiceProviderDataTester::runServiceProviderDataTest(
-                test, d->provider->data(), &errorMessage, &tooltip );
-        d->testModel->addTestResult( test, success ? TestModel::TestFinishedSuccessfully
-                                                   : TestModel::TestFinishedWithErrors,
-                                     errorMessage, tooltip, projectAction(ShowProjectSettings) );
-    } break;
-
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    case TestModel::ScriptExecutionTestCase:
-        success = d->startScriptExecutionTest( test );
-        break;
-#endif
-
-    default:
-        kWarning() << "Unknown test" << test;
-        success = false;
-        break;
-    }
-
-    if ( finishedAfterThisTest ) {
-        d->endTesting();
-    }
-    return success;
+    return d->startTest( test );
 }
 
 bool Project::startTestCase( TestModel::TestCase testCase )
@@ -3239,7 +3488,7 @@ bool Project::startTestCase( TestModel::TestCase testCase )
     Q_D( Project );
     bool finishedAfterThisTestCase = false;
     if ( !isTestRunning() ) {
-        if ( !d->beginTesting() ) {
+        if ( !d->beginTesting(TestModel::testsOfTestCase(testCase)) ) {
             // Test could not be started
             return false;
         } else {
@@ -3260,7 +3509,7 @@ bool Project::startTestCase( TestModel::TestCase testCase )
         }
     }
 
-    if ( finishedAfterThisTestCase ) {
+    if ( finishedAfterThisTestCase && testCase != TestModel::ScriptExecutionTestCase ) {
         d->endTesting();
     }
     return success;
@@ -3269,26 +3518,16 @@ bool Project::startTestCase( TestModel::TestCase testCase )
 void Project::testProject()
 {
     Q_D( Project );
-    if ( !d->askForProjectActivation(ProjectPrivate::ActivateProjectForTests) || !d->beginTesting() ) {
+    if ( !d->askForProjectActivation(ProjectPrivate::ActivateProjectForTests) ||
+         !d->beginTesting(TestModel::allTests()) )
+    {
         return;
     }
 
+    d->testModel->clear();
     startTestCase( TestModel::ServiceProviderDataTestCase ); // This test case runs synchronously
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    // Get a list of all functions that are implemented in the script
-    const QStringList functions = scriptFunctions();
-    if ( !functions.contains(ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE) ) {
-        d->testModel->markTestCaseAsUnstartable( TestModel::ScriptExecutionTestCase,
-                i18nc("@info/plain", "You need to implement a 'getTimetable' script function"),
-                i18nc("@info", "<title>You need to implement a 'getTimetable' script function</title> "
-                      "<para>Service provider plugin that only support journeys are currently not "
-                      "accepted by the data engine, but that may change.</para>"),
-                projectAction(ShowScript) );
-        d->endTesting();
-        return;
-    }
-
     // Run the script and check the results
     if ( !startTestCase(TestModel::ScriptExecutionTestCase) ||
          d->testState == ProjectPrivate::TestsGetAborted )
@@ -3297,6 +3536,18 @@ void Project::testProject()
         return;
     }
 #endif
+}
+
+QList< TestModel::Test > Project::startedTests() const
+{
+    Q_D( const Project );
+    return d->startedTests;
+}
+
+QList< TestModel::Test > Project::finishedTests() const
+{
+    Q_D( const Project );
+    return d->finishedTests;
 }
 
 void Project::abortTests()
@@ -3312,186 +3563,179 @@ void Project::clearTestResults()
     d->updateProjectActions( QList< ProjectAction >() << ClearTestResults );
 }
 
-void Project::testJobStarted( ThreadWeaver::Job *job )
+TestModel::Test Project::testFromObjectName( const QString &objectName )
 {
+    if ( objectName == QLatin1String("TEST_LOAD") ) {
+        return TestModel::LoadScriptTest;
+    } else if ( objectName == QLatin1String("TEST_DEPARTURES") ) {
+        return TestModel::DepartureTest;
+    } else if ( objectName == QLatin1String("TEST_ARRIVALS") ) {
+        return TestModel::ArrivalTest;
+    } else if ( objectName == QLatin1String("TEST_ADDITIONAL_DATA") ) {
+        return TestModel::AdditionalDataTest;
+    } else if ( objectName == QLatin1String("TEST_STOP_SUGGESTIONS") ) {
+        return TestModel::StopSuggestionTest;
+    } else if ( objectName == QLatin1String("TEST_STOP_SUGGESTIONS_FROMGEOPOSITION") ) {
+        return TestModel::StopSuggestionFromGeoPositionTest;
+    } else if ( objectName == QLatin1String("TEST_JOURNEYS") ) {
+        return TestModel::JourneyTest;
+    } else if ( objectName == QLatin1String("TEST_FEATURES") ) {
+        return TestModel::FeaturesTest;
+    } else {
+        return TestModel::InvalidTest;
+    }
+}
+
+void Project::testJobStarted( TestModel::Test test, JobType type, const QString &useCase )
+{
+    Q_UNUSED(type)
+    Q_UNUSED(useCase);
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( Project );
-    CallScriptFunctionJob *callFunctionJob = qobject_cast< CallScriptFunctionJob* >( job );
-    if ( callFunctionJob ) {
-        TestModel::Test test = TestModel::InvalidTest;
-        TimetableDataRequestJob *requestJob = qobject_cast< TimetableDataRequestJob* >( job );
-        if ( requestJob ) {
-            const QString sourceName = requestJob->request()->sourceName;
-            if ( sourceName == QLatin1String("TEST_DEPARTURES") ) {
-                test = TestModel::DepartureTest;
-            } else if ( sourceName == QLatin1String("TEST_ARRIVALS") ) {
-                test = TestModel::ArrivalTest;
-            } else if ( sourceName == QLatin1String("TEST_ADDITIONAL_DATA") ) {
-                test = TestModel::AdditionalDataTest;
-            } else if ( sourceName == QLatin1String("TEST_STOP_SUGGESTIONS") ) {
-                test = TestModel::StopSuggestionTest;
-            } else if ( sourceName == QLatin1String("TEST_STOP_SUGGESTIONS_FROMGEOPOSITION") ) {
-                test = TestModel::StopSuggestionFromGeoPositionTest;
-            } else if ( sourceName == QLatin1String("TEST_JOURNEYS") ) {
-                test = TestModel::JourneyTest;
-            } else if ( sourceName == QLatin1String("TEST_FEATURES") ) {
-                test = TestModel::FeaturesTest;
-            }
-        } else if ( callFunctionJob->functionName() ==
-                    ServiceProviderScript::SCRIPT_FUNCTION_FEATURES )
-        {
-            test = TestModel::FeaturesTest;
-        }
-
-        if ( test == TestModel::InvalidTest ) {
-            kDebug() << "Unknown test job was started";
-            return;
-        } else {
-            const bool doAppendOutput = d->executionReason == QLatin1String("<unknown>");
-            d->executionReason = i18nc("@info",
-                    "<emphasis strong='1'>Execution of \"%1\" started</emphasis> (%2)",
-                    TestModel::nameForTest(test), QTime::currentTime().toString());
-            if ( doAppendOutput ) {
-                appendOutput( "<br />" + d->executionReason );
-                d->executionReason.clear();
-            }
-            d->testModel->markTestAsStarted( test );
-        }
+    if ( test == TestModel::InvalidTest ) {
+        kWarning() << "Unknown test job was started";
+        return;
     }
+
+    d->testModel->markTestAsStarted( test );
 #else
-    Q_UNUSED( job )
+    Q_UNUSED(test);
 #endif
 }
 
-void Project::testJobDone( ThreadWeaver::Job *job )
+void Project::testJobDone( TestModel::Test test, JobType type, const QString &useCase,
+                           const DebuggerJobResult &result )
 {
+    Q_UNUSED(type);
+    Q_UNUSED(useCase);
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( Project );
-    d->executionReason.clear();
-    CallScriptFunctionJob *callFunctionJob = qobject_cast< CallScriptFunctionJob* >( job );
-    if ( callFunctionJob ) {
-        TestModel::Test test = TestModel::InvalidTest;
-        TimetableDataRequestJob *requestJob = qobject_cast< TimetableDataRequestJob* >( job );
-        if ( requestJob ) {
-            const QString sourceName = requestJob->request()->sourceName;
-            if ( sourceName == QLatin1String("TEST_DEPARTURES") ) {
-                test = TestModel::DepartureTest;
-            } else if ( sourceName == QLatin1String("TEST_ARRIVALS") ) {
-                test = TestModel::ArrivalTest;
-            } else if ( sourceName == QLatin1String("TEST_ADDITIONAL_DATA") ) {
-                test = TestModel::AdditionalDataTest;
-            } else if ( sourceName == QLatin1String("TEST_STOP_SUGGESTIONS") ) {
-                test = TestModel::StopSuggestionTest;
-            } else if ( sourceName == QLatin1String("TEST_STOP_SUGGESTIONS_FROMGEOPOSITION") ) {
-                test = TestModel::StopSuggestionFromGeoPositionTest;
-            } else if ( sourceName == QLatin1String("TEST_JOURNEYS") ) {
-                test = TestModel::JourneyTest;
-            } else if ( sourceName == QLatin1String("TEST_FEATURES") ) {
-                test = TestModel::FeaturesTest;
-            }
-            if ( test != TestModel::InvalidTest ) {
-                d->pendingTests.removeOne( requestJob );
-            } else {
-                kWarning() << "Unknown test" << test;
-            }
-        } else if ( callFunctionJob->functionName() ==
-                    ServiceProviderScript::SCRIPT_FUNCTION_FEATURES )
-        {
-            test = TestModel::FeaturesTest;
-            d->pendingTests.removeOne( job );
-        }
+    if ( test == TestModel::InvalidTest ) {
+        kWarning() << "Unknown test" << test;
+    } else {
+        d->pendingTests.remove( test );
+    }
 
-        if ( test == TestModel::InvalidTest ) {
-            kDebug() << "Unknown test job was done";
-            return;
+    TestModel::TestState testState = d->testModel->setTestState( test,
+            TestModel::testStateFromBool(result.success),
+            result.explanation, QString(), projectAction(ShowScript),
+            result.messages, result.resultData, result.request );
+    if ( result.aborted ) {
+        appendOutput( i18nc("@info", "Test \"%1\" was aborted for %2.",
+                            TestModel::nameForTest(test), d->data()->id()),
+                KColorScheme(QPalette::Active).foreground(KColorScheme::NeutralText).color() );
+    } else if ( result.success && testState != TestModel::TestFinishedWithErrors ) {
+        if ( testState == TestModel::TestFinishedWithWarnings ) {
+            appendOutput( i18nc("@info", "Test \"%1\" finished with warnings for %2.",
+                                TestModel::nameForTest(test), d->data()->id()),
+                    KColorScheme(QPalette::Active).foreground(KColorScheme::NeutralText).color() );
         } else {
-            d->testModel->addTestResult( test,
-                                         TestModel::testStateFromBool(callFunctionJob->success()),
-                                         callFunctionJob->explanation(), QString(),
-                                         projectAction(ShowScript),
-                                         callFunctionJob->additionalMessages(),
-                                         requestJob ? requestJob->timetableData()
-                                                    : QList<TimetableData>(),
-                                         requestJob ? requestJob->request()
-                                                    : QSharedPointer<AbstractRequest>() );
-            if ( callFunctionJob->success() ) {
-                appendOutput( i18nc("@info", "Test \"%1\" was successful.",
-                                    TestModel::nameForTest(test)),
-                        KColorScheme(QPalette::Active).foreground(KColorScheme::PositiveText).color() );
-            } else {
-                appendOutput( i18nc("@info", "Test \"%1\" failed.", TestModel::nameForTest(test)),
-                        KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText).color() );
-            }
-
-            for ( QList<TestModel::Test>::Iterator it = d->dependendTests.begin();
-                  it != d->dependendTests.end(); ++it )
-            {
-                const QList< TestModel::Test > requiredTests = TestModel::testIsDependedOf( *it );
-                if ( requiredTests.contains(test) ) {
-                    // A required test was finished
-                    bool allFinished = true;
-                    foreach ( TestModel::Test requiredTest, requiredTests ) {
-                        if ( !d->testModel->isTestFinished(requiredTest) && test != requiredTest ) {
-                            allFinished = false;
-                            break;
-                        }
-                    }
-                    if ( allFinished ) {
-                        kDebug() << "All required tests for test" << test << "are finished";
-                        const TestModel::Test test = *it;
-                        it = d->dependendTests.erase( it );
-                        delete job;
-
-                        startTest( test );
-                        return;
-                    }
-                }
-            }
+            appendOutput( i18nc("@info", "Test \"%1\" was successful for %2.",
+                                TestModel::nameForTest(test), d->data()->id()),
+                    KColorScheme(QPalette::Active).foreground(KColorScheme::PositiveText).color() );
         }
-
-        if ( d->pendingTests.isEmpty() && d->dependendTests.isEmpty() ) {
-            // The last pending test has finished
-            kDebug() << "The last pending test has finished";
-            d->endTesting();
-        }
+    } else {
+        appendOutput( i18nc("@info", "Test \"%1\" failed for %2.",
+                            TestModel::nameForTest(test), d->data()->id()),
+                KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText).color() );
     }
-#endif
 
-    delete job;
+    d->testFinished( test );
+#endif
 }
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-void Project::requestTimetableDataStarted( TimetableDataRequestJob *job )
+void Project::jobStarted( JobType type, const QString &useCase,
+                          const QString &objectName )
 {
     Q_D( Project );
-    const bool doAppendOutput = d->executionReason == QLatin1String("<unknown>");
-    if ( !isTestRunning() || doAppendOutput ) {
-        d->executionReason = i18nc("@info",
-                "<emphasis strong='1'>Execution of function \"%1\" started</emphasis> (%2)",
-                job->functionName(), QTime::currentTime().toString());
+    if ( type == Debugger::EvaluateInContext && d->debugger->runningJobs().count() > 1 ) {
+        appendOutput( i18nc("@info",
+                "<para><emphasis>Begin child job:</emphasis> %1 (%2)</para>",
+                useCase, QTime::currentTime().toString()) );
+    } else {
+        appendOutput( (d->output.isEmpty() ? QString() : "<div style='height:10px;'>&nbsp;</div>")
+                + i18nc("@info", "<para><emphasis strong='1'>Begin:</emphasis> %1 (%2)</para>",
+                        useCase, QTime::currentTime().toString()) );
     }
-    if ( doAppendOutput ) {
-        appendOutput( "<br />" + d->executionReason );
-        d->executionReason.clear();
+
+    TestModel::Test test = testFromObjectName( objectName );
+    if ( test != TestModel::InvalidTest ) {
+        testJobStarted( test, type, useCase );
     }
+}
+
+void Project::jobDone( JobType type, const QString &useCase, const QString &objectName,
+                       const DebuggerJobResult &result )
+{
+    Q_D( Project );
+    QString returnValue = Global::encodeHtmlEntities( result.returnValue.toString(),
+                                                      Global::EncodeLessAndGreaterThan );
+    if ( returnValue.isEmpty() ) {
+        returnValue = "undefined";
+    }
+    TestModel::Test test = testFromObjectName( objectName );
+    if ( test != TestModel::InvalidTest ) {
+        testJobDone( test, type, useCase, result );
+    }
+    if ( type == Debugger::EvaluateInContext && d->debugger->hasRunningJobs() ) {
+        appendOutput( i18nc("@info",
+                "<para><emphasis>End child job:</emphasis> %1, result: %2 (%3)</para>",
+                useCase, returnValue, QTime::currentTime().toString()) );
+    } else {
+        appendOutput( i18nc("@info",
+                "<para><emphasis strong='1'>End:</emphasis> %1, result: %2 (%3)</para>",
+                useCase, returnValue, QTime::currentTime().toString()) );
+    }
+}
+
+void Project::evaluationResult( const EvaluationResult &result )
+{
+    if ( result.error ) {
+        if ( result.backtrace.isEmpty() ) {
+            appendToConsole( i18nc("@info", "Error: <message>%1</message>", result.errorMessage) );
+        } else {
+            appendToConsole( i18nc("@info", "Error: <message>%1</message><nl />"
+                                   "Backtrace: <message>%2</message>",
+                                   result.errorMessage, result.backtrace.join("<br />")) );
+        }
+    } else {
+        appendToConsole( Global::encodeHtmlEntities(result.returnValue,
+                                                    Global::EncodeLessAndGreaterThan) );
+    }
+}
+
+void Project::commandExecutionResult( const QString &returnValue, bool error )
+{
+    Q_UNUSED( error );
+    appendToConsole( returnValue );
 }
 
 void Project::functionCallResult( const QSharedPointer< AbstractRequest > &request,
                                   bool success, const QString &explanation,
                                   const QList< TimetableData >& timetableData,
-                                  const QScriptValue &returnValue )
+                                  const QVariant &returnValue )
 {
     Q_UNUSED( request );
     if ( timetableData.isEmpty() ) {
-        appendOutput( i18nc("@info",
-                "Script execution has finished without results and returned <icode>%1</icode>.",
-                returnValue.toString()),
-                KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText).color() );
-    } else {
+        if ( !returnValue.toString().isEmpty() ) {
+            appendOutput( i18nc("@info", "Script execution has finished without results and "
+                                "returned <icode>%1</icode>.", returnValue.toString()),
+                    KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText).color() );
+        } else {
+            appendOutput( i18nc("@info", "Script execution has finished without results."),
+                    KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText).color() );
+        }
+    } else if ( !returnValue.toString().isEmpty() ) {
         appendOutput( i18ncp("@info",
                 "Script execution has finished with %1 result and returned <icode>%2</icode>.",
                 "Script execution has finished with %1 results and returned <icode>%2</icode>.",
                 timetableData.count(), returnValue.toString()),
+                KColorScheme(QPalette::Active).foreground(
+                    success ? KColorScheme::PositiveText : KColorScheme::NegativeText).color() );
+    } else {
+        appendOutput( i18ncp("@info", "Script execution has finished with %1 result.",
+                "Script execution has finished with %1 results.", timetableData.count()),
                 KColorScheme(QPalette::Active).foreground(
                     success ? KColorScheme::PositiveText : KColorScheme::NegativeText).color() );
     }
@@ -3502,40 +3746,42 @@ void Project::functionCallResult( const QSharedPointer< AbstractRequest > &reque
     }
 }
 
-bool Project::loadScriptSynchronous()
+bool Project::suppressMessages() const
+{
+    Q_D( const Project );
+    return d->suppressMessages || d->isTestRunning();
+}
+
+void Project::setQuestionsEnabled( bool enable )
 {
     Q_D( Project );
-    if ( isDebuggerRunning() ) {
-        return true;
-    }
-
-    if ( d->debugger->loadScript(scriptText(), d->data(), NoDebugFlags) ) {
-        // A LoadScriptJob was started or is already running,
-        // wait for it's result (received in loadScriptResult() => d->scriptState)
-        QEventLoop loop;
-        connect( d->debugger, SIGNAL(loadScriptResult(ScriptErrorType,QString,QStringList)),
-                &loop, SLOT(quit()) );
-        connect( d->debugger, SIGNAL(stopped(ScriptRunData)), &loop, SLOT(quit()) );
-        loop.exec();
-    }
-
-    return d->scriptState == ProjectPrivate::ScriptLoaded;
+    d->enableQuestions = enable;
 }
 
 void Project::loadScriptResult( ScriptErrorType lastScriptError,
                                 const QString &lastScriptErrorString,
-                                const QStringList &globalFunctions )
+                                const QStringList &globalFunctions,
+                                const QStringList &includedFiles )
 {
     Q_D( Project );
+    d->suppressMessages = false;
     if ( lastScriptError != NoScriptError ) {
         // Emit an information message about the error (eg. a syntax error)
         d->globalFunctions.clear();
+        d->includedFiles.clear();
         d->scriptState = ProjectPrivate::ScriptNotLoaded;
-        emit informationMessage( lastScriptErrorString, KMessageWidget::Error, 10000 );
+        if ( !d->suppressMessages ) {
+            emit informationMessage( lastScriptErrorString, KMessageWidget::Error, 10000 );
+        }
     } else {
         d->globalFunctions = globalFunctions;
+        d->includedFiles = includedFiles;
         d->scriptState = ProjectPrivate::ScriptLoaded;
     }
+    d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
+                                                         << DebuggerActionGroup );
+
+    emit debuggerReady();
 }
 
 void Project::runGetTimetable()
@@ -3801,20 +4047,20 @@ void Project::runToCursor()
     d->debugger->debugRunUntilLineNumber( scriptTab->fileName(), view->cursorPosition().line() + 1 );
 }
 
-void Project::debugInterrupted()
+void Project::debugInterrupted( int lineNumber, const QString &fileName,
+                                const QDateTime &timestamp )
 {
+    Q_UNUSED( timestamp );
     Q_D( Project );
     if ( !d->debugger->hasUncaughtException() ) {
-        const QString interruptFile = d->debugger->backtraceModel()->topFrame()->fileName();
-
         // Show script tab and ask to activate the project if it's not already active
-        ScriptTab *tab = interruptFile == scriptFileName() || interruptFile.isEmpty()
-                ? showScriptTab() : showExternalScriptTab(interruptFile);
+        ScriptTab *tab = fileName == scriptFileName() || fileName.isEmpty()
+                ? showScriptTab() : showExternalScriptTab(fileName);
         d->askForProjectActivation( ProjectPrivate::ActivateProjectForDebugging );
         d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
                                                             << DebuggerActionGroup );
 
-        tab->setExecutionPosition( d->debugger->lineNumber(), d->debugger->columnNumber() );
+        tab->setExecutionPosition( lineNumber );
     }
 
     // Update title of all script tabs
@@ -3838,15 +4084,6 @@ void Project::debugStarted()
     Q_D( Project );
     d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
                                                       << DebuggerActionGroup );
-
-    const bool doAppendOutput = !d->executionReason.isEmpty();
-    if ( doAppendOutput ) {
-        appendOutput( "<br />" + d->executionReason );
-        d->executionReason.clear();
-    } else {
-        d->executionReason = "<unknown>";
-    }
-
     if ( d->scriptTab ) {
         d->scriptTab->slotTitleChanged();
     }
@@ -3860,33 +4097,62 @@ void Project::debugStopped( const ScriptRunData &scriptRunData )
                                                          << DebuggerActionGroup );
 
     QString message = i18nc("@info Shown in project output, %1: Current time",
-                            "<emphasis strong='1'>Execution finished</emphasis> (%1)",
-                            QTime::currentTime().toString());
-    if ( scriptRunData.executionTime() > 0 ) {
-        message.append( "<br />" );
-        message.append( i18nc("@info %1 is a formatted duration string",
-                              "- %1 spent for script execution",
-                              KGlobal::locale()->formatDuration(scriptRunData.executionTime())) );
-    }
-    if ( scriptRunData.signalWaitingTime() > 0 || scriptRunData.asynchronousDownloadSize() > 0 ) {
-        message.append( "<br />" );
-        message.append( i18nc("@info %1 is a formatted duration string, %2 a formatted byte size string",
-                              "- %1 spent waiting for signals (%2 downloaded in asynchronous network requests)",
-                              KGlobal::locale()->formatDuration(scriptRunData.signalWaitingTime()),
-                              KGlobal::locale()->formatByteSize(scriptRunData.asynchronousDownloadSize())) );
-    }
-    if ( scriptRunData.synchronousDownloadTime() > 0 || scriptRunData.synchronousDownloadSize() > 0 ) {
-        message.append( "<br />" );
-        message.append( i18nc("@info %1 is a formatted duration string, %2 a formatted byte size string",
-                              "- %1 spent for synchronous downloads (%2 downloaded)",
-                              KGlobal::locale()->formatDuration(scriptRunData.synchronousDownloadTime()),
-                              KGlobal::locale()->formatByteSize(scriptRunData.synchronousDownloadSize())) );
-    }
+                            "<emphasis>Statistics:</emphasis>");
+    message.append( "<br />" );
+    message.append( i18nc("@info %1 is a formatted duration string",
+                            "- %1 spent for script execution",
+                            KGlobal::locale()->formatDuration(scriptRunData.executionTime())) );
     if ( scriptRunData.interruptTime() > 0 ) {
         message.append( "<br />" );
         message.append( i18nc("@info %1 is a formatted duration string",
                               "- %1 interrupted",
                               KGlobal::locale()->formatDuration(scriptRunData.interruptTime())) );
+    }
+    if ( scriptRunData.signalWaitingTime() > 0 ) {
+        message.append( "<br />" );
+        message.append( i18nc("@info %1 is a formatted duration string",
+                              "- %1 spent waiting for signals (eg. asynchronous network requests)",
+                              KGlobal::locale()->formatDuration(scriptRunData.signalWaitingTime())) );
+    }
+    if ( scriptRunData.synchronousDownloadTime() > 0 ) {
+        message.append( "<br />" );
+        message.append( i18nc("@info %1 is a formatted duration string",
+                              "- %1 spent for synchronous downloads",
+                              KGlobal::locale()->formatDuration(scriptRunData.synchronousDownloadTime())) );
+    }
+    if ( scriptRunData.asynchronousDownloadSize() > 0 ||
+         scriptRunData.synchronousDownloadSize() > 0 )
+    {
+        message.append( "<br />" );
+        if ( scriptRunData.asynchronousDownloadSize() == scriptRunData.totalDownloadSize() ) {
+            message.append( i18nc("@info %1 is a formatted byte size string",
+                                "- %1 downloaded in asynchronous requests",
+                                KGlobal::locale()->formatByteSize(scriptRunData.asynchronousDownloadSize())) );
+        } else if ( scriptRunData.synchronousDownloadSize() == scriptRunData.totalDownloadSize() ) {
+            message.append( i18nc("@info %1 is a formatted byte size string",
+                                "- %1 downloaded in synchronous requests",
+                                KGlobal::locale()->formatByteSize(scriptRunData.synchronousDownloadSize())) );
+        } else {
+            QString details;
+            if ( scriptRunData.asynchronousDownloadSize() > 0 ) {
+                details.append( i18nc("@info %1 is a formatted byte size string",
+                        "%1 in asynchronous requests",
+                        KGlobal::locale()->formatByteSize(scriptRunData.asynchronousDownloadSize())) );
+            }
+            if ( scriptRunData.synchronousDownloadSize() > 0 ) {
+                if ( !details.isEmpty() ) {
+                    details.append( ", " );
+                }
+                details.append( i18nc("@info 1 is a formatted byte size string",
+                        "%1 in synchronous requests",
+                        KGlobal::locale()->formatByteSize(scriptRunData.synchronousDownloadSize())) );
+            }
+            message.append( i18nc("@info %1 is a formatted byte size string, %2 a translated details "
+                                "string (how much was downloaded in synchronous/asynchronous requests)",
+                                "- %1 downloaded (%2)",
+                                KGlobal::locale()->formatByteSize(scriptRunData.asynchronousDownloadSize()),
+                                details) );
+        }
     }
     appendOutput( message );
 
@@ -3895,6 +4161,7 @@ void Project::debugStopped( const ScriptRunData &scriptRunData )
     }
 
     emit debuggerRunningChanged( false );
+    emit debuggerReady();
 }
 
 void Project::debugAborted()
@@ -3933,8 +4200,11 @@ void Project::scriptException( int lineNumber, const QString &errorMessage, cons
                       KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText).color() );
         tab = showExternalScriptTab( fileName );
     }
-    tab->document()->views().first()->setCursorPosition(
-            KTextEditor::Cursor(lineNumber - 1, 0) );
+
+    if ( !d->suppressMessages ) {
+        tab->document()->views().first()->setCursorPosition(
+                KTextEditor::Cursor(lineNumber - 1, 0) );
+    }
 }
 #endif // BUILD_PROVIDER_TYPE_SCRIPT
 
@@ -4099,6 +4369,11 @@ void Project::closeTab( TabType type )
     if ( tabOfType ) {
         emit tabCloseRequest( tabOfType );
     }
+}
+
+void Project::closeTab( AbstractTab *tab )
+{
+    emit tabCloseRequest( tab );
 }
 
 PlasmaPreviewTab *Project::createPlasmaPreviewTab( QWidget *parent )
@@ -4273,7 +4548,7 @@ ScriptTab *Project::createExternalScriptTab( const QString &filePath, QWidget *p
         delete externalScriptTab;
         return 0;
     } else if ( !externalScriptTab->document()->openUrl(KUrl(filePath)) ) {
-        d->errorHappened( Project::ScriptFileNotFound, // TODO
+        d->errorHappened( Project::ScriptFileNotFound,
                           i18nc("@info", "The external script file <filename>%1</filename> "
                                 "could not be opened.", filePath) );
         delete externalScriptTab;
@@ -4320,6 +4595,8 @@ void Project::setProviderData( const ServiceProviderData *providerData )
     emit iconNameChanged( iconName() );
     emit iconChanged( projectIcon() );
     emit dataChanged( data() );
+    d->testModel->markTestsAsOutdated(
+            TestModel::testsOfTestCase(TestModel::ServiceProviderDataTestCase) );
 
     if ( d->projectSourceTab ) {
         // Update service provider plugin document
@@ -4468,33 +4745,36 @@ QString Project::projectSourceText( ProjectDocumentSource source) const
 }
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-QString Project::scriptText() const
+QString Project::scriptText( const QString &includedScriptFilePath ) const
 {
     Q_D( const Project );
-    if ( d->scriptTab ) {
-        // Script file opened in a tab
-        return d->scriptTab->document()->text();
-    } else if ( !d->unsavedScriptContents.isEmpty() ) {
-        // Unsaved script contents available
-        return d->unsavedScriptContents;
-    } else {
-        // No script tab opened, read script text from file
-        const QString fileName = d->provider->data()->scriptFileName();
-        if ( !QFile::exists(fileName) ) {
-            return QString();
+    if ( includedScriptFilePath.isEmpty() ) {
+        if ( d->scriptTab ) {
+            // Script file opened in a tab
+            return d->scriptTab->document()->text();
+        } else if ( !d->unsavedScriptContents.isEmpty() ) {
+            // Unsaved script contents available
+            return d->unsavedScriptContents;
         }
-
-        // Open script file
-        QFile file( fileName );
-        if ( !file.open(QIODevice::ReadOnly) ) {
-            return QString();
-        }
-
-        // Read and close script file
-        const QByteArray ba = file.readAll();
-        file.close();
-        return QString( ba );
     }
+
+    // No script tab opened, read script text from file
+    const QString fileName = !includedScriptFilePath.isEmpty()
+            ? includedScriptFilePath : d->provider->data()->scriptFileName();
+    if ( !QFile::exists(fileName) ) {
+        return QString();
+    }
+
+    // Open script file
+    QFile file( fileName );
+    if ( !file.open(QIODevice::ReadOnly) ) {
+        return QString();
+    }
+
+    // Read and close script file
+    const QByteArray ba = file.readAll();
+    file.close();
+    return QString( ba );
 }
 
 void Project::setScriptText( const QString &text )

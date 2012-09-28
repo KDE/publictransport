@@ -88,6 +88,7 @@ struct AbstractRequest {
     virtual ~AbstractRequest() {};
 
     virtual AbstractRequest *clone() const = 0;
+    virtual QString argumentsString() const = 0;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const = 0;
@@ -111,6 +112,7 @@ struct StopSuggestionRequest : public AbstractRequest {
     {
         return new StopSuggestionRequest( sourceName, stop, maxCount, city, parseMode );
     };
+    virtual QString argumentsString() const;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
@@ -149,6 +151,7 @@ struct StopSuggestionFromGeoPositionRequest : public StopSuggestionRequest {
         return new StopSuggestionFromGeoPositionRequest( sourceName, longitude, latitude,
                                                          maxCount, distance, parseMode );
     };
+    virtual QString argumentsString() const;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
@@ -170,6 +173,7 @@ struct DepartureRequest : public AbstractRequest {
     {
         return new DepartureRequest( sourceName, stop, dateTime, maxCount, city, parseMode );
     };
+    virtual QString argumentsString() const;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
@@ -193,6 +197,7 @@ struct ArrivalRequest : public DepartureRequest {
     {
         return new ArrivalRequest( sourceName, stop, dateTime, maxCount, city, parseMode );
     };
+    virtual QString argumentsString() const;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
@@ -243,6 +248,7 @@ struct JourneyRequest : public AbstractRequest {
         return new JourneyRequest( sourceName, stop, targetStop, dateTime, maxCount, urlToUse,
                                    city, parseMode );
     };
+    virtual QString argumentsString() const;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
@@ -276,6 +282,7 @@ struct AdditionalDataRequest : public AbstractRequest {
           routeDataUrl(other.routeDataUrl) {};
 
     virtual AbstractRequest *clone() const { return new AdditionalDataRequest(*this); };
+    virtual QString argumentsString() const;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;

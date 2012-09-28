@@ -22,9 +22,10 @@
 
 // Own includes
 #include "config.h"
-#include "enums.h" // For TabType
+#include "tabs/tabs.h" // For TabType
 #include "testmodel.h" // For TestModel::Test, TestModel::TestCase
 #include "debugger/debuggerstructures.h"
+#include "debugger/debuggerjobs.h"
 
 // Public Transport engine includes
 #include <engine/enums.h> // For TimetableData, TimetableInformation
@@ -40,6 +41,7 @@ namespace ThreadWeaver
 {
     class Job;
 }
+typedef QSharedPointer< ThreadWeaver::WeaverInterface > WeaverInterfacePointer;
 
 class ProjectPrivate;
 class ProjectModel;
@@ -67,6 +69,7 @@ namespace Debugger {
     class Breakpoint;
     class ScriptRunData;
     class TimetableDataRequestJob;
+    class DebuggerJob;
 }
 
 class KActionMenu;
@@ -173,6 +176,8 @@ public:
     enum ScriptTemplateType {
         NoScriptTemplate = 0,
         ScriptQtScriptTemplate, /**< A template for script content written in QtScript. */
+        ScriptQtScriptHafasTemplate, /**< A template for script content written in QtScript,
+                * using the base HAFAS script. */ // TODO
         ScriptRubyTemplate, /**< A template for script content written in ruby. */
         ScriptPythonTemplate, /**< A template for script content written in python. */
 
@@ -321,7 +326,7 @@ public:
      * @param parent Used as parent for dialogs created inside Project, eg. showSettingsDialog()
      *   uses this as parent for the settings dialog.
      **/
-    explicit Project( QWidget *parent = 0 );
+    explicit Project( const WeaverInterfacePointer &weaver, QWidget *parent = 0 );
 
     /** @brief Destructor. */
     virtual ~Project();
@@ -334,6 +339,12 @@ public:
      *   project gets loaded.
      **/
     bool loadProject( const QString &projectSoureFile = QString() );
+
+    /** @brief Whether or not messages for this project should currently be suppressed. */
+    bool suppressMessages() const;
+
+    /** @brief Whether or not question message boxes should be shown. */
+    void setQuestionsEnabled( bool enable = true );
 
     /** @brief Get the current state of this project. */
     Q_INVOKABLE static QString nameFromIcon( const QIcon &icon ) { return icon.name(); };
@@ -532,8 +543,11 @@ public:
     /** @brief Create a tab of the given @p type or return an already created one. */
     Q_INVOKABLE AbstractTab *createTab( TabType type, QWidget *parent = 0 );
 
-    /** @brief Close the tab of the given @p type, if any. */
+    /** @brief Close the tab(s) of the given @p type, if any. */
     Q_INVOKABLE void closeTab( TabType type );
+
+    /** @brief Close @p tab. */
+    Q_INVOKABLE void closeTab( AbstractTab *tab );
 
     /**
      * @brief Get a pointer to the dashboard tab, if it was created.
@@ -556,6 +570,11 @@ public:
      * @see showScriptTab
      **/
     ScriptTab *scriptTab() const;
+
+    /**
+     * @brief Get a pointer to the included script document tab for @p filePath, if it was created.
+     **/
+    ScriptTab *scriptTab( const QString &filePath ) const;
 
     /** @brief Get a list of pointers to opened script document tabs for external scripts. */
     QList< ScriptTab* > externalScriptTabs() const;
@@ -653,8 +672,12 @@ public:
     Q_INVOKABLE QString projectSourceText( ProjectDocumentSource source = ReadProjectDocumentFromTabIfOpened ) const;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    /** @brief Get the contents of the script document. */
-    Q_INVOKABLE QString scriptText() const;
+    /**
+     * @brief Get the contents of the script document or an included script.
+     * @param includedScriptFilePath File path to the included script file to read or an empty
+     *   string to get the contents of the main script file.
+     **/
+    Q_INVOKABLE QString scriptText( const QString &includedScriptFilePath = QString() ) const;
 
     /** @brief Set the contents of the script document to @p text. */
     Q_INVOKABLE void setScriptText( const QString &text );
@@ -687,8 +710,6 @@ public:
     /** @brief Get the script template text for @p templateType. */
     Q_INVOKABLE static QString scriptTemplateText(
             ScriptTemplateType templateType = DefaultScriptTemplate );
-
-    bool loadScriptSynchronous();
 #endif
 
     /**
@@ -727,6 +748,9 @@ public:
     /** @brief Get a list of all functions that are implemented in the script. */
     Q_INVOKABLE QStringList scriptFunctions();
 
+    /** @brief Get a list of file paths to all included scripts. */
+    Q_INVOKABLE QStringList includedFiles();
+
     DepartureRequest getDepartureRequest( QWidget *parent = 0, bool* cancelled = 0 ) const;
     StopSuggestionRequest getStopSuggestionRequest( QWidget *parent = 0, bool* cancelled = 0 ) const;
     StopSuggestionFromGeoPositionRequest getStopSuggestionFromGeoPositionRequest(
@@ -736,6 +760,8 @@ public:
     /** @brief Return the model for tests. */
     TestModel *testModel() const;
 
+    QList< TestModel::Test > finishedTests() const;
+    QList< TestModel::Test > startedTests() const;
 
 signals:
     void nameChanged( const QString &newName );
@@ -748,6 +774,8 @@ signals:
     void testRunningChanged( bool testRunning );
     void outputChanged();
     void consoleTextChanged( const QString &consoleText );
+
+    void debuggerReady();
 
     void outputCleared();
     void outputAppended( const QString &newOutput );
@@ -807,6 +835,10 @@ signals:
     /** @brief Emitted when a test has finished, after a call to testProject(). */
     void testFinished( bool success );
 
+    /** @brief Emitted when testing progresses, @p progress is between 0 and 1. */
+    void testProgress( const QList< TestModel::Test > &finishedTests,
+                       const QList< TestModel::Test > &startedTests );
+
 public slots:
     /** @brief Save this project to @p xmlFilePath. */
     bool save( QWidget *parent = 0, const QString &xmlFilePath = QString() );
@@ -864,6 +896,9 @@ public slots:
 
     /** @brief Start @p test. */
     bool startTest( TestModel::Test test );
+
+    /** @brief Start @p tests. */
+    void startTests( const QList< TestModel::Test > &tests );
 
     /** @brief Start all tests in @p testCase. */
     bool startTestCase( TestModel::TestCase testCase );
@@ -962,18 +997,23 @@ protected slots:
     void slotModifiedStateChanged();
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    void requestTimetableDataStarted( TimetableDataRequestJob *job );
+    void jobStarted( JobType type, const QString &useCase, const QString &objectName );
+    void jobDone( JobType type, const QString &useCase, const QString &objectName,
+                  const DebuggerJobResult &result );
+    void scriptSaved();
 
     void loadScriptResult( ScriptErrorType lastScriptError,
                            const QString &lastScriptErrorString,
-                           const QStringList &globalFunctions );
+                           const QStringList &globalFunctions,
+                           const QStringList &includedFiles );
     void functionCallResult( const QSharedPointer< AbstractRequest > &request,
                              bool success, const QString &explanation,
                              const QList< TimetableData > &timetableData,
-                             const QScriptValue &returnValue );
+                             const QVariant &returnValue );
     void scriptOutput( const QString &message, const QScriptContextInfo &context );
-    void scriptErrorReceived( const QString &errorMessage, const QScriptContextInfo &context,
-                              const QString &failedParseText );
+    void scriptMessageReceived( const QString &errorMessage, const QScriptContextInfo &context,
+                                const QString &failedParseText,
+                                Helper::ErrorSeverity severity = Helper::Information );
 
     /** @brief Show a script tab containing an external script, included into the main script. */
     ScriptTab *showExternalScriptActionTriggered( QWidget *parent = 0 );
@@ -1012,7 +1052,7 @@ protected slots:
     void scriptAdded( const QString &fileName );
     void scriptFileChanged( const QString &fileName );
 
-    void debugInterrupted();
+    void debugInterrupted( int lineNumber, const QString &fileName, const QDateTime &timestamp );
     void debugContinued();
     void debugStarted();
     void debugStopped( const ScriptRunData &scriptRunData );
@@ -1033,12 +1073,13 @@ protected slots:
     void plasmaPreviewTabDestroyed();
     void webTabDestroyed();
 
-
     void commandExecutionResult( const QString &returnValue, bool error = false );
     void evaluationResult( const EvaluationResult &result );
 
-    void testJobStarted( ThreadWeaver::Job *job );
-    void testJobDone( ThreadWeaver::Job *job );
+    void testJobStarted( TestModel::Test test, JobType type, const QString &useCase );
+    void testJobDone( TestModel::Test test, JobType type, const QString &useCase,
+                      const DebuggerJobResult &result );
+    TestModel::Test testFromObjectName( const QString &objectName );
 
     void testActionTriggered();
     void testCaseActionTriggered();

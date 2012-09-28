@@ -93,6 +93,7 @@
 #include <QtGui/QTreeView>
 #include <QtGui/QBoxLayout>
 #include <QtGui/QKeyEvent>
+#include <qprogressbar.h>
 #include <QtCore/QTimer>
 #include <QtWebKit/QWebInspector>
 
@@ -160,7 +161,7 @@ void moveContainer( KXMLGUIClient *client, const QString &tagname, const QString
 TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpButtonHint ),
         ui_preferences(0), m_projectModel(0), m_partManager(0),
         m_tabWidget(new KTabWidget(this)),
-        m_leftDockBar(0), m_rightDockBar(0), m_bottomDockBar(0),
+        m_leftDockBar(0), m_rightDockBar(0), m_bottomDockBar(0), m_progressBar(0),
         m_documentationDock(0), m_projectsDock(0), m_testDock(0),
         m_webInspectorDock(0), m_networkMonitorDock(0),
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -202,6 +203,7 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     connect( m_projectModel, SIGNAL(projectAdded(Project*)), this, SLOT(projectAdded(Project*)) );
     connect( m_projectModel, SIGNAL(projectAboutToBeRemoved(Project*)),
              this, SLOT(projectAboutToBeRemoved(Project*)) );
+    connect( m_projectModel, SIGNAL(testProgress(int,int)), this, SLOT(updateProgress(int,int)) );
 
     Settings::self()->readConfig();
     setupActions();
@@ -281,6 +283,77 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
 
 TimetableMate::~TimetableMate() {
     delete ui_preferences;
+    delete m_progressBar;
+}
+
+void TimetableMate::updateProgress( int finishedTests, int totalTests ) {
+    if ( !m_progressBar ) {
+        QWidget *widget = new QWidget( this );
+
+        // Create a progress bar, use the same height as the bottom DockToolBar
+        QProgressBar *progressBar = new QProgressBar( widget );
+        progressBar->setMaximumSize( 250, KIconLoader::SizeSmall );
+        progressBar->setFormat( "%v of %m tests" );
+
+        // Create a fixed toolbar for the progress bar
+        QToolBar *progressToolBar = new QToolBar( this );
+        progressToolBar->setObjectName( "progress" );
+        progressToolBar->setMovable( false );
+        progressToolBar->setFloatable( false );
+
+        // Add the progress bar to it's tool bar
+        // and put a spacer before it to align it to the right
+        QHBoxLayout *layout = new QHBoxLayout( widget );
+        layout->setContentsMargins( 0, 0, 0, 0 );
+        layout->addSpacerItem( new QSpacerItem(5, 5, QSizePolicy::Expanding) );
+        layout->addWidget( progressBar );
+        progressToolBar->addWidget( widget );
+        addToolBar( Qt::BottomToolBarArea, progressToolBar );
+
+        // Create a new object with data for the progress bar
+        m_progressBar = new ProgressBarData( progressToolBar, progressBar );
+    }
+
+    // Set values for the progress bar
+    m_progressBar->progressBar->setMaximum( totalTests );
+    m_progressBar->progressBar->setValue( finishedTests );
+
+    // Stop running timers to hide the progress bar
+    delete m_progressBar->progressBarTimer;
+    m_progressBar->progressBarTimer = 0;
+
+    if ( finishedTests == totalTests ) {
+        // When all tests are finished start a timer to hide the progress bar again
+        m_progressBar->progressBarTimer = new QTimer( this );
+        connect( m_progressBar->progressBarTimer, SIGNAL(timeout()), this, SLOT(hideProgress()) );
+        m_progressBar->progressBarTimer->start( 5000 );
+    }
+}
+
+TimetableMate::ProgressBarData::~ProgressBarData()
+{
+    if ( progressBarTimer ) {
+        progressBarTimer->stop();
+        delete progressBarTimer;
+        progressBarTimer = 0;
+    }
+
+    if ( progressToolBar ) {
+        delete progressToolBar;
+        progressToolBar = 0;
+        progressBar = 0; // Got deleted with m_progressToolBar
+    }
+}
+
+void TimetableMate::hideProgress()
+{
+    if ( m_progressBar ) {
+        if ( m_progressBar->progressToolBar ) {
+            removeToolBar( m_progressBar->progressToolBar );
+        }
+        delete m_progressBar;
+        m_progressBar = 0;
+    }
 }
 
 void TimetableMate::saveProperties( KConfigGroup &config )
@@ -673,8 +746,9 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Debugger::Debugger *debugger = previousProject->debugger();
         disconnect( debugger, SIGNAL(aborted()), this, SLOT(debugAborted()) );
-        disconnect( debugger, SIGNAL(interrupted()), this, SLOT(debugInterrupted()) );
-        disconnect( debugger, SIGNAL(continued()), this, SLOT(debugContinued()) );
+        disconnect( debugger, SIGNAL(interrupted(int,QString,QDateTime)),
+                    this, SLOT(debugInterrupted(int,QString,QDateTime)) );
+        disconnect( debugger, SIGNAL(continued(QDateTime,bool)), this, SLOT(debugContinued()) );
         disconnect( debugger, SIGNAL(started()), this, SLOT(debugStarted()) );
         disconnect( debugger, SIGNAL(stopped()), this, SLOT(debugStopped()) );
         disconnect( debugger, SIGNAL(exception(int,QString,QString)),
@@ -708,8 +782,9 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Debugger::Debugger *debugger = project->debugger();
         connect( debugger, SIGNAL(aborted()), this, SLOT(debugAborted()) );
-        connect( debugger, SIGNAL(interrupted()), this, SLOT(debugInterrupted()) );
-        connect( debugger, SIGNAL(continued(bool)), this, SLOT(debugContinued()) );
+        connect( debugger, SIGNAL(interrupted(int,QString,QDateTime)),
+                 this, SLOT(debugInterrupted(int,QString,QDateTime)) );
+        connect( debugger, SIGNAL(continued(QDateTime,bool)), this, SLOT(debugContinued()) );
         connect( debugger, SIGNAL(started()), this, SLOT(debugStarted()) );
         connect( debugger, SIGNAL(stopped()), this, SLOT(debugStopped()) );
         connect( debugger, SIGNAL(exception(int,QString,QString)),
@@ -797,7 +872,7 @@ void TimetableMate::updateWindowTitle() {
     // Add information about the debugger state
     Debugger::Debugger *debugger = project->debugger();
     if ( debugger ) {
-        if ( debugger->hasUncaughtException() ) { //m_engine->hasUncaughtException() ) {
+        if ( debugger->hasUncaughtException() ) {
             caption += " - " + i18nc("@info/plain", "Debugging (Exception in Line %1)",
                                      debugger->uncaughtExceptionLineNumber());
         } else if ( debugger->isInterrupted() ) {
@@ -1314,6 +1389,11 @@ void TimetableMate::setupActions() {
     tabClose->setShortcut( KStandardShortcut::close() );
     connect( tabClose, SIGNAL(triggered()), this, SLOT(closeCurrentTab()) );
     actionCollection()->addAction( QLatin1String("tab_close"), tabClose );
+
+    KAction *runAllTestsAction = new KAction( KIcon("task-complete"),
+            i18nc("@action", "Test all &Projects"), this );
+    connect( runAllTestsAction, SIGNAL(triggered()), m_projectModel, SLOT(testAllProjects()) );
+    actionCollection()->addAction( QLatin1String("test_all_projects"), runAllTestsAction );
 }
 
 void TimetableMate::tabNextActionTriggered()
@@ -1367,8 +1447,12 @@ void TimetableMate::breakpointReached( const Breakpoint &breakpoint )
                  KMessageWidget::Information );
 }
 
-void TimetableMate::debugInterrupted()
+void TimetableMate::debugInterrupted( int lineNumber, const QString &fileName,
+                                      const QDateTime &timestamp )
 {
+    Q_UNUSED( lineNumber );
+    Q_UNUSED( fileName );
+    Q_UNUSED( timestamp );
     updateWindowTitle();
 }
 
@@ -1400,7 +1484,7 @@ void TimetableMate::uncaughtException( int lineNumber, const QString &errorMessa
                                        const QString &fileName )
 {
     // Do not show messages while testing, results are shown in the test dock
-    if ( m_projectModel->activeProject()->isTestRunning() ) {
+    if ( m_projectModel->activeProject()->suppressMessages() ) {
         return;
     }
 
@@ -1427,7 +1511,7 @@ void TimetableMate::testFinished( bool success )
 
 void TimetableMate::fileNew()
 {
-    Project *newProject = new Project( this );
+    Project *newProject = new Project( m_projectModel->weaver(), this );
     newProject->loadProject();
     m_projectModel->appendProject( newProject );
     newProject->showDashboardTab();
@@ -1665,7 +1749,7 @@ Project *TimetableMate::openProject( const QString &filePath )
         return openedProject;
     }
 
-    Project *project = new Project( this );
+    Project *project = new Project( m_projectModel->weaver(), this );
     project->loadProject( filePath );
     if ( project->state() == Project::ProjectSuccessfullyLoaded ) {
         if ( !project->filePath().isEmpty() ) {

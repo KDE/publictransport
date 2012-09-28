@@ -68,6 +68,16 @@ void TestModel::markTestAsStarted( TestModel::Test test )
     testChanged( test );
 }
 
+void TestModel::markTestsAsOutdated( const QList< TestModel::Test >& tests )
+{
+    foreach ( Test test, tests ) {
+        if ( m_testData.contains(test) ) {
+            m_testData[ test ].flags |= TestIsOutdated;
+            testChanged( test );
+        }
+    }
+}
+
 void TestModel::removeTestChildren( TestModel::Test test )
 {
     const QModelIndex testIndex = indexFromTest( test );
@@ -81,11 +91,10 @@ void TestModel::removeTestChildren( TestModel::Test test )
     }
 }
 
-void TestModel::addTestResult( TestModel::Test test, TestState state, const QString &explanation,
-                               const QString &tooltip, QAction *solution,
-                               const QList< TimetableDataRequestMessage > &childrenExplanations,
-                               const QList< TimetableData > &results,
-                               const QSharedPointer<AbstractRequest> &request )
+TestModel::TestState TestModel::setTestState( TestModel::Test test, TestState state,
+        const QString &explanation, const QString &tooltip, QAction *solution,
+        const QList< TimetableDataRequestMessage > &childrenExplanations,
+        const QList< TimetableData > &results, const QSharedPointer<AbstractRequest> &request )
 {
     const QModelIndex testIndex = indexFromTest( test );
     removeTestChildren( test );
@@ -122,6 +131,7 @@ void TestModel::addTestResult( TestModel::Test test, TestState state, const QStr
     }
 
     testChanged( test );
+    return state;
 }
 
 void TestModel::testChanged( TestModel::Test test )
@@ -285,6 +295,34 @@ QFont TestModel::getFont( const QVariant &fontData ) const
             ? fontData.value<QFont>() : KGlobalSettings::generalFont();
 }
 
+QString TestModel::nameForState( TestModel::TestState state )
+{
+    switch ( state ) {
+    case TestNotStarted:
+        return i18nc("@info/plain", "Not Started");
+    case TestCaseNotFinished:
+        return i18nc("@info/plain", "Not Finished");
+    case TestDelegated:
+        return i18nc("@info/plain", "Delegated");
+    case TestDisabled:
+        return i18nc("@info/plain", "Disabled");
+    case TestIsRunning:
+        return i18nc("@info/plain", "Running");
+    case TestFinishedSuccessfully:
+        return i18nc("@info/plain", "Success");
+    case TestFinishedWithWarnings:
+        return i18nc("@info/plain", "Warnings");
+    case TestAborted:
+        return i18nc("@info/plain", "Aborted");
+    case TestFinishedWithErrors:
+    case TestCouldNotBeStarted:
+        return i18nc("@info/plain", "Failed");
+    default:
+        kDebug() << "Unexpected test state" << state;
+        return "Unknown";
+    }
+}
+
 QVariant TestModel::testCaseData( TestModel::TestCase testCase, const QModelIndex &index, int role ) const
 {
     switch ( role ) {
@@ -292,32 +330,16 @@ QVariant TestModel::testCaseData( TestModel::TestCase testCase, const QModelInde
         switch ( index.column() ) {
         case NameColumn:
             return nameForTestCase( testCase );
-        case StateColumn: {
-            const TestState state = testCaseState( testCase );
-            switch ( state ) {
-            case TestNotStarted:
-                return i18nc("@info/plain", "Not Started");
-            case TestIsRunning:
-                return i18nc("@info/plain", "Running");
-            case TestFinishedSuccessfully:
-                return i18nc("@info/plain", "Success");
-            case TestFinishedWithWarnings:
-                return i18nc("@info/plain", "Warnings");
-            case TestFinishedWithErrors:
-            case TestCouldNotBeStarted:
-                return i18nc("@info/plain", "Failed");
-            }
-        } break;
+        case StateColumn:
+            return nameForState( testCaseState(testCase) );
         case ExplanationColumn: {
             const TestState state = testCaseState( testCase );
-            if ( (state == TestCouldNotBeStarted || state == TestFinishedWithErrors ||
-                  state == TestFinishedSuccessfully || state == TestFinishedWithWarnings) &&
+            if ( (isFinishedState(state) || state == TestDelegated || state == TestAborted) &&
                  !m_unstartableTestCases[testCase].explanation.isEmpty() )
             {
                 return m_unstartableTestCases[ testCase ].explanation;
-            } else {
-                return descriptionForTestCase( testCase );
             }
+            return descriptionForTestCase( testCase );
         } break;
         }
         break;
@@ -327,13 +349,20 @@ QVariant TestModel::testCaseData( TestModel::TestCase testCase, const QModelInde
             const TestState state = testCaseState( testCase );
             switch ( state ) {
             case TestNotStarted:
+            case TestCaseNotFinished:
                 return KIcon("arrow-right");
+            case TestDisabled:
+                return KIcon("dialog-cancel");
+            case TestDelegated:
+                return KIcon("task-delegate");
             case TestIsRunning:
                 return KIcon("task-ongoing");
             case TestFinishedSuccessfully:
                 return KIcon("task-complete");
             case TestFinishedWithWarnings:
                 return KIcon("dialog-warning");
+            case TestAborted:
+                return KIcon("process-stop");
             case TestFinishedWithErrors:
             case TestCouldNotBeStarted:
                 return KIcon("task-reject");
@@ -344,8 +373,8 @@ QVariant TestModel::testCaseData( TestModel::TestCase testCase, const QModelInde
     case Qt::ToolTipRole:
         if ( index.column() == ExplanationColumn ) {
             const TestState state = testCaseState( testCase );
-            if ( state == TestCouldNotBeStarted || state == TestFinishedWithErrors ||
-                 state == TestFinishedWithWarnings || state == TestFinishedSuccessfully )
+            if ( (isFinishedState(state) || state == TestDelegated) &&
+                 !m_unstartableTestCases[testCase].tooltip.isEmpty() )
             {
                 return m_unstartableTestCases[ testCase ].tooltip;
             } else {
@@ -397,36 +426,37 @@ QVariant TestModel::testData( TestModel::Test test, const QModelIndex &index, in
         switch ( index.column() ) {
         case NameColumn:
             return nameForTest( test );
-        case StateColumn: {
-            TestState state = m_testData.contains(test)
-                    ? m_testData[test].state : TestNotStarted;
-            switch ( state ) {
-            case TestNotStarted:
-                return i18nc("@info/plain", "Not Started");
-            case TestIsRunning:
-                return i18nc("@info/plain", "Running");
-            case TestFinishedSuccessfully:
-                return i18nc("@info/plain", "Success");
-            case TestFinishedWithWarnings:
-                return i18nc("@info/plain", "Warnings");
-            case TestFinishedWithErrors:
-            case TestCouldNotBeStarted:
-                return i18nc("@info/plain", "Failed");
+        case StateColumn:
+            if ( m_testData.contains(test) ) {
+                if ( m_testData[test].flags.testFlag(TestIsOutdated) ) {
+                    return i18nc("@info/plain", "Outdated");
+                } else {
+                    return nameForState( m_testData[test].state );
+                }
             }
-        } break;
+            return nameForState( TestNotStarted );
         case ExplanationColumn:
-            return m_testData.contains(test) && m_testData[test].isFinished() &&
-                   !m_testData[test].explanation.isEmpty()
-                    ? m_testData[test].explanation : descriptionForTest(test);
+            if ( m_testData.contains(test) ) {
+                const TestData testData = m_testData[ test ];
+                if ( (testData.isFinished() || testData.isDelegated() || testData.isAborted()) &&
+                     !testData.explanation.isEmpty() )
+                {
+                    return testData.explanation;
+                }
+            }
+            return descriptionForTest( test );
         }
         break;
 
     case Qt::ToolTipRole:
         if ( index.column() == ExplanationColumn ) {
-            return m_testData.contains(test) && m_testData[test].isFinished()
-                   ? (!m_testData[test].tooltip.isEmpty()
-                      ? m_testData[test].tooltip : m_testData[test].explanation)
-                   : descriptionForTest(test);
+            if ( m_testData.contains(test) ) {
+                const TestData testData = m_testData[ test ];
+                if ( testData.isFinished() || testData.isDelegated() ) {
+                    return !testData.tooltip.isEmpty() ? testData.tooltip : testData.explanation;
+                }
+            }
+            return descriptionForTest( test );
         } else if ( index.column() == NameColumn ) {
             return descriptionForTest( test );
         }
@@ -438,13 +468,20 @@ QVariant TestModel::testData( TestModel::Test test, const QModelIndex &index, in
                     ? m_testData[test].state : TestNotStarted;
             switch ( state ) {
             case TestNotStarted:
+            case TestCaseNotFinished:
                 return KIcon("arrow-right");
+            case TestDisabled:
+                return KIcon("dialog-cancel");
+            case TestDelegated:
+                return KIcon("task-delegate");
             case TestIsRunning:
                 return KIcon("task-ongoing");
             case TestFinishedSuccessfully:
                 return KIcon("task-complete");
             case TestFinishedWithWarnings:
                 return KIcon("dialog-warning");
+            case TestAborted:
+                return KIcon("process-stop");
             case TestFinishedWithErrors:
             case TestCouldNotBeStarted:
                 return KIcon("task-reject");
@@ -477,9 +514,16 @@ QVariant TestModel::testData( TestModel::Test test, const QModelIndex &index, in
         }
         break;
 
-    case Qt::BackgroundRole:
-        return backgroundFromTestState( testState(test) );
-
+    case Qt::BackgroundRole: {
+        const QVariant color = backgroundFromTestState( testState(test) );
+        if ( color.isValid() && m_testData.contains(test) &&
+             m_testData[test].flags.testFlag(TestIsOutdated) )
+        {
+            return KColorUtils::mix( color.value<QBrush>().color(),
+                                     KColorScheme(QPalette::Active).background().color() );
+        }
+        return color;
+    }
     case Qt::ForegroundRole:
         return foregroundFromTestState( testState(test) );
     }
@@ -504,7 +548,12 @@ QVariant TestModel::data( const QModelIndex &index, int role ) const
                 case Qt::ToolTipRole: {
                     const TestData &testData = m_testData[ test ];
                     if ( index.row() < testData.childrenExplanations.count() ) {
-                        return testData.childrenExplanations[index.row()].message;
+                        const TimetableDataRequestMessage message =
+                                testData.childrenExplanations[ index.row() ];
+                        return message.repetitions > 0
+                                ? i18nc("@info/plain Always plural", "%1 times: %2",
+                                        message.repetitions + 1, message.message)
+                                : message.message;
                     }
                 }
                 case Qt::DecorationRole:
@@ -577,7 +626,7 @@ QVariant TestModel::data( const QModelIndex &index, int role ) const
     return QVariant();
 }
 
-QBrush TestModel::backgroundFromTestState( TestModel::TestState state ) const
+QVariant TestModel::backgroundFromTestState( TestModel::TestState state ) const
 {
     switch ( state ) {
     case TestFinishedSuccessfully:
@@ -586,15 +635,19 @@ QBrush TestModel::backgroundFromTestState( TestModel::TestState state ) const
         return KColorScheme(QPalette::Active).background(KColorScheme::NeutralBackground);
     case TestCouldNotBeStarted:
     case TestFinishedWithErrors:
+    case TestAborted:
         return KColorScheme(QPalette::Active).background(KColorScheme::NegativeBackground);
+    case TestDisabled:
+    case TestDelegated:
     case TestIsRunning:
     case TestNotStarted:
+    case TestCaseNotFinished:
     default:
-        return KColorScheme(QPalette::Active).background(KColorScheme::NormalBackground);
+        return QVariant();
     }
 }
 
-QBrush TestModel::foregroundFromTestState( TestModel::TestState state ) const
+QVariant TestModel::foregroundFromTestState( TestModel::TestState state ) const
 {
     switch ( state ) {
     case TestFinishedSuccessfully:
@@ -603,15 +656,18 @@ QBrush TestModel::foregroundFromTestState( TestModel::TestState state ) const
         return KColorScheme(QPalette::Active).foreground(KColorScheme::NeutralText);
     case TestCouldNotBeStarted:
     case TestFinishedWithErrors:
+    case TestAborted:
         return KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText);
+    case TestDelegated:
     case TestIsRunning:
     case TestNotStarted:
+    case TestCaseNotFinished:
     default:
-        return KColorScheme(QPalette::Active).foreground(KColorScheme::NormalText);
+        return QVariant();
     }
 }
 
-QBrush TestModel::backgroundFromMessageType( TimetableDataRequestMessage::Type messageType ) const
+QVariant TestModel::backgroundFromMessageType( TimetableDataRequestMessage::Type messageType ) const
 {
     switch ( messageType ) {
     case TimetableDataRequestMessage::Warning:
@@ -620,11 +676,11 @@ QBrush TestModel::backgroundFromMessageType( TimetableDataRequestMessage::Type m
         return KColorScheme(QPalette::Active).background(KColorScheme::NegativeBackground);
     case TimetableDataRequestMessage::Information:
     default:
-        return KColorScheme(QPalette::Active).background(KColorScheme::NormalBackground);
+        return QVariant();
     }
 }
 
-QBrush TestModel::foregroundFromMessageType( TimetableDataRequestMessage::Type messageType ) const
+QVariant TestModel::foregroundFromMessageType( TimetableDataRequestMessage::Type messageType ) const
 {
     switch ( messageType ) {
     case TimetableDataRequestMessage::Warning:
@@ -633,13 +689,24 @@ QBrush TestModel::foregroundFromMessageType( TimetableDataRequestMessage::Type m
         return KColorScheme(QPalette::Active).foreground(KColorScheme::NegativeText);
     case TimetableDataRequestMessage::Information:
     default:
-        return KColorScheme(QPalette::Active).foreground(KColorScheme::NormalText);
+        return QVariant();
     }
 }
 
 Qt::ItemFlags TestModel::flags( const QModelIndex &index ) const
 {
-    return index.isValid() ? Qt::ItemIsEnabled | Qt::ItemIsSelectable : Qt::NoItemFlags;
+    if ( !index.isValid() ) {
+        return Qt::NoItemFlags;
+    }
+
+    const Test test = testFromIndex( index );
+    if ( testState(test) == TestDisabled ||
+         (m_testData.contains(test) && m_testData[test].flags.testFlag(TestIsOutdated)) )
+    {
+        return Qt::ItemIsSelectable;
+    }
+
+    return Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 }
 
 QVariant TestModel::headerData( int section, Qt::Orientation orientation, int role ) const
@@ -670,13 +737,46 @@ bool TestModel::hasErroneousTests() const
     return isErroneousTestState( testCaseState(ServiceProviderDataTestCase) );
 }
 
+float TestModel::progress() const
+{
+    return float(finishedTests().count()) / float(TestCount);
+}
+
+QList< TestModel::Test > TestModel::finishedTests() const
+{
+    QList< Test > tests;
+    for ( int i = 0; i < TestCount; ++i ) {
+        const Test test = static_cast< Test >( i );
+        if ( isTestFinished(test) ) {
+            tests << test;
+        }
+    }
+    return tests;
+}
+
+QList< TestModel::Test > TestModel::startedTests() const
+{
+    return project()->startedTests();
+}
+
+QList< TestModel::Test > TestModel::allTests()
+{
+    QList< TestModel::Test > tests;
+    for ( int i = 0; i < TestCount; ++i ) {
+        tests << static_cast< Test >( i );
+    }
+    return tests;
+}
+
 TestModel::TestState TestModel::completeState() const
 {
     TestState completeState = TestNotStarted;
     for ( int i = 0; i < TestCaseCount; ++i ) {
         const TestCase testCase = static_cast< TestCase >( i );
         const TestState state = testCaseState( testCase );
-        if ( state > completeState ) {
+        if ( !isFinishedState(state) && state != TestIsRunning && state != TestAborted ) {
+            return TestCaseNotFinished;
+        } else if ( state > completeState ) {
             completeState = state;
         }
     }
@@ -698,7 +798,9 @@ TestModel::TestState TestModel::testCaseState( TestModel::TestCase testCase ) co
 
         // Overwrite the test case state with the state of the current test if it has a
         // higher value then the value of the current test case state
-        if ( state > caseState ) {
+        if ( !isFinishedState(state) && state != TestIsRunning && state != TestAborted ) {
+            return TestCaseNotFinished;
+        } else if ( state > caseState ) {
             caseState = state;
         }
     }
@@ -735,7 +837,7 @@ QList< TestModel::Test > TestModel::testsOfTestCase( TestModel::TestCase testCas
         break;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptExecutionTestCase:
-        tests << DepartureTest << ArrivalTest << AdditionalDataTest
+        tests << LoadScriptTest << DepartureTest << ArrivalTest << AdditionalDataTest
               << StopSuggestionTest << StopSuggestionFromGeoPositionTest
               << JourneyTest << FeaturesTest;
         break;
@@ -764,6 +866,7 @@ TestModel::TestCase TestModel::testCaseOfTest( TestModel::Test test )
         return ServiceProviderDataTestCase;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    case LoadScriptTest:
     case DepartureTest:
     case ArrivalTest:
     case AdditionalDataTest:
@@ -785,14 +888,19 @@ QList< TestModel::Test > TestModel::testIsDependedOf( TestModel::Test test )
     switch ( test ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case AdditionalDataTest:
-        return QList< TestModel::Test >() << DepartureTest;
+        return QList< TestModel::Test >() << LoadScriptTest << FeaturesTest << DepartureTest;
+
+    case ArrivalTest:
+    case StopSuggestionFromGeoPositionTest:
+        return QList< TestModel::Test >() << LoadScriptTest << FeaturesTest;
 
     case DepartureTest:
-    case ArrivalTest:
     case StopSuggestionTest:
-    case StopSuggestionFromGeoPositionTest:
     case JourneyTest:
     case FeaturesTest:
+        return QList< TestModel::Test >() << LoadScriptTest;
+
+    case LoadScriptTest:
 #endif
 
     case ServiceProviderDataNameTest:
@@ -850,6 +958,8 @@ QString TestModel::nameForTest( TestModel::Test test )
         return i18nc("@info/plain", "Description Test" );
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    case LoadScriptTest:
+        return i18nc("@info/plain", "Load Script Test" );
     case DepartureTest:
         return i18nc("@info/plain", "Departure Test" );
     case ArrivalTest:
@@ -911,6 +1021,8 @@ QString TestModel::descriptionForTest( TestModel::Test test )
         return i18nc("@info/plain", "Tests for a valid description" );
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    case LoadScriptTest:
+        return i18nc("@info/plain", "Tries to load the script, fails on syntax errors" );
     case DepartureTest:
         return i18nc("@info/plain", "Runs the %1() script function and tests collected departure data",
                      ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE );
@@ -946,159 +1058,4 @@ QString TestModel::descriptionForTest( TestModel::Test test )
 QAction *TestModel::actionFromIndex( const QModelIndex &index )
 {
     return index.data(SolutionActionRole).value< QAction* >();
-}
-
-ActionDelegate::ActionDelegate( QAbstractItemView *itemView, QObject *parent )
-            : KWidgetItemDelegate(itemView, parent)
-{
-    QTreeView *treeView = qobject_cast< QTreeView* >( itemView );
-    if ( treeView ) {
-        connect( treeView->header(), SIGNAL(sectionResized(int,int,int)),
-                this, SLOT(updateGeometry()) );
-        connect( treeView->header(), SIGNAL(sectionMoved(int,int,int)),
-                this, SLOT(updateGeometry()) );
-    }
-}
-
-ActionDelegate::~ActionDelegate()
-{
-}
-
-void ActionDelegate::updateGeometry()
-{
-    // Make KWidgetItemDelegate call updateItemWidgets() when a section was resized or moved
-    // by making it process resize events (the size needs to really change,
-    // sending a QResizeEvent with the same size does not work)
-    const QSize size = itemView()->size();
-    itemView()->resize( size.width() + 1, size.height() );
-    itemView()->resize( size );
-}
-
-QList< QWidget * > ActionDelegate::createItemWidgets() const
-{
-    QToolButton *button = new QToolButton();
-    setBlockedEventTypes( button, QList<QEvent::Type>() << QEvent::MouseButtonPress
-                                  << QEvent::MouseButtonRelease << QEvent::MouseButtonDblClick );
-    return QList<QWidget*>() << button;
-}
-
-void ActionDelegate::updateItemWidgets( const QList< QWidget * > widgets,
-                                        const QStyleOptionViewItem &option,
-                                        const QPersistentModelIndex &index ) const
-{
-    if ( widgets.isEmpty() ) {
-        kDebug() << "No widgets";
-        return;
-    }
-
-    QToolButton *button = qobject_cast< QToolButton* >( widgets.first() );
-    button->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::MinimumExpanding );
-
-    QAction *action = TestModel::actionFromIndex( index );
-    if ( action && !option.rect.isEmpty() ) {
-        // Initialize button
-        button->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
-        button->setDefaultAction( action );
-
-        // Align button on the left and in the middle
-        const QVariant alignmentVariant = index.data( Qt::TextAlignmentRole );
-        Qt::Alignment alignment = Qt::AlignRight | Qt::AlignVCenter;
-        QPoint point( 0, 0 );
-        if ( alignment.testFlag(Qt::AlignRight) ) {
-            point.setX( option.rect.width() - button->width() );
-        } else if ( alignment.testFlag(Qt::AlignHCenter) ) {
-            point.setX( (option.rect.width() - button->width()) / 2 );
-        }
-        if ( alignment.testFlag(Qt::AlignBottom) ) {
-            point.setY( option.rect.height() - button->height() );
-        } else if ( alignment.testFlag(Qt::AlignVCenter) ) {
-            point.setY( (option.rect.height() - button->height()) / 2 );
-        }
-        button->move( point );
-
-        // Resize button to fit into option.rect and have maximally the buttons size hint as size
-        const QSize size = button->sizeHint();
-        button->resize( qMin(size.width(), option.rect.width()),
-                        qMin(size.height(), option.rect.height()) );
-
-        // Show the button
-        button->show();
-    } else {
-        // Hide button, if there is no action set in the model for index
-        // or if the target rectangle is empty (eg. because it is a child item of a collapsed
-        // parent in a QTreeView)
-        button->hide();
-    }
-}
-
-QSize ActionDelegate::toolButtonSize( const QStyleOptionViewItem &option,
-                                      const QModelIndex &index ) const
-{
-    Q_UNUSED( option );
-    QAction *action = TestModel::actionFromIndex( index );
-    if ( !action ) {
-        return QSize();
-    }
-
-    QStyleOptionToolButton buttonOption;
-    buttonOption.toolButtonStyle = Qt::ToolButtonTextBesideIcon;
-    buttonOption.text = action->text();
-    buttonOption.icon = action->icon();
-    buttonOption.iconSize = QSize( 22, 22 ); // a dummy icon size
-    const QVariant &fontData = index.data( Qt::FontRole );
-    const QFont font = fontData.isValid() && fontData.canConvert(QVariant::Font)
-            ? index.data(Qt::FontRole).value<QFont>() : KGlobalSettings::generalFont();
-    const QFontMetrics fontMetrics( font );
-    const int buttonTextWidth = fontMetrics.width( buttonOption.text );
-    return QApplication::style()->sizeFromContents(
-            QStyle::CT_ToolButton, &buttonOption, QSize(qMax(24 + buttonTextWidth, 22), 22) );
-}
-
-QSize ActionDelegate::sizeHint( const QStyleOptionViewItem &option,
-                                const QModelIndex &index ) const
-{
-    const QVariant &fontData = index.data( Qt::FontRole );
-    const QFont font = fontData.isValid() && fontData.canConvert(QVariant::Font)
-            ? index.data(Qt::FontRole).value<QFont>() : KGlobalSettings::generalFont();
-    const QFontMetrics fontMetrics( font );
-    const int textWidth = fontMetrics.width( index.data().toString() );
-    const int textLines = qMax( 1, option.rect.height() / fontMetrics.lineSpacing() );
-    const QSize buttonSize = toolButtonSize( option, index );
-    return QSize( (textWidth / textLines) + 2 + buttonSize.width(),
-                  qMax(fontMetrics.lineSpacing(), buttonSize.height()) );
-}
-
-void ActionDelegate::paint( QPainter *painter, const QStyleOptionViewItem &option,
-                            const QModelIndex &index ) const
-{
-    const bool isSelected = option.state.testFlag( QStyle::State_Selected );
-    QStyle* style = QApplication::style();
-    const QVariant background = index.data( Qt::BackgroundRole );
-    const QVariant foreground = index.data( Qt::ForegroundRole );
-    QStyleOptionViewItemV4 opt( option );
-    if ( background.isValid() ) {
-        opt.backgroundBrush = background.value<QBrush>();
-    }
-    if ( foreground.isValid() ) {
-        opt.palette.setColor( QPalette::Text, foreground.value<QBrush>().color() );
-    }
-    style->drawPrimitive( QStyle::PE_PanelItemViewItem, &opt, painter );
-
-    const QVariant &fontData = index.data( Qt::FontRole );
-    const QFont font = fontData.isValid() && fontData.canConvert(QVariant::Font)
-            ? index.data(Qt::FontRole).value<QFont>() : KGlobalSettings::generalFont();
-    const QFontMetrics fontMetrics( font );
-    const QVariant alignment = index.data(Qt::TextAlignmentRole);
-
-    painter->save();
-    const QColor textColor = opt.palette.color( QPalette::Active, isSelected
-                                                ? QPalette::BrightText : QPalette::Text );
-    painter->setPen( textColor );
-    const QRect textRect = opt.rect.adjusted( 2, 0, -toolButtonSize(option, index).width() + 2, 0 );
-    const QString text = fontMetrics.elidedText( index.data().toString(),
-                                                 Qt::ElideRight, textRect.width() );
-    style->drawItemText( painter, textRect, alignment.isValid()
-                         ? alignment.toInt() : int(Qt::AlignRight | Qt::AlignVCenter),
-                         option.palette, option.state.testFlag(QStyle::State_Enabled), text );
-    painter->restore();
 }

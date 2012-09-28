@@ -416,7 +416,7 @@ void JavaScriptModel::appendNodes( const QList< CodeNode::Ptr > nodes )
     updateFirstEmptyNodeName();
 }
 
-QList< CodeNode::Ptr > childFunctions( const CodeNode::Ptr &node )
+QList< CodeNode::Ptr > JavaScriptModel::childFunctions( const CodeNode::Ptr &node )
 {
     QList< CodeNode::Ptr > flatNodes;
     foreach ( const CodeNode::Ptr &child, node->children() ) {

@@ -26,6 +26,8 @@
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     #include "tabs/scripttab.h"
     #include "debugger/debugger.h"
+    #include "javascriptparser.h"
+    #include "javascriptmodel.h"
 #endif
 
 // Public Transport engine includes
@@ -39,12 +41,16 @@
 #include <KDebug>
 #include <KDialog>
 #include <KColorScheme>
+#include <ThreadWeaver/Weaver>
 
 // Qt includes
 #include <QFileInfo>
+#include <QTimer>
 #include <QFont>
 
-ProjectModel::ProjectModel( QObject *parent ) : QAbstractItemModel( parent ), m_activeProject(0)
+ProjectModel::ProjectModel( QObject *parent )
+        : QAbstractItemModel(parent), m_activeProject(0), m_updateProjectsTimer(0),
+          m_weaver(WeaverInterfacePointer(new ThreadWeaver::Weaver()))
 {
 }
 
@@ -180,7 +186,10 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                 return KIcon("application-x-publictransport-serviceprovider");
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
             case ProjectModelItem::ScriptItem:
+            case ProjectModelItem::IncludedScriptItem:
                 return project->scriptIcon();
+            case ProjectModelItem::CodeItem:
+                return KIcon("code-function");
 #endif
             case ProjectModelItem::PlasmaPreviewItem:
                 return KIcon("plasma");
@@ -199,6 +208,9 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
             case ProjectModelItem::ScriptItem:
                 return i18nc("@info:tooltip", "Create/edit the projects script.");
+            case ProjectModelItem::IncludedScriptItem:
+                return i18nc("@info:tooltip", "View/edit included script <filename>%1</filename>.",
+                             dynamic_cast<ProjectModelIncludedScriptItem*>(projectItem)->fileName() );
 #endif
             case ProjectModelItem::ProjectSourceItem:
                 return i18nc("@info:tooltip", "Edit project settings directly in the XML "
@@ -227,9 +239,8 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                     QFont font = KGlobalSettings::generalFont();
                     font.setItalic( true );
                     return font;
-                } else {
-                    return KGlobalSettings::generalFont();
                 }
+                break;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
             case ProjectModelItem::ScriptItem:
                 if ( project->scriptTab() &&
@@ -238,13 +249,23 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                     QFont font = KGlobalSettings::generalFont();
                     font.setItalic( true );
                     return font;
-                } else {
-                    return KGlobalSettings::generalFont();
                 }
+                break;
+            case ProjectModelItem::IncludedScriptItem: {
+                ProjectModelIncludedScriptItem *includedScriptItem =
+                        dynamic_cast< ProjectModelIncludedScriptItem* >( projectItem );
+                ScriptTab *scriptTab = project->scriptTab( includedScriptItem->filePath() );
+                if ( scriptTab && scriptTab->isModified() ) {
+                    QFont font = KGlobalSettings::generalFont();
+                    font.setItalic( true );
+                    return font;
+                }
+            } break;
 #endif
             case ProjectModelItem::PlasmaPreviewItem:
             case ProjectModelItem::WebItem:
             case ProjectModelItem::DashboardItem:
+            case ProjectModelItem::CodeItem:
             default:
                 return QVariant();
             }
@@ -267,9 +288,8 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                 font.setItalic( project->isModified() );
                 font.setBold( project == m_activeProject );
                 return font;
-            } else {
-                return KGlobalSettings::generalFont();
             }
+            break;
         case Qt::ForegroundRole:
             switch ( project->testModel()->completeState() ) {
             case TestModel::TestFinishedSuccessfully:
@@ -282,7 +302,7 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
             case TestModel::TestNotStarted:
             case TestModel::TestIsRunning:
             default:
-                return KColorScheme(QPalette::Active).foreground();
+                return QVariant();
             }
         }
     }
@@ -307,6 +327,8 @@ Qt::ItemFlags ProjectModel::flags( const QModelIndex &index ) const
         case ProjectModelItem::PlasmaPreviewItem:
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case ProjectModelItem::ScriptItem:
+        case ProjectModelItem::IncludedScriptItem:
+        case ProjectModelItem::CodeItem:
 #endif
             return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
         case ProjectModelItem::WebItem:
@@ -346,12 +368,37 @@ ProjectModelItem::~ProjectModelItem()
 void ProjectModelItem::addChild( ProjectModelItem *item )
 {
     if ( m_children.contains(item) ) {
-        kDebug() << "Child item already added";
+        kDebug() << "Child item already added" << item->text();
         return;
     }
 
     item->m_parent = this;
     m_children << item;
+}
+
+void ProjectModelItem::insertChild( int index, ProjectModelItem *item )
+{
+    if ( m_children.contains(item) ) {
+        kDebug() << "Child item already added" << item->text();
+        return;
+    }
+
+    item->m_parent = this;
+    m_children.insert( index, item );
+}
+
+void ProjectModelItem::removeChildren( const QList< ProjectModelItem* > &items )
+{
+    foreach ( ProjectModelItem *item, items ) {
+        m_children.removeOne( item );
+        delete item;
+    }
+}
+
+void ProjectModelItem::clearChildren()
+{
+    qDeleteAll( m_children );
+    m_children.clear();
 }
 
 Project *ProjectModel::projectFromFilePath( const QString &filePath ) const
@@ -385,17 +432,142 @@ void ProjectModel::appendProject( Project *project )
     projectItem->addChild( ProjectModelItem::createPlasmaPreviewItem(project) );
     endInsertRows();
 
-    project->setProjectModel( this );
     connect( project, SIGNAL(modifiedStateChanged(bool)), this, SLOT(slotProjectModified()) );
+    connect( project, SIGNAL(debuggerReady()), this, SLOT(scriptSaved()) );
     connect( project->testModel(), SIGNAL(testResultsChanged()), this, SLOT(slotProjectModified()) );
     connect( this, SIGNAL(activeProjectChanged(Project*,Project*)),
              project, SLOT(slotActiveProjectChanged(Project*,Project*)) );
     connect( project, SIGNAL(setAsActiveProjectRequest()), this, SLOT(setAsActiveProjectRequest()) );
+    connect( project, SIGNAL(testProgress(QList<TestModel::Test>,QList<TestModel::Test>)),
+             this, SLOT(projectTestProgress(QList<TestModel::Test>,QList<TestModel::Test>)) );
+    project->setProjectModel( this );
     emit projectAdded( project );
 
     if ( !m_activeProject ) {
         // Make new project the active project if no other project is set
         setActiveProject( project );
+    }
+}
+
+bool ProjectModel::isIdle() const
+{
+    foreach ( ProjectModelItem *projectItem, m_projects ) {
+        Project *project = projectItem->project();
+        if ( project->isTestRunning() ) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+void ProjectModel::updateProjects()
+{
+    if ( !isIdle() ) {
+        // Too busy, try again later
+        m_updateProjectsTimer->start( 500 );
+        return;
+    }
+
+    delete m_updateProjectsTimer;
+    m_updateProjectsTimer = 0;
+
+    foreach ( Project *project, m_changedScriptProjects ) {
+        // Remove all items for previously included files
+        QList< ProjectModelItem* > itemsToRemove;
+        const QModelIndex projectIndex = indexFromProject( project );
+        ProjectModelItem *projectItem = projectItemFromIndex( projectIndex );
+        ProjectModelItem *scriptItem = projectItemChildFromProject( project, ProjectModelItem::ScriptItem );
+        int scriptItemIndex = indexFromProjectItem( scriptItem ).row();
+        int firstIncludedScriptItemIndex = scriptItemIndex + 1;
+        foreach ( ProjectModelItem *childItem, projectItem->children() ) {
+            if ( childItem->type() == ProjectModelItem::IncludedScriptItem ) {
+                itemsToRemove << childItem;
+            }
+        }
+        if ( !itemsToRemove.isEmpty() ) {
+            beginRemoveRows( projectIndex, firstIncludedScriptItemIndex,
+                            firstIncludedScriptItemIndex + itemsToRemove.count() - 1 );
+            projectItem->removeChildren( itemsToRemove );
+            itemsToRemove.clear();
+            endRemoveRows();
+        }
+
+        // Insert items for now included files
+        if ( !project->includedFiles().isEmpty() ) {
+            beginInsertRows( projectIndex, scriptItemIndex + 1,
+                            scriptItemIndex + project->includedFiles().count() );
+            foreach ( const QString &includedFile, project->includedFiles() ) {
+                ProjectModelIncludedScriptItem *includedScriptItem =
+                        new ProjectModelIncludedScriptItem( project, includedFile );
+                projectItem->insertChild( ++scriptItemIndex, includedScriptItem );
+                insertCodeNodes( includedScriptItem, false );
+            }
+            endInsertRows();
+        }
+
+        insertCodeNodes( scriptItem );
+    }
+
+    m_changedScriptProjects.clear();
+}
+
+void ProjectModel::scriptSaved()
+{
+    Project *project = qobject_cast< Project* >( sender() );
+    Q_ASSERT( project );
+    if ( !m_changedScriptProjects.contains(project) ) {
+        m_changedScriptProjects << project;
+    }
+
+    if ( project->suppressMessages() ) {
+        return;
+    }
+    if ( !m_updateProjectsTimer ) {
+        m_updateProjectsTimer = new QTimer( this );
+        connect( m_updateProjectsTimer, SIGNAL(timeout()), this, SLOT(updateProjects()) );
+    }
+    m_updateProjectsTimer->start( 250 );
+}
+
+void ProjectModel::insertCodeNodes( ProjectModelItem *scriptItem, bool emitSignals )
+{
+    // Parse script
+    Project *project = scriptItem->project();
+    ProjectModelIncludedScriptItem *includedScriptItem =
+            dynamic_cast< ProjectModelIncludedScriptItem* >( scriptItem );
+    JavaScriptParser parser( project->scriptText(
+            includedScriptItem ? includedScriptItem->filePath() : QString()) );
+    const QList< CodeNode::Ptr > nodes = parser.nodes();
+    QList< CodeNode::Ptr > flatNodes = QList< CodeNode::Ptr >() << nodes;
+    foreach ( const CodeNode::Ptr &node, nodes ) {
+        flatNodes << JavaScriptModel::childFunctions( node );
+    }
+
+    // Remove old script child items
+    const QModelIndex index = indexFromProjectItem( scriptItem );
+    if ( !scriptItem->children().isEmpty() ) {
+        if ( emitSignals ) {
+            beginRemoveRows( index, 0, rowCount(index) );
+            scriptItem->clearChildren();
+            endRemoveRows();
+        } else {
+            scriptItem->clearChildren();
+        }
+    }
+
+    // Insert new script child items
+    if ( emitSignals ) {
+        beginInsertRows( index, 0, flatNodes.count() - 1 );
+    }
+    foreach ( const CodeNode::Ptr &node, flatNodes ) {
+        const FunctionNode::Ptr functionNode = node.dynamicCast<FunctionNode>();
+        if ( functionNode ) {
+            scriptItem->addChild( new ProjectModelCodeItem(project, functionNode) );
+        }
+    }
+    if ( emitSignals ) {
+        endInsertRows();
     }
 }
 
@@ -418,12 +590,14 @@ TabType ProjectModelItem::tabTypeFromProjectItemType( ProjectModelItem::Type pro
         return Tabs::ProjectSource;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptItem:
+    case IncludedScriptItem:
         return Tabs::Script;
 #endif
     case PlasmaPreviewItem:
         return Tabs::PlasmaPreview;
     case WebItem:
         return Tabs::Web;
+    case CodeItem:
     case ProjectItem:
     default:
         return Tabs::NoTab;
@@ -449,6 +623,11 @@ ProjectModelItem::Type ProjectModelItem::projectItemTypeFromTabType( TabType tab
     default:
         return ProjectItem;
     }
+}
+
+QString ProjectModelIncludedScriptItem::fileName() const
+{
+    return QFileInfo( m_filePath ).fileName();
 }
 
 void ProjectModel::slotProjectModified()
@@ -531,7 +710,6 @@ void ProjectModel::clear()
     qDeleteAll( m_projects );
     m_projects.clear();
     endRemoveRows();
-
 }
 
 QModelIndex ProjectModel::indexFromRow( int row ) const
@@ -595,4 +773,73 @@ ProjectModelItem *ProjectModel::projectItemChildFromProject( Project *project,
 
     // Not found
     return 0;
+}
+
+void ProjectModel::testAllProjects()
+{
+    // First store all tests of all projects in the list of started tests,
+    // otherwise the total number of tests isn't ready when testing starts
+    foreach ( ProjectModelItem *projectItem, m_projects ) {
+        m_startedTests.insert( projectItem->project(), TestModel::allTests() );
+    }
+
+    // Start the tests
+    foreach ( ProjectModelItem *projectItem, m_projects ) {
+        projectItem->project()->testProject();
+    }
+}
+
+void ProjectModel::projectTestProgress( const QList< TestModel::Test > &projectFinishedTests,
+                                        const QList< TestModel::Test > &projectStartedTests )
+{
+    Project *progressProject = qobject_cast< Project* >( sender() );
+    Q_ASSERT( progressProject );
+
+    QHash< Project*, QList< TestModel::Test > > finishedTests = m_finishedTests;
+    QHash< Project*, QList< TestModel::Test > > startedTests;
+    int finishedTestCount = 0, startedTestCount = 0;
+    foreach ( ProjectModelItem *projectItem, m_projects ) {
+        Project *project = projectItem->project();
+        const QList< TestModel::Test > finishedTestsOfProject =
+                project == progressProject ? projectFinishedTests : project->finishedTests();
+        const QList< TestModel::Test > startedTestsOfProject =
+                project == progressProject ? projectStartedTests : project->startedTests();
+
+        if ( finishedTestsOfProject.isEmpty() ) {
+            // Finished tests are not available from Project
+            // after the test was finished for the project, add number of finished tests
+            // stored in m_finishedTests
+            finishedTestCount += m_finishedTests[ project ].count();
+        } else {
+            finishedTests.insert( project, finishedTestsOfProject );
+            finishedTestCount += finishedTestsOfProject.count();
+        }
+        if ( !startedTestsOfProject.isEmpty() ) {
+            startedTests.insert( project, startedTestsOfProject );
+            startedTestCount += startedTestsOfProject.count();
+        }
+    }
+
+    // Store finished tests and use stored list of started tests, if any
+    m_finishedTests = finishedTests;
+    if ( m_startedTests.isEmpty() ) {
+        m_startedTests = startedTests;
+    } else {
+        startedTests = m_startedTests;
+
+        startedTestCount = 0;
+        for ( QHash< Project*, QList< TestModel::Test > >::ConstIterator it = startedTests.constBegin();
+              it != startedTests.constEnd(); ++it )
+        {
+            startedTestCount += it->count();
+        }
+    }
+
+    emit testProgress( finishedTestCount, startedTestCount );
+    emit testProgress( finishedTests, startedTests );
+
+    if ( finishedTestCount == startedTestCount ) {
+        m_startedTests.clear();
+        m_finishedTests.clear();
+    }
 }

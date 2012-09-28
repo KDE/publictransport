@@ -30,6 +30,8 @@ option( BUILD_PROVIDER_TYPE_GTFS "Build with support for GTFS providers" ON )
 cmake_dependent_option( BUILD_GTFS_REALTIME
     "Build with GTFS-realtime support for GTFS providers (needs protocol buffers)" ON
     "BUILD_PROVIDER_TYPE_GTFS" OFF )
+option( ENABLE_DEBUG_NETWORK "Enable debug output for network events in scripts" OFF )
+option( ENABLE_DEBUG_SCRIPT_HELPER "Enable debug output for warnings/errors in the script 'helper' object, eg. when debugging scripts that use the 'helper' object" OFF )
 
 # Fatal error if no provider types are enabled
 if ( NOT BUILD_PROVIDER_TYPE_SCRIPT AND NOT BUILD_PROVIDER_TYPE_GTFS )
@@ -87,6 +89,14 @@ if ( BUILD_PROVIDER_TYPE_GTFS )
 
     add_subdirectory( gtfs )
 endif ( BUILD_PROVIDER_TYPE_GTFS )
+
+# Message, when debug output is enabled for specific events
+if ( ENABLE_DEBUG_NETWORK )
+    message( "   - Enable debug output for script network events" )
+endif ( ENABLE_DEBUG_NETWORK )
+if ( ENABLE_DEBUG_SCRIPT_HELPER )
+    message( "   - Enable debug output for warnings/errors in the script 'helper' object" )
+endif ( ENABLE_DEBUG_SCRIPT_HELPER )
 
 # Add unit tests
 if ( BUILD_TESTS )

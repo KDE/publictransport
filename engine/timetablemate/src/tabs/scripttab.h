@@ -74,6 +74,7 @@ signals:
 
 public slots:
     void parseScript();
+    void goToLine( int lineNumber );
     void goToPreviousFunction();
     void goToNextFunction();
     void toggleBreakpoint( int lineNumber = -1 );

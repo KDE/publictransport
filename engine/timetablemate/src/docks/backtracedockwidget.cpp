@@ -72,16 +72,16 @@ BacktraceDockWidget::BacktraceDockWidget( ProjectModel *projectModel, KActionMen
 void BacktraceDockWidget::activeProjectAboutToChange( Project *project, Project *previousProject )
 {
     if ( previousProject ) {
-        disconnect( previousProject->debugger(), SIGNAL(continued(bool)),
-                    this, SLOT(debuggerContinued(bool)) );
+        disconnect( previousProject->debugger(), SIGNAL(continued(QDateTime,bool)),
+                    this, SLOT(debuggerContinued(QDateTime,bool)) );
         disconnect( previousProject->debugger(), SIGNAL(stateChanged(DebuggerState,DebuggerState)),
                     this, SLOT(debuggerStateChanged(DebuggerState,DebuggerState)) );
     }
 
     if ( project ) {
         m_backtraceWidget->setModel( project->debugger()->backtraceModel() );
-        connect( project->debugger(), SIGNAL(continued(bool)),
-                 this, SLOT(debuggerContinued(bool)) );
+        connect( project->debugger(), SIGNAL(continued(QDateTime,bool)),
+                 this, SLOT(debuggerContinued(QDateTime,bool)) );
         connect( project->debugger(), SIGNAL(stateChanged(DebuggerState,DebuggerState)),
                  this, SLOT(debuggerStateChanged(DebuggerState,DebuggerState)) );
     }
@@ -133,8 +133,10 @@ void BacktraceDockWidget::debuggerStateChanged( DebuggerState newState, Debugger
     }
 }
 
-void BacktraceDockWidget::debuggerContinued( bool willInterruptAfterNextStatement )
+void BacktraceDockWidget::debuggerContinued( const QDateTime &timestamp,
+                                             bool willInterruptAfterNextStatement )
 {
+    Q_UNUSED( timestamp );
     if ( !willInterruptAfterNextStatement ) {
         disable();
     }

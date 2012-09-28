@@ -132,7 +132,6 @@ VariableItem::~VariableItem()
 
 VariableItemList::~VariableItemList()
 {
-//     qDeleteAll( variables ); TODO
 }
 
 QVariant VariableModel::headerData( int section, Qt::Orientation orientation, int role ) const
@@ -868,7 +867,7 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
 
     data.name = name;
     data.scriptValue = value;
-    data.value = value.toVariant(); // TODO remove?
+    data.value = value.toVariant();
     data.description = VariableItem::variableValueTooltip( data.description,
                                                            encodeValue, endCharacter );
 
@@ -957,7 +956,9 @@ VariableTreeData VariableTreeData::fromScripValue( const QString &name, const QS
             VariableTreeData requestsItem( SpecialVariable,  i18nc("@info/plain", "Running Requests"),
                                         data.description, KIcon("documentinfo") );
             int i = 1;
-            foreach ( NetworkRequest *networkRequest, network->runningRequests() ) {
+            foreach ( const QSharedPointer< NetworkRequest > &networkRequest,
+                      network->runningRequests() )
+            {
                 VariableTreeData requestItem( SpecialVariable,
                         i18nc("@info/plain", "Request %1", i), networkRequest->url(),
                         KIcon("code-class") );

@@ -28,10 +28,13 @@
 #define DEBUGGER_H
 
 // Own includes
+#include "debug_config.h"
 #include "debuggerstructures.h"
 
 // Qt includes
 #include <QScriptEngineAgent>
+
+struct ScriptObjects;
 
 class QMutex;
 class QTimer;
@@ -50,15 +53,15 @@ struct BreakpointChange;
  *
  * @warning This is an internal class. Do not use this class directly (there is no public
  *   contructor). Instead use Debugger, which manages threads to run and control scripts.
- *   Debugger uses this class internally, possibly simultanously in multiple threads.
- *   Debugger simply forwards many functions to this class but it hides the public
- *   QScriptEngineAgent interface implementation.
+ *   Debugger uses this class internally through thread jobs, ie. classes derived from DebuggerJob.
+ *   It can safely be used in multiple threads simultanously. Debugger simply forwards/connects
+ *   many functions/signals to this class (through functions/signals of DebuggerJob objects).
  *
  * DebuggerAgent provides common debugger functionality to control script execution like
  * interrupting a running script (debugInterrupt()), continuing after an interrupt
  * (debugContinue()), executing a script step by step (debugStepInto(), debugStepOver(),
  * debugStepOut()), executing until a specific line number (debugRunUntilLineNumber(), eg. until
- * the current cursor position), aborting script execution and breakpoints.
+ * the current cursor position), aborting script execution and managing breakpoints.
  * Interrupts are handled using a QWaitCondition.
  *
  * The position at which a script got interrupted can be retrieved using lineNumber() and
@@ -75,19 +78,22 @@ struct BreakpointChange;
  *   interrupted at a multiline statement, it must be set at the first line of the statement.
  *   Otherwise the breakpoint will never be hit.
  *
+ * Console commands can be executed using executeCommand(). To evaluate script code in the context
+ * of a currently interrupted script use evaluateInContext().
+ *
  * @note Line numbers are expected to begin with 1 for the first line like in QScript-classes by
  *   default, rather than being zero-based like line numbers in KTextEditor.
  *
  * This class is thread safe. There is a mutex to protect member variables and a global mutex
- * to protect the QScriptEngine.
+ * to protect access to the QScriptEngine.
  *
  * @see Debugger
  **/
 class DebuggerAgent : public QObject, public QScriptEngineAgent {
     Q_OBJECT
-    friend class Debugger;
     friend class Breakpoint;
     friend class Frame;
+    friend class DebuggerJob;
 
 public:
     static const int CHECK_RUNNING_INTERVAL;
@@ -176,19 +182,16 @@ public:
 
     QScriptContextInfo contextInfo();
 
+    /** @brief Whether or not an uncaught exception was thrown in the script. */
     bool hasUncaughtException() const;
     int uncaughtExceptionLineNumber() const;
     QScriptValue uncaughtException() const;
 
+    /** @brief Evaluate @p program in the context of an interrupted script. */
     QScriptValue evaluateInContext( const QString &program, const QString &contextName,
                                     bool *hadUncaughtException = 0, int *errorLineNumber = 0,
                                     QString *errorMessage = 0, QStringList *backtrace = 0,
                                     DebugFlags debugFlags = DefaultDebugFlags );
-
-    QVariant evaluateInExternalEngine( const QString &program, const QString &contextName,
-                                       bool *hadUncaughtException = 0, int *errorLineNumber = 0,
-                                       QString *errorMessage = 0, QStringList *backtrace = 0,
-                                       DebugFlags debugFlags = DefaultDebugFlags );
 
     /** @brief Executes @p command and puts the return value into @p returnValue. */
     bool executeCommand( const ConsoleCommand &command, QString *returnValue = 0 );
@@ -201,12 +204,39 @@ public:
 
     bool checkHasExited();
 
+    /**
+     * @brief Get a pointer to the mutex used to protect access to the script engine.
+     *
+     * The engine mutex is locked while the script engine is evaluating, gets unlocked after
+     * every line of code and while the debugger is interrupted. Gets locked/unlocked from
+     * different threads.
+     * This always returns the same pointer for the livetime of this DebuggerAgent.
+     **/
+    QMutex *engineMutex() const { return m_engineMutex; };
+
+    /**
+     * @brief Continue an interrupted script to emit doSomething() and directly interrupts again.
+     * @see doSomething()
+     **/
+    void continueToDoSomething();
+
 signals:
+    /**
+     * @brief Emitted when interrupting directly after waking from interrupt.
+     *
+     * Can be used together with continueToDoSomething() to execute code in the thread of this
+     * DebuggerAgent, the connection to this signal needs to be direct (Qt::DirectConnection).
+     **/
+    void doSomething();
+
     /** @brief Script execution just started. */
-    void started();
+    void started( const QDateTime &timestamp );
 
     /** @brief The script finished and is no longer running */
-    void stopped( bool aborted = false );
+    void stopped( const QDateTime &timestamp, bool aborted = false,
+                  bool hasRunningRequests = false, int uncaughtExceptionLineNumber = -1,
+                  const QString &uncaughtException = QString(),
+                  const QStringList &backtrace = QStringList() );
 
     /** @see isInterrupted() */
     void positionChanged( int lineNumber, int columnNumber, int oldLineNumber, int oldColumnNumber );
@@ -222,13 +252,13 @@ signals:
                     const QString &fileName = QString() );
 
     /** @brief Script execution was just interrupted. */
-    void interrupted();
+    void interrupted( int lineNumber, const QString &fileName, const QDateTime &timestamp );
 
     /** @brief Script execution was just aborted. */
     void aborted();
 
     /** @brief Script execution was just continued after begin interrupted. */
-    void continued( bool willInterruptAfterNextStatement = false );
+    void continued( const QDateTime &timestamp, bool willInterruptAfterNextStatement = false );
 
     /** @brief The script send a @p debugString using the print() function. */
     void output( const QString &debugString, const QScriptContextInfo &contextInfo );
@@ -258,19 +288,22 @@ signals:
 public slots:
     /**
      * @brief Continue script execution until the next statement.
-     * @param repeat The number of repetitions for step into. 0 for only one repetition, the default.
+     * @param repeat The number of repetitions of the step into action.
+     *   Use 0 to only execute the action once, ie. no repetitions, the default.
      **/
     void debugStepInto( int repeat = 0 );
 
     /**
      * @brief Continue script execution until the next statement in the same context.
-     * @param repeat The number of repetitions for step over. 0 for only one repetition, the default.
+     * @param repeat The number of repetitions of the step over action.
+     *   Use 0 to only execute the action once, ie. no repetitions, the default.
      **/
     void debugStepOver( int repeat = 0 );
 
     /**
      * @brief Continue script execution until the current function gets left.
-     * @param repeat The number of repetitions for step out. 0 for only one repetition, the default.
+     * @param repeat The number of repetitions of the step out action.
+     *   Use 0 to only execute the action once, ie. no repetitions, the default.
      **/
     void debugStepOut( int repeat = 0 );
 
@@ -298,7 +331,8 @@ protected slots:
     void debugRunInjectedProgram();
     void debugStepIntoInjectedProgram();
     void cancelInjectedCodeExecution();
-    void wakeFromInterrupt();
+    void wakeFromInterrupt( DebuggerState unmodifiedState );
+    inline void wakeFromInterrupt() { wakeFromInterrupt(m_state); };
 
 public: // QScriptAgent-Implementation
     virtual void scriptLoad( qint64 id, const QString &program, const QString &fileName, int baseLineNumber );
@@ -316,7 +350,7 @@ public: // QScriptAgent-Implementation
 
 protected:
     /** @brief Creates a new Debugger instance. */
-    DebuggerAgent( QScriptEngine *engine, QMutex *engineMutex );
+    DebuggerAgent( QScriptEngine *engine, QMutex *engineMutex, bool mutexIsLocked = false );
 
 private:
     enum ConsoleCommandExecutionControl {
@@ -338,37 +372,25 @@ private:
         InjectedScriptUpdateVariablesInParentContext
     };
 
-    // Expects locked m_mutex
     ExecutionControl applyExecutionControl( ExecutionControl executionControl,
                                             QScriptContext *currentContext );
 
-    // Expects locked m_mutex, looks for breakpoints at the current execution position
-    // (tests conditions, enabled/disabled)
+    // Looks for breakpoints at the current execution position (tests conditions, enabled/disabled)
     bool findActiveBreakpoint( int lineNumber, Breakpoint *&foundBreakpoint, bool *conditionError );
 
-    // Expects locked m_mutex
     int currentFunctionLineNumber() const;
-
-    // Excepts unlocked m_mutex
     void fireup();
-
-    // Excepts unlocked m_mutex
     void shutdown();
 
-    // Excepts unlocked m_mutex
     void doInterrupt( bool injectedProgram = false );
 
     // Emit changes in the backtrace and the variables in the current context
     // Is called by doInterrupt() to have models updated
-    // Excepts unlocked m_mutex
     void emitChanges();
 
-    // Excepts unlocked m_mutex
     bool debugControl( ConsoleCommandExecutionControl controlType,
                        const QVariant &argument = QVariant(), QString *errorMessage = 0 );
-
     void setState( DebuggerState newState );
-
     static ConsoleCommandExecutionControl consoleCommandExecutionControlFromString( const QString &str );
 
     inline QHash< uint, Breakpoint > &currentBreakpoints() {
@@ -381,7 +403,8 @@ private:
     QMutex *const m_mutex; // Protect member variables, make Debugger class thread safe
     QWaitCondition *const m_interruptWaiter; // Waits on interrupts, wake up to continue script execution based on m_executionType
     QMutex *const m_interruptMutex;
-    QMutex *const m_engineMutex; // use carefully, eg. tryLock() instead of lock().. it is blocked while the script is running, until it gets interrupted or finishes
+    QMutex *const m_engineMutex; // Is locked while the script engine is evaluating,
+            // gets unlocked after every line of code and while the debugger is interrupted
     QTimer *const m_checkRunningTimer;
 
     int m_lineNumber;
@@ -390,7 +413,7 @@ private:
     bool m_hasUncaughtException;
     int m_uncaughtExceptionLineNumber;
     QScriptValue m_uncaughtException;
-    QScriptValue m_globalObject;
+    QStringList m_uncaughtExceptionBacktrace;
     QHash< QString, QHash< uint, Breakpoint > > m_breakpoints; // Outer key: filename, inner key: line number
     int m_runUntilLineNumber; // -1 => "run until line number" not active
 
@@ -402,7 +425,6 @@ private:
     int m_repeatExecutionTypeCount;
     QScriptContext *m_currentContext;
     QScriptContext *m_interruptContext;
-    bool m_backtraceCleanedup;
     qint64 m_injectedScriptId;
     qint64 m_currentScriptId;
 

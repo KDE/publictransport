@@ -22,7 +22,7 @@
 
 // Own includes
 #include "config.h"
-#include "enums.h"
+#include "tabs.h"
 
 // Qt includes
 #include <QWidget>

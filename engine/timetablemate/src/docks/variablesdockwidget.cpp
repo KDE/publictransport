@@ -216,8 +216,10 @@ void VariablesDockWidget::debuggerStateChanged( DebuggerState newState, Debugger
     }
 }
 
-void VariablesDockWidget::debuggerContinued( bool willInterruptAfterNextStatement )
+void VariablesDockWidget::debuggerContinued( const QDateTime &timestamp,
+                                             bool willInterruptAfterNextStatement )
 {
+    Q_UNUSED( timestamp );
     if ( !willInterruptAfterNextStatement ) {
         disable();
     }
@@ -226,8 +228,8 @@ void VariablesDockWidget::debuggerContinued( bool willInterruptAfterNextStatemen
 void VariablesDockWidget::activeProjectAboutToChange( Project *project, Project *previousProject )
 {
     if ( previousProject ) {
-        disconnect( previousProject->debugger(), SIGNAL(continued(bool)),
-                    this, SLOT(debuggerContinued(bool)) );
+        disconnect( previousProject->debugger(), SIGNAL(continued(QDateTime,bool)),
+                    this, SLOT(debuggerContinued(QDateTime,bool)) );
         disconnect( previousProject->debugger(), SIGNAL(stateChanged(DebuggerState,DebuggerState)),
                     this, SLOT(debuggerStateChanged(DebuggerState,DebuggerState)) );
     }
@@ -237,8 +239,8 @@ void VariablesDockWidget::activeProjectAboutToChange( Project *project, Project 
         m_proxyModel->setSourceModel( m_variableModel );
         m_variablesWidget->setModel( m_proxyModel );
 
-        connect( project->debugger(), SIGNAL(continued(bool)),
-                 this, SLOT(debuggerContinued(bool)) );
+        connect( project->debugger(), SIGNAL(continued(QDateTime,bool)),
+                 this, SLOT(debuggerContinued(QDateTime,bool)) );
         connect( project->debugger(), SIGNAL(stateChanged(DebuggerState,DebuggerState)),
                  this, SLOT(debuggerStateChanged(DebuggerState,DebuggerState)) );
     }

@@ -58,8 +58,9 @@ DashboardTab::DashboardTab( Project *project, QWidget *parent )
     qRegisterMetaType< TestModel* >( "TestModel*" );
     qRegisterMetaType< Enums::ServiceProviderType >( "Enums::ServiceProviderType" );
     qmlRegisterType< ServiceProviderData, 1 >( "TimetableMate", 1, 0, "ServiceProviderData" );
-    qmlRegisterType< Project, 1 >( "TimetableMate", 1, 0, "Project" );
-    qmlRegisterType< Tabs, 1 >( "TimetableMate", 1, 0, "Tabs" );
+    qmlRegisterUncreatableType< Project >( "TimetableMate", 1, 0, "Project",
+                                           "Cannot create new projects" );
+    qmlRegisterUncreatableType< Tabs >( "TimetableMate", 1, 0, "Tabs", "Only for enumerables" );
     qmlRegisterUncreatableType< Enums >( "TimetableMate", 1, 0, "PublicTransport",
                                          "Only for enumerables" );
 

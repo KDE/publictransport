@@ -21,6 +21,7 @@
 #include "scripting.h"
 
 // Own includes
+#include "config.h"
 #include "global.h"
 #include "serviceproviderglobal.h"
 
@@ -53,47 +54,52 @@
 namespace Scripting {
 
 NetworkRequest::NetworkRequest( QObject* parent )
-        : QObject(parent), m_network(0), m_isFinished(false), m_request(0), m_reply(0)
+        : QObject(parent), m_mutex(new QMutex()), m_network(0), m_isFinished(false),
+          m_request(0), m_reply(0)
 {
-    kDebug() << "Create INVALID request";
 }
 
 NetworkRequest::NetworkRequest( const QString& url, Network *network, QObject* parent )
-        : QObject(parent), m_url(url), m_network(network), m_isFinished(false),
-          m_request(new QNetworkRequest(url)), m_reply(0)
+        : QObject(parent), m_mutex(new QMutex()), m_url(url), m_network(network),
+          m_isFinished(false), m_request(new QNetworkRequest(url)), m_reply(0)
 {
-    kDebug() << "Create request" << url;
 }
 
 NetworkRequest::~NetworkRequest()
 {
     abort();
 
-    kDebug() << "Delete request for" << m_url;
     delete m_request;
+    delete m_mutex;
 }
 
 void NetworkRequest::abort()
 {
     const bool timedOut = qobject_cast< QTimer* >( sender() );
     if ( !isRunning() ) {
-        kDebug() << (timedOut ? "Timeout, but request already finished"
-                              : "Cannot abort a request that is not running!");
+        if ( timedOut ) {
+            kDebug() << "Timeout, but request already finished";
+        }
         return;
     }
 
     // isRunning() returned true => m_reply != 0
+    m_mutex->lockInline();
+    disconnect( m_reply, 0, this, 0 );
     m_reply->abort();
     m_reply->deleteLater();
     m_reply = 0;
+    m_mutex->unlockInline();
 
     emit aborted( timedOut );
 }
 
 void NetworkRequest::slotReadyRead()
 {
+    m_mutex->lockInline();
     if ( !m_reply ) {
         // Prevent crashes on exit
+        m_mutex->unlockInline();
         kWarning() << "Reply object already deleted, aborted?";
         return;
     }
@@ -103,8 +109,9 @@ void NetworkRequest::slotReadyRead()
     m_data.append( data );
 
     if ( data.isEmpty() ) {
-        kDebug() << "Error downloading" << m_url << m_reply->errorString();
+        kWarning() << "Error downloading" << m_url << m_reply->errorString();
     }
+    m_mutex->unlockInline();
 
     emit readyRead( data );
 }
@@ -159,8 +166,10 @@ QByteArray gzipDecompress( QByteArray compressData )
 
 void NetworkRequest::slotFinished()
 {
+    m_mutex->lockInline();
     if ( !m_reply ) {
         // Prevent crashes on exit
+        m_mutex->unlockInline();
         kWarning() << "Reply object already deleted, aborted?";
         return;
     }
@@ -172,7 +181,7 @@ void NetworkRequest::slotFinished()
                        << m_reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
         } else {
             m_redirectUrl = m_reply->attribute( QNetworkRequest::RedirectionTargetAttribute ).toUrl();
-            kDebug() << "Redirection to" << m_redirectUrl;
+            DEBUG_NETWORK("Redirection to" << m_redirectUrl);
 
             // Delete the reply
             m_reply->deleteLater();
@@ -180,7 +189,10 @@ void NetworkRequest::slotFinished()
 
             delete m_request;
             m_request = new QNetworkRequest( m_redirectUrl );
-            emit redirected( m_redirectUrl );
+            const QUrl redirectUrl = m_redirectUrl;
+            m_mutex->unlockInline();
+
+            emit redirected( redirectUrl );
             return;
         }
     }
@@ -189,34 +201,42 @@ void NetworkRequest::slotFinished()
     const int statusCode = m_reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
 
     // Read all data, decode it and give it to the script
-    QByteArray data = m_reply->readAll();
-    m_data.append( data );
+    m_data.append( m_reply->readAll() );
 
     if ( m_data.isEmpty() ) {
-        kDebug() << "Error downloading" << m_url << m_reply->errorString();
+        kWarning() << "Error downloading" << m_url
+                   << (m_reply ? m_reply->errorString() : "Reply already deleted");
     }
 
     // Check if the data is compressed and was not decompressed by QNetworkAccessManager
-    if ( data.length() >= 2 && quint8(data[0]) == 0x1f && quint8(data[1]) == 0x8b ) {
+    if ( m_data.length() >= 2 && quint8(m_data[0]) == 0x1f && quint8(m_data[1]) == 0x8b ) {
         // Data is compressed, uncompress it
         // NOTE qUncompress() did not work here, "invalid zip"
         m_data = gzipDecompress( m_data );
-        kDebug() << "Uncompressed data from" << size << "Bytes to" << m_data.size() << "Bytes, ratio:"
-                 << 100 - qRound(100 * size / m_data.size()) << '%';
+        DEBUG_NETWORK("Uncompressed data from" << size << "Bytes to" << m_data.size()
+                      << "Bytes, ratio:" << 100 - qRound(100 * size / m_data.size()) << '%');
     }
 
+    DEBUG_NETWORK("Request finished" << m_reply->url());
+    if ( m_reply->url().isEmpty() ) {
+        kWarning() << "Empty URL in QNetworkReply!";
+    }
     m_reply->deleteLater();
     m_reply = 0;
 
     m_isFinished = true;
-    emit finished( m_data, statusCode, size );
-    m_data.clear();
+    const QByteArray data = m_data;
+    m_mutex->unlockInline();
+
+    emit finished( data, statusCode, size );
 }
 
 void NetworkRequest::started( QNetworkReply* reply, int timeout )
 {
+    m_mutex->lockInline();
     if ( !m_network ) {
-        kDebug() << "Can't decode, no m_network given...";
+        kWarning() << "Can't decode, no m_network given...";
+        m_mutex->unlockInline();
         return;
     }
     m_data.clear();
@@ -230,16 +250,15 @@ void NetworkRequest::started( QNetworkReply* reply, int timeout )
     if ( receivers(SIGNAL(readyRead(QByteArray))) > 0 ) {
         connect( m_reply, SIGNAL(readyRead()), this, SLOT(slotReadyRead()) );
     }
-    if ( receivers(SIGNAL(finished(QByteArray,int))) > 0 ) {
-        connect( m_reply, SIGNAL(finished()), this, SLOT(slotFinished()) );
-    }
+    connect( m_reply, SIGNAL(finished()), this, SLOT(slotFinished()) );
+    m_mutex->unlockInline();
 
-//     connect( m_reply, SIGNAL(finished()), this, SIGNAL(finishedNoDecoding()) );
     emit started();
 }
 
 bool NetworkRequest::isValid() const
 {
+    QMutexLocker locker( m_mutex );
     if ( m_request ) {
         return true;
     } else {
@@ -251,6 +270,7 @@ bool NetworkRequest::isValid() const
 
 QByteArray NetworkRequest::getCharset( const QString& charset ) const
 {
+    QMutexLocker locker( m_mutex );
     QByteArray baCharset;
     if ( charset.isEmpty() ) {
         // No charset given, use the one specified in the ContentType header
@@ -268,6 +288,7 @@ QByteArray NetworkRequest::getCharset( const QString& charset ) const
 
 QByteArray NetworkRequest::postDataByteArray() const
 {
+    QMutexLocker locker( m_mutex );
     return m_postData;
 }
 
@@ -287,6 +308,7 @@ void NetworkRequest::setPostData( const QString& postData, const QString& charse
 //         m_postData = postData.toUtf8();
 //     } else {
         QTextCodec *codec = QTextCodec::codecForName( baCharset );
+        QMutexLocker locker( m_mutex );
         if ( codec ) {
             m_request->setHeader( QNetworkRequest::ContentTypeHeader, baCharset );
             m_postData = codec->fromUnicode( postData );
@@ -306,6 +328,8 @@ QString NetworkRequest::header( const QString &header, const QString& charset ) 
     }
     QByteArray baCharset = getCharset( charset );
     QTextCodec *codec = QTextCodec::codecForName( baCharset );
+
+    QMutexLocker locker( m_mutex );
     return m_request->rawHeader( codec ? codec->fromUnicode(header) : header.toUtf8() );
 }
 
@@ -322,6 +346,7 @@ void NetworkRequest::setHeader( const QString& header, const QString& value,
 
     QByteArray baCharset = getCharset( charset );
     QTextCodec *codec = QTextCodec::codecForName( baCharset );
+    QMutexLocker locker( m_mutex );
     if ( codec ) {
         m_request->setRawHeader( codec->fromUnicode(header), codec->fromUnicode(value) );
     } else {
@@ -333,14 +358,17 @@ void NetworkRequest::setHeader( const QString& header, const QString& value,
 
 QNetworkRequest* NetworkRequest::request() const
 {
+    QMutexLocker locker( m_mutex );
     return m_request;
 }
 
 Network::Network( const QByteArray &fallbackCharset, QObject* parent )
-        : QObject(parent), m_mutex(new QMutex()), m_fallbackCharset(fallbackCharset),
-          m_manager(new QNetworkAccessManager(this)), m_quit(false), m_lastDownloadAborted(false)
+        : QObject(parent), m_mutex(new QMutex(QMutex::Recursive)),
+          m_fallbackCharset(fallbackCharset), m_manager(new QNetworkAccessManager(this)),
+          m_quit(false), m_lastDownloadAborted(false)
 {
-    qRegisterMetaType<NetworkRequest*>( "NetworkRequest*" );
+    qRegisterMetaType< NetworkRequest* >( "NetworkRequest*" );
+    qRegisterMetaType< NetworkRequest::Ptr >( "NetworkRequest::Ptr" );
 }
 
 Network::~Network()
@@ -348,13 +376,16 @@ Network::~Network()
     // Quit event loop of possibly running synchronous requests
     m_mutex->lock();
     m_quit = true;
-    QList< NetworkRequest* > runningRequests = m_runningRequests;
     m_mutex->unlock();
 
-    if ( !runningRequests.isEmpty() ) {
-        kDebug() << "Deleting Network object with" << runningRequests.count()
-                 << "running requests";
-        qDeleteAll( runningRequests );
+    const QList< NetworkRequest::Ptr > _runningRequests = runningRequests();
+    if ( !_runningRequests.isEmpty() ) {
+        kWarning() << "Deleting Network object with" << _runningRequests.count()
+                   << "running requests";
+        foreach ( const NetworkRequest::Ptr &request, _runningRequests ) {
+            request->abort();
+//             request->deleteLater();
+        }
     }
 
     delete m_mutex;
@@ -362,7 +393,9 @@ Network::~Network()
 
 NetworkRequest* Network::createRequest( const QString& url )
 {
-    NetworkRequest *request = new NetworkRequest( url, this );
+    NetworkRequest *request = new NetworkRequest( url, this, parent() );
+    NetworkRequest::Ptr requestPtr( request );
+    m_requests << requestPtr;
     connect( request, SIGNAL(started()), this, SLOT(slotRequestStarted()) );
     connect( request, SIGNAL(finished(QByteArray,int,int)),
              this, SLOT(slotRequestFinished(QByteArray,int,int)) );
@@ -371,34 +404,48 @@ NetworkRequest* Network::createRequest( const QString& url )
     return request;
 }
 
+NetworkRequest::Ptr Network::getSharedRequest( NetworkRequest *request ) const
+{
+    foreach ( const NetworkRequest::Ptr &sharedRequest, m_requests ) {
+        if ( sharedRequest.data() == request ) {
+            return sharedRequest;
+        }
+    }
+    return NetworkRequest::Ptr();
+}
+
 void Network::slotRequestStarted()
 {
     NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
-    Q_ASSERT( request ); // This slot should only be connected to signals of NetworkRequest
-
-    kDebug() << "Started" << request->url();
+    NetworkRequest::Ptr sharedRequest = getSharedRequest( request );
+    Q_ASSERT( sharedRequest ); // This slot should only be connected to signals of NetworkRequest
 
     m_mutex->lockInline();
     m_lastDownloadAborted = false;
-    m_runningRequests << request;
     m_mutex->unlockInline();
 
-    emit requestStarted( request );
+    emit requestStarted( sharedRequest );
 }
 
 void Network::slotRequestFinished( const QByteArray &data, int statusCode, int size )
 {
     NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
-    Q_ASSERT( request ); // This slot should only be connected to signals of NetworkRequest
+    NetworkRequest::Ptr sharedRequest = getSharedRequest( request );
+    Q_ASSERT( sharedRequest ); // This slot should only be connected to signals of NetworkRequest
 
-    kDebug() << "Finished" << request->url();
+    // Remove finished request from request list and add it to the list of finished requests
+    // to not have it deleted here. The script might try to use the request object later,
+    // eg. because of connected slots, and will crash if the request object was already deleted.
+    // This way NetworkRequest objects stay alive at least as long as the Network object does.
     m_mutex->lockInline();
-    m_runningRequests.removeOne( request );
-    const bool noMoreRequests = m_runningRequests.isEmpty();
+    const QDateTime timestamp = QDateTime::currentDateTime();
+    m_requests.removeOne( sharedRequest );
+    m_finishedRequests << sharedRequest;
     m_mutex->unlockInline();
 
-    emit requestFinished( request, data, statusCode, size );
-    if ( noMoreRequests ) {
+    emit requestFinished( sharedRequest, data, timestamp, statusCode, size );
+
+    if ( !hasRunningRequests() ) {
         emit allRequestsFinished();
     }
 }
@@ -406,7 +453,8 @@ void Network::slotRequestFinished( const QByteArray &data, int statusCode, int s
 void Network::slotRequestRedirected( const QUrl &newUrl )
 {
     NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
-    Q_ASSERT( request ); // This slot should only be connected to signals of NetworkRequest
+    NetworkRequest::Ptr sharedRequest = getSharedRequest( request );
+    Q_ASSERT( sharedRequest ); // This slot should only be connected to signals of NetworkRequest
 
     m_mutex->lockInline();
     QNetworkReply *reply = m_manager->get( *request->request() );
@@ -415,29 +463,27 @@ void Network::slotRequestRedirected( const QUrl &newUrl )
 
     request->started( reply );
 
-    kDebug() << "Redirected to" << newUrl;
-    emit requestRedirected( request, newUrl );
+    DEBUG_NETWORK("Redirected to" << newUrl);
+    emit requestRedirected( sharedRequest, newUrl );
 }
 
 void Network::slotRequestAborted()
 {
     m_mutex->lockInline();
     if ( m_quit ) {
-        kDebug() << "WAS ABORTED";
         m_mutex->unlockInline();
         return;
     }
 
     NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
-    Q_ASSERT( request ); // This slot should only be connected to signals of NetworkRequest
+    NetworkRequest::Ptr sharedRequest = getSharedRequest( request );
+    Q_ASSERT( sharedRequest ); // This slot should only be connected to signals of NetworkRequest
 
-    kDebug() << "Aborted" << request->url();
-
+    DEBUG_NETWORK("Aborted" << request->url());
     m_lastDownloadAborted = true;
-    m_runningRequests.removeOne( request );
     m_mutex->unlockInline();
 
-    emit requestAborted( request );
+    emit requestAborted( sharedRequest );
 
     // TEST already gets emitted in slotRequestFinished()
 //     if ( m_runningRequests.isEmpty() ) {
@@ -514,13 +560,11 @@ void Network::post( NetworkRequest* request, int timeout )
 
 void Network::abortAllRequests()
 {
-    m_mutex->lockInline();
-    const QList< NetworkRequest* > runningRequests = m_runningRequests;
-    m_mutex->unlockInline();
-
-    for ( int i = runningRequests.count() - 1; i >= 0; --i ) {
-        // Calling abort automatically removes the aborted request from m_runningRequests
-        runningRequests[i]->abort();
+    const QList< NetworkRequest::Ptr > requests = runningRequests();
+    DEBUG_NETWORK("Abort" << requests.count() << "request(s)");
+    for ( int i = requests.count() - 1; i >= 0; --i ) {
+        // Calling abort automatically removes the aborted request from m_createdRequests
+        requests[i]->abort();
     }
 }
 
@@ -528,7 +572,7 @@ QByteArray Network::getSynchronous( const QString &url, int timeout )
 {
     // Create a get request
     QNetworkRequest request( url );
-    kDebug() << "Start synchronous request" << url;
+    DEBUG_NETWORK("Start synchronous request" << url);
 
     m_mutex->lockInline();
     QNetworkReply *reply = m_manager->get( request );
@@ -550,18 +594,18 @@ QByteArray Network::getSynchronous( const QString &url, int timeout )
         if ( timeout > 0 ) {
             QTimer::singleShot( timeout, &eventLoop, SLOT(quit()) );
         }
-        eventLoop.exec( QEventLoop::ExcludeUserInputEvents );
+        if ( !reply->isFinished() ) {
+            eventLoop.exec( QEventLoop::ExcludeUserInputEvents );
+        }
 
         m_mutex->lock();
-        const bool quit = reply->isRunning() || m_quit || m_lastDownloadAborted;
+        const bool quit = m_quit || m_lastDownloadAborted || reply->isRunning();
         m_mutex->unlock();
 
         // Check if the timeout occured before the request finished
         if ( quit ) {
-            kDebug() << "Cancelled, destroyed or timeout while downloading" << url;
+            DEBUG_NETWORK("Cancelled, destroyed or timeout while downloading" << url);
             emit synchronousRequestFinished( url, QByteArray(), true );
-            reply->abort();
-            reply->deleteLater();
             return QByteArray();
         }
 
@@ -578,7 +622,7 @@ QByteArray Network::getSynchronous( const QString &url, int timeout )
             const QUrl redirectUrl =
                     reply->attribute( QNetworkRequest::RedirectionTargetAttribute ).toUrl();
             request.setUrl( redirectUrl );
-            kDebug() << "Redirected to" << redirectUrl;
+            DEBUG_NETWORK("Redirected to" << redirectUrl);
 
             m_mutex->lock();
             delete reply;
@@ -595,18 +639,18 @@ QByteArray Network::getSynchronous( const QString &url, int timeout )
 
     const int time = start.msecsTo( QTime::currentTime() );
     const int statusCode = reply->attribute( QNetworkRequest::HttpStatusCodeAttribute ).toInt();
-//     kDebug() << "Waited" << ( time / 1000.0 ) << "seconds for download of" << url;
+    DEBUG_NETWORK("Waited" << (time / 1000.0) << "seconds for download of"
+                  << url << "Status:" << statusCode);
 
     // Read all data, decode it and give it to the script
     QByteArray data = reply->readAll();
     reply->deleteLater();
     if ( data.isEmpty() ) {
-        kDebug() << "Error downloading" << url << reply->errorString();
+        kWarning() << "Error downloading" << url << reply->errorString();
         emit synchronousRequestFinished( url, QByteArray(), true, statusCode, time );
         return QByteArray();
     } else {
         QMutexLocker locker( m_mutex );
-//         const QString html = Global::decodeHtml( data, m_fallbackCharset ); TEST
         emit synchronousRequestFinished( url, data, false, statusCode, time, data.size() );
         return data;
     }
@@ -908,10 +952,34 @@ QString Helper::decode( const QByteArray &document, const QByteArray &charset )
     return Global::decode( document, charset );
 }
 
-void Helper::error( const QString& message, const QString &failedParseText, ErrorSeverity severity )
+Helper::~Helper()
 {
+    emitRepeatedMessageWarning();
+}
+
+void Helper::emitRepeatedMessageWarning()
+{
+    if ( m_errorMessageRepetition > 0 ) {
+        kDebug() << "(Last error message repeated" << m_errorMessageRepetition << "times)";
+        emit messageReceived( i18nc("@info/plain", "Last error message repeated %1 times",
+                                  m_errorMessageRepetition), QScriptContextInfo() );
+        m_errorMessageRepetition = 0;
+    }
+}
+
+void Helper::messageReceived( const QString& message, const QString &failedParseText,
+                              ErrorSeverity severity )
+{
+    if ( message == m_lastErrorMessage ) {
+        ++m_errorMessageRepetition;
+        return;
+    }
+
+    emitRepeatedMessageWarning();
+    m_lastErrorMessage = message;
+
     QScriptContextInfo info( context()->parentContext() );
-    emit errorReceived( message, info, failedParseText, severity );
+    emit messageReceived( message, info, failedParseText, severity );
 
     // Output debug message and a maximum count of 200 characters of the text where the parsing failed
     QString shortParseText = failedParseText.trimmed().left(350);
@@ -967,7 +1035,7 @@ void Helper::error( const QString& message, const QString &failedParseText, Erro
 
 void ResultObject::addData( const QVariantMap& map )
 {
-    QMutexLocker locker( m_mutex );
+    m_mutex->lockInline();
     TimetableData data;
     for ( QVariantMap::ConstIterator it = map.constBegin(); it != map.constEnd(); ++it ) {
         bool ok;
@@ -981,15 +1049,19 @@ void ResultObject::addData( const QVariantMap& map )
             kDebug() << "Unknown timetable information" << it.key() << "with value" << value;
             const QString message = i18nc("@info/plain", "Invalid timetable information \"%1\" "
                                           "with value \"%2\"", it.key(), value.toString());
-            emit invalidDataReceived( info, message, context()->parentContext(),
-                                      m_timetableData.count(), map );
+            const int count = m_timetableData.count();
+            m_mutex->unlockInline();
+            emit invalidDataReceived( info, message, context()->parentContext(), count, map );
+            m_mutex->lockInline();
             continue;
         } else if ( !value.isValid() || value.isNull() ) {
             kDebug() << "Value for" << info << "is invalid or null" << value;
             const QString message = i18nc("@info/plain", "Invalid value received for \"%1\"",
                                           it.key());
-            emit invalidDataReceived( info, message, context()->parentContext(),
-                                      m_timetableData.count(), map );
+            const int count = m_timetableData.count();
+            m_mutex->unlockInline();
+            emit invalidDataReceived( info, message, context()->parentContext(), count, map );
+            m_mutex->lockInline();
             continue;
         } else if ( info == Enums::TypeOfVehicle &&
                     static_cast<Enums::VehicleType>(value.toInt()) == Enums::InvalidVehicleType &&
@@ -998,8 +1070,10 @@ void ResultObject::addData( const QVariantMap& map )
             kDebug() << "Invalid type of vehicle value" << value;
             const QString message = i18nc("@info/plain",
                     "Invalid type of vehicle received: \"%1\"", value.toString());
-            emit invalidDataReceived( info, message, context()->parentContext(),
-                                      m_timetableData.count(), map );
+            const int count = m_timetableData.count();
+            m_mutex->unlockInline();
+            emit invalidDataReceived( info, message, context()->parentContext(), count, map );
+            m_mutex->lockInline();
         } else if ( info == Enums::TypesOfVehicleInJourney || info == Enums::RouteTypesOfVehicles ) {
             const QVariantList types = value.toList();
             foreach ( const QVariant &type, types ) {
@@ -1011,8 +1085,11 @@ void ResultObject::addData( const QVariantMap& map )
                     const QString message = i18nc("@info/plain",
                             "Invalid type of vehicle received in \"%1\": \"%2\"",
                             Global::timetableInformationToString(info), type.toString());
+                    const int count = m_timetableData.count();
+                    m_mutex->unlockInline();
                     emit invalidDataReceived( info, message, context()->parentContext(),
-                                              m_timetableData.count(), map );
+                                              count, map );
+                    m_mutex->lockInline();
                 }
             }
         }
@@ -1048,7 +1125,10 @@ void ResultObject::addData( const QVariantMap& map )
 
     if ( m_features.testFlag(AutoPublish) && m_timetableData.count() == 10 ) {
         // Publish the first 10 data items automatically
+        m_mutex->unlockInline();
         emit publish();
+    } else {
+        m_mutex->unlockInline();
     }
 }
 
@@ -1126,11 +1206,11 @@ QVariantMap Helper::matchTime( const QString& str, const QString& format )
             ret.insert( "minute", time.minute() );
         } else {
             ret.insert( "error", true );
-            kDebug() << "Couldn't match time in" << str << pattern;
+            DEBUG_SCRIPT_HELPER("Couldn't match time in" << str << pattern);
         }
     } else {
         ret.insert( "error", true );
-        kDebug() << "Couldn't match time in" << str << pattern;
+        DEBUG_SCRIPT_HELPER("Couldn't match time in" << str << pattern);
     }
     return ret;
 }
@@ -1154,11 +1234,10 @@ QDate Helper::matchDate( const QString& str, const QString& format )
         QRegExp rx2( "\\d{2,4}-\\d{2}-\\d{2}" );
         if ( rx2.indexIn(str) != -1 ) {
             date = QDate::fromString( rx2.cap(), "yyyy-MM-dd" );
-        } else {
-            kDebug() << "Couldn't match date in" << str << pattern;
         }
-    } else {
-        kDebug() << "Couldn't match date in" << str << pattern;
+    }
+    if ( !date.isValid() ) {
+        DEBUG_SCRIPT_HELPER("Couldn't match date in" << str << pattern);
     }
 
     // Adjust date, needed for formats with only two "yy" for year matching
@@ -1198,7 +1277,7 @@ QString Helper::addMinsToTime( const QString& sTime, int minsToAdd, const QStrin
 {
     QTime time = QTime::fromString( sTime, format );
     if ( !time.isValid() ) {
-        kDebug() << "Couldn't parse the given time" << sTime << format;
+        DEBUG_SCRIPT_HELPER("Couldn't parse the given time" << sTime << format);
         return "";
     }
     return time.addSecs( minsToAdd * 60 ).toString( format );
@@ -1208,7 +1287,7 @@ QString Helper::addDaysToDate( const QString& sDate, int daysToAdd, const QStrin
 {
     QDate date = QDate::fromString( sDate, format ).addDays( daysToAdd );
     if ( !date.isValid() ) {
-        kDebug() << "Couldn't parse the given date" << sDate << format;
+        DEBUG_SCRIPT_HELPER("Couldn't parse the given date" << sDate << format);
         return sDate;
     }
     return date.toString( format );
@@ -1488,6 +1567,7 @@ QVariantMap Helper::findNamedHtmlTags( const QString &str, const QString &tagNam
             ? namePosition["regexp"].toString() : QString();
     const QString ambiguousNameResolution = options.contains("ambiguousNameResolution")
             ? options["ambiguousNameResolution"].toString().toLower() : "replace";
+    const bool debug = options.value( "debug", false ).toBool();
 
     const QVariantList foundTags = findHtmlTags( str, tagName, options );
     QVariantMap foundTagsMap;
@@ -1496,7 +1576,9 @@ QVariantMap Helper::findNamedHtmlTags( const QString &str, const QString &tagNam
                 namePositionRegExpPattern,
                 namePositionIsAttribute ? namePosition["name"].toString() : QString() );
         if ( name.isEmpty() ) {
-            kDebug() << "Empty name in" << str;
+            if ( debug ) {
+                kDebug() << "Empty name in" << str;
+            }
             continue;
         }
 
@@ -1514,12 +1596,12 @@ QVariantMap Helper::findNamedHtmlTags( const QString &str, const QString &tagNam
     }
 
     // Store list of names in the "names" property, therefore "names" should not be a found tag name
-    if ( foundTagsMap.contains("names") ) {
+    if ( !foundTagsMap.contains("names") ) {
+        foundTagsMap[ "names" ] = QVariant::fromValue<QStringList>( foundTagsMap.keys() );
+    } else if ( debug ) {
         kDebug() << "A tag with the name 'names' was found. Normally a property 'names' gets "
                     "added to the object returned by this functionm, which lists all found "
                     "names in a list.";
-    } else {
-        foundTagsMap[ "names" ] = QVariant::fromValue<QStringList>( foundTagsMap.keys() );
     }
     return foundTagsMap;
 }
@@ -1914,19 +1996,31 @@ bool Network::lastDownloadAborted() const
 bool Network::hasRunningRequests() const
 {
     QMutexLocker locker( m_mutex );
-    return !m_runningRequests.isEmpty();
+    foreach ( const NetworkRequest::Ptr &request, m_requests ) {
+        if ( request->isRunning() ) {
+            // Found a running request
+            return true;
+        }
+    }
+    // No running request found
+    return false;
 }
 
-QList< NetworkRequest * > Network::runningRequests() const
+QList< NetworkRequest::Ptr > Network::runningRequests() const
 {
     QMutexLocker locker( m_mutex );
-    return m_runningRequests;
+    QList< NetworkRequest::Ptr > requests;
+    foreach ( const NetworkRequest::Ptr &request, m_requests ) {
+        if ( request->isRunning() ) {
+            requests << request;
+        }
+    }
+    return requests;
 }
 
 int Network::runningRequestCount() const
 {
-    QMutexLocker locker( m_mutex );
-    return m_runningRequests.count();
+    return runningRequests().count();
 }
 
 QByteArray Network::fallbackCharset() const
@@ -1939,6 +2033,16 @@ QList< TimetableData > ResultObject::data() const
 {
     QMutexLocker locker( m_mutex );
     return m_timetableData;
+}
+
+QVariant ResultObject::data( int index, Enums::TimetableInformation information ) const
+{
+    QMutexLocker locker( m_mutex );
+    if ( index < 0 || index >= m_timetableData.count() ) {
+        context()->throwError( QScriptContext::RangeError, "Index out of range" );
+        return QVariant();
+    }
+    return m_timetableData[ index ][ information ];
 }
 
 bool ResultObject::hasData() const
@@ -2102,6 +2206,48 @@ QByteArray DataStreamPrototype::readBytesUntilZero()
         bytes.append( character );
     }
     return bytes;
+}
+
+QString NetworkRequest::url() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_url;
+}
+
+bool NetworkRequest::isRunning() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_reply;
+}
+
+bool NetworkRequest::isFinished() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_isFinished;
+}
+
+bool NetworkRequest::isRedirected() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_redirectUrl.isValid();
+}
+
+QUrl NetworkRequest::redirectedUrl() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_redirectUrl;
+}
+
+QString NetworkRequest::postData() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_postData;
+}
+
+quint64 NetworkRequest::uncompressedSize() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_uncompressedSize;
 }
 
 #include "scripting.moc"

@@ -29,16 +29,24 @@
 
 // Own includes
 #include "debuggerstructures.h"
+#include "../testmodel.h" // For TestModel::TimetableDataRequestMessage
 
 // PublicTransport engine includes
 #include <engine/serviceproviderdata.h>
+#include <engine/script/scriptobjects.h>
+#include <engine/request.h>
 
 // KDE includes
 #include <ThreadWeaver/Job>
+#include <QPointer>
+
+// Uncomment to activate more debug messages
+#define DEBUG_JOBS(msg) // kDebug() << msg
 
 // If this is defined debug output gets generated when a job starts or ends
-#define DEBUG_JOB_START_END
+// #define DEBUG_JOB_START_END
 
+class QEventLoop;
 namespace Scripting
 {
     class Storage;
@@ -54,68 +62,306 @@ class QMutex;
 
 namespace Debugger {
 
+class BreakpointChange;
+class BacktraceChange;
+class VariableChange;
+
 class DebuggerAgent;
 class Debugger;
+
+struct DebuggerJobResult {
+    DebuggerJobResult( bool success = true, bool aborted = false,
+                       const QVariant returnValue = QVariant(),
+                       const QString &explanation = QString(),
+                       const QList< TimetableData > &resultData = QList< TimetableData >(),
+                       const QList< TimetableDataRequestMessage > &messages =
+                            QList< TimetableDataRequestMessage >(),
+                       AbstractRequest *request = 0 )
+            : success(success), aborted(aborted), returnValue(returnValue),
+              explanation(explanation), resultData(resultData), messages(messages),
+              request(QSharedPointer<AbstractRequest>(request)) {};
+
+    bool success;
+    bool aborted;
+    QVariant returnValue;
+    QString explanation;
+    QList< TimetableData > resultData;
+    QList< TimetableDataRequestMessage > messages;
+    QSharedPointer< AbstractRequest > request;
+};
 
 /**
  * @brief Abstract base for debugger jobs.
  **/
 class DebuggerJob : public ThreadWeaver::Job {
     Q_OBJECT
+    friend class DebuggerAgent;
 
 public:
-    /** @brief Job types. */
-    enum Type {
-        LoadScript, /**< A job of type LoadScriptJob. */
-        EvaluateInContext, /**< A job of type EvaluateInContextJob. */
-        ExecuteConsoleCommand, /**< A job of type ExecuteConsoleCommandJob. */
-        CallScriptFunction, /**< A job of type CallScriptFunctionJob. */
-        TestFeatures, /**< A job of type TestFeaturesJob. */
-        TimetableDataRequest /**< A job of type TimetableDataRequestJob. */
-    };
+    explicit DebuggerJob( const ScriptData &scriptData, const QString &useCase = QString(),
+                          QObject* parent = 0 );
 
     /** @brief Constructor. */
-    explicit DebuggerJob( DebuggerAgent *debugger, const ServiceProviderData &data,
-                          QMutex *engineMutex, QObject* parent = 0 );
+    DebuggerJob( DebuggerAgent *debugger, QMutex *engineMutex, const ScriptData &scriptData,
+                 const ScriptObjects &objects, const QString &useCase = QString(),
+                 QObject* parent = 0 );
 
     /** @brief Destructor. */
     virtual ~DebuggerJob();
 
     /** @brief Get the type of this debugger job. */
-    virtual Type type() const = 0;
+    virtual JobType type() const = 0;
 
-    static QString typeToString( Type type );
+    static QString typeToString( JobType type );
+
+    virtual QString defaultUseCase() const { return QString(); };
+    void setUseCase( const QString &useCase );
+    QString useCase() const;
 
     /** @brief Get a string with information about this job. */
-    virtual QString toString() const { return typeToString(type()); };
+    virtual QString toString() const;
 
     virtual void requestAbort();
 
-    DebuggerAgent *debugger() const { return m_debugger; };
+    DebuggerAgent *debuggerAgent() const;
+    QMutex *engineMutex() const;
+
+    bool wasAborted() const;
 
     /** @brief Overwritten from ThreadWeaver::Job to return whether or not the job was successful. */
     virtual bool success() const;
+
+    ScriptObjects objects() const;
 
     /**
      * @brief Get information about the result of the job as QString.
      * If success() returns false, this contains an error message.
      **/
-    inline QString explanation() const { return m_explanation; };
+    QString explanation() const;
+
+    virtual QVariant returnValue() const { return QVariant(); };
 
     /** @brief Get the ServiceProviderData object used by the job. */
-    inline const ServiceProviderData providerData() const { return m_data; };
+    const ServiceProviderData providerData() const;
 
+#ifdef DEBUG_JOB_START_END
     /**
      * @brief Only for debugging, prints to output that the job has ended (and how).
      * @note This method gets called automatically, when debuggerRun() returns. Only call this
      *   manually, when the thread will be killed before returning from debuggerRun().
      **/
     void debugJobEnd() const;
+#endif
+
+
+    /** @brief Gets the current state of the debugger. */
+    DebuggerState state() const;
+
+    /** @brief Whether or not script execution is currently interrupted. */
+    bool isInterrupted() const;
+
+    /** @brief Whether or not the script currently gets executed or is interrupted. */
+    bool isRunning() const;
+
+    /** @brief Whether or not the script currently gets aborted. */
+    bool isAborting() const;
+
+    bool isEvaluating() const;
+
+    /** @brief Whether or not @p program can be evaluated. */
+    bool canEvaluate( const QString &program ) const;
+
+    /**
+     * @brief Blocks until the debugger has been completely shut down.
+     *
+     * If the debugger is not running, this function returns immediately.
+     * This function should be called before starting another execution to ensure that the debugger
+     * state stays clean. Otherwise there may be crashes and unexpected behaviour.
+     **/
+    void finish() const;
+
+    /** @brief The name of the currently executed source file. */
+    QString currentSourceFile() const;
+
+    /** @brief Get the current execution line number. */
+    int lineNumber() const;
+
+    /** @brief Get the current execution column number. */
+    int columnNumber() const;
+
+    /** @brief Whether or not there was an uncaught exception. */
+    bool hasUncaughtException() const;
+
+    /** @brief The line number of an uncaught exception, if any. */
+    int uncaughtExceptionLineNumber() const;
+
+    /** @brief The QScriptValue of an uncaught exception, if any. */
+    QScriptValue uncaughtException() const;
+
+    /**
+     * @brief Checks whether script execution can be interrupted at @p lineNumber.
+     *
+     * Empty lines or lines with '//' at the beginning are not executable and script execution
+     * can not be interrupted there, for example.
+     *
+     * If the line at @p lineNumber is not evaluatable, the line and the following line are tested
+     * together. Up to 25 following lines are currently used to test if there is an evaluatable
+     * multiline statement starting at @p lineNumber.
+     *
+     * @warning This does not always work. The breakpoint may always be skipped although this
+     *   function says it could break there.
+     **/
+    NextEvaluatableLineHint canBreakAt( const QString &fileName, int lineNumber ) const;
+
+    /**
+     * @brief Get the first executable line number bigger than or equal to @p lineNumber.
+     *
+     * This function uses canBreakAt() to check whether or not script execution can be interrupted.
+     * If not, the line number gets increased and again checked, etc.
+     * If no such line number could be found -1 gets returned.
+     **/
+    int getNextBreakableLineNumber( const QString &fileName, int lineNumber ) const;
+
+    void attachDebugger( Debugger *debugger );
+
+    void moveScriptObjectsToThread( QThread *thread );
+    void gotScriptObjectsBack();
+
+    enum WaitForType {
+        WaitForNothing, /**< Wait for the signal only. */
+        WaitForNetwork, /**< Wait for all running network requests to finish. */
+        WaitForInterrupt, /**< Wait for the next interrupt. */
+        WaitForScriptFinish /**< Wait until script execution is finished. */
+    };
+
+    bool waitFor( QObject *sender, const char *signal, WaitForType type = WaitForNothing );
+
+    virtual void connectScriptObjects( bool doConnect = true );
+
+signals:
+    /** @brief Script execution just started. */
+    void started( const QDateTime &timestamp );
+
+    /** @brief The script finished and is no longer running */
+    void stopped( const QDateTime &timestamp,
+                  ScriptStoppedFlags scriptStoppedFlags = ScriptStopped,
+                  int uncaughtExceptionLineNumber = -1,
+                  const QString &uncaughtException = QString(),
+                  const QStringList &backtrace = QStringList() );
+
+    /** @see isInterrupted() */
+    void positionChanged( int lineNumber, int columnNumber, int oldLineNumber, int oldColumnNumber );
+
+    /** @brief The state of the debugger has changed from @p oldState to @p newState. */
+    void stateChanged( DebuggerState newState, DebuggerState oldState );
+
+    /** @brief Reached @p breakpoint and increased it's hit count. */
+    void breakpointReached( const Breakpoint &breakpoint );
+
+    /** @brief An uncaught exception occured at @p lineNumber. */
+    void exception( int lineNumber, const QString &errorMessage,
+                    const QString &fileName = QString() );
+
+    /** @brief Script execution was just interrupted. */
+    void interrupted( int lineNumber, const QString &fileName, const QDateTime &timestamp );
+
+    /** @brief Script execution was just aborted. */
+    void aborted();
+
+    /** @brief Script execution was just continued after begin interrupted. */
+    void continued( const QDateTime &timestamp, bool willInterruptAfterNextStatement = false );
+
+    /** @brief The script send a @p debugString using the print() function. */
+    void output( const QString &debugString, const QScriptContextInfo &contextInfo );
+
+    void informationMessage( const QString &message );
+    void errorMessage( const QString &message );
+
+    /**
+     * @brief Evaluation of script code in the context of a running script has finished.
+     * This signal gets emitted after calling evaluateInContext().
+     *
+     * @p returnValue The value that was returned from the code that was evaluated.
+     **/
+    void evaluationInContextFinished( const QScriptValue &returnValue = QScriptValue() );
+
+    void evaluationInContextAborted( const QString &errorMessage );
+
+    /** @brief Variables have changed according to @p change. */
+    void variablesChanged( const VariableChange &change );
+
+    /** @brief The backtrace has changed according to @p change. */
+    void backtraceChanged( const BacktraceChange &change );
+
+    /** @brief Breakpoints have changed according to @p change. */
+    void breakpointsChanged( const BreakpointChange &change );
+
+    void scriptMessageReceived( const QString &errorMessage, const QScriptContextInfo &contextInfo,
+                                const QString &failedParseText = QString(),
+                                Helper::ErrorSeverity severity = Helper::Information );
+
+    void movedScriptObjectsToThread( QThread *thread );
+
+public slots:
+    /**
+     * @brief Continue script execution until the next statement.
+     * @param repeat The number of repetitions for step into. 0 for only one repetition, the default.
+     **/
+    virtual void debugStepInto( int repeat = 0 );
+
+    /**
+     * @brief Continue script execution until the next statement in the same context.
+     * @param repeat The number of repetitions for step over. 0 for only one repetition, the default.
+     **/
+    virtual void debugStepOver( int repeat = 0 );
+
+    /**
+     * @brief Continue script execution until the current function gets left.
+     * @param repeat The number of repetitions for step out. 0 for only one repetition, the default.
+     **/
+    virtual void debugStepOut( int repeat = 0 );
+
+    /** @brief Continue script execution until @p lineNumber is reached. */
+    virtual void debugRunUntilLineNumber( const QString &fileName, int lineNumber );
+
+    /** @brief Interrupt script execution. */
+    virtual void debugInterrupt();
+
+    /** @brief Continue script execution, only interrupt on breakpoints or uncaught exceptions. */
+    virtual void debugContinue();
+
+    /** @brief Abort script execution. */
+    virtual void abortDebugger();
+
+    virtual void addBreakpoint( const Breakpoint &breakpoint );
+    virtual void updateBreakpoint( const Breakpoint &breakpoint ) { addBreakpoint(breakpoint); };
+    virtual void removeBreakpoint( const Breakpoint &breakpoint );
+
+    virtual void slotOutput( const QString &outputString, const QScriptContextInfo &contextInfo );
+
+    virtual void checkExecution();
+
+protected slots:
+    void setDefaultUseCase();
+
+    /** @brief The script finished and is no longer running */
+    void slotStopped( const QDateTime &timestamp, bool aborted = false,
+                      bool hasRunningRequests = false, int uncaughtExceptionLineNumber = -1,
+                      const QString &uncaughtException = QString(),
+                      const QStringList &backtrace = QStringList() );
+
+    void doSomething();
+
+    void evaluationAborted( const QString &errorMessage );
 
 protected:
     // Expects m_engineMutex and m_mutex to be unlocked
     void handleError( QScriptEngine *engine, const QString &message = QString(),
                       EvaluationResult *result = 0 );
+    void handleError( int uncaughtExceptionLineNumber = -1,
+                      const QString &uncaughtException = QString(),
+                      const QStringList &backtrace = QStringList(),
+                      const QString &message = QString(), EvaluationResult *result = 0 );
 
     /** @brief Override this method instead of run(). */
     virtual void debuggerRun() = 0;
@@ -123,15 +369,28 @@ protected:
     /** @brief Sends output to the debugger when a job starts/ends. */
     void run();
 
-    DebuggerAgent *const m_debugger;
-//     Storage *m_scriptStorage;
-//     QSharedPointer<Network> m_scriptNetwork;
-//     QSharedPointer<ResultObject> m_scriptResult;
-    const ServiceProviderData m_data;
+    void disconnectScriptObjects();
+
+    DebuggerAgent *createAgent();
+    void destroyAgent();
+    void attachAgent( DebuggerAgent *agent );
+    void connectAgent( DebuggerAgent *agent, bool doConnect = true, bool connectModels = true );
+
+    virtual void _evaluationAborted( const QString &errorMessage ) { Q_UNUSED(errorMessage); };
+
+    QPointer< DebuggerAgent > m_agent;
+    ScriptData m_data;
+    ScriptObjects m_objects;
+    Debugger *m_debugger;
     bool m_success;
+    bool m_aborted;
     QString m_explanation;
-    QMutex *m_mutex;
+    QMutex *const m_mutex;
     QMutex *m_engineMutex;
+    QString m_useCase;
+    bool m_quit;
+    QThread *m_scriptObjectTargetThread;
+    QEventLoop *m_currentLoop;
 };
 
 /**
@@ -143,7 +402,9 @@ class LoadScriptJob : public DebuggerJob {
 
 public:
     /** @brief Get the type of this debugger job. */
-    virtual Type type() const { return LoadScript; };
+    virtual JobType type() const { return LoadScript; };
+
+    virtual QString defaultUseCase() const;
 
 protected:
     /**
@@ -157,54 +418,69 @@ protected:
      * @param script A QScriptProgram object containing the new script code.
      * @param parent The parent QObject. Default is 0.
      **/
-    explicit LoadScriptJob( DebuggerAgent *debugger, const ServiceProviderData &data,
-                            QMutex *engineMutex, QScriptProgram *script,
-                            Scripting::Helper *scriptHelper, Scripting::ResultObject *scriptResult,
-                            Scripting::Network *scriptNetwork, Scripting::Storage *scriptStorage,
-                            Scripting::DataStreamPrototype *dataStreamPrototype,
-                            const QMetaObject &enums, DebugFlags debugFlags = DefaultDebugFlags,
-                            QObject* parent = 0 )
-            : DebuggerJob(debugger, data, engineMutex, parent),
-              m_script(script), m_scriptHelper(scriptHelper), m_scriptResult(scriptResult),
-              m_scriptNetwork(scriptNetwork), m_scriptStorage(scriptStorage),
-              m_dataStreamPrototype(dataStreamPrototype), m_enums(enums),
-              m_debugFlags(debugFlags) {};
+    explicit LoadScriptJob( const ScriptData &scriptData, const QString &useCase = QString(),
+                            DebugFlags debugFlags = DefaultDebugFlags, QObject* parent = 0 )
+            : DebuggerJob(scriptData, useCase, parent), m_debugFlags(debugFlags) {};
+
+    virtual ~LoadScriptJob();
 
     virtual void debuggerRun();
-    bool loadScriptObjects();
-    QStringList globalFunctions() const { return m_globalFunctions; };
-    DebugFlags debugFlags() const { return m_debugFlags; };
+    QStringList globalFunctions() const;
+    QStringList includedFiles() const;
+    DebugFlags debugFlags() const;
 
 private:
-    QScriptProgram *m_script;
-    Scripting::Helper *const m_scriptHelper;
-    Scripting::ResultObject *const m_scriptResult;
-    Scripting::Network *const m_scriptNetwork;
-    Scripting::Storage *const m_scriptStorage;
-    Scripting::DataStreamPrototype *const m_dataStreamPrototype;
-    const QMetaObject m_enums;
     QStringList m_globalFunctions;
+    QStringList m_includedFiles;
     const DebugFlags m_debugFlags;
+};
+
+/**
+ * @brief Base class for jobs that can run with the debugger agent of another job.
+ **/
+class ForeignAgentJob : public DebuggerJob {
+    Q_OBJECT
+    friend class Debugger;
+
+public:
+    virtual ~ForeignAgentJob() {};
+
+    QPointer< DebuggerJob > parentJob() const { return m_parentJob; };
+
+protected:
+    explicit ForeignAgentJob( const ScriptData &scriptData, const QString &useCase = QString(),
+                              DebuggerJob *parentJob = 0, QObject* parent = 0 );
+
+    virtual void debuggerRun();
+
+    virtual bool runInForeignAgent( DebuggerAgent *agent ) = 0;
+//     virtual void updateResult() = 0;
+    virtual void handleUncaughtException( DebuggerAgent *agent ) { Q_UNUSED(agent); };
+    virtual bool waitForFinish( DebuggerAgent *agent, const ScriptObjects &objects );
+
+    QPointer< DebuggerJob > m_parentJob;
 };
 
 /**
  * @brief Runs script code in the context where the script is currently interrupted.
  **/
-class EvaluateInContextJob : public DebuggerJob {
+class EvaluateInContextJob : public ForeignAgentJob {
     Q_OBJECT
     friend class Debugger;
 
 public:
+    virtual ~EvaluateInContextJob();
+
     /** @brief Get the type of this debugger job. */
-    virtual Type type() const { return EvaluateInContext; };
+    virtual JobType type() const { return EvaluateInContext; };
 
     /** @brief Gets the result of the evaluation, when the job has finished. */
     EvaluationResult result() const;
 
-    virtual QString toString() const;
+    virtual QVariant returnValue() const;
 
-protected slots:
-    void evaluationAborted( const QString &errorMessage );
+    virtual QString toString() const;
+    virtual QString defaultUseCase() const;
 
 protected:
     /**
@@ -219,13 +495,13 @@ protected:
      * @param context A name for the evaluation context, shown in backtraces.
      * @param parent The parent QObject. Default is 0.
      **/
-    explicit EvaluateInContextJob( DebuggerAgent *debugger, const ServiceProviderData &data,
-                                   QMutex *engineMutex, const QString &program,
-                                   const QString &context, QObject* parent = 0 )
-            : DebuggerJob(debugger, data, engineMutex, parent),
-              m_program(program), m_context(QString(context).replace( '\n', ' ' )) {};
+    explicit EvaluateInContextJob( const ScriptData &data, const QString &program,
+                                   const QString &context, const QString &useCase,
+                                   DebuggerJob *runningJob = 0, QObject* parent = 0 );
 
-    virtual void debuggerRun();
+    virtual bool runInForeignAgent( DebuggerAgent *agent );
+    virtual void handleUncaughtException( DebuggerAgent *agent );
+    virtual void _evaluationAborted( const QString &errorMessage );
 
 private:
     const QString m_program;
@@ -236,13 +512,15 @@ private:
 /**
  * @brief Executes a console command.
  **/
-class ExecuteConsoleCommandJob : public DebuggerJob {
+class ExecuteConsoleCommandJob : public ForeignAgentJob {
     Q_OBJECT
     friend class Debugger;
 
 public:
+    virtual ~ExecuteConsoleCommandJob();
+
     /** @brief Get the type of this debugger job. */
-    virtual Type type() const { return ExecuteConsoleCommand; };
+    virtual JobType type() const { return ExecuteConsoleCommand; };
 
     /** @brief Gets the ConsoleCommand that gets run in this job. */
     const ConsoleCommand command() const;
@@ -252,9 +530,10 @@ public:
      *
      * The "answer string" or return value can contain HTML and may be empty.
      **/
-    QString returnValue() const;
+    virtual QVariant returnValue() const;
 
     virtual QString toString() const;
+    virtual QString defaultUseCase() const;
 
 protected:
     /**
@@ -268,12 +547,12 @@ protected:
      * @param command The console command to execute in this job.
      * @param parent The parent QObject. Default is 0.
      **/
-    explicit ExecuteConsoleCommandJob( DebuggerAgent *debugger, const ServiceProviderData &data,
-                                       QMutex *engineMutex, const ConsoleCommand &command,
-                                       QObject* parent = 0 )
-            : DebuggerJob(debugger, data, engineMutex, parent), m_command(command) {};
+    explicit ExecuteConsoleCommandJob( const ScriptData &data, const ConsoleCommand &command,
+                                       const QString &useCase = QString(),
+                                       DebuggerJob *runningJob = 0, QObject* parent = 0 );
 
     virtual void debuggerRun();
+    virtual bool runInForeignAgent( DebuggerAgent *agent );
 
 private:
     const ConsoleCommand m_command;

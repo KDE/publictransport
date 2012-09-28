@@ -28,10 +28,14 @@
 #define DEBUGGERTHREAD_H
 
 // Own includes
-#include "debuggeragent.h" // For inline function calls forwarded to DebuggerAgent
+#include "debug_config.h"
+#include "debuggerjobs.h"
 
 // PublicTransport engine includes
 #include <engine/enums.h> // For TimetableData
+
+// Qt includes
+#include <QPointer>
 
 struct AbstractRequest;
 class ServiceProviderData;
@@ -47,7 +51,10 @@ namespace ThreadWeaver {
     class WeaverInterface;
     class JobSequence;
     class ResourceRestrictionPolicy;
+    class Thread;
 };
+typedef QSharedPointer< ThreadWeaver::WeaverInterface > WeaverInterfacePointer;
+
 class QMutex;
 class QWaitCondition;
 class QScriptProgram;
@@ -75,10 +82,23 @@ class VariableModel;
 class ScriptRunData {
     friend class Debugger;
 public:
+    enum State {
+        Initializing = 0,
+        Running,
+        WaitingForSignal,
+        Interrupted,
+        Finished
+    };
+
+    DebuggerJob *job() const { return m_job; };
+
+    bool isExecuting() const { return m_state != Initializing && m_state != Finished; };
+    bool isWaitingForSignal() const { return m_state == WaitingForSignal; };
+
     /** @brief The time in milliseconds spent for script execution. */
     int executionTime() const {
-        return m_executionTimer.elapsed() - m_signalWaitingTime - m_interruptTime -
-                                            m_synchronousDownloadTime;
+        return qMax( 0, m_executionTime - m_signalWaitingTime -
+                        m_interruptTime - m_synchronousDownloadTime );
     };
 
     /** @brief The time in milliseconds spent waiting for signals. */
@@ -91,35 +111,35 @@ public:
 
     int asynchronousDownloadSize() const { return m_asynchronousDownloadSize; };
     int synchronousDownloadSize() const { return m_synchronousDownloadSize; };
+    int totalDownloadSize() const { return m_asynchronousDownloadSize + m_synchronousDownloadSize; };
 
 protected:
     /** @brief Constructor, directly starts the execution timer. */
-    ScriptRunData() : m_signalWaitingTime(0), m_interruptTime(0), m_synchronousDownloadTime(0),
-                      m_asynchronousDownloadSize(0), m_synchronousDownloadSize(0) {
-        m_executionTimer.start();
-    };
+    ScriptRunData( DebuggerJob *job = 0 );
+
+    void executionStarted( const QDateTime &timestamp );
+
+    void executionStopped( const QDateTime &timestamp );
 
     /** @brief Call this method when script execution gets suspended to wait for a signal. */
-    void waitingForSignal() { m_waitForSignalTimer.start(); };
+    void waitingForSignal( const QDateTime &timestamp );
 
     /**
      * @brief Call this method when script execution gets continued after waiting for a signal.
      * @returns The time in milliseconds spent waiting for the last signal.
      **/
-    int wokeUpFromSignal() {
-        const int waitingTime = m_waitForSignalTimer.elapsed();
-        m_signalWaitingTime += waitingTime;
-        return waitingTime;
-    };
+    int wokeUpFromSignal( const QDateTime &timestamp );
 
     /** @brief Call this method when script execution gets interrupted. */
-    void interrupted() { m_interruptTimer.start(); };
+    void interrupted( const QDateTime &timestamp );
 
     /** @brief Call this method when script execution gets continued after being interrupted. */
-    void continued() { m_interruptTime += m_interruptTimer.elapsed(); };
+    void continued( const QDateTime &timestamp );
 
-    void asynchronousDownloadFinished( int size ) {
+    void asynchronousDownloadFinished( const QDateTime &timestamp, int size ) {
         m_asynchronousDownloadSize += size;
+        // TODO call wokeUpFromSignal() here?
+        wokeUpFromSignal( timestamp );
     };
 
     void synchronousDownloadFinished( int waitingTime, int size ) {
@@ -128,23 +148,27 @@ protected:
     };
 
 private:
-    QTime m_executionTimer;
-    QTime m_waitForSignalTimer;
-    QTime m_interruptTimer;
+    QPointer<DebuggerJob> m_job;
+    QDateTime m_executionStartTimestamp;
+    QDateTime m_waitForSignalTimestamp;
+    QDateTime m_interruptTimestamp;
+    int m_executionTime;
     int m_signalWaitingTime;
     int m_interruptTime;
     int m_synchronousDownloadTime;
     int m_asynchronousDownloadSize;
     int m_synchronousDownloadSize;
+    State m_state;
 };
 
 /**
- * @brief Manages debugging of QtScript code using DebuggerAgent and ThreadWeaver.
+ * @brief Manages multithreaded debugging of QtScript code.
  *
- * DebuggerAgent is a specialized QScriptEngineAgent used to control execution of QtScript code.
- * It is ensured, that only one evaluation is running in the engine at a time. If the evaluation
- * of the main script is interrupted, code can be run inside the current context of the script in
- * another thread. This can be used for eg. console commands or breakpoint condition evaluation.
+ * ThreadWeaver is used with jobs derived from DebuggerJob and some restriction policies to
+ * synchronize the jobs. It is ensured, that only one evaluation is running in the engine
+ * at a time. If the evaluation of the script is interrupted, code can be run inside the current
+ * context of the script in another thread. This can be used for eg. console commands or
+ * breakpoint condition evaluation.
  *
  * Functions that need to access the script engine (eg. to evaluate script code) return values
  * asynchronously using signals. For example requestTimetableData() returns values in the
@@ -159,9 +183,9 @@ private:
  *   isInterrupted() or use QMutex::tryLock() and eg. create a thread job object to do the work
  *   when the engine is free again.
  *
- * This class is not thread safe, but DebuggerAgent is. ThreadWeaver jobs are communicating with
- * DebuggerAgent, not this class. This class only manages thread jobs and asynchronous
- * communication. Many functions only foward to the according functions in DebuggerAgent.
+ * This class is not thread safe, but DebuggerAgent is. DebuggerJob instances are communicating
+ * with DebuggerAgent, not this class. This class manages the thread jobs and synchronizes them.
+ * Some functions only foward to the according functions in the currently running DebuggerJob.
  *
  * Variables, a backtrace and breakpoints are managed by separate models, accessible using
  * variableModel(), backtraceModel() and breakpointModel(). Variables and frames of the backtrace
@@ -174,7 +198,6 @@ private:
  **/
 class Debugger : public QObject {
     Q_OBJECT
-    friend class DebuggerAgent;
     friend class LoadScriptJob;
     friend class TimetableDataRequestJob;
     friend class EvaluateInContextJob;
@@ -191,18 +214,22 @@ public:
 
     /** @brief Constructor. */
     explicit Debugger( QObject *parent = 0 );
+    explicit Debugger( const WeaverInterfacePointer &weaver, QObject *parent = 0 );
 
     /** @brief Destructor. */
     virtual ~Debugger();
 
+    inline bool hasRunningJobs() const { return !m_runningJobs.isEmpty(); };
+    inline QStack< QPointer<DebuggerJob> > runningJobs() const { return m_runningJobs; };
+
     /** @brief Get the current state of the debugger. */
-    inline DebuggerState state() const { return m_debugger->state(); };
+    inline DebuggerState state() const { return !hasRunningJobs() ? NotRunning : currentJob()->state(); };
 
     /** @brief Whether or not the debugger is currently running. */
-    inline bool isRunning() const { return m_debugger->isRunning(); };
+    inline bool isRunning() const { return !hasRunningJobs() ? false : currentJob()->isRunning(); };
 
     /** @brief Whether or not the debugger is currently interrupted. */
-    inline bool isInterrupted() const { return m_debugger->isInterrupted(); };
+    inline bool isInterrupted() const { return !hasRunningJobs() ? false : currentJob()->isInterrupted(); };
 
     /** @brief Get the current state of the script. */
     inline ScriptState scriptState() const { return m_state; };
@@ -214,22 +241,30 @@ public:
     inline QString lastScriptErrorString() const { return m_lastScriptErrorString; };
 
     /** @brief The name of the currently executed source file. */
-    inline QString currentSourceFile() const { return m_debugger->currentSourceFile(); };
+    inline QString currentSourceFile() const {
+        return !hasRunningJobs() ? QString() : currentJob()->currentSourceFile();
+    };
 
     /** @brief Get the current execution line number. */
-    inline int lineNumber() const { return m_debugger->lineNumber(); };
+    inline int lineNumber() const { return !hasRunningJobs() ? -1 : currentJob()->lineNumber(); };
 
     /** @brief Get the current execution column number. */
-    inline int columnNumber() const { return m_debugger->columnNumber(); };
+    inline int columnNumber() const { return !hasRunningJobs() ? -1 : currentJob()->columnNumber(); };
 
     /** @brief Whether or not there was an uncaught exception. */
-    inline bool hasUncaughtException() const { return m_debugger->hasUncaughtException(); };
+    inline bool hasUncaughtException() const {
+        return !hasRunningJobs() ? false : currentJob()->hasUncaughtException();
+    };
 
     /** @brief The line number of an uncaught exception, if any. */
-    inline int uncaughtExceptionLineNumber() const { return m_debugger->uncaughtExceptionLineNumber(); };
+    inline int uncaughtExceptionLineNumber() const {
+        return !hasRunningJobs() ? -1 : currentJob()->uncaughtExceptionLineNumber();
+    };
 
     /** @brief The QScriptValue of an uncaught exception, if any. */
-    inline QScriptValue uncaughtException() const { return m_debugger->uncaughtException(); };
+    inline QScriptValue uncaughtException() const {
+        return !hasRunningJobs() ? QScriptValue() : currentJob()->uncaughtException();
+    };
 
     /** @brief Get a pointer to the VariableModel used by this debugger. */
     inline VariableModel *variableModel() const { return m_variableModel; };
@@ -245,22 +280,26 @@ public:
      * @return @c True if a LoadScriptJob was started or is already running,
      *   @c false if the script was already loaded and did not change.
      **/
-    bool loadScript( const QString &program, const ServiceProviderData *data,
-                     DebugFlags debugFlags = DefaultDebugFlags );
+    LoadScriptJob *loadScript( const QString &program, const ServiceProviderData *data,
+                               DebugFlags debugFlags = DefaultDebugFlags );
+
+    bool isLoadScriptJobRunning() const;
 
     /**
      * @brief Checks whether script execution can be interrupted at @p lineNumber.
      * @see DebuggerAgent::canBreakAt(int)
      **/
     inline NextEvaluatableLineHint canBreakAt( const QString &fileName, int lineNumber ) const {
-            return m_debugger->canBreakAt(fileName, lineNumber); };
+            return !hasRunningJobs() ? CannotFindNextEvaluatableLine
+                    : currentJob()->canBreakAt(fileName, lineNumber); };
 
     /**
      * @brief Get the first executable line number bigger than or equal to @p lineNumber.
      * @see DebuggerAgent::getNextBreakableLineNumber(int)
      **/
     inline int getNextBreakableLineNumber( const QString &fileName, int lineNumber ) const {
-            return m_debugger->getNextBreakableLineNumber(fileName, lineNumber); };
+            return !hasRunningJobs() ? lineNumber
+                    : currentJob()->getNextBreakableLineNumber(fileName, lineNumber); };
 
     /** @brief Whether or not @p program can be evaluated. */
     bool canEvaluate( const QString &program ) const;
@@ -278,6 +317,7 @@ public:
      * @return False if the TimetableDataRequestJob could not be created.
      **/
     bool requestTimetableData( const AbstractRequest *request,
+                               const QString &useCase = QString(),
                                DebugFlags debugFlags = DefaultDebugFlags );
 
     /**
@@ -309,28 +349,22 @@ public:
      * @brief Enqueues @p debuggerJob and executes it when all dependencies are fulfilled.
      *
      * @param debuggerJob The job to enqueue.
-     * @param connectJob Whether or not the jobs done() signal should be connected to a slot that
-     *   emits the associated result signal (eg. loadScriptResult()) and deletes the job.
-     *   If this is false, the job will not be deleted. If this is true connectJob() gets called
-     *   before enqueueing the job. The default is true.
      * @return True, if @p debuggerJob was successfully enqueued. False, otherwise.
      **/
-    bool enqueueJob( DebuggerJob *debuggerJob, bool connectJob = true );
+    bool enqueueJob( DebuggerJob *debuggerJob );
 
-    /**
-     * @brief Connects the done() signal of @p debuggerJob to this debugger.
-     *
-     * The done() signal gets connected to a slot that emits the associated result signal (eg.
-     * loadScriptResult()) and deletes the job.
-     **/
-    void connectJob( DebuggerJob *debuggerJob );
+    /** @brief Create a new LoadScriptJob. */
+    LoadScriptJob *getLoadScriptJob( const QString &program, const ServiceProviderData *data,
+                                     DebugFlags debugFlags = NeverInterrupt );
 
     /** @brief Create a new TimetableDataRequestJob from @p request. */
     TimetableDataRequestJob *createTimetableDataRequestJob(
-            const AbstractRequest *request, DebugFlags debugFlags = DefaultDebugFlags );
+            const AbstractRequest *request, const QString &useCase = QString(),
+            DebugFlags debugFlags = DefaultDebugFlags );
 
     /** @brief Create a new ExecuteConsoleCommandJob from @p command. */
-    ExecuteConsoleCommandJob *createExecuteConsoleCommandJob( const ConsoleCommand &command );
+    ExecuteConsoleCommandJob *createExecuteConsoleCommandJob( const ConsoleCommand &command,
+                                                              const QString &useCase = QString() );
 
     /**
      * @brief Create a new EvaluateInContextJob that executes @p program.
@@ -340,14 +374,25 @@ public:
      *   shown in backtraces.
      **/
     EvaluateInContextJob *createEvaluateInContextJob( const QString &program,
-                                                      const QString &contextName );
+            const QString &contextName, const QString &useCase = QString() );
 
     CallScriptFunctionJob *createCallScriptFunctionJob( const QString &functionName,
-            const QVariantList &arguments = QVariantList(), DebugFlags debugFlags = DefaultDebugFlags );
+            const QVariantList &arguments = QVariantList(), const QString &useCase = QString(),
+            DebugFlags debugFlags = DefaultDebugFlags );
 
-    TestFeaturesJob *createTestFeaturesJob( DebugFlags debugFlags = DefaultDebugFlags );
+    TestFeaturesJob *createTestFeaturesJob( const QString &useCase = QString(),
+                                            DebugFlags debugFlags = DefaultDebugFlags );
 
-    ThreadWeaver::WeaverInterface *weaver() const { return m_weaver; };
+    WeaverInterfacePointer weaver() const { return m_weaver; };
+
+    /**
+     * @brief Blocks until the debugger has been completely shut down.
+     *
+     * If the debugger is not running, this function returns immediately.
+     * This function should be called before starting another execution to ensure that the debugger
+     * state stays clean. Otherwise there may be crashes and unexpected behaviour.
+     **/
+    void finish();
 
 signals:
     /**
@@ -402,13 +447,13 @@ signals:
                     const QString &fileName = QString() );
 
     /** @brief Script execution was just interrupted. */
-    void interrupted();
+    void interrupted( int lineNumber, const QString &fileName, const QDateTime &timestamp );
 
     /** @brief Script execution was just aborted. */
     void aborted();
 
     /** @brief Script execution was just continued after begin interrupted. */
-    void continued( bool willInterruptAfterNextStatement = false );
+    void continued( const QDateTime &timestamp, bool willInterruptAfterNextStatement = false );
 
     /** @brief The script send a @p debugString using the print() function. */
     void output( const QString &debugString, const QScriptContextInfo &contextInfo );
@@ -416,12 +461,12 @@ signals:
     void informationMessage( const QString &message );
     void errorMessage( const QString &message );
 
-    void loadScriptStarted( LoadScriptJob *job );
-    void requestTimetableDataStarted( TimetableDataRequestJob *job );
-    void callScriptFunctionStarted( CallScriptFunctionJob *job );
-    void commandExecutionStarted( ExecuteConsoleCommandJob *job );
-    void evaluationStarted( EvaluateInContextJob *job );
-    void testFeaturesStarted( TestFeaturesJob *job );
+    /** @brief A job of the given @p type has been started. */
+    void jobStarted( JobType type, const QString &useCase, const QString &objectName );
+
+    /** @brief A job of the given @p type is done. */
+    void jobDone( JobType type, const QString &useCase, const QString &objectName,
+                  const DebuggerJobResult &result );
 
     /**
      * @brief A LoadScriptJob is done.
@@ -433,10 +478,12 @@ signals:
      *   contains an error message in that case). False otherwise.
      * @param globalFunctions A list of global functions used by the PublicTransport engine that
      *   are implemented by the script.
+     * @param includedFiles A list of file paths to all included script files.
      **/
     void loadScriptResult( ScriptErrorType lastScriptError,
                            const QString &lastScriptErrorString,
-                           const QStringList &globalFunctions );
+                           const QStringList &globalFunctions,
+                           const QStringList &includedFiles );
 
     /**
      * @brief An ExecuteConsoleCommandJob is done.
@@ -477,38 +524,45 @@ signals:
     void requestTimetableDataResult( const QSharedPointer< AbstractRequest > &request,
                              bool success, const QString &explanation,
                              const QList< TimetableData > &timetableData = QList< TimetableData >(),
-                             const QScriptValue &returnValue = QScriptValue() );
+                             const QVariant &returnValue = QVariant() );
 
     void callScriptFunctionResult( const QString &functionName,
-                                   const QScriptValue &returnValue = QScriptValue() );
+                                   const QVariant &returnValue = QVariant() );
 
-    void testFeaturesResult( const QList<Enums::ProviderFeature> features ); // TODO
+    void testFeaturesResult( const QList<Enums::ProviderFeature> features );
 
-    void scriptErrorReceived( const QString &errorMessage, const QScriptContextInfo &contextInfo,
-                              const QString &failedParseText );
+    void scriptMessageReceived( const QString &errorMessage, const QScriptContextInfo &contextInfo,
+                              const QString &failedParseText,
+                              Helper::ErrorSeverity severity = Helper::Information );
 
 public slots:
     /** @brief Continue script execution until the next statement. */
-    inline void debugStepInto( int repeat = 0 ) { m_debugger->debugStepInto(repeat); };
+    inline void debugStepInto( int repeat = 0 ) {
+        if ( hasRunningJobs() ) currentJob()->debugStepInto(repeat);
+    };
 
     /** @brief Continue script execution until the next statement in the same level. */
-    inline void debugStepOver( int repeat = 0 ) { m_debugger->debugStepOver(repeat); };
+    inline void debugStepOver( int repeat = 0 ) {
+        if ( hasRunningJobs() ) currentJob()->debugStepOver(repeat);
+    };
 
     /** @brief Continue script execution until the current function gets left. */
-    inline void debugStepOut( int repeat = 0 ) { m_debugger->debugStepOut(repeat); };
+    inline void debugStepOut( int repeat = 0 ) {
+        if ( hasRunningJobs() ) currentJob()->debugStepOut(repeat);
+    };
 
     /** @brief Continue script execution until @p lineNumber is reached. */
     void debugRunUntilLineNumber( const QString &fileName, int lineNumber ) {
-            m_debugger->debugRunUntilLineNumber(fileName, lineNumber); };
+        if ( hasRunningJobs() ) currentJob()->debugRunUntilLineNumber(fileName, lineNumber); };
 
     /** @brief Interrupt script execution. */
-    inline void debugInterrupt() { m_debugger->debugInterrupt(); };
+    inline void debugInterrupt() { if ( hasRunningJobs() ) currentJob()->debugInterrupt(); };
 
     /** @brief Continue script execution, only interrupt on breakpoints or uncaught exceptions. */
-    inline void debugContinue() { m_debugger->debugContinue(); };
+    inline void debugContinue() { if ( hasRunningJobs() ) currentJob()->debugContinue(); };
 
     /** @brief Abort script execution. */
-    inline void abortDebugger() { m_debugger->abortDebugger(); };
+    inline void abortDebugger() { if ( hasRunningJobs() ) currentJob()->abortDebugger(); };
 
     /** @brief Remove all breakpoints, for each removed breakpoint breakpointRemoved() gets emitted. */
     void removeAllBreakpoints();
@@ -532,52 +586,57 @@ protected slots:
     /** @brief A TestFeaturesJob is done. */
     void testFeaturesJobDone( ThreadWeaver::Job *job );
 
-    void jobStarted( ThreadWeaver::Job *job );
-    void jobDestroyed( QObject *job );
+    void slotJobStarted( ThreadWeaver::Job *job );
+    void slotJobDone( ThreadWeaver::Job *job );
 
-    void slotStarted();
-    void slotStopped( bool aborted = false );
-    void slotInterrupted();
-    void slotContinued( bool willInterruptAfterNextStatement = false );
+    void slotStarted( const QDateTime &timestamp );
+    void slotStopped( const QDateTime &timestamp, ScriptStoppedFlags flags = ScriptStopped,
+                      int uncaughtExceptionLineNumber = -1,
+                      const QString &uncaughtException = QString() );
+    void slotInterrupted( int lineNumber, const QString &fileName, const QDateTime &timestamp );
+    void slotContinued( const QDateTime &timestamp, bool willInterruptAfterNextStatement = false );
     void slotAborted();
-    void asynchronousRequestWaitFinished( int statusCode, int size );
+    void asynchronousRequestWaitFinished( const QDateTime &timestamp, int statusCode, int size );
     void synchronousRequestWaitFinished( int statusCode, int waitingTime, int size );
 
     void timeout();
 
 private:
-    LoadScriptJob *enqueueNewLoadScriptJob( DebugFlags debugFlags = NoDebugFlags );
+    void initialize();
     void runAfterScriptIsLoaded( ThreadWeaver::Job *dependendJob );
-    void createScriptObjects( const ServiceProviderData *data );
     void assignDebuggerQueuePolicy( DebuggerJob *job );
     void assignEvaluateInContextQueuePolicy( DebuggerJob *job );
+    LoadScriptJob *createLoadScriptJob( DebugFlags debugFlags = NeverInterrupt );
+    void connectJob( DebuggerJob *debuggerJob );
 
     void startTimeout( int milliseconds = 5000 );
     void stopTimeout();
 
-    ScriptState m_state;
-    ThreadWeaver::WeaverInterface *const m_weaver;
-    LoadScriptJob *m_loadScriptJob;
-    QMutex *const m_engineMutex; // Global mutex to protect the script engine
+    inline const QPointer<DebuggerJob> currentJob() const {
+        QPointer<DebuggerJob> job = m_runningJobs.top();
+        if ( (job->type() == EvaluateInContext || job->type() == ExecuteConsoleCommand) &&
+             m_runningJobs.count() > 1 )
+        {
+            job = m_runningJobs[ m_runningJobs.count() - 2 ];
+        }
+        return job;
+    };
+    inline bool isEvaluating() const {
+        return hasRunningJobs() ? currentJob()->isEvaluating() : false;
+    };
 
-    QScriptEngine *const m_engine; // Can be accessed simultanously by multiple threads, protected by m_engineMutex
-    QScriptProgram *m_script;
-    DebuggerAgent *const m_debugger; // Is thread safe
+    ScriptState m_state;
+    WeaverInterfacePointer m_weaver;
+    LoadScriptJob *m_loadScriptJob;
+    QStack< QPointer<DebuggerJob> > m_runningJobs;
+
     ScriptErrorType m_lastScriptError;
     QString m_lastScriptErrorString;
-
-    const ServiceProviderData *m_data;
-    Network *m_scriptNetwork;
-    Helper *m_scriptHelper;
-    ResultObject *m_scriptResult;
-    Storage *m_scriptStorage;
-    DataStreamPrototype *m_scriptDataStreamPrototype;
+    ScriptData m_data;
 
     VariableModel *const m_variableModel;
     BacktraceModel *const m_backtraceModel;
     BreakpointModel *const m_breakpointModel;
-
-    ThreadWeaver::JobSequence *m_jobSequence;
 
     // Restricts access to the debugger to one job at a time
     // (currently assigned to LoadScriptJob and TimetableDataRequestJob)
@@ -589,7 +648,6 @@ private:
     //  is executing script code)
     ThreadWeaver::ResourceRestrictionPolicy *m_evaluateInContextRestrictionPolicy;
 
-    QList< QObject* > m_runningJobs;
     bool m_running;
     ScriptRunData *m_runData;
     QTimer *m_timeout;

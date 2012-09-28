@@ -126,7 +126,7 @@ public:
      * @param data Information about the service provider.
      * @param scriptStorage The shared Storage object.
      **/
-    explicit ScriptJob( const ScriptObjects &objects, QObject* parent = 0 );
+    explicit ScriptJob( const ScriptData &data, QObject* parent = 0 );
 
     /** @brief Destructor. */
     virtual ~ScriptJob();
@@ -140,7 +140,7 @@ public:
     /** @brief Return a string describing the error, if success() returns false. */
     QString errorString() const { return m_errorString; };
 
-    /** @brief TODO. */
+    /** @brief Return the URL of the last finished request. */
     QString lastDownloadUrl() const { return m_lastUrl; };
 
 signals:
@@ -192,6 +192,7 @@ protected:
     virtual bool success() const { return m_success; };
 
     QScriptEngine *m_engine;
+    ScriptData m_data;
     ScriptObjects m_objects;
     QEventLoop *m_eventLoop;
     int m_published;
@@ -205,8 +206,8 @@ class DepartureJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit DepartureJob( const ScriptObjects &objects,
-                           const DepartureRequest& request, QObject* parent = 0);
+    explicit DepartureJob( const ScriptData &data, const DepartureRequest& request,
+                           QObject* parent = 0);
 
     virtual ~DepartureJob();
 
@@ -221,8 +222,8 @@ class ArrivalJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit ArrivalJob( const ScriptObjects &objects,
-                         const ArrivalRequest& request, QObject* parent = 0);
+    explicit ArrivalJob( const ScriptData &data, const ArrivalRequest& request,
+                         QObject* parent = 0);
 
     virtual ~ArrivalJob();
 
@@ -237,8 +238,8 @@ class JourneyJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit JourneyJob( const ScriptObjects &objects,
-                         const JourneyRequest& request, QObject* parent = 0);
+    explicit JourneyJob( const ScriptData &data, const JourneyRequest& request,
+                         QObject* parent = 0);
 
     virtual ~JourneyJob();
 
@@ -253,8 +254,8 @@ class StopSuggestionsJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit StopSuggestionsJob( const ScriptObjects &objects,
-                                 const StopSuggestionRequest& request, QObject* parent = 0);
+    explicit StopSuggestionsJob( const ScriptData &data, const StopSuggestionRequest& request,
+                                 QObject* parent = 0);
 
     virtual ~StopSuggestionsJob();
 
@@ -269,7 +270,7 @@ class StopSuggestionsFromGeoPositionJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit StopSuggestionsFromGeoPositionJob( const ScriptObjects &objects,
+    explicit StopSuggestionsFromGeoPositionJob( const ScriptData &data,
             const StopSuggestionFromGeoPositionRequest& request, QObject* parent = 0);
 
     virtual ~StopSuggestionsFromGeoPositionJob();
@@ -285,8 +286,8 @@ class AdditionalDataJob : public ScriptJob {
     Q_OBJECT
 
 public:
-    explicit AdditionalDataJob( const ScriptObjects &objects,
-                                const AdditionalDataRequest& request, QObject* parent = 0);
+    explicit AdditionalDataJob( const ScriptData &data, const AdditionalDataRequest& request,
+                                QObject* parent = 0);
     virtual ~AdditionalDataJob();
 
     virtual const AbstractRequest* request() const;

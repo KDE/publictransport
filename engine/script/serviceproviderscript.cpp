@@ -104,7 +104,7 @@ bool ServiceProviderScript::lazyLoadScript()
     scriptFile.close();
 
     // Initialize the script
-    m_objects.createObjects( m_data, QScriptProgram(scriptContents, m_data->scriptFileName()) );
+    m_scriptData = ScriptData( m_data, QScriptProgram(scriptContents, m_data->scriptFileName()) );
 
     return true;
 }
@@ -236,9 +236,11 @@ QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
             }
         }
         if ( ok ) {
-            m_objects.attachToEngine( &engine );
+            ScriptObjects objects;
+            objects.createObjects( m_scriptData );
+            objects.attachToEngine( &engine, m_scriptData );
 
-            engine.evaluate( m_objects.scriptProgram );
+            engine.evaluate( m_scriptData.program );
             QVariantList result;
             if ( !engine.hasUncaughtException() ) {
                 result = engine.globalObject().property(
@@ -567,7 +569,7 @@ void ServiceProviderScript::requestDepartures( const DepartureRequest &request )
         return;
     }
 
-    DepartureJob *job = new DepartureJob( m_objects, request, this );
+    DepartureJob *job = new DepartureJob( m_scriptData, request, this );
     connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );
@@ -584,7 +586,7 @@ void ServiceProviderScript::requestArrivals( const ArrivalRequest &request )
         return;
     }
 
-    ArrivalJob *job = new ArrivalJob( m_objects, request, this );
+    ArrivalJob *job = new ArrivalJob( m_scriptData, request, this );
     connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );
@@ -601,7 +603,7 @@ void ServiceProviderScript::requestJourneys( const JourneyRequest &request )
         return;
     }
 
-    JourneyJob *job = new JourneyJob( m_objects, request, this );
+    JourneyJob *job = new JourneyJob( m_scriptData, request, this );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequest,bool)),
              this, SLOT(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequest,bool)) );
@@ -616,7 +618,7 @@ void ServiceProviderScript::requestStopSuggestions( const StopSuggestionRequest 
         return;
     }
 
-    StopSuggestionsJob *job = new StopSuggestionsJob( m_objects, request, this );
+    StopSuggestionsJob *job = new StopSuggestionsJob( m_scriptData, request, this );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)),
              this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)) );
@@ -633,7 +635,7 @@ void ServiceProviderScript::requestStopSuggestionsFromGeoPosition(
     }
 
     StopSuggestionsFromGeoPositionJob *job = new StopSuggestionsFromGeoPositionJob(
-            m_objects, request, this );
+            m_scriptData, request, this );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)),
              this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)) );
@@ -648,7 +650,7 @@ void ServiceProviderScript::requestAdditionalData( const AdditionalDataRequest &
         return;
     }
 
-    AdditionalDataJob *job = new AdditionalDataJob( m_objects, request, this );
+    AdditionalDataJob *job = new AdditionalDataJob( m_scriptData, request, this );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(additionalDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)),
              this, SLOT(additionDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)) );

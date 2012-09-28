@@ -343,31 +343,33 @@ public:
     /** @brief Destructor. */
     virtual ~NetworkRequest();
 
+    typedef QSharedPointer< NetworkRequest > Ptr;
+
     /**
      * @brief The URL of this request.
      *
      * @note The URL can not be changed, a request object is only used for @em one request.
      * @ingroup scripting
      **/
-    QString url() const { return m_url; };
+    QString url() const;
 
     /**
      * @brief Whether or not the request is currently running.
      * @ingroup scripting
      **/
-    bool isRunning() const { return m_reply; };
+    bool isRunning() const;
 
     /**
      * @brief Whether or not the request is finished (successful or not), ie. was running.
      * @ingroup scripting
      **/
-    bool isFinished() const { return m_isFinished; };
+    bool isFinished() const;
 
     /** @brief Whether or not this request was redirected. */
-    bool isRedirected() const { return m_redirectUrl.isValid(); };
+    bool isRedirected() const;
 
     /** @brief Get the redirected URL of this request, if any. */
-    QUrl redirectedUrl() const { return m_redirectUrl; };
+    QUrl redirectedUrl() const;
 
     /**
      * @brief Set the data to sent to the server when using Network::post().
@@ -389,7 +391,7 @@ public:
     Q_INVOKABLE void setPostData( const QString &postData, const QString &charset = QString() );
 
     /** @brief Get the data to sent to the server when using Network::post(). */
-    QString postData() const { return m_postData; };
+    QString postData() const;
 
     /** @brief Get the @p header decoded using @p charset. */
     Q_INVOKABLE QString header( const QString &header, const QString& charset ) const;
@@ -411,7 +413,7 @@ public:
     Q_INVOKABLE void setHeader( const QString &header, const QString &value,
                                 const QString &charset = QString() );
 
-    quint64 uncompressedSize() const { return m_uncompressedSize; };
+    quint64 uncompressedSize() const;
 
 public Q_SLOTS:
     /**
@@ -468,6 +470,7 @@ protected:
     bool isValid() const;
 
 private:
+    QMutex *m_mutex;
     const QString m_url;
     QUrl m_redirectUrl;
     Network *m_network;
@@ -525,7 +528,7 @@ private:
  * @ingroup scripting
  * @since 0.10
  **/
-class Network : public QObject {
+class Network : public QObject, public QScriptable {
     Q_OBJECT
     Q_PROPERTY( QString lastUrl READ lastUrl )
     Q_PROPERTY( bool lastDownloadAborted READ lastDownloadAborted )
@@ -644,7 +647,7 @@ public:
      * @see hasRunningRequests
      * @ingroup scripting
      **/
-    Q_INVOKABLE QList< NetworkRequest* > runningRequests() const;
+    Q_INVOKABLE QList< NetworkRequest::Ptr > runningRequests() const;
 
     /**
      * @brief Returns the number of currently running requests.
@@ -667,7 +670,7 @@ Q_SIGNALS:
      * @ingroup scripting
      * @see synchronousRequestStarted()
      **/
-    void requestStarted( NetworkRequest *request );
+    void requestStarted( const NetworkRequest::Ptr &request );
 
     /**
      * @brief Emitted when an asynchronous request has finished.
@@ -680,11 +683,13 @@ Q_SIGNALS:
      * @ingroup scripting
      * @see synchronousRequestFinished()
      **/
-    void requestFinished( NetworkRequest *request, const QByteArray &data = QByteArray(),
+    void requestFinished( const NetworkRequest::Ptr &request,
+                          const QByteArray &data = QByteArray(),
+                          const QDateTime &timestamp = QDateTime(),
                           int statusCode = 200, int size = 0 );
 
     /** @brief Emitted when an asynchronous @p request was redirect to @p newUrl. */
-    void requestRedirected( NetworkRequest *request, const QUrl &newUrl );
+    void requestRedirected( const NetworkRequest::Ptr &request, const QUrl &newUrl );
 
     /**
      * @brief Emitted when a synchronous request has been started.
@@ -739,7 +744,7 @@ Q_SIGNALS:
      * @param request The request that was aborted.
      * @ingroup scripting
      **/
-    void requestAborted( NetworkRequest *request );
+    void requestAborted( const NetworkRequest::Ptr &request );
 
 public Q_SLOTS:
     /**
@@ -757,6 +762,7 @@ protected Q_SLOTS:
 
 protected:
     bool checkRequest( NetworkRequest *request );
+    NetworkRequest::Ptr getSharedRequest( NetworkRequest *request ) const;
 
 private:
     QMutex *m_mutex;
@@ -765,7 +771,8 @@ private:
     bool m_quit;
     QString m_lastUrl;
     bool m_lastDownloadAborted;
-    QList< NetworkRequest* > m_runningRequests;
+    QList< NetworkRequest::Ptr > m_requests;
+    QList< NetworkRequest::Ptr > m_finishedRequests;
 };
 
 /**
@@ -811,40 +818,58 @@ public:
      * @param serviceProviderId The ID of the service provider this Helper object is created for.
      * @param parent The parent object.
      **/
-    explicit Helper( const QString &serviceProviderId, QObject* parent = 0 ) : QObject( parent ) {
-        m_serviceProviderId = serviceProviderId;
+    explicit Helper( const QString &serviceProviderId, QObject* parent = 0 )
+            : QObject(parent), m_serviceProviderId(serviceProviderId), m_errorMessageRepetition(0)
+    {
         qRegisterMetaType< Helper::ErrorSeverity >( "Helper::ErrorSeverity" );
     };
 
+    virtual ~Helper();
+
     /**
-     * @brief Prints @p message on stdout and logs it in a file.
+     * @brief Prints an information @p message on stdout and logs it in a file.
      *
-     * Logs the error message with the given data string, eg. the HTML code where parsing failed.
-     * The message gets also send to stdout with a short version of the data
+     * Logs the message with the given @p failedParseText string, eg. the HTML code where parsing
+     * failed. The message gets also send to stdout with a short version of the data.
      * The log file is normally located at "~/.kde4/share/apps/plasma_engine_publictransport/serviceproviders.log".
+     * If the same message gets sent repeatedly, it gets sent only once.
      *
-     * If logging is not needed use the JavaScript function @c print instead.
-     * If the error is fatal consider using @c throw instead to create an exception and abort
-     * script execution.
+     * @param message The information message.
+     * @param failedParseText The text in the source document to which the message applies.
+     **/
+    Q_INVOKABLE void information( const QString &message, const QString &failedParseText = QString() ) {
+            messageReceived(message, failedParseText, Information); };
+
+    /**
+     * @brief Prints a warning @p message on stdout and logs it in a file.
+     *
+     * Logs the message with the given @p failedParseText string, eg. the HTML code where parsing
+     * failed. The message gets also send to stdout with a short version of the data.
+     * The log file is normally located at "~/.kde4/share/apps/plasma_engine_publictransport/serviceproviders.log".
+     * If the same message gets sent repeatedly, it gets sent only once.
+     *
+     * @param message The warning message.
+     * @param failedParseText The text in the source document to which the message applies.
+     **/
+    Q_INVOKABLE void warning( const QString &message, const QString &failedParseText = QString() ) {
+            messageReceived(message, failedParseText, Warning); };
+
+    /**
+     * @brief Prints an error @p message on stdout and logs it in a file.
+     *
+     * Logs the message with the given @p failedParseText string, eg. the HTML code where parsing
+     * failed. The message gets also send to stdout with a short version of the data.
+     * The log file is normally located at "~/.kde4/share/apps/plasma_engine_publictransport/serviceproviders.log".
+     * If the same message gets sent repeatedly, it gets sent only once.
+     *
+     * @note If the error is fatal consider using @c throw instead to create an exception and abort
+     *   script execution.
      *
      * @param message The error message.
-     * @param failedParseText The text in the source document where parsing failed.
-     * @param severity The severity of the error.
+     * @param failedParseText The text in the source document to which the message applies.
      **/
-    Q_INVOKABLE void error( const QString &message, const QString &failedParseText = QString(),
-                            Helper::ErrorSeverity severity = Warning );
-
-//     /** TODO Implement decode() function for scripts, eg. for version 0.3.1
-//      * @brief Decodes HTML entities in @p html.
-//      *
-//      * For example "&nbsp;" gets replaced by " ".
-//      * HTML entities which include a charcode, eg. "&#100;" are also replaced, in the example
-//      * by the character for the charcode 100, ie. QChar(100).
-//      *
-//      * @param html The string to be decoded.
-//      * @return @p html with decoded HTML entities.
-//      **/
-//     Q_INVOKABLE static QString decode( const QString &html );
+    Q_INVOKABLE void error( const QString &message, const QString &failedParseText = QString() ) {
+            messageReceived(message, failedParseText, Fatal); };
 
     /**
      * @brief Decodes HTML entities in @p html.
@@ -1249,15 +1274,20 @@ signals:
      * @param failedParseText The text in the source document where parsing failed.
      * @param severity The severity of the error.
      **/
-    void errorReceived( const QString &message, const QScriptContextInfo &contextInfo,
+    void messageReceived( const QString &message, const QScriptContextInfo &contextInfo,
                         const QString &failedParseText = QString(),
                         Helper::ErrorSeverity severity = Warning );
 
 private:
     static QString getTagName( const QVariantMap &searchResult, const QString &type = "contents",
             const QString &regExp = QString(), const QString attributeName = QString() );
+    void messageReceived( const QString &message, const QString &failedParseText,
+                          Helper::ErrorSeverity severity );
+    void emitRepeatedMessageWarning();
 
     QString m_serviceProviderId;
+    QString m_lastErrorMessage;
+    int m_errorMessageRepetition;
 };
 
 /**
@@ -1348,6 +1378,11 @@ public:
      * @return The list of stored TimetableData objects.
      **/
     QList< TimetableData > data() const;
+
+    Q_INVOKABLE inline QVariant data( int index, int information ) const {
+        return data( index, static_cast<Enums::TimetableInformation>(information) );
+    };
+    Q_INVOKABLE QVariant data( int index, Enums::TimetableInformation information ) const;
 
     /**
      * @brief Checks whether or not the list of TimetableData objects is empty.

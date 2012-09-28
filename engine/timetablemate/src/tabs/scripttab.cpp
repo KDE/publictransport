@@ -66,7 +66,8 @@ ScriptTab::ScriptTab( Project *project, KTextEditor::Document *document, QWidget
           m_previousFunctionAction(0), m_nextFunctionAction(0), m_backgroundParserTimer(0),
           m_executionLine(-1)
 {
-    connect( project->debugger(), SIGNAL(continued()), this, SLOT(removeExecutionMarker()) );
+    connect( project->debugger(), SIGNAL(continued(QDateTime,bool)),
+             this, SLOT(removeExecutionMarker()) );
     connect( project->debugger(), SIGNAL(stopped()), this, SLOT(removeExecutionMarker()) );
 }
 
@@ -76,10 +77,8 @@ ScriptTab::~ScriptTab()
 
 void ScriptTab::setExecutionPosition( int executionLine, int column )
 {
-    KTextEditor::View *view = document()->activeView();
-    view->blockSignals( true );
-    view->setCursorPosition( KTextEditor::Cursor(executionLine - 1, column) );
-    view->blockSignals( false );
+    Q_UNUSED( column );
+    goToLine( executionLine );
 
     // Move execution mark
     KTextEditor::MarkInterface *markInterface =
@@ -353,7 +352,7 @@ void ScriptTab::slotSetStatusBarText( const QString &message )
 
 void ScriptTab::toggleBreakpoint( int lineNumber )
 {
-    project()->loadScriptSynchronous();
+//     project()->loadScriptSynchronous();
 
     lineNumber = lineNumber == -1
             ? document()->views().first()->cursorPosition().line() + 1 : lineNumber;
@@ -406,7 +405,7 @@ void ScriptTab::markChanged( KTextEditor::Document *document, const KTextEditor:
                              KTextEditor::MarkInterface::MarkChangeAction action )
 {
     if ( mark.type == KTextEditor::MarkInterface::BreakpointActive ) {
-        project()->loadScriptSynchronous();
+//         project()->loadScriptSynchronous();
 
         Debugger::BreakpointModel *breakpointModel = project()->debugger()->breakpointModel();
         if ( action == KTextEditor::MarkInterface::MarkAdded ) {
@@ -441,10 +440,7 @@ void ScriptTab::currentFunctionChanged( int index )
 //     FunctionNode *function = dynamic_cast< FunctionNode* >( node );
     FunctionNode::Ptr function = node.dynamicCast<FunctionNode>();
     if ( function ) {
-        KTextEditor::View *view = document()->activeView();
-        view->blockSignals( true );
-        view->setCursorPosition( KTextEditor::Cursor(function->line() - 1, 0) );
-        view->blockSignals( false );
+        goToLine( function->line() );
     }
 
     updateNextPreviousFunctionActions();
@@ -568,7 +564,7 @@ void ScriptTab::parseScript()
     KTextEditor::MarkInterface *markInterface =
             qobject_cast<KTextEditor::MarkInterface*>( document() );
     if ( markInterface ) {
-        markInterface->clearMarks();
+        markInterface->clearMarks(); // TODO Only remove error marks
 
         if ( parser.hasError() ) {
             markInterface->addMark( parser.errorLine() - 1, KTextEditor::MarkInterface::Error );
@@ -606,6 +602,14 @@ void ScriptTab::parseScript()
     updateNextPreviousFunctionActions();
 
 //     project()->debugger()->loadScript( project()->scriptText(), project()->provider()->data() );
+}
+
+void ScriptTab::goToLine( int lineNumber )
+{
+    KTextEditor::View *view = document()->activeView();
+    view->blockSignals( true );
+    view->setCursorPosition( KTextEditor::Cursor(lineNumber - 1, 0) );
+    view->blockSignals( false );
 }
 
 void ScriptTab::goToPreviousFunction()

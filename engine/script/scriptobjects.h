@@ -27,28 +27,44 @@ using namespace Scripting;
 
 class QMutex;
 class QScriptEngine;
+
+struct ScriptData {
+    /** @brief Read script data from the engine's global object. */
+    static ScriptData fromEngine( QScriptEngine *engine,
+                                  const QScriptProgram &scriptProgram = QScriptProgram() );
+
+    ScriptData();
+    ScriptData( const ServiceProviderData *data, const QScriptProgram &scriptProgram );
+
+    bool isValid() const {
+        return provider.isValid() && !program.isNull();
+    };
+
+    ServiceProviderData provider;
+    QScriptProgram program;
+};
+
 struct ScriptObjects {
     /** @brief Read script objects from the engine's global object. */
-    static ScriptObjects fromEngine( QScriptEngine *engine,
-                                     const QScriptProgram &scriptProgram = QScriptProgram() );
+    static ScriptObjects fromEngine( QScriptEngine *engine );
 
     ScriptObjects();
 
     void clear();
-    void createObjects( const ServiceProviderData *data = 0,
-                        const QScriptProgram &scriptProgram = QScriptProgram() );
-    bool attachToEngine( QScriptEngine *engine );
+    void createObjects( const ServiceProviderData *data, const QScriptProgram &scriptProgram );
+    void createObjects( const ScriptData &data = ScriptData() );
+    bool attachToEngine( QScriptEngine *engine, const ScriptData &data );
+    void moveToThread( QThread *thread );
+    QThread *currentThread() const;
 
     bool isValid() const {
-        return data.isValid() && scriptStorage && !scriptNetwork.isNull() && scriptHelper;
+        return storage && network && result && helper;
     };
 
-    ServiceProviderData data;
-    QSharedPointer< Storage > scriptStorage;
-    QSharedPointer< Network > scriptNetwork;
-    QSharedPointer< ResultObject > scriptResult;
-    QSharedPointer< Helper > scriptHelper;
-    QScriptProgram scriptProgram;
+    QSharedPointer< Storage > storage;
+    QSharedPointer< Network > network;
+    QSharedPointer< ResultObject > result;
+    QSharedPointer< Helper > helper;
     QString lastError;
 };
 

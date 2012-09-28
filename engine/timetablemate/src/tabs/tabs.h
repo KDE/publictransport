@@ -17,8 +17,8 @@
 *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
-#ifndef ENUMS_H
-#define ENUMS_H
+#ifndef TABS_ENUMS_H
+#define TABS_ENUMS_H
 
 // Own includes
 #include "config.h"

@@ -71,6 +71,45 @@ QString AdditionalDataRequest::functionName() const
     return ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA;
 }
 
+QString DepartureRequest::argumentsString() const
+{
+    return QString("{stop: \"%1\", city: \"%2\", maxCount: %3, dateTime: %4, dataType: %5}")
+            .arg(stop, city).arg(maxCount)
+            .arg(dateTime.toString(Qt::SystemLocaleShortDate), parseModeName());
+}
+
+QString ArrivalRequest::argumentsString() const
+{
+    return DepartureRequest::argumentsString();
+}
+
+QString StopSuggestionRequest::argumentsString() const
+{
+    return QString("{stop: \"%1\", city: \"%2\", maxCount: %3}").arg(stop, city).arg(maxCount);
+}
+
+QString StopSuggestionFromGeoPositionRequest::argumentsString() const
+{
+    return QString("{longitude: %1, longitude: %2, distance: %3, maxCount: %4}")
+            .arg(longitude).arg(latitude).arg(distance).arg(maxCount);
+}
+
+QString AdditionalDataRequest::argumentsString() const
+{
+    return QString("{stop: \"%1\", city: \"%2\", dataType: %3, transportLine: \"%4\", "
+                   "target: \"%5\", dateTime: %6, routeDataUrl: %7}")
+            .arg(stop, city, parseModeName(), transportLine, target,
+                 dateTime.toString(Qt::SystemLocaleShortDate), routeDataUrl);
+}
+
+QString JourneyRequest::argumentsString() const
+{
+    return QString("{stop: \"%1\", city: \"%2\", maxCount: %3, originStop: \"%4\", "
+                   "targetStop: \"%5\", dateTime: %6}")
+            .arg(stop, city).arg(maxCount)
+            .arg(stop, targetStop, dateTime.toString(Qt::SystemLocaleShortDate));
+}
+
 QScriptValue StopSuggestionRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();

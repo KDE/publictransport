@@ -28,7 +28,6 @@
 
 // KDE includes
 #include <KLocalizedString>
-#include <KWidgetItemDelegate>
 #include <KWebView>
 
 // Qt includes
@@ -82,9 +81,6 @@ TestDockWidget::TestDockWidget( ProjectModel *projectModel, KActionMenu *showDoc
 
 TestDockWidget::~TestDockWidget()
 {
-    QAbstractItemDelegate *oldDelegate =
-            m_testWidget->itemDelegateForColumn( TestModel::ExplanationColumn );
-    delete oldDelegate;
 }
 
 void TestDockWidget::activeProjectAboutToChange( Project *project, Project *previousProject )
@@ -105,19 +101,11 @@ void TestDockWidget::activeProjectAboutToChange( Project *project, Project *prev
 
 void TestDockWidget::initModel( TestModel *testModel )
 {
-    QAbstractItemDelegate *oldDelegate =
-            m_testWidget->itemDelegateForColumn( TestModel::ExplanationColumn );
     m_testWidget->setModel( testModel );
     if ( m_testModel && m_testModel->QObject::parent() == this ) {
         delete m_testModel;
     }
     m_testModel = testModel;
-    if ( m_testModel ) {
-        // Create delegate for the solution column of the new model
-        ActionDelegate *delegate = new ActionDelegate( m_testWidget, this );
-        m_testWidget->setItemDelegateForColumn( TestModel::ExplanationColumn, delegate );
-    }
-    delete oldDelegate;
 
     // Initialize header
     QHeaderView *header = m_testWidget->header();
@@ -174,7 +162,7 @@ void TestDockWidget::contextMenu( const QPoint &pos )
         return;
     }
 
-    QScopedPointer< QMenu > menu( new QMenu(this) );
+    QPointer< QMenu > menu( new QMenu(this) );
     QAction *openUrlAction = 0, *copyUrlAction = 0;
     TestModel::Test test = TestModel::InvalidTest;
     TestModel::TestCase testCase = TestModel::InvalidTestCase;
@@ -198,6 +186,12 @@ void TestDockWidget::contextMenu( const QPoint &pos )
                                              i18nc("@info/plain", "Open URL") );
             copyUrlAction = menu->addAction( KIcon("edit-copy"), i18nc("@info/plain", "Copy URL") );
         }
+
+        // Show solution actions in the context menu
+        QAction *solutionAction = TestModel::actionFromIndex( index );
+        if ( solutionAction ) {
+            menu->addAction( solutionAction );
+        }
     }
 
     menu->addSeparator();
@@ -214,4 +208,5 @@ void TestDockWidget::contextMenu( const QPoint &pos )
             QApplication::clipboard()->setText( url );
         }
     }
+    delete menu.data();
 }

@@ -1,0 +1,51 @@
+
+#cmakedefine ENABLE_DEBUGGER_EVENT
+#cmakedefine ENABLE_DEBUGGER_EVENT_POS_CHANGED
+#cmakedefine ENABLE_DEBUGGER_JOB_SYNCHRONIZATION
+#cmakedefine ENABLE_DEBUGGER_CONTROL
+#cmakedefine ENABLE_DEBUGGER_STATE_CHANGE
+
+// Debug output for eg. "Execution started", "Interrupted", "Continued", "Aborted", ...
+#ifdef ENABLE_DEBUGGER_EVENT
+    #define DEBUGGER_EVENT(event) kDebug() << event << this
+#else
+    #define DEBUGGER_EVENT(event)
+#endif
+
+// Debug output for every line of script code that was executed in the engine
+#ifdef ENABLE_DEBUGGER_EVENT_POS_CHANGED
+    #define DEBUGGER_EVENT_POS_CHANGED(msg) kDebug() << msg << this
+#else
+    #define DEBUGGER_EVENT_POS_CHANGED(msg)
+#endif
+
+// Debug output for job started/stopped/wait signals
+#ifdef ENABLE_DEBUGGER_JOB_SYNCHRONIZATION
+    #define DEBUGGER_JOB_SYNCHRONIZATION( msg ) kDebug() << msg
+    #define DEBUGGER_JOB_SYNCHRONIZATION_JOB( job, msg ) \
+        kDebug() << msg << ('(' + (job ? job->toString() : "Job already deleted") + ')')
+#else
+    #define DEBUGGER_JOB_SYNCHRONIZATION( msg )
+    #define DEBUGGER_JOB_SYNCHRONIZATION_JOB( job, msg )
+#endif
+
+#ifdef ENABLE_DEBUGGER_CONTROL
+    // Debug output when a debug control function gets called, eg. continue(), debugStepOver(), ...
+    #define DEBUGGER_CONTROL(function) kDebug() << QString("%1()").arg(function) << this
+    #define DEBUGGER_CONTROL2(function, arg1) \
+        kDebug() << QString("%1( %2 )").arg(function).arg(arg1) << this
+    #define DEBUGGER_CONTROL3(function, arg1, arg2) \
+        kDebug() << QString("%1( %2, %3 )").arg(function).arg(arg1).arg(arg2) << this
+#else
+    #define DEBUGGER_CONTROL(function)
+    #define DEBUGGER_CONTROL2(function, arg1)
+    #define DEBUGGER_CONTROL3(function, arg1, arg2)
+#endif
+
+// Debug output when the state of the debugger changes
+#ifdef ENABLE_DEBUGGER_STATE_CHANGE
+    #define DEBUGGER_STATE_CHANGE(oldState,newState) \
+          kDebug() << "State changed from" << oldState << "to" << newState << this
+#else
+    #define DEBUGGER_STATE_CHANGE(oldState,newState)
+#endif

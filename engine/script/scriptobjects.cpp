@@ -29,72 +29,105 @@
 
 // Qt includes
 #include <QMutex>
+#include <QApplication>
+#include <QNetworkAccessManager>
 
 ScriptObjects::ScriptObjects()
-        : scriptStorage(0), scriptNetwork(0), scriptResult(0), scriptHelper(0)
+        : storage(0), network(0), result(0), helper(0)
+{
+}
+
+ScriptData::ScriptData()
+{
+}
+
+ScriptData::ScriptData( const ServiceProviderData *data, const QScriptProgram &scriptProgram )
+        : provider(data ? *data : ServiceProviderData()), program(scriptProgram)
 {
 }
 
 void ScriptObjects::clear()
 {
-    scriptStorage = QSharedPointer< Storage >( 0 );
-    scriptHelper = QSharedPointer< Helper >( 0 );
-    scriptNetwork = QSharedPointer< Network >( 0 );
-    scriptResult = QSharedPointer< ResultObject >( 0 );
+    storage = QSharedPointer< Storage >( 0 );
+    helper = QSharedPointer< Helper >( 0 );
+    network = QSharedPointer< Network >( 0 );
+    result = QSharedPointer< ResultObject >( 0 );
 }
 
-void ScriptObjects::createObjects( const ServiceProviderData *_data,
-                                   const QScriptProgram &_scriptProgram )
+void ScriptObjects::createObjects( const ServiceProviderData *data,
+                                   const QScriptProgram &scriptProgram )
 {
-    if ( _data ) {
-        data = *_data;
+    createObjects( ScriptData(data, scriptProgram) );
+}
+
+void ScriptObjects::createObjects( const ScriptData &data )
+{
+    if ( !storage ) {
+        storage = QSharedPointer< Storage >( new Storage(data.provider.id()) );
     }
-    if ( !_scriptProgram.isNull() ) {
-        scriptProgram = _scriptProgram;
+    if ( network.isNull() ) {
+        network = QSharedPointer< Network >( new Network(data.provider.fallbackCharset()) );
     }
-    if ( !scriptStorage ) {
-        scriptStorage = QSharedPointer< Storage >( new Storage(data.id()) );
+    if ( result.isNull() ) {
+        result = QSharedPointer< ResultObject >( new ResultObject() );
     }
-    if ( scriptNetwork.isNull() ) {
-        scriptNetwork = QSharedPointer< Network >( new Network(data.fallbackCharset()) );
-    }
-    if ( scriptResult.isNull() ) {
-        scriptResult = QSharedPointer< ResultObject >( new ResultObject() );
-    }
-    if ( !scriptHelper ) {
-        scriptHelper = QSharedPointer< Helper >( new Helper(data.id()) );
+    if ( !helper ) {
+        helper = QSharedPointer< Helper >( new Helper(data.provider.id()) );
     }
 }
 
-ScriptObjects ScriptObjects::fromEngine( QScriptEngine *engine,
-                                         const QScriptProgram &scriptProgram )
+ScriptData ScriptData::fromEngine( QScriptEngine *engine, const QScriptProgram &scriptProgram )
 {
-    ScriptObjects objects;
     ServiceProviderData *data = qobject_cast< ServiceProviderData* >(
             engine->globalObject().property("provider").toQObject() );
-    if ( data ) {
-        objects.data = *data;
-    }
+    return ScriptData( data, scriptProgram );
+}
 
-    objects.scriptHelper =QSharedPointer< Helper >( qobject_cast< Helper* >(
+ScriptObjects ScriptObjects::fromEngine( QScriptEngine *engine )
+{
+    ScriptObjects objects;
+    objects.helper = QSharedPointer< Helper >( qobject_cast< Helper* >(
             engine->globalObject().property("helper").toQObject() ) );
-    objects.scriptNetwork = QSharedPointer< Network >( qobject_cast< Network* >(
+    objects.network = QSharedPointer< Network >( qobject_cast< Network* >(
             engine->globalObject().property("network").toQObject() ) );
-    objects.scriptResult = QSharedPointer< ResultObject >( qobject_cast< ResultObject* >(
+    objects.result = QSharedPointer< ResultObject >( qobject_cast< ResultObject* >(
             engine->globalObject().property("result").toQObject() ) );
-    objects.scriptStorage = QSharedPointer< Storage >( qobject_cast< Storage* >(
+    objects.storage = QSharedPointer< Storage >( qobject_cast< Storage* >(
             engine->globalObject().property("storage").toQObject() ) );
-
-    objects.scriptProgram = scriptProgram;
     return objects;
 }
 
-bool ScriptObjects::attachToEngine( QScriptEngine *engine )
+void ScriptObjects::moveToThread( QThread *thread )
 {
-    if ( !isValid() || scriptProgram.isNull() ) {
-        kWarning() << "Cannot attach invalid objects"
-                   << scriptHelper << scriptNetwork
-                   << scriptResult << scriptStorage;
+    if ( helper ) {
+        helper->moveToThread( thread );
+    }
+    if ( network ) {
+        network->moveToThread( thread );
+    }
+    if ( result ) {
+        result->moveToThread( thread );
+    }
+    if ( storage ) {
+        storage->moveToThread( thread );
+    }
+}
+
+QThread *ScriptObjects::currentThread() const
+{
+    return helper ? helper->thread() : 0;
+}
+
+bool ScriptObjects::attachToEngine( QScriptEngine *engine, const ScriptData &data )
+{
+    if ( !isValid() ) {
+        kDebug() << "Attaching invalid objects" << helper << network << result << storage;
+    } else if ( data.program.isNull() ) {
+        kDebug() << "Attaching invalid data";
+    }
+
+    if ( engine->isEvaluating() ) {
+        kWarning() << "Cannot attach objects while evaluating";
         return false;
     }
 
@@ -108,17 +141,19 @@ bool ScriptObjects::attachToEngine( QScriptEngine *engine )
 
     const QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
 
-    // Add a 'provider' object
-    engine->globalObject().setProperty( "provider", engine->newQObject(&data), flags ); // TEST
+    // Add a 'provider' object, clone a new ServiceProviderData object
+    // for the case that the ScriptData instance gets deleted
+    engine->globalObject().setProperty( "provider",
+                                        engine->newQObject(data.provider.clone(engine)), flags );
 
     // Add an include() function
     QScriptValue includeFunction = engine->globalObject().property("include");
     if ( !includeFunction.isValid() ) {
         includeFunction = engine->newFunction( include, 1 );
     }
-    if ( !scriptProgram.isNull() ) {
+    if ( !data.program.isNull() ) {
         QVariantHash includeData;
-        includeData[ scriptProgram.fileName() ] = maxIncludeLine( scriptProgram.sourceCode() );
+        includeData[ data.program.fileName() ] = maxIncludeLine( data.program.sourceCode() );
         includeFunction.setData( qScriptValueFromValue(engine, includeData) );
     }
     engine->globalObject().setProperty( "include", includeFunction, flags );
@@ -129,10 +164,14 @@ bool ScriptObjects::attachToEngine( QScriptEngine *engine )
     engine->globalObject().setProperty( "DataStream", streamMeta, flags );
 
     // Make the objects available to the script
-    engine->globalObject().setProperty( "helper", engine->newQObject(scriptHelper.data()), flags );
-    engine->globalObject().setProperty( "network", engine->newQObject(scriptNetwork.data()), flags );
-    engine->globalObject().setProperty( "storage", engine->newQObject(scriptStorage.data()), flags );
-    engine->globalObject().setProperty( "result", engine->newQObject(scriptResult.data()), flags );
+    engine->globalObject().setProperty( "helper", helper.isNull()
+            ? engine->undefinedValue() : engine->newQObject(helper.data()), flags );
+    engine->globalObject().setProperty( "network", network.isNull()
+            ? engine->undefinedValue() : engine->newQObject(network.data()), flags );
+    engine->globalObject().setProperty( "storage", storage.isNull()
+            ? engine->undefinedValue() : engine->newQObject(storage.data()), flags );
+    engine->globalObject().setProperty( "result", result.isNull()
+            ? engine->undefinedValue() : engine->newQObject(result.data()), flags );
     engine->globalObject().setProperty( "enum",
             engine->newQMetaObject(&ResultObject::staticMetaObject), flags );
     engine->globalObject().setProperty( "PublicTransport",
@@ -148,7 +187,7 @@ bool ScriptObjects::attachToEngine( QScriptEngine *engine )
 
     // Import extensions (from XML file, <script extensions="...">)
     lastError.clear();
-    foreach ( const QString &extension, data.scriptExtensions() ) {
+    foreach ( const QString &extension, data.provider.scriptExtensions() ) {
         if ( !importExtension(engine, extension) ) {
             lastError = i18nc("@info/plain", "Could not import extension %1", extension);
             return false;

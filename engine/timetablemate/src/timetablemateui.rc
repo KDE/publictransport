@@ -58,6 +58,8 @@
         <Separator/>
         <!-- Actions to run specific tests are inserted here -->
         <ActionList name="test_list" />
+        <Separator/>
+        <Action name="test_all_projects" />
     </Menu>
 
     <!-- Add a separator to separate part menus -->

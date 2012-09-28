@@ -217,7 +217,6 @@ void ConsoleDockWidget::executeCommand( const QString &_commandString )
     }
 
     // Check if commandString contains a command of the form ".<command> ..."
-    project->debugger()->loadScript( project->scriptText(), project->provider()->data() );
     Debugger::ConsoleCommand command = Debugger::ConsoleCommand::fromString( commandString );
     if ( command.isValid() )  {
         if ( command.command() == ConsoleCommand::ClearCommand ) {

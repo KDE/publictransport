@@ -27,8 +27,6 @@
 #ifndef DEBUGGERSTRUCTURES_H
 #define DEBUGGERSTRUCTURES_H
 
-#define DEBUGGER_DEBUG(x) // kDebug() << x
-
 // Qt includes
 #include <QStringList>
 #include <QScriptValue>
@@ -58,14 +56,14 @@ enum DebuggerState {
 
 /** @brief Debug mode used for function arguments. */
 enum DebugFlag {
-    NoDebugFlags            = 0x0000,
+    NeverInterrupt          = 0x0000,
 
     InterruptAtStart        = 0x0001,
     InterruptOnExceptions   = 0x0002,
     InterruptOnBreakpoints  = 0x0004,
 
     InterruptOnExceptionsAndBreakpoints = InterruptOnExceptions | InterruptOnBreakpoints,
-    DefaultDebugFlags = InterruptOnExceptionsAndBreakpoints
+    DefaultDebugFlags = NeverInterrupt
 };
 Q_DECLARE_FLAGS( DebugFlags, DebugFlag );
 
@@ -88,6 +86,16 @@ enum ExecutionControl {
             * and interrupted it at the next statement. */
 };
 
+/** @brief Job types. */
+enum JobType {
+    LoadScript, /**< A job of type LoadScriptJob. */
+    EvaluateInContext, /**< A job of type EvaluateInContextJob. */
+    ExecuteConsoleCommand, /**< A job of type ExecuteConsoleCommandJob. */
+    CallScriptFunction, /**< A job of type CallScriptFunctionJob. */
+    TestFeatures, /**< A job of type TestFeaturesJob. */
+    TimetableDataRequest /**< A job of type TimetableDataRequestJob. */
+};
+
 /** @brief Types of script errors. */
 enum ScriptErrorType {
     NoScriptError = 0,
@@ -106,17 +114,36 @@ enum NextEvaluatableLineHint {
             * be tested next. */
 };
 
+/**
+ * @brief Information about how script execution stopped.
+ *
+ * These flags get used externally by DebuggerAgent, Debugger only uses them internally and emits
+ * Debugger::stopped() when the script is completely finished, ie. has stopped and has no running
+ * network requests. DebuggerAgent::stopped() gets emitted when evaluation in the engine has
+ * stopped, but may be waiting for a network request to continue evaluation with the received data.
+ **/
+enum ScriptStoppedFlag {
+    ScriptStopped               = 0x00, /**< Script evaluation has stopped in the engine,
+                                           * this flag is always set (value 0x0). */
+    ScriptWasAborted            = 0x01, /**< The script was stopped because of an abort, eg.
+                                           * because of a call to abortDebugger(). */
+    ScriptHasRunningRequests    = 0x02  /**< The script engine stopped (paused) evaluation and is
+            * waiting for a network request. It will continue automatically when the request has
+            * finished (when the signal is connected to a slot in the script). */
+};
+Q_DECLARE_FLAGS( ScriptStoppedFlags, ScriptStoppedFlag );
+
 /** @brief Contains information about the result of an evaluation. */
 struct EvaluationResult {
     /** @brief Creates a new EvaluationResult object. */
-    EvaluationResult( const QVariant &returnValue = QVariant() )
+    EvaluationResult( const QString &returnValue = QString() )
             : error(false), errorLineNumber(-1), returnValue(returnValue) {};
 
     bool error; /**< Whether or not there was an error. */
     int errorLineNumber; /**< The line number, where the error happened, if error is true. */
     QString errorMessage; /**< An error message, if error is true. */
     QStringList backtrace; /**< A backtrace from where the error happened, if error is true. */
-    QVariant returnValue; /**< The return value of the evaluation, if error is false. */
+    QString returnValue; /**< The return value of the evaluation as string, if error is false. */
 };
 
 /** @brief Represents one frame of a backtrace. */
@@ -357,8 +384,8 @@ private:
 inline QDebug &operator <<( QDebug debug, DebugFlag debugMode )
 {
     switch ( debugMode ) {
-    case NoDebugFlags:
-        return debug << "NoDebugFlags";
+    case NeverInterrupt:
+        return debug << "NeverInterrupt";
     case InterruptAtStart:
         return debug << "InterruptAtStart";
     case InterruptOnExceptions:
@@ -393,6 +420,8 @@ inline QDebug &operator <<( QDebug debug, DebuggerState state )
         return debug << "Running";
     case Interrupted:
         return debug << "Interrupted";
+    case Aborting:
+        return debug << "Aborting";
     default:
         return debug << "DebuggerState unknown" << static_cast<int>(state);
     }

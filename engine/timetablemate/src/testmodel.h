@@ -55,7 +55,12 @@ struct TimetableDataRequestMessage {
                                  const QString &fileName = QString(), int lineNumber = -1,
                                  Features features = NoFeature, const QVariant &data = QVariant() )
             : message(message), type(type), fileName(fileName), lineNumber(lineNumber),
-              features(features), data(data) {};
+              features(features), data(data), repetitions(0) {};
+
+    bool operator ==( const TimetableDataRequestMessage &other ) {
+        return type == other.type && lineNumber == other.lineNumber &&
+               fileName == other.fileName && message == other.message;
+    };
 
     QString message;
     Type type;
@@ -63,6 +68,7 @@ struct TimetableDataRequestMessage {
     int lineNumber;
     Features features;
     QVariant data;
+    int repetitions;
 };
 
 /** @brief Model for tests and it's results. */
@@ -124,6 +130,8 @@ public:
         ServiceProviderDataDescriptionTest,
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        LoadScriptTest, /**< Tries to load the script, without calling any function. Syntax errors
+                * make this test fail. */
         DepartureTest, /**< Tests for an implemented getTimetable() function and for valid
                 * departure results. */
         ArrivalTest, /**< Tests for an implemented getTimetable() function and for valid
@@ -151,6 +159,13 @@ public:
      **/
     enum TestState {
         TestNotStarted = 0, /**< No test of the test case has been started. */
+        TestCaseNotFinished, /**< Not all tests of the test case are finished.
+                * @note This state is only used for test cases, not tests. */
+        TestDelegated, /**< The test or at least one test of a test case is delegated to one or
+                * more other tests to check preconditions or collect data needed for the test. */
+        TestDisabled, /**< The test or all tests of a test case are finished and at least one test
+                * was disabled, because preconditions are not met (eg. needed provider features),
+                * no test had an error. */
         TestFinishedSuccessfully, /**< The test or all tests of a test case finished successfully. */
         TestFinishedWithWarnings, /**< The test or all tests of a test case are finished,
                 * at least one test had a warning, no test had an error. */
@@ -158,8 +173,15 @@ public:
                 * and at least one test had an error. */
         TestCouldNotBeStarted, /**< The test could not be started or at least one test of a test
                 * case could not be started. */
-        TestIsRunning /**< The test or at least one test of a test case is still running. */
+        TestIsRunning, /**< The test or at least one test of a test case is still running. */
+        TestAborted /**< The test or at least one test of a test case were aborted. */
     };
+
+    enum TestFlag {
+        NoTestFlags     = 0x00,
+        TestIsOutdated  = 0x01
+    };
+    Q_DECLARE_FLAGS( TestFlags, TestFlag );
 
     /** @brief Constructor. */
     explicit TestModel( QObject *parent = 0 );
@@ -190,14 +212,16 @@ public:
 
     void markTestCaseAsUnstartable( TestCase testCase, const QString &errorMessage = QString(),
                                     const QString &tooltip = QString(), QAction *solution = 0 );
+
     void markTestAsStarted( Test test );
-    void addTestResult( Test test, TestState state, const QString &explanation = QString(),
-                        const QString &tooltip = QString(), QAction *solution = 0,
-                        const QList< TimetableDataRequestMessage > &childrenExplanations =
-                                QList< TimetableDataRequestMessage >(),
-                        const QList< TimetableData > &results = QList< TimetableData >(),
-                        const QSharedPointer<AbstractRequest> &request =
-                                QSharedPointer<AbstractRequest>() );
+    void markTestsAsOutdated( const QList< Test > &tests );
+    TestState setTestState( Test test, TestState state, const QString &explanation = QString(),
+                       const QString &tooltip = QString(), QAction *solution = 0,
+                       const QList< TimetableDataRequestMessage > &childrenExplanations =
+                             QList< TimetableDataRequestMessage >(),
+                       const QList< TimetableData > &results = QList< TimetableData >(),
+                       const QSharedPointer<AbstractRequest> &request =
+                             QSharedPointer<AbstractRequest>() );
 
     /** @brief Get the QModelIndex for @p testCase. */
     Q_INVOKABLE QModelIndex indexFromTestCase( TestCase testCase, int column = 0 ) const;
@@ -207,6 +231,13 @@ public:
 
     Q_INVOKABLE TestCase testCaseFromIndex( const QModelIndex &testCaseIndex ) const;
     Q_INVOKABLE Test testFromIndex( const QModelIndex &testIndex ) const;
+
+    Q_INVOKABLE float progress() const;
+    Q_INVOKABLE QList< Test > finishedTests() const;
+    Q_INVOKABLE QList< Test > startedTests() const;
+    Q_INVOKABLE inline int testCaseCount() const { return TestCaseCount; };
+    Q_INVOKABLE inline int testCount() const { return TestCount; };
+    Q_INVOKABLE static QList< Test > allTests();
 
     Q_INVOKABLE TestState completeState() const;
 
@@ -223,9 +254,7 @@ public:
     Q_INVOKABLE TestState testState( Test test ) const;
 
     inline bool isTestFinished( Test test ) const {
-        const TestState state = testState( test );
-        return state == TestFinishedSuccessfully || state == TestFinishedWithErrors ||
-               state == TestFinishedWithWarnings;
+        return isFinishedState( testState(test) );
     };
 
     QList< TimetableData > testResults( Test test ) const;
@@ -254,16 +283,26 @@ public:
     /** @brief Get a name for @p test. */
     Q_INVOKABLE static QString nameForTest( Test test );
 
+    /** @brief Get a name for @p state. */
+    Q_INVOKABLE static QString nameForState( TestState state );
+
     /** @brief Get a description for @p testCase. */
     Q_INVOKABLE static QString descriptionForTestCase( TestCase testCase );
 
     /** @brief Get a description for @p test. */
     Q_INVOKABLE static QString descriptionForTest( Test test );
 
+    /** @brief Whether or not @p state is a finished state. */
+    Q_INVOKABLE inline static bool isFinishedState( TestState state ) {
+        return state == TestCouldNotBeStarted || state == TestFinishedWithErrors ||
+               state == TestFinishedSuccessfully || state == TestFinishedWithWarnings ||
+               state == TestDisabled;
+    };
+
 signals:
     void testResultsChanged();
 
-protected:
+public:
     static QAction *actionFromIndex( const QModelIndex &index );
 
 private:
@@ -290,19 +329,24 @@ private:
                   childrenExplanations(childrenExplanations), results(results), request(request) {};
 
         TestState state;
+        TestFlags flags;
         QList< TimetableDataRequestMessage > childrenExplanations;
         QList< TimetableData > results;
         QSharedPointer<AbstractRequest> request;
 
+        inline bool isOutdated() const { return flags.testFlag(TestIsOutdated); };
         inline bool isNotStarted() const { return state == TestNotStarted; };
+        inline bool isDelegated() const { return state == TestDelegated; };
+        inline bool isDisabled() const { return state == TestDisabled; };
+        inline bool isAborted() const { return state == TestAborted; };
         inline bool isRunning() const { return state == TestIsRunning; };
         inline bool isUnstartable() const { return state == TestCouldNotBeStarted; };
         inline bool isFinishedSuccessfully() const { return state == TestFinishedSuccessfully; };
         inline bool isFinishedWithErrors() const { return state == TestFinishedWithErrors; };
         inline bool isFinishedWithWarnings() const { return state == TestFinishedWithWarnings; };
         inline bool isFinished() const {
-                return isFinishedSuccessfully() || isFinishedWithErrors() ||
-                       isFinishedWithWarnings() || isUnstartable();
+            return isFinishedSuccessfully() || isFinishedWithErrors() ||
+                   isFinishedWithWarnings() || isUnstartable() || isDisabled();
         };
     };
 
@@ -318,36 +362,33 @@ private:
     };
 
     QFont getFont( const QVariant &fontData ) const;
-    QBrush backgroundFromTestState( TestState testState ) const;
-    QBrush foregroundFromTestState( TestState testState ) const;
-    QBrush backgroundFromMessageType( TimetableDataRequestMessage::Type messageType ) const;
-    QBrush foregroundFromMessageType( TimetableDataRequestMessage::Type messageType ) const;
+    QVariant backgroundFromTestState( TestState state ) const;
+    QVariant foregroundFromTestState( TestState state ) const;
+    QVariant backgroundFromMessageType( TimetableDataRequestMessage::Type messageType ) const;
+    QVariant foregroundFromMessageType( TimetableDataRequestMessage::Type messageType ) const;
 
     QHash< Test, TestData > m_testData;
     QHash< TestCase, TestCaseData > m_unstartableTestCases;
 };
 
-class ActionDelegate : public KWidgetItemDelegate {
-    Q_OBJECT
-    friend class TestModel;
+Q_DECLARE_OPERATORS_FOR_FLAGS( TestModel::TestFlags );
 
-public:
-    explicit ActionDelegate( QAbstractItemView *itemView, QObject *parent = 0 );
-    virtual ~ActionDelegate();
+inline QDebug &operator <<( QDebug debug, TestModel::Test test )
+{
+    const int index = TestModel::staticMetaObject.indexOfEnumerator("Test");
+    return debug << QLatin1String( TestModel::staticMetaObject.enumerator(index).valueToKey(test) );
+};
 
-protected slots:
-    void updateGeometry();
+inline QDebug &operator <<( QDebug debug, TestModel::TestCase testCase )
+{
+    const int index = TestModel::staticMetaObject.indexOfEnumerator("TestCase");
+    return debug << QLatin1String( TestModel::staticMetaObject.enumerator(index).valueToKey(testCase) );
+};
 
-protected:
-    virtual QList< QWidget* > createItemWidgets() const;
-    virtual void updateItemWidgets( const QList< QWidget* > widgets,
-                                    const QStyleOptionViewItem &option,
-                                    const QPersistentModelIndex &index ) const;
-    virtual QSize sizeHint( const QStyleOptionViewItem &option, const QModelIndex &index ) const;
-    virtual void paint( QPainter *painter, const QStyleOptionViewItem &option,
-                        const QModelIndex &index ) const;
-
-    QSize toolButtonSize( const QStyleOptionViewItem &option, const QModelIndex &index ) const;
+inline QDebug &operator <<( QDebug debug, TestModel::TestState state )
+{
+    const int index = TestModel::staticMetaObject.indexOfEnumerator("TestState");
+    return debug << QLatin1String( TestModel::staticMetaObject.enumerator(index).valueToKey(state) );
 };
 
 #endif // Multiple inclusion guard

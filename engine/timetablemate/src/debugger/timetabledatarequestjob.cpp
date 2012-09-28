@@ -30,53 +30,49 @@
 #include <engine/request.h>
 
 // KDE includes
-#include <threadweaver/DebuggingAids.h>
 #include <KDebug>
 #include <KLocalizedString>
 #include <KGlobal>
 #include <KLocale>
+#include <KGlobalSettings>
+#include <ThreadWeaver/Thread>
 
 // Qt includes
 #include <QEventLoop>
 #include <QTimer>
 #include <QFileInfo>
+#include <QWaitCondition>
+#include <QApplication>
 
 namespace Debugger {
 
-CallScriptFunctionJob::CallScriptFunctionJob( DebuggerAgent *debugger,
-        const ServiceProviderData &data, QMutex *engineMutex, const QString &functionName,
-        const QVariantList &arguments, DebugFlags debugFlags, QObject *parent )
-        : DebuggerJob( debugger, data, engineMutex, parent ),
-          m_debugFlags(debugFlags), m_functionName(functionName), m_arguments(arguments),
-          m_currentLoop(0)
-{
-}
-
-CallScriptFunctionJob::CallScriptFunctionJob( DebuggerAgent *debugger,
-        const ServiceProviderData &data, QMutex *engineMutex, DebugFlags debugFlags,
-        QObject *parent )
-        : DebuggerJob( debugger, data, engineMutex, parent ),
-          m_debugFlags(debugFlags), m_currentLoop(0)
-{
-}
-
-TestFeaturesJob::TestFeaturesJob( DebuggerAgent *debugger,
-        const ServiceProviderData &data, QMutex *engineMutex, DebugFlags debugFlags,
-        QObject *parent )
-        : CallScriptFunctionJob(debugger, data, engineMutex,
-                                ServiceProviderScript::SCRIPT_FUNCTION_FEATURES,
-                                QVariantList(), debugFlags, parent)
-{
-}
-
-TimetableDataRequestJob::TimetableDataRequestJob( DebuggerAgent *debugger,
-        const ServiceProviderData &data, QMutex *engineMutex, const AbstractRequest *request,
+CallScriptFunctionJob::CallScriptFunctionJob( const ScriptData &scriptData,
+        const QString &functionName, const QVariantList &arguments, const QString &useCase,
         DebugFlags debugFlags, QObject *parent )
-        : CallScriptFunctionJob(debugger, data, engineMutex, debugFlags, parent),
-          m_request(request->clone())
-//         : DebuggerJob(debugger, info, engineMutex, parent),
-//           m_request(request->clone()), m_debugMode(debugMode)
+        : DebuggerJob(scriptData, useCase, parent), m_debugFlags(debugFlags),
+          m_functionName(functionName), m_arguments(arguments)
 {
+}
+
+CallScriptFunctionJob::CallScriptFunctionJob( const ScriptData &scriptData, const QString &useCase,
+                                              DebugFlags debugFlags, QObject *parent )
+        : DebuggerJob(scriptData, useCase, parent), m_debugFlags(debugFlags)
+{
+}
+
+TestFeaturesJob::TestFeaturesJob( const ScriptData &scriptData, const QString &useCase,
+                                  DebugFlags debugFlags, QObject *parent )
+        : CallScriptFunctionJob(scriptData, ServiceProviderScript::SCRIPT_FUNCTION_FEATURES,
+                                QVariantList(), useCase, debugFlags, parent)
+{
+}
+
+TimetableDataRequestJob::TimetableDataRequestJob( const ScriptData &scriptData,
+        const AbstractRequest *request, const QString &useCase, DebugFlags debugFlags,
+        QObject *parent )
+        : CallScriptFunctionJob(scriptData, useCase, debugFlags, parent), m_request(request->clone())
+{
+    QMutexLocker locker( m_mutex );
     switch ( request->parseMode ) {
     case ParseForDepartures:
     case ParseForArrivals:
@@ -94,50 +90,41 @@ TimetableDataRequestJob::TimetableDataRequestJob( DebuggerAgent *debugger,
         break;
     default:
         // This should never happen, therefore no i18n
-        QMutexLocker locker( m_mutex );
         m_explanation = "Unknown parse mode";
         m_success = false;
         return;
     }
 }
 
-void CallScriptFunctionJob::requestAbort()
+QScriptValueList CallScriptFunctionJob::createArgumentScriptValues( DebuggerAgent *debugger ) const
 {
-    DebuggerJob::requestAbort();
-
-    m_mutex->lockInline();
-    if ( m_currentLoop ) {
-        QEventLoop *loop = m_currentLoop;
-        m_currentLoop = 0;
-        m_mutex->unlockInline();
-
-        loop->quit();
-    } else {
-        m_mutex->unlockInline();
+    // m_engineMutex is locked
+    QMutexLocker locker( m_mutex );
+    if ( !debugger ) {
+        debugger = m_agent;
     }
-}
-
-QScriptValueList CallScriptFunctionJob::createArgumentScriptValues() const
-{
-    m_mutex->lockInline();
-    QVariantList arguments = m_arguments;
-    m_mutex->unlockInline();
 
     QScriptValueList args;
-    QScriptEngine *engine = m_debugger->engine();
-    foreach ( const QVariant &argument, arguments ) {
+    QScriptEngine *engine = debugger->engine();
+    foreach ( const QVariant &argument, m_arguments ) {
         args << engine->toScriptValue( argument );
     }
     return args;
 }
 
-QScriptValueList TimetableDataRequestJob::createArgumentScriptValues() const
+QScriptValueList TimetableDataRequestJob::createArgumentScriptValues( DebuggerAgent *debugger ) const
 {
-    return QScriptValueList() << m_request->toScriptValue( m_debugger->engine() );
+    // m_engineMutex is locked
+    QMutexLocker locker( m_mutex );
+    if ( !debugger ) {
+        debugger = m_agent;
+    }
+    return QScriptValueList() << m_request->toScriptValue( debugger->engine() );
 }
 
 void TimetableDataRequestJob::finish( const QList<TimetableData> &data )
 {
+    QMutexLocker locker( m_mutex );
     m_timetableData = data;
 }
 
@@ -147,10 +134,11 @@ CallScriptFunctionJob::~CallScriptFunctionJob()
 
 TimetableDataRequestJob::~TimetableDataRequestJob()
 {
+    QMutexLocker locker( m_mutex );
     delete m_request;
 }
 
-QScriptValue CallScriptFunctionJob::returnValue() const
+QVariant CallScriptFunctionJob::returnValue() const
 {
     QMutexLocker locker( m_mutex );
     return m_returnValue;
@@ -158,6 +146,7 @@ QScriptValue CallScriptFunctionJob::returnValue() const
 
 QList< Enums::ProviderFeature > TestFeaturesJob::features() const
 {
+    QMutexLocker locker( m_mutex );
     return m_features;
 }
 
@@ -185,6 +174,12 @@ QString CallScriptFunctionJob::functionName() const
     return m_functionName;
 }
 
+DebugFlags CallScriptFunctionJob::debugFlags() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_debugFlags;
+}
+
 QString CallScriptFunctionJob::toString() const
 {
     QMutexLocker locker( m_mutex );
@@ -192,6 +187,8 @@ QString CallScriptFunctionJob::toString() const
         QString valueString = m_returnValue.toString();
         if ( valueString.length() > 100 ) {
             valueString = valueString.left(100) + "...";
+        } else if ( valueString.isEmpty() ) {
+            valueString = "undefined";
         }
         return QString("%1 (%2() = %3)").arg( DebuggerJob::toString() )
                 .arg( m_functionName ).arg( valueString );
@@ -200,14 +197,27 @@ QString CallScriptFunctionJob::toString() const
     }
 }
 
+QString CallScriptFunctionJob::defaultUseCase() const
+{
+    QMutexLocker locker( m_mutex );
+    return i18nc("@info", "Call function <icode>%1()</icode>", m_functionName);
+}
+
+QString TimetableDataRequestJob::defaultUseCase() const
+{
+    QMutexLocker locker( m_mutex );
+    return i18nc("@info", "Call function <icode>%1( %2 )</icode>",
+                 m_functionName, m_request->argumentsString());
+}
+
 bool TestFeaturesJob::testResults()
 {
-    const QVariant variant = m_returnValue.toVariant();
-    if ( !variant.isValid() ) {
+    QMutexLocker locker( m_mutex );
+    if ( !m_returnValue.isValid() ) {
         return false;
     }
 
-    const QVariantList items = variant.toList();
+    const QVariantList items = m_returnValue.toList();
     if ( items.isEmpty() ) {
         m_additionalMessages << TimetableDataRequestMessage(
                 i18nc("@info/plain", "No TimetableInformation string returned"),
@@ -215,26 +225,61 @@ bool TestFeaturesJob::testResults()
     } else {
         int i = 1;
         foreach ( const QVariant &item, items ) {
-//             const bool stringEqualsArrivals =
-//                     string.compare(QLatin1String("arrivals"), Qt::CaseInsensitive) == 0;
             const Enums::ProviderFeature feature =
                     static_cast< Enums::ProviderFeature >( item.toInt() );
-//             if ( info == Enums::Nothing ) { //&& !stringEqualsArrivals ) {
-//                 m_additionalMessages << TimetableDataRequestMessage(
-//                         i18nc("@info/plain", "Invalid TimetableInformation string returned: '%1'",
-//                               string),
-//                         TimetableDataRequestMessage::Error );
-//             } else {
-            m_features << feature;
-            m_additionalMessages << TimetableDataRequestMessage(
-                    QString("%1: %2").arg(i).arg(Enums::toString(feature)),
-                    TimetableDataRequestMessage::Information );
+            if ( feature == Enums::InvalidProviderFeature ) {
+                m_additionalMessages << TimetableDataRequestMessage(
+                        i18nc("@info/plain", "Invalid ProviderFeature: '%1'",
+                              item.toString()),
+                        TimetableDataRequestMessage::Error );
+            } else {
+                m_features << feature;
+                m_additionalMessages << TimetableDataRequestMessage(
+                        QString("%1: %2").arg(i).arg(Enums::toString(feature)),
+                        TimetableDataRequestMessage::Information );
+            }
             ++i;
-//             }
         }
     }
 
     return true;
+}
+
+void CallScriptFunctionJob::connectScriptObjects( bool doConnect )
+{
+    DebuggerJob::connectScriptObjects( doConnect );
+
+    QMutexLocker locker( m_mutex );
+    if ( doConnect ) {
+        // Connect to request finished signals to store the time spent for network requests
+        connect( m_objects.network.data(), SIGNAL(requestFinished(NetworkRequest::Ptr,QByteArray,QDateTime,int,int)),
+                 this, SLOT(requestFinished(NetworkRequest::Ptr,QByteArray,QDateTime,int,int)) );
+        connect( m_objects.network.data(), SIGNAL(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)),
+                 this, SLOT(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)) );
+
+        // Connect to the messageReceived() signal of the "helper" script object to collect
+        // messages sent to "helper.error()", "helper.warning()" or "helper.information()"
+        connect( m_objects.helper.data(), SIGNAL(messageReceived(QString,QScriptContextInfo,QString,Helper::ErrorSeverity)),
+                 this, SLOT(slotScriptMessageReceived(QString,QScriptContextInfo,QString,Helper::ErrorSeverity)) );
+
+        connect( m_objects.result.data(), SIGNAL(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)),
+                 this, SLOT(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)) );
+
+        // Connect to the stopped() signal of the agent to get notified when execution gets aborted
+        connect( m_agent, SIGNAL(stopped(QDateTime,bool,bool,int,QString,QStringList)),
+                 this, SLOT(scriptStopped(QDateTime,bool,bool,int,QString,QStringList)) );
+    } else {
+        disconnect( m_objects.network.data(), SIGNAL(requestFinished(NetworkRequest::Ptr,QByteArray,QDateTime,int,int)),
+                    this, SLOT(requestFinished(NetworkRequest::Ptr,QByteArray,QDateTime,int,int)) );
+        disconnect( m_objects.network.data(), SIGNAL(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)),
+                    this, SLOT(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)) );
+        disconnect( m_objects.helper.data(), SIGNAL(messageReceived(QString,QScriptContextInfo,QString,Helper::ErrorSeverity)),
+                    this, SLOT(slotScriptMessageReceived(QString,QScriptContextInfo,QString,Helper::ErrorSeverity)) );
+        disconnect( m_objects.result.data(), SIGNAL(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)),
+                    this, SLOT(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)) );
+        disconnect( m_agent, SIGNAL(stopped(QDateTime,bool,bool,int,QString,QStringList)),
+                    this, SLOT(scriptStopped(QDateTime,bool,bool,int,QString,QStringList)) );
+    }
 }
 
 void CallScriptFunctionJob::debuggerRun()
@@ -246,188 +291,121 @@ void CallScriptFunctionJob::debuggerRun()
         return;
     }
 
-    DebuggerAgent *debugger = m_debugger;
-    QScriptEngine *engine = m_debugger->engine();
+    // Create new engine and agent
+    m_engineMutex->lockInline();
+    DebuggerAgent *agent = createAgent();
+    if ( !agent ) {
+        m_engineMutex->unlockInline();
+        m_mutex->unlockInline();
+        return;
+    }
+    QScriptEngine *engine = agent->engine();
+    ScriptObjects objects = m_objects;
+    const ScriptData data = m_data;
     const QString functionName = m_functionName;
     const DebugFlags debugFlags = m_debugFlags;
     m_mutex->unlockInline();
 
-    // Wait for the debugger to get ready
-    debugger->finish();
-
-    m_engineMutex->lockInline();
-    engine->clearExceptions();
-
-    ResultObject *scriptResult = qobject_cast< ResultObject* >(
-            engine->globalObject().property("result").toQObject() );
-    Q_ASSERT( scriptResult );
-
-    // Clear "result" script object
-    scriptResult->clear();
+    // Load script
+    engine->evaluate( data.program );
+    Q_ASSERT_X( !engine->isEvaluating(), "CallScriptFunctionJob::debuggerRun()",
+                "Evaluating the script should not start any asynchronous requests, bad script" );
 
     QScriptValue function = engine->globalObject().property( functionName );
     if ( !function.isFunction() ) {
-        ThreadWeaver::debug( 0, " - Run script ERROR: Did not find function %s\n",
-                             functionName.toUtf8().constData() );
+        QMutexLocker locker( m_mutex );
+        destroyAgent();
         m_engineMutex->unlockInline();
 
-        QMutexLocker locker( m_mutex );
         m_explanation = i18nc("@info/plain", "Did not find a '%1' function in the script.",
                                functionName);
         m_success = false;
         return;
     }
 
-    // Create new Network object in this thread, restore old object at the end
-    QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
-    const QScriptValue previousScriptNetwork = engine->globalObject().property("network");
-    Network *scriptNetwork = new Network( m_data.fallbackCharset() );
-    connect( scriptNetwork, SIGNAL(requestFinished(NetworkRequest*,QByteArray,int,int)),
-             this, SLOT(requestFinished(NetworkRequest*,QByteArray,int,int)) );
-    connect( scriptNetwork, SIGNAL(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)),
-             this, SLOT(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)) );
-    engine->globalObject().setProperty( "network", engine->newQObject(scriptNetwork), flags );
-
-    // Get the helper object and connect to the errorReceived() signal to collect
-    // messages sent to "helper.error()" from a script
-    Helper *scriptHelper = qobject_cast< Helper* >(
-            engine->globalObject().property("helper").toQObject() );
-    connect( scriptHelper, SIGNAL(errorReceived(QString,QScriptContextInfo,QString,Helper::ErrorSeverity)),
-             this, SLOT(scriptErrorReceived(QString,QScriptContextInfo,QString,Helper::ErrorSeverity)) );
-
-    connect( scriptResult, SIGNAL(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)),
-             this, SLOT(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)) );
-
-    connect( debugger, SIGNAL(stopped(bool)), this, SLOT(scriptStopped(bool)) );
-
-    debugger->setExecutionControlType( debugFlags.testFlag(InterruptAtStart)
+    connectScriptObjects();
+    agent->setExecutionControlType( debugFlags.testFlag(InterruptAtStart)
                                        ? ExecuteInterrupt : ExecuteRun );
-    debugger->setDebugFlags( debugFlags );
+    agent->setDebugFlags( debugFlags );
 
-    // Call script function
-    const QScriptValueList arguments = createArgumentScriptValues();
-    const QScriptValue returnValue = function.call( QScriptValue(), arguments );
-    m_engineMutex->unlockInline();
+    // Make this job responsive while running the script
+    engine->setProcessEventsInterval( 50 );
+
+    // Call script function while the engine mutex is still locked
+    const QScriptValueList arguments = createArgumentScriptValues( agent );
+    const QVariant returnValue = function.call( QScriptValue(), arguments ).toVariant();
 
     // The called function returned, but asynchronous network requests may have been started.
     // Wait for all network requests to finish, because slots in the script may get called
-    const int finishWaitTime = 500;
-    int finishWaitCounter = 0;
-    while ( m_success && !debugger->wasLastRunAborted() && scriptNetwork->hasRunningRequests() &&
-            finishWaitCounter < 20 )
-    {
-        QEventLoop loop;
-        connect( scriptNetwork, SIGNAL(allRequestsFinished()), &loop, SLOT(quit()) );
-//         connect( this, SIGNAL(destroyed(QObject*)), &loop, SLOT(quit()) );
-        QTimer::singleShot( finishWaitTime, &loop, SLOT(quit()) );
-
-        m_currentLoop = &loop;
-        loop.exec();
-        if ( !m_currentLoop ) {
-            setFinished( true );
-            return;
-        } else {
-            m_currentLoop = 0;
-        }
-
-        ++finishWaitCounter;
+    if ( !waitFor(objects.network.data(), SIGNAL(allRequestsFinished()), WaitForNetwork) ) {
+        m_engineMutex->unlockInline();
+        return;
     }
-    const bool allNetworkRequestsFinished = !scriptNetwork->hasRunningRequests();
 
-    // Waiting for script execution to finish
-    finishWaitCounter = 0;
-    while ( m_success && !debugger->wasLastRunAborted() && m_debugger->isRunning() && finishWaitCounter < 20 ) {
-        QEventLoop loop;
-        connect( m_debugger, SIGNAL(stopped()), &loop, SLOT(quit()) );
-//         connect( this, SIGNAL(destroyed(QObject*)), &loop, SLOT(quit()) );
-        QTimer::singleShot( finishWaitTime, &loop, SLOT(quit()) );
-
-        m_currentLoop = &loop;
-        loop.exec();
-        if ( !m_currentLoop ) {
-            setFinished( true );
-            return;
-        } else {
-            m_currentLoop = 0;
-        }
-
-        ++finishWaitCounter;
+    // Wait for script execution to finish
+    if ( !waitFor(agent, SIGNAL(stopped(QDateTime,bool,bool,int,QString,QStringList)), WaitForScriptFinish) ) {
+        m_engineMutex->unlockInline();
+        return;
     }
-    const bool finishedSuccessfully = !debugger->wasLastRunAborted() && finishWaitCounter < 20;
+
+    const bool allNetworkRequestsFinished = !objects.network->hasRunningRequests();
+    const bool finishedSuccessfully = !agent->wasLastRunAborted();
 
 //     GlobalTimetableInfo globalInfo;
 //     globalInfo.requestDate = QDate::currentDate();
 //     globalInfo.delayInfoAvailable =
 //             !m_scriptResult->isHintGiven( ResultObject::NoDelaysForStop );
 
-    bool locked;
-    if ( finishedSuccessfully || debugger->wasLastRunAborted() || !m_success ) {
-        // Script finished or was aborted
-        locked = m_engineMutex->tryLock( 250 );
-    } else {
-        // Script not finished, engine mutex is most probably still locked
-        kDebug() << "Script not finished, abort";
-        locked = m_engineMutex->tryLock( 250 );
-        engine->abortEvaluation();
-    }
-
-    disconnect( scriptResult, SIGNAL(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)),
-                this, SLOT(invalidDataReceived(Enums::TimetableInformation,QString,QScriptContextInfo,int,QVariantMap)) );
-
     // Check for exceptions
-    if ( finishedSuccessfully && engine->hasUncaughtException() ) {
-        if ( locked ) {
-            m_engineMutex->unlockInline();
-        }
-        ThreadWeaver::debug( 0, " - Run script ERROR: In function %s: %s\n",
-                            functionName.toUtf8().constData(),
-                            engine->uncaughtException().toString().toUtf8().constData() );
-        handleError( engine, i18nc("@info/plain", "Error in the script at line %1 in function "
-                                   "'%2': <message>%3</message>.",
-                                   debugger->uncaughtExceptionLineNumber(), functionName,
-                                   debugger->uncaughtException().toString()) );
-        m_debugger->debugInterrupt(); // TEST is this needed?
+    if ( finishedSuccessfully && agent->hasUncaughtException() ) {
+        const QString uncaughtException = agent->uncaughtException().toString();
+        handleError( engine, i18nc("@info/plain", "Error in the script at line %1"
+                     "in function '%2': <message>%3</message>.",
+                     agent->uncaughtExceptionLineNumber(), functionName, uncaughtException) );
+        m_mutex->lockInline();
+        destroyAgent();
+        m_mutex->unlockInline();
+        m_engineMutex->unlockInline();
         return;
     }
-//     engine->clearExceptions();
-    if ( locked ) {
-        m_engineMutex->unlockInline();
-    }
+
+    // Unlock engine mutex after execution was finished
+    m_engineMutex->unlockInline();
 
     m_mutex->lockInline();
     m_returnValue = returnValue;
-    if ( functionName == ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA ) {
-        const QVariantMap map = returnValue.toVariant().toMap();
-        TimetableData data;
-        for ( QVariantMap::ConstIterator it = map.constBegin(); it != map.constEnd(); ++it ) {
-            data[ Global::timetableInformationFromString(it.key()) ] = it.value();
-        }
-        if ( !data.isEmpty() ) {
-            kDebug() << data.count() << "entries";
-            finish( QList<TimetableData>() << data );
-        }
-    } else {
-        finish( scriptResult->data() );
-    }
+    m_aborted = agent->wasLastRunAborted();
+    bool quit = m_quit;
     m_mutex->unlockInline();
 
-    // Mark job as done for Debugger to know that the script is not waiting for a signal
-    setFinished( true );
+    if ( !quit ) {
+        if ( functionName == ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA ) {
+            const QVariantMap map = returnValue.toMap();
+            TimetableData data;
+            for ( QVariantMap::ConstIterator it = map.constBegin(); it != map.constEnd(); ++it ) {
+                data[ Global::timetableInformationFromString(it.key()) ] = it.value();
+            }
+            if ( !data.isEmpty() ) {
+                finish( QList<TimetableData>() << data );
+            }
+        } else {
+            finish( objects.result->data() );
+        }
+    }
 
-    // Use the previous Network object in the engine again and delete the one for this thread
-    // This needs to be called after setFinished(true), otherwise the Debugger thinks there are
-    // still running jobs, ie. waiting for a signal
-    m_engineMutex->lockInline();
-    engine->globalObject().setProperty( "network", previousScriptNetwork, flags );
-    m_engineMutex->unlockInline();
-    delete scriptNetwork;
+    // Process signals from the debugger before it gets deleted
+    qApp->processEvents();
 
     QMutexLocker locker( m_mutex );
-    if ( !m_success ) {
-        return;
+    m_engineMutex->lockInline();
+    destroyAgent();
+    m_engineMutex->unlockInline();
+
+    if ( !m_success || m_quit ) {
+        m_success = false;
     } else if ( allNetworkRequestsFinished && finishedSuccessfully ) {
         // No uncaught exceptions, all network requests finished
-        if ( debugger->wasLastRunAborted() ) {
+        if ( m_aborted ) {
             m_success = false;
             m_explanation = i18nc("@info/plain", "Execution was aborted");
         } else {
@@ -437,7 +415,7 @@ void CallScriptFunctionJob::debuggerRun()
         // The script finish successfully, but not all network requests finished
         m_explanation = i18nc("@info/plain", "Not all network requests were finished in time");
         m_success = false;
-    } else if ( debugger->wasLastRunAborted() ) {
+    } else if ( m_aborted ) {
         // Script was aborted
         m_explanation = i18nc("@info/plain", "Aborted");
         m_success = false;
@@ -448,47 +426,53 @@ void CallScriptFunctionJob::debuggerRun()
                                "there may be an infinite loop.");
         m_success = false;
     }
+
 }
 
-void CallScriptFunctionJob::scriptStopped( bool aborted )
+void CallScriptFunctionJob::scriptStopped( const QDateTime &timestamp, bool aborted,
+                                           bool hasRunningRequests, int uncaughtExceptionLineNumber,
+                                           const QString &uncaughtException,
+                                           const QStringList &backtrace )
 {
+    Q_UNUSED( timestamp );
+    Q_UNUSED( hasRunningRequests );
     if ( aborted ) {
-        m_mutex->lockInline();
-        DebuggerAgent *debugger = m_debugger;
-        QScriptEngine *engine = debugger->engine();
-        const QString functionName = m_functionName;
-        m_mutex->unlockInline();
-
-        handleError( engine, i18nc("@info/plain", "Error in the script at line %1 in function "
-                                   "'%2': <message>%3</message>.",
-                                   debugger->uncaughtExceptionLineNumber(), functionName,
-                                   debugger->uncaughtException().toString()) );
+        handleError( uncaughtExceptionLineNumber, uncaughtException, backtrace,
+                     i18nc("@info/plain", "Aborted") );
     }
 }
 
-void CallScriptFunctionJob::scriptErrorReceived( const QString &message,
-                                                 const QScriptContextInfo &context,
-                                                 const QString &failedParseText,
-                                                 Helper::ErrorSeverity severity )
+void CallScriptFunctionJob::slotScriptMessageReceived( const QString &message,
+                                                     const QScriptContextInfo &context,
+                                                     const QString &failedParseText,
+                                                     Helper::ErrorSeverity severity )
 {
     Q_UNUSED( failedParseText );
     TimetableDataRequestMessage::Type type;
     switch ( severity ) {
-    case Helper::Information:
-        type = TimetableDataRequestMessage::Information;
-        break;
     case Helper::Warning:
         type = TimetableDataRequestMessage::Warning;
         break;
     case Helper::Fatal:
         type = TimetableDataRequestMessage::Error;
         break;
+    default:
+    case Helper::Information:
+        type = TimetableDataRequestMessage::Information;
+        break;
     }
-    m_additionalMessages << TimetableDataRequestMessage(
+
+    QMutexLocker locker( m_mutex );
+    const TimetableDataRequestMessage newMessage(
             i18nc("@info/plain", "Error in file <filename>%1</filename>, line %2: "
                   "<message>%3</message>",
                   QFileInfo(context.fileName()).fileName(), context.lineNumber(), message),
             type, context.fileName(), context.lineNumber() );
+    if ( !m_additionalMessages.isEmpty() && m_additionalMessages.last() == newMessage ) {
+        ++m_additionalMessages.last().repetitions;
+    } else {
+        m_additionalMessages << newMessage;
+    }
 }
 
 void CallScriptFunctionJob::invalidDataReceived( Enums::TimetableInformation information,
@@ -498,27 +482,37 @@ void CallScriptFunctionJob::invalidDataReceived( Enums::TimetableInformation inf
 {
     Q_UNUSED( information );
     Q_UNUSED( map );
+
+    QMutexLocker locker( m_mutex );
     m_additionalMessages << TimetableDataRequestMessage(
             i18nc("@info/plain", "Invalid data in result %1, line %2: <message>%3</message>",
                   index + 1, context.lineNumber(), message),
             TimetableDataRequestMessage::Error, context.fileName(), context.lineNumber() );
 }
 
-void CallScriptFunctionJob::requestFinished( NetworkRequest *request, const QByteArray &data,
+void CallScriptFunctionJob::requestFinished( const NetworkRequest::Ptr &request,
+                                             const QByteArray &data, const QDateTime &timestamp,
                                              int statusCode, int size )
 {
+    Q_UNUSED( data );
+    emit asynchronousRequestWaitFinished( timestamp, statusCode, size );
+
+    QMutexLocker locker( m_mutex );
     m_additionalMessages << TimetableDataRequestMessage(
             i18nc("@info/plain", "Download finished (status %1): %2, <link>%3</link>",
                   statusCode, KGlobal::locale()->formatByteSize(size), request->url()),
             TimetableDataRequestMessage::Information, QString(), -1,
             TimetableDataRequestMessage::OpenLink, request->url() );
-    emit asynchronousRequestWaitFinished( statusCode, size );
 }
 
 void CallScriptFunctionJob::synchronousRequestFinished( const QString &url, const QByteArray &data,
                                                         bool cancelled, int statusCode,
                                                         int waitingTime, int size )
 {
+    Q_UNUSED(data);
+    emit synchronousRequestWaitFinished( statusCode, waitingTime, size );
+
+    QMutexLocker locker( m_mutex );
     if ( cancelled ) {
         m_additionalMessages << TimetableDataRequestMessage(
                 i18nc("@info/plain", "Download cancelled/failed (status %1): <link>%2</link>",
@@ -532,37 +526,38 @@ void CallScriptFunctionJob::synchronousRequestFinished( const QString &url, cons
                 TimetableDataRequestMessage::Information, QString(), -1,
                 TimetableDataRequestMessage::OpenLink, url );
     }
-    emit synchronousRequestWaitFinished( statusCode, waitingTime, size );
 }
 
 bool TimetableDataRequestJob::testResults()
 {
+    QMutexLocker locker( m_mutex );
+    const AbstractRequest *request = m_request;
     const DepartureRequest *departureRequest =
-            dynamic_cast< const DepartureRequest* >( m_request );
+            dynamic_cast< const DepartureRequest* >( request );
     if ( departureRequest ) {
         return testDepartureData( departureRequest );
     }
 
     const StopSuggestionRequest *stopSuggestionRequest =
-            dynamic_cast< const StopSuggestionRequest* >( m_request );
+            dynamic_cast< const StopSuggestionRequest* >( request );
     if ( stopSuggestionRequest ) {
         return testStopSuggestionData( stopSuggestionRequest );
     }
 
     const StopSuggestionFromGeoPositionRequest *stopSuggestionFromGeoPositionRequest =
-            dynamic_cast< const StopSuggestionFromGeoPositionRequest* >( m_request );
+            dynamic_cast< const StopSuggestionFromGeoPositionRequest* >( request );
     if ( stopSuggestionFromGeoPositionRequest ) {
         return testStopSuggestionData( stopSuggestionFromGeoPositionRequest );
     }
 
     const JourneyRequest *journeyRequest =
-            dynamic_cast< const JourneyRequest* >( m_request );
+            dynamic_cast< const JourneyRequest* >( request );
     if ( journeyRequest ) {
         return testJourneyData( journeyRequest );
     }
 
     const AdditionalDataRequest *additinalDataRequest =
-            dynamic_cast< const AdditionalDataRequest* >( m_request );
+            dynamic_cast< const AdditionalDataRequest* >( request );
     if ( additinalDataRequest ) {
         return testAdditionalData( additinalDataRequest );
     }
@@ -598,6 +593,9 @@ TimetableDataRequestMessage CallScriptFunctionJob::message( MessageType messageT
 
 bool TimetableDataRequestJob::testAdditionalData( const AdditionalDataRequest *request )
 {
+    Q_UNUSED(request);
+
+    QMutexLocker locker( m_mutex );
     if ( m_timetableData.isEmpty() ) {
         m_explanation = i18nc("@info/plain", "No additional data found");
         return false;
@@ -632,6 +630,7 @@ bool TimetableDataRequestJob::testAdditionalData( const AdditionalDataRequest *r
 
 bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request )
 {
+    QMutexLocker locker( m_mutex );
     if ( m_timetableData.isEmpty() ) {
         if ( request->parseMode == ParseForArrivals ) {
             m_explanation = i18nc("@info/plain", "No arrivals found");
@@ -644,7 +643,7 @@ bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request
     // Get global information
     QStringList globalInfos;
     if ( m_returnValue.isValid() ) {
-        globalInfos = m_returnValue.toVariant().toStringList();
+        globalInfos = m_returnValue.toStringList();
     }
 
     // Get result set
@@ -834,6 +833,7 @@ bool TimetableDataRequestJob::testStopSuggestionData(
         const StopSuggestionRequest *request )
 {
     Q_UNUSED( request );
+    QMutexLocker locker( m_mutex );
     if ( m_timetableData.isEmpty() ) {
         m_explanation = i18nc("@info/plain", "No stop suggestions found");
         return false;
@@ -842,7 +842,7 @@ bool TimetableDataRequestJob::testStopSuggestionData(
     // Get global information
     QStringList globalInfos;
     if ( m_returnValue.isValid() ) {
-        globalInfos = m_returnValue.toVariant().toStringList();
+        globalInfos = m_returnValue.toStringList();
     }
 
     // Test timetable data
@@ -899,6 +899,7 @@ bool TimetableDataRequestJob::testStopSuggestionData(
 bool TimetableDataRequestJob::testJourneyData( const JourneyRequest *request )
 {
     Q_UNUSED( request );
+    QMutexLocker locker( m_mutex );
     if ( m_timetableData.isEmpty() ) {
         m_explanation = i18nc("@info/plain", "No journeys found");
         return false;
@@ -907,7 +908,7 @@ bool TimetableDataRequestJob::testJourneyData( const JourneyRequest *request )
     // Get global information
     QStringList globalInfos;
     if ( m_returnValue.isValid() ) {
-        globalInfos = m_returnValue.toVariant().toStringList();
+        globalInfos = m_returnValue.toStringList();
     }
 
     m_explanation = i18ncp("@info/plain", "Got %1 journey",

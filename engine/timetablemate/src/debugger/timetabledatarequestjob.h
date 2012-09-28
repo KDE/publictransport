@@ -64,31 +64,35 @@ public:
     virtual ~CallScriptFunctionJob();
 
     /** @brief Get the type of this debugger job. */
-    virtual Type type() const { return TimetableDataRequest; };
+    virtual JobType type() const { return TimetableDataRequest; };
 
     virtual QString toString() const;
+    virtual QString defaultUseCase() const;
 
     /** @brief Gets the return value of the called script function, when the job has finished. */
-    QScriptValue returnValue() const;
+    virtual QVariant returnValue() const;
 
     /** @brief Get a list of additional messages, if any. */
     QList< TimetableDataRequestMessage > additionalMessages() const;
 
     QString functionName() const;
 
-    DebugFlags debugFlags() const { return m_debugFlags; };
+    DebugFlags debugFlags() const;
+
+    virtual void connectScriptObjects( bool doConnect = true );
 
 signals:
-    void asynchronousRequestWaitFinished( int statusCode = 200, int size = 0 );
+    void asynchronousRequestWaitFinished( const QDateTime &timestamp,
+                                          int statusCode = 200, int size = 0 );
     void synchronousRequestWaitFinished( int statusCode = 200, int waitingTime = 0, int size = 0 );
 
 protected slots:
     /**
-     * @brief Collect messages sent to Helper::error() as additional messages.
-     * This slot gets connected to the errorReceived() signal of the scripts Helper object.
+     * @brief Collect messages from the script as additional messages.
+     * This slot gets connected to the messageReceived() signal of the scripts Helper object.
      **/
-    void scriptErrorReceived( const QString &message, const QScriptContextInfo &context,
-                              const QString &failedParseText, Helper::ErrorSeverity severity );
+    void slotScriptMessageReceived( const QString &message, const QScriptContextInfo &context,
+                                    const QString &failedParseText, Helper::ErrorSeverity severity );
 
     /**
      * @brief Collect error messages generated in ResultObject::addData() as additional messages.
@@ -99,13 +103,17 @@ protected slots:
                               const QScriptContextInfo &context,
                               int index, const QVariantMap& map );
 
-    void requestFinished( NetworkRequest *request, const QByteArray &data = QByteArray(),
+    void requestFinished( const NetworkRequest::Ptr &request, const QByteArray &data = QByteArray(),
+                          const QDateTime &timestamp = QDateTime(),
                           int statusCode = 200, int size = 0 );
     void synchronousRequestFinished( const QString &url, const QByteArray &data = QByteArray(),
                                      bool cancelled = false, int statusCode = 200,
                                      int waitingTime = 0, int size = 0 );
 
-    void scriptStopped( bool aborted );
+    void scriptStopped( const QDateTime &timestamp, bool aborted,
+                        bool hasRunningRequests = false, int uncaughtExceptionLineNumber = -1,
+                        const QString &uncaughtException = QString(),
+                        const QStringList &backtrace = QStringList() );
 
 protected:
     /**
@@ -125,24 +133,22 @@ protected:
      * @param debugFlags Flags for the debugger.
      * @param parent The parent QObject. Default is 0.
      **/
-    explicit CallScriptFunctionJob( DebuggerAgent *debugger,
-            const ServiceProviderData &data, QMutex *engineMutex, const QString &functionName,
-            const QVariantList &arguments, DebugFlags debugFlags = DefaultDebugFlags,
-            QObject* parent = 0 );
+    explicit CallScriptFunctionJob( const ScriptData &scriptData, const QString &functionName,
+                                    const QVariantList &arguments, const QString &useCase,
+                                    DebugFlags debugFlags = DefaultDebugFlags,
+                                    QObject* parent = 0 );
 
-    explicit CallScriptFunctionJob( DebuggerAgent *debugger,
-            const ServiceProviderData &data, QMutex *engineMutex,
-            DebugFlags debugFlags = DefaultDebugFlags, QObject* parent = 0 );
+    explicit CallScriptFunctionJob( const ScriptData &scriptData, const QString &useCase,
+                                    DebugFlags debugFlags = DefaultDebugFlags,
+                                    QObject* parent = 0 );
 
     virtual void debuggerRun();
-
-    virtual void requestAbort();
 
     /**
      * @brief Create a list of arguments for the function to call.
      * The engine mutex is locked when this function gets called.
      **/
-    virtual QScriptValueList createArgumentScriptValues() const;
+    virtual QScriptValueList createArgumentScriptValues( DebuggerAgent *debugger ) const;
 
     virtual void finish( const QList<TimetableData> &data ) { Q_UNUSED(data); };
 
@@ -165,9 +171,8 @@ protected:
     const DebugFlags m_debugFlags;
     QString m_functionName;
     QVariantList m_arguments;
-    QScriptValue m_returnValue;
+    QVariant m_returnValue;
     QList< TimetableDataRequestMessage > m_additionalMessages;
-    QEventLoop *m_currentLoop;
 };
 
 /**
@@ -179,7 +184,7 @@ class TestFeaturesJob : public CallScriptFunctionJob {
 
 public:
     /** @brief Get the type of this debugger job. */
-    virtual Type type() const { return TestFeatures; };
+    virtual JobType type() const { return TestFeatures; };
 
     /** @brief Returns a list of provider features found in the return value. */
     QList< Enums::ProviderFeature > features() const;
@@ -197,9 +202,8 @@ protected:
      * @param debugFlags Flags for the debugger.
      * @param parent The parent QObject. Default is 0.
      **/
-    explicit TestFeaturesJob( DebuggerAgent *debugger,
-            const ServiceProviderData &data, QMutex *engineMutex,
-            DebugFlags debugFlags = DefaultDebugFlags, QObject* parent = 0 );
+    explicit TestFeaturesJob( const ScriptData &scriptData, const QString &useCase,
+                              DebugFlags debugFlags = DefaultDebugFlags, QObject* parent = 0 );
 
     // Generate "additional messages" for invalid datasets
     virtual bool testResults();
@@ -220,13 +224,15 @@ public:
     virtual ~TimetableDataRequestJob();
 
     /** @brief Get the type of this debugger job. */
-    virtual Type type() const { return TimetableDataRequest; };
+    virtual JobType type() const { return TimetableDataRequest; };
 
     /** @brief Gets the resulting list of timetable data objects, when the job has finished. */
     QList< TimetableData > timetableData() const;
 
     /** @brief Get a clone of the request object. */
     QSharedPointer< AbstractRequest > request() const;
+
+    virtual QString defaultUseCase() const;
 
 protected:
     /**
@@ -247,9 +253,10 @@ protected:
      * @param debugFlags Flags for the debugger.
      * @param parent The parent QObject. Default is 0.
      **/
-    explicit TimetableDataRequestJob( DebuggerAgent *debugger,
-            const ServiceProviderData &data, QMutex *engineMutex, const AbstractRequest *request,
-            DebugFlags debugFlags = DefaultDebugFlags, QObject* parent = 0 );
+    explicit TimetableDataRequestJob( const ScriptData &scriptData, const AbstractRequest *request,
+                                      const QString &useCase,
+                                      DebugFlags debugFlags = DefaultDebugFlags,
+                                      QObject* parent = 0 );
 
     virtual void finish( const QList<TimetableData> &data );
 
@@ -257,7 +264,7 @@ protected:
      * @brief Create a list of arguments for the function to call, using AbstractRequest::toScriptValue().
      * The engine mutex is locked when this function gets called.
      **/
-    virtual QScriptValueList createArgumentScriptValues() const;
+    virtual QScriptValueList createArgumentScriptValues( DebuggerAgent *debugger ) const;
 
     // Generate "additional messages" for invalid datasets
     virtual bool testResults();

@@ -67,7 +67,7 @@ protected slots:
     void clickedBacktraceItem( const QModelIndex &index );
 
     void activeProjectAboutToChange( Project *project, Project *previousProject );
-    void debuggerContinued( bool willInterruptAfterNextStatement );
+    void debuggerContinued( const QDateTime &timestamp, bool willInterruptAfterNextStatement );
     void debuggerStateChanged( DebuggerState newState, DebuggerState oldState );
 
 private:

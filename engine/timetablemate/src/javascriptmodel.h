@@ -48,6 +48,7 @@ public:
     ~JavaScriptModel();
 
     static QString nodeTypeName( NodeType nodeType );
+    static QList< CodeNode::Ptr > childFunctions( const CodeNode::Ptr &node );
 
     void setJavaScriptCompletionModel( JavaScriptCompletionModel *javaScriptCompletionModel ) {
         m_javaScriptCompletionModel = javaScriptCompletionModel;

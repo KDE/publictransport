@@ -27,25 +27,20 @@
 
 // PublicTransport engine includes
 #include <engine/script/scripting.h>
-#include <engine/script/serviceproviderscript.h>
-#include <engine/script/script_thread.h>
-#include <engine/global.h>
 
 // KDE includes
 #include <KDebug>
 #include <KLocalizedString>
-#include <threadweaver/DebuggingAids.h>
 
 // Qt includes
 #include <QScriptEngine>
 #include <QScriptContextInfo>
 #include <QScriptValueIterator>
-#include <QTime>
 #include <QTimer>
 #include <QMutex>
 #include <QWaitCondition>
-#include <QFileInfo>
-#include <QApplication>
+#include <QEventLoop>
+#include <QFileInfo> // Only used for debugging
 
 namespace Debugger {
 
@@ -69,7 +64,7 @@ QScriptValue debugPrintFunction( QScriptContext *context, QScriptEngine *engine 
     return engine->undefinedValue();
 };
 
-DebuggerAgent::DebuggerAgent( QScriptEngine *engine, QMutex *engineMutex )
+DebuggerAgent::DebuggerAgent( QScriptEngine *engine, QMutex *engineMutex, bool mutexIsLocked )
         : QObject(engine), QScriptEngineAgent(engine),
           m_mutex(new QMutex(QMutex::Recursive)), m_interruptWaiter(new QWaitCondition()),
           m_interruptMutex(new QMutex()), m_engineMutex(engineMutex),
@@ -82,7 +77,6 @@ DebuggerAgent::DebuggerAgent( QScriptEngine *engine, QMutex *engineMutex )
     qRegisterMetaType< Breakpoint >( "Breakpoint" );
 
     m_mutex->lockInline();
-    m_backtraceCleanedup = true;
     m_lineNumber = -1;
     m_columnNumber = -1;
     m_currentScriptId = -1;
@@ -95,25 +89,19 @@ DebuggerAgent::DebuggerAgent( QScriptEngine *engine, QMutex *engineMutex )
     m_uncaughtExceptionLineNumber = -1;
     m_interruptFunctionLevel = -2;
     m_functionDepth = 0;
-    connect( m_checkRunningTimer, SIGNAL(timeout()), this, SLOT(checkExecution()) );
     m_mutex->unlockInline();
 
-    QMutexLocker engineLocker( m_engineMutex );
-    engine->setProcessEventsInterval( 100 );
-
     // Install custom print function (overwriting the builtin print function)
+    if ( !mutexIsLocked ) {
+        m_engineMutex->lockInline();
+    }
     QScriptValue printFunction = engine->newFunction( debugPrintFunction );
     printFunction.setData( engine->newQObject(this) );
     QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
     engine->globalObject().setProperty( "print", printFunction, flags );
-/*
-    // Make include() function available to scripts, store programBegin to be able to check
-    // if an include() call is at the beginning of a script
-    QScriptValue includeFunction = engine->newFunction( include, 1 );
-    engine->globalObject().setProperty( "include", includeFunction, flags );*/
-
-//     kDebug() << "Check execution in 250ms";
-//     QTimer::singleShot( 250, this, SLOT(checkExecution()) );
+    if ( !mutexIsLocked ) {
+        m_engineMutex->unlockInline();
+    }
 }
 
 DebuggerAgent::~DebuggerAgent()
@@ -142,7 +130,7 @@ bool DebuggerAgent::isInterrupted() const
 bool DebuggerAgent::isRunning() const
 {
     QMutexLocker locker( m_mutex );
-    return m_state != NotRunning;
+    return m_state == Running;
 }
 
 bool DebuggerAgent::isAborting() const
@@ -154,20 +142,23 @@ bool DebuggerAgent::isAborting() const
 bool DebuggerAgent::wasLastRunAborted() const
 {
     QMutexLocker locker( m_mutex );
-    return m_state == NotRunning && m_lastRunAborted;
+    return m_lastRunAborted;
 }
 
 void DebuggerAgent::finish() const
 {
     m_mutex->lockInline();
-    const DebuggerState state = m_state;
-    m_mutex->unlockInline();
-
-    if ( state != NotRunning ) {
-        kDebug() << "Wait until the previous script run is finished";
+    if ( m_state != NotRunning ) {
+        DEBUGGER_EVENT("Wait until script execution finishes...");
         QEventLoop loop;
-        connect( this, SIGNAL(stopped()), &loop, SLOT(quit()) );
+        connect( this, SIGNAL(stopped(QDateTime,bool,bool,int,QString,QStringList)),
+                 &loop, SLOT(quit()) );
+        m_mutex->unlockInline();
+
         loop.exec();
+        DEBUGGER_EVENT("...Script execution has finished");
+    } else {
+        m_mutex->unlockInline();
     }
 }
 
@@ -296,7 +287,11 @@ bool DebuggerAgent::executeCommand( const ConsoleCommand &command, QString *retu
         }
 
         // TODO: Add argument to control breakpoints in external scripts
-        lineNumber = getNextBreakableLineNumber( m_mainScriptFileName, lineNumber );
+        m_mutex->lock();
+        const QString mainScriptFileName = m_mainScriptFileName;
+        m_mutex->unlock();
+
+        lineNumber = getNextBreakableLineNumber( mainScriptFileName, lineNumber );
         ok = lineNumber >= 0;
         if ( !ok ) {
             *returnValue = i18nc("@info", "Cannot interrupt script execution at line %1",
@@ -305,11 +300,11 @@ bool DebuggerAgent::executeCommand( const ConsoleCommand &command, QString *retu
         }
 
         // TODO Use filename from a new argument
-        const QHash< uint, Breakpoint > &breakpoints = breakpointsForFile( m_mainScriptFileName );
+        const QHash< uint, Breakpoint > &breakpoints = breakpointsForFile( mainScriptFileName );
         const bool breakpointExists = breakpoints.contains( lineNumber );
         kDebug() << "Breakpoint exists" << breakpointExists;
         Breakpoint breakpoint = breakpointExists ? breakpoints[lineNumber]
-                : Breakpoint( m_mainScriptFileName, lineNumber );
+                : Breakpoint( mainScriptFileName, lineNumber );
         if ( command.arguments().count() == 1 ) {
             // Only ".break <lineNumber>", no command to execute
             // Return information about the breakpoint
@@ -453,9 +448,13 @@ bool DebuggerAgent::executeCommand( const ConsoleCommand &command, QString *retu
             if ( executionControl != InvalidControlExecution ) {
                 QString errorMessage;
                 const bool ok = debugControl( executionControl, command.argument(1), &errorMessage );
-                if ( returnValue && !ok ) {
-                    *returnValue = i18nc("@info", "Cannot execute command: <message>%1</message>",
-                                         errorMessage);
+                if ( returnValue ) {
+                    if ( ok ) {
+                        *returnValue = i18nc("@info", "Command successfully executed");
+                    } else {
+                        *returnValue = i18nc("@info",
+                                "Cannot execute command: <message>%1</message>", errorMessage);
+                    }
                 }
                 return ok;
             } else if ( returnValue ) {
@@ -479,9 +478,11 @@ bool DebuggerAgent::executeCommand( const ConsoleCommand &command, QString *retu
         int errorLineNumber;
         QString errorMessage;
         QStringList backtrace;
+
         QScriptValue result = evaluateInContext( command.arguments().join(" "),
                 i18nc("@info/plain", "Console Debug Command"), &error, &errorLineNumber,
                 &errorMessage, &backtrace, InterruptAtStart );
+
         if ( error ) {
             if ( returnValue ) {
                 *returnValue = i18nc("@info", "Error: <message>%1</message><nl />"
@@ -492,7 +493,6 @@ bool DebuggerAgent::executeCommand( const ConsoleCommand &command, QString *retu
             *returnValue = result.toString();
         }
         return !error;
-        return true; // Wait for interrupt
     }
 
     default:
@@ -501,83 +501,17 @@ bool DebuggerAgent::executeCommand( const ConsoleCommand &command, QString *retu
     }
 }
 
-QVariant DebuggerAgent::evaluateInExternalEngine( const QString &program, const QString &contextName,
-                                                  bool *hadUncaughtException, int *errorLineNumber,
-                                                  QString *errorMessage, QStringList *backtrace,
-                                                  DebugFlags debugFlags )
+void DebuggerAgent::continueToDoSomething()
 {
-//     TODO One engine per console?
-    QScriptEngine engine2;
-//     QScriptValue activationObject = engine2.newVariant( context->activationObject().toVariant() );
-//     QScriptValue thisObject = engine2.newVariant( context->thisObject().toVariant() );
-//     QScriptValue globalObject = engine2.newVariant( engine()->globalObject().toVariant() );
-//     m_engineMutex->unlockInline();
-
-//     engine2.setGlobalObject( globalObject );
-//     engine2.currentContext()->setActivationObject( activationObject );
-//     engine2.currentContext()->setThisObject( thisObject );
-    QScriptValue result = engine2.evaluate( program,
-            contextName.isEmpty() ? "<Injected Code>" : contextName );
-
-    // Store current execution type, to restore it later
-//     m_mutex->lockInline();
-//     const ExecutionControl executionType = m_executionControl;
-//     m_mutex->unlockInline();
-
-//     QTimer timer;
-//     if ( debugMode == InterruptAtStart ) {
-//         debugStepIntoInjectedProgram();
-//     } else {
-//         debugRunInjectedProgram();
-//
-//         // Start a countdown, if evaluation does not finish within this countdown, it gets aborted
-//         timer.setSingleShot( true );
-//         connect( &timer, SIGNAL(timeout()), this, SLOT(cancelInjectedCodeExecution()) );
-//         timer.start( 3000 ); // 3 seconds time for the evaluation
-//     }
-//
-//     // Evaluate program
-//     m_engineMutex->lockInline();
-//     QScriptValue result = engine()->evaluate( program,
-//             contextName.isEmpty() ? "<Injected Code>" : contextName );
-//     m_engineMutex->unlockInline();
-//     timer.stop(); // Stop cancel timeout
-//
-//     // Restore previous execution type (if not interrupted)
-//     if ( debugMode != InterruptAtStart ) {
-//         m_mutex->lockInline();
-//         m_executionControl = executionType;
-//         m_mutex->unlockInline();
-//     }
-//
-//     QMutexLocker locker( m_engineMutex );
-    kDebug() << "Evaluate-in-context result" << result.toString() << program;
-    if ( hadUncaughtException ) {
-        *hadUncaughtException = engine2.hasUncaughtException();
-    }
-    if ( errorLineNumber ) {
-        *errorLineNumber = engine2.uncaughtExceptionLineNumber();
-    }
-    if ( errorMessage ) {
-        *errorMessage = engine2.uncaughtException().toString();
-    }
-    if ( backtrace ) {
-        *backtrace = engine2.uncaughtExceptionBacktrace();
-    }
-    if ( engine2.hasUncaughtException() ) {
-        kDebug() << "Uncaught exception in program:"
-                 << engine2.uncaughtExceptionBacktrace();
+    QMutexLocker locker( m_mutex );
+    if ( m_state != Interrupted ) {
+        kDebug() << "Debugger is not interrupted" << m_state;
+        return;
     }
 
-    // Transfer values from evaluation context to script context
-//     QScriptValueIterator it( engine2.currentContext()->activationObject() );
-//     QScriptValue scriptContext = engine()->currentContext()->activationObject();
-//     if ( it.hasNext() ) {
-//         it.next();
-//         scriptContext.setProperty( it.name(), it.value() );
-//     }
-
-    return result.toVariant();
+    // Wake from interrupt, then emit doSomething() and directly interrupt again
+    m_executionControl = ExecuteInterrupt;
+    m_interruptWaiter->wakeAll();
 }
 
 QScriptValue DebuggerAgent::evaluateInContext( const QString &program, const QString &contextName,
@@ -585,18 +519,7 @@ QScriptValue DebuggerAgent::evaluateInContext( const QString &program, const QSt
         QStringList *backtrace, DebugFlags debugFlags )
 {
     // Use new context for program evaluation
-    if ( !m_engineMutex->tryLock(100) ) {
-        kDebug() << "Cannot lock engine, it is most probably running, ie. not interrupted!";
-        if ( hadUncaughtException ) {
-            *hadUncaughtException = true;
-        }
-        if ( errorMessage ) {
-            *errorMessage = "Cannot lock engine, it is most probably running, ie. not interrupted!";
-        }
-        return QScriptValue();
-    }
     QScriptContext *context = engine()->pushContext();
-    m_engineMutex->unlockInline();
 
     // Store current execution type/debug flags, to restore it later
     m_mutex->lockInline();
@@ -618,10 +541,8 @@ QScriptValue DebuggerAgent::evaluateInContext( const QString &program, const QSt
     }
 
     // Evaluate program
-    m_engineMutex->lockInline();
     QScriptValue result = engine()->evaluate( program,
             contextName.isEmpty() ? "<Injected Code>" : contextName );
-    m_engineMutex->unlockInline();
     timer.stop(); // Stop cancel timeout
 
     // Restore previous execution type (if not interrupted)
@@ -638,8 +559,7 @@ QScriptValue DebuggerAgent::evaluateInContext( const QString &program, const QSt
         m_mutex->unlockInline();
     }
 
-    QMutexLocker locker( m_engineMutex );
-    kDebug() << "Evaluate-in-context result" << result.toString() << program;
+    DEBUGGER_EVENT("Evaluate-in-context result" << result.toString() << program);
     if ( hadUncaughtException ) {
         *hadUncaughtException = engine()->hasUncaughtException();
     }
@@ -673,19 +593,16 @@ QScriptValue DebuggerAgent::evaluateInContext( const QString &program, const QSt
 
 void DebuggerAgent::cancelInjectedCodeExecution()
 {
-    m_mutex->lockInline();
+    QMutexLocker locker( m_mutex );
     if ( m_injectedScriptState == InjectedScriptEvaluating ) {
-        kDebug() << "Evaluation did not finish in time or was cancelled";
+        DEBUGGER_EVENT("Evaluation did not finish in time or was cancelled");
         m_executionControl = ExecuteAbortInjectedProgram;
-        m_mutex->unlockInline();
     } else {
-        m_mutex->unlockInline();
-
-        kDebug() << "Not running injected code";
+        // Is not running injected code
         checkHasExited();
     }
 
-    m_interruptWaiter->wakeAll();
+    wakeFromInterrupt();
 }
 
 void DebuggerAgent::addBreakpoint( const Breakpoint &breakpoint )
@@ -705,7 +622,7 @@ bool DebuggerAgent::debugControl( DebuggerAgent::ConsoleCommandExecutionControl 
 {
     switch ( controlType ) {
     case ControlExecutionContinue:
-        if ( !isInterrupted() /*&& m_executionType != ExecuteNotRunning*/ ) {
+        if ( !isInterrupted() ) {
             if ( errorMessage ) {
                 *errorMessage = i18nc("@info", "Debugger is not interrupted!");
             }
@@ -714,27 +631,21 @@ bool DebuggerAgent::debugControl( DebuggerAgent::ConsoleCommandExecutionControl 
         debugContinue();
         break;
     case ControlExecutionInterrupt:
-        m_mutex->lockInline();
-        if ( m_state != Running ) {
-            m_mutex->unlockInline();
+        if ( !isRunning() ) {
             if ( errorMessage ) {
                 *errorMessage = i18nc("@info", "Debugger is not running! Start the debugger first.");
             }
             return false;
         }
-        m_mutex->unlockInline();
         debugInterrupt();
         break;
     case ControlExecutionAbort:
-        m_mutex->lockInline();
-        if ( m_state != Running ) {
-            m_mutex->unlockInline();
+        if ( !isRunning() && !isInterrupted() ) {
             if ( errorMessage ) {
-                *errorMessage = i18nc("@info", "Debugger is not running! Start the debugger first.");
+                *errorMessage = i18nc("@info", "Debugger is not running or interrupted! Start the debugger first.");
             }
             return false;
         }
-        m_mutex->unlockInline();
         abortDebugger();
         break;
     case ControlExecutionStepInto:
@@ -744,7 +655,7 @@ bool DebuggerAgent::debugControl( DebuggerAgent::ConsoleCommandExecutionControl 
             }
             return false;
         }
-        debugStepInto( argument.isValid() ? argument.toInt() - 1 : 0 );
+        debugStepInto( qMax(0, argument.toInt() - 1) );
         break;
     case ControlExecutionStepOver:
         if ( !isInterrupted() ) {
@@ -753,7 +664,7 @@ bool DebuggerAgent::debugControl( DebuggerAgent::ConsoleCommandExecutionControl 
             }
             return false;
         }
-        debugStepOver( argument.isValid() ? argument.toInt() - 1 : 0 );
+        debugStepOver( qMax(0, argument.toInt() - 1) );
         break;
     case ControlExecutionStepOut:
         if ( !isInterrupted() ) {
@@ -762,14 +673,17 @@ bool DebuggerAgent::debugControl( DebuggerAgent::ConsoleCommandExecutionControl 
             }
             return false;
         }
-        debugStepOut( argument.isValid() ? argument.toInt() - 1 : 0 );
+        debugStepOut( qMax(0, argument.toInt() - 1) );
         break;
     case ControlExecutionRunUntil: {
         bool ok;
         int lineNumber = argument.toInt( &ok );
+
         m_mutex->lockInline();
         const int scriptLineCount = m_scriptLines[m_mainScriptFileName].count();
+        const QString mainScriptFileName = m_mainScriptFileName;
         m_mutex->unlockInline();
+
         if ( !argument.isValid() || !ok ) {
             if ( errorMessage ) {
                 *errorMessage = i18nc("@info", "Invalid argument '%1', expected line number!",
@@ -785,7 +699,7 @@ bool DebuggerAgent::debugControl( DebuggerAgent::ConsoleCommandExecutionControl 
         }
 
         // TODO: Add argument to run until a line in an external script
-        lineNumber = getNextBreakableLineNumber( m_mainScriptFileName, lineNumber );
+        lineNumber = getNextBreakableLineNumber( mainScriptFileName, lineNumber );
         if ( lineNumber < 0 ) {
             if ( errorMessage ) {
                 *errorMessage = i18nc("@info", "Cannot interrupt script execution at line %!",
@@ -794,7 +708,7 @@ bool DebuggerAgent::debugControl( DebuggerAgent::ConsoleCommandExecutionControl 
             return false;
         }
 
-        debugRunUntilLineNumber( m_mainScriptFileName, lineNumber );
+        debugRunUntilLineNumber( mainScriptFileName, lineNumber );
         break;
     }
     case InvalidControlExecution:
@@ -842,75 +756,63 @@ void DebuggerAgent::setExecutionControlType( ExecutionControl executionType )
 
 void DebuggerAgent::abortDebugger()
 {
-    m_mutex->lockInline();
-    switch ( m_state ) {
+    DEBUGGER_CONTROL("abortDebugger");
+    QMutexLocker locker( m_mutex );
+    const DebuggerState state = m_state;
+    switch ( state ) {
     case Aborting:
-        kDebug() << "Is already aborting";
-        m_mutex->unlockInline();
+        DEBUGGER_EVENT("Is already aborting");
         return;
     case NotRunning:
         if ( m_injectedScriptState == InjectedScriptEvaluating ) {
-            m_mutex->unlockInline();
             cancelInjectedCodeExecution();
-        } else {
-            m_mutex->unlockInline();
-
-            // Debugger is not running, check to be sure..
-//             checkHasExited();
         }
-        break;
+        return;
+    case Running:
+    case Interrupted:
     default:
+        DEBUGGER_EVENT("Abort");
         m_lastRunAborted = true;
         m_executionControl = ExecuteAbort;
-        m_mutex->unlockInline();
-
         setState( Aborting );
         engine()->abortEvaluation();
         break;
     }
 
-    m_interruptWaiter->wakeAll();
+    wakeFromInterrupt( state );
 }
 
 void DebuggerAgent::debugInterrupt()
 {
     QMutexLocker locker( m_mutex );
-    if ( m_state == Interrupted ) {
-        kDebug() << "Already interrupted";
-        return;
-    } else if ( m_state == Aborting ) {
-        kDebug() << "Aborting";
+    DEBUGGER_CONTROL( "debugInterrupt" );
+    if ( m_state != Running ) {
+        kDebug() << "Debugger is not running" << m_state;
         return;
     }
-        /* else if ( m_state == NotRunning ) {
-        kDebug() << "Not running";
-        return;
-    }*/
+
     m_executionControl = ExecuteInterrupt;
 }
 
 void DebuggerAgent::debugContinue()
 {
-    m_mutex->lockInline();
-    if ( m_state == NotRunning ) {
-        m_mutex->unlockInline();
-        kDebug() << "Debugger is not running";
-        return;
-    } else if ( m_state == Aborting ) {
-        kDebug() << "Aborting";
+    QMutexLocker locker( m_mutex );
+    DEBUGGER_CONTROL( "debugContinue" );
+    if ( m_state != Interrupted ) {
+        kDebug() << "Debugger is not interrupted" << m_state;
         return;
     }
+
     m_executionControl = ExecuteRun;
     m_interruptWaiter->wakeAll();
-    m_mutex->unlockInline();
 }
 
 void DebuggerAgent::debugStepInto( int repeat )
 {
-    kDebug() << "debugStepInto(" << repeat << ")";
+    DEBUGGER_CONTROL2( "debugStepInto", repeat );
     QMutexLocker locker( m_mutex );
     if ( m_state != Interrupted ) {
-        kDebug() << "Debugger is not interrupted";
+        kDebug() << "Debugger is not interrupted" << m_state;
         return;
     }
 
@@ -922,15 +824,14 @@ void DebuggerAgent::debugStepInto( int repeat )
 
 void DebuggerAgent::debugStepOver( int repeat )
 {
-    kDebug() << "debugStepOver(" << repeat << ")";
+    DEBUGGER_CONTROL2( "debugStepOver", repeat );
     QMutexLocker locker( m_mutex );
     if ( m_state != Interrupted ) {
-        kDebug() << "Debugger is not interrupted";
+        kDebug() << "Debugger is not interrupted" << m_state;
         return;
     }
 
     // Wake from interrupt and run until the next statement in the function level
-//     m_interruptContext = m_currentContext;
     m_interruptFunctionLevel = 0;
     m_repeatExecutionTypeCount = repeat;
     m_executionControl = ExecuteStepOver;
@@ -939,10 +840,10 @@ void DebuggerAgent::debugStepOver( int repeat )
 
 void DebuggerAgent::debugStepOut( int repeat )
 {
-    kDebug() << "debugStepOut(" << repeat << ")";
+    DEBUGGER_CONTROL2( "debugStepOut", repeat );
     QMutexLocker locker( m_mutex );
     if ( m_state != Interrupted) {
-        kDebug() << "Debugger is not interrupted";
+        kDebug() << "Debugger is not interrupted" << m_state;
         return;
     }
 
@@ -955,24 +856,21 @@ void DebuggerAgent::debugStepOut( int repeat )
 
 void DebuggerAgent::debugRunUntilLineNumber( const QString &fileName, int lineNumber )
 {
-    kDebug() << "debugRunUntilLineNumber(" << QFileInfo(fileName).fileName() << lineNumber << ")";
+    DEBUGGER_CONTROL3( "debugRunUntilLineNumber", QFileInfo(fileName).fileName(), lineNumber );
     int runUntilLineNumber = getNextBreakableLineNumber( fileName, lineNumber );
 
-    m_mutex->lockInline();
+    QMutexLocker locker( m_mutex );
     m_runUntilLineNumber = runUntilLineNumber;
     if ( runUntilLineNumber != -1 ) {
         m_executionControl = ExecuteRun;
-        m_mutex->unlockInline();
-        m_interruptWaiter->wakeAll();
-    } else {
-        m_mutex->unlockInline();
+        wakeFromInterrupt();
     }
 }
 
 void DebuggerAgent::debugRunInjectedProgram()
 {
     QMutexLocker locker( m_mutex );
-    kDebug() << "debugRunInjectedProgram()";
+    DEBUGGER_CONTROL("debugRunInjectedProgram");
     m_repeatExecutionTypeCount = 0;
     m_injectedScriptState = InjectedScriptInitializing; // Update in next scriptLoad()
     m_previousExecutionControl = m_executionControl;
@@ -984,7 +882,7 @@ void DebuggerAgent::debugRunInjectedProgram()
 void DebuggerAgent::debugStepIntoInjectedProgram()
 {
     QMutexLocker locker( m_mutex );
-    kDebug() << "debugStepIntoInjectedProgram()";
+    DEBUGGER_CONTROL("debugStepIntoInjectedProgram");
     m_repeatExecutionTypeCount = 0;
     m_injectedScriptState = InjectedScriptInitializing; // Update in next scriptLoad()
     m_previousExecutionControl = m_executionControl;
@@ -1005,7 +903,7 @@ QString DebuggerAgent::mainScriptFileName() const
     return m_mainScriptFileName;
 }
 
-void DebuggerAgent::setMainScriptFileName ( const QString &mainScriptFileName )
+void DebuggerAgent::setMainScriptFileName( const QString &mainScriptFileName )
 {
     QMutexLocker locker( m_mutex );
     m_mainScriptFileName = mainScriptFileName;
@@ -1020,9 +918,9 @@ void DebuggerAgent::setScriptText( const QString &fileName, const QString &progr
 void DebuggerAgent::scriptLoad( qint64 id, const QString &program, const QString &fileName,
                                 int baseLineNumber )
 {
-    kDebug() << id /*<< program*/ << QFileInfo(fileName).fileName() << baseLineNumber;
+    Q_UNUSED( baseLineNumber );
     if ( id != -1 ) {
-        m_mutex->lockInline();
+        QMutexLocker locker( m_mutex );
         m_scriptIdToFileName.insert( id, fileName );
         m_currentScriptId = id;
         if ( m_injectedScriptState == InjectedScriptInitializing ) {
@@ -1030,15 +928,11 @@ void DebuggerAgent::scriptLoad( qint64 id, const QString &program, const QString
             // while the main script is interrupted
             m_injectedScriptId = id;
             m_injectedScriptState = InjectedScriptEvaluating;
-            m_mutex->unlockInline();
         } else if ( m_executionControl != ExecuteRunInjectedProgram &&
                     m_executionControl != ExecuteStepIntoInjectedProgram )
         {
-            m_mutex->unlockInline();
-            kDebug() << "Load new script program" << id << QFileInfo(fileName).fileName();
+            DEBUGGER_EVENT( "Load script" << QFileInfo(fileName).fileName() << "with id" << id );
             setScriptText( fileName, program );
-        } else {
-            m_mutex->unlockInline();
         }
     }
 }
@@ -1046,22 +940,24 @@ void DebuggerAgent::scriptLoad( qint64 id, const QString &program, const QString
 void DebuggerAgent::scriptUnload( qint64 id )
 {
     Q_UNUSED( id );
-    m_mutex->lockInline();
+    QMutexLocker locker( m_mutex );
     if ( m_injectedScriptState == InjectedScriptUpdateVariablesInParentContext ) {
         m_injectedScriptState = InjectedScriptNotRunning;
         QTimer::singleShot( 0, this, SLOT(wakeFromInterrupt()) );
     }
-    kDebug() << "Unload" << id << m_scriptIdToFileName[id];
+    DEBUGGER_EVENT( "Unload script" << m_scriptIdToFileName[id] << "with id" << id );
     m_scriptIdToFileName.remove( id );
     if ( m_currentScriptId == id ) {
         m_currentScriptId = -1;
     }
-    m_mutex->unlockInline();
 }
 
-void DebuggerAgent::wakeFromInterrupt()
+void DebuggerAgent::wakeFromInterrupt( DebuggerState unmodifiedState )
 {
-    m_interruptWaiter->wakeAll();
+    QMutexLocker locker( m_mutex );
+    if ( unmodifiedState == Interrupted ) {
+        m_interruptWaiter->wakeAll();
+    }
 }
 
 void DebuggerAgent::contextPush()
@@ -1075,17 +971,13 @@ void DebuggerAgent::contextPop()
 void DebuggerAgent::functionEntry( qint64 scriptId )
 {
     if ( scriptId != -1 ) {
-        m_mutex->lockInline();
+        QMutexLocker locker( m_mutex );
         ++m_functionDepth;
-
-        m_backtraceCleanedup = false;
         if ( m_interruptFunctionLevel >= -1 &&
             (m_executionControl == ExecuteStepOver || m_executionControl == ExecuteStepOut) )
         {
             ++m_interruptFunctionLevel;
         }
-//         kDebug() << "m_functionDepth =" << m_functionDepth;
-        m_mutex->unlockInline();
 
         emit variablesChanged( VariableChange(PushVariableStack) );
         emit backtraceChanged( BacktraceChange(PushBacktraceFrame) );
@@ -1100,18 +992,15 @@ void DebuggerAgent::functionExit( qint64 scriptId, const QScriptValue& returnVal
         emit backtraceChanged( BacktraceChange(PopBacktraceFrame) );
     }
 
-    m_mutex->lockInline();
+    QMutexLocker locker( m_mutex );
     if ( scriptId != -1 && m_injectedScriptId == scriptId ) {
-        kDebug() << "Evaluation in context finished with" << returnValue.toString();
+        DEBUGGER_EVENT( "Evaluation in context finished with" << returnValue.toString() );
         m_executionControl = m_previousExecutionControl;
-        m_mutex->unlockInline();
         emit evaluationInContextFinished( returnValue );
 
         // Interrupts again if it was interrupted before,
         // but variables can be updated in the script context
-        m_mutex->lockInline();
         m_injectedScriptState = InjectedScriptUpdateVariablesInParentContext;
-        m_mutex->unlockInline();
     } else {
         if ( scriptId != -1 && m_interruptFunctionLevel >= 0 ) {
             if ( m_executionControl == ExecuteStepOver ) {
@@ -1122,30 +1011,22 @@ void DebuggerAgent::functionExit( qint64 scriptId, const QScriptValue& returnVal
                 --m_interruptFunctionLevel;
             }
         }
-        m_mutex->unlockInline();
     }
 
     if ( scriptId != -1 ) {
-        m_mutex->lockInline();
         if ( m_executionControl == ExecuteAbort || m_state == Aborting ) {
             // Do nothing when aborting, changing m_functionDepth when aborting
             // leads to problems when starting the script again
-            m_mutex->unlockInline();
             return;
         }
 
         --m_functionDepth;
         const int functionDepth = m_functionDepth;
-        m_mutex->unlockInline();
 
         if ( functionDepth == 0 ) {
-            // Engine mutex is still locked here, unlock for checkHasExited()
-            m_engineMutex->unlockInline();
-            if ( checkHasExited() ) {
-                return;
-            } else {
-                m_engineMutex->lockInline();
-            }
+            // Engine mutex is still locked here to protect the engine while it is executing,
+            // unlock after execution has ended here
+            shutdown();
         }
     }
 }
@@ -1153,6 +1034,7 @@ void DebuggerAgent::functionExit( qint64 scriptId, const QScriptValue& returnVal
 ExecutionControl DebuggerAgent::applyExecutionControl( ExecutionControl executionControl,
                                                        QScriptContext *currentContext )
 {
+    QMutexLocker locker( m_mutex );
     Q_UNUSED( currentContext );
     switch ( executionControl ) {
         case ExecuteStepInto:
@@ -1207,24 +1089,24 @@ ExecutionControl DebuggerAgent::applyExecutionControl( ExecutionControl executio
 }
 
 void DebuggerAgent::emitChanges() {
-    m_engineMutex->lockInline();
+    QMutexLocker engineLocker( m_engineMutex );
+    QMutexLocker locker( m_mutex );
+
     QScriptContext *context = engine()->currentContext();
-
-    m_mutex->lockInline();
     m_currentContext = context;
-    m_backtraceCleanedup = true;
-    m_mutex->unlockInline();
-
     if ( context ) {
-        emit variablesChanged( VariableChange::fromContext(context) );
-
+        // Construct backtrace/variable change objects
         // The Frame object is already created and added to the model with empty values
         // (in DebuggerAgent::functionEntry())
         const bool isGlobal = context->thisObject().equals( engine()->globalObject() );
         const Frame frame( QScriptContextInfo(context), isGlobal );
-        emit backtraceChanged( BacktraceChange(UpdateBacktraceFrame, frame) );
+        const BacktraceChange backtraceChange( UpdateBacktraceFrame, frame );
+        const VariableChange variableChange = VariableChange::fromContext( context );
+
+        // Emit changes
+        emit variablesChanged( variableChange );
+        emit backtraceChanged( backtraceChange );
     }
-    m_engineMutex->unlockInline();
 }
 
 void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnNumber )
@@ -1238,18 +1120,18 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
     QScriptContext *currentContext = engine()->currentContext();
     // Unlock now, maybe trying to lock above was successful or the engine was already locked
     m_engineMutex->unlockInline();
-    DEBUGGER_DEBUG("Engine unlocked --------------------------------");
 
     // Lock member variables and initialize
     m_mutex->lockInline();
     ExecutionControl executionControl = m_executionControl;
     const bool isAborting = executionControl == ExecuteAbort || m_state == Aborting;
-    DEBUGGER_DEBUG("Execution type:" << executionControl << "  line" << lineNumber << "col" << columnNumber);
+    DEBUGGER_EVENT_POS_CHANGED("Position changed to line" << lineNumber << "colum" << columnNumber
+        << "in file" << m_scriptIdToFileName[scriptId] << "- Execution type:" << executionControl);
     const bool injectedProgram = m_injectedScriptState == InjectedScriptEvaluating;
     if ( !injectedProgram && m_state == NotRunning ) {
         // Execution has just started
         m_mutex->unlockInline();
-        fireup(); // Updates m_state
+        fireup();
         m_mutex->lockInline();
     }
 
@@ -1312,6 +1194,7 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
             emit positionChanged( lineNumber, columnNumber, oldLineNumber, oldColumnNumber );
 
             // Interrupt script execution
+            DEBUGGER_EVENT("Interrupt now");
             doInterrupt( injectedProgram );
 
             // Script execution continued, update values
@@ -1321,11 +1204,10 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
             m_mutex->unlockInline();
         }
     } else {
-        // Do not update execution position or check for breakpoints, if in an injected program
+        // Do not update execution position or check for breakpoints,
+        // if in an injected program or aborting
         m_mutex->unlockInline();
     }
-
-    DEBUGGER_DEBUG("Execution control type after interrupt:" << executionControl);
 
     // Check if debugging should be aborted
     if ( executionControl == ExecuteAbort ) {
@@ -1334,17 +1216,18 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
         m_injectedScriptState = InjectedScriptNotRunning;
         m_mutex->unlockInline();
 
+        // TODO
         const bool locked = m_engineMutex->tryLock( 250 );
         engine()->abortEvaluation();
-        if ( locked ) {
-            m_engineMutex->unlockInline();
+        if ( !locked ) {
+            kWarning() << "Could not lock the engine";
         }
 
-        kDebug() << "Shutdown";
         shutdown();
     } else if ( executionControl == ExecuteAbortInjectedProgram ) {
         // Restore member variables
         m_mutex->lockInline();
+        DEBUGGER_EVENT("Abort injected program");
         m_injectedScriptState = InjectedScriptAborting; // Handled in doInterrupt
         m_executionControl = m_previousExecutionControl;
         m_mutex->unlockInline();
@@ -1353,10 +1236,9 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
         // Interrupt execution of injected script code,
         // it should be aborted by terminating the executing thread
         doInterrupt( true );
-    } else if ( state != NotRunning ) {
+    } else if ( state != NotRunning && state != Aborting ) {
         // Protect further script execution
         m_engineMutex->lockInline();
-        DEBUGGER_DEBUG("Engine locked --------------------------------");
     }
 }
 
@@ -1375,8 +1257,7 @@ QScriptContextInfo DebuggerAgent::contextInfo() {
 bool DebuggerAgent::findActiveBreakpoint( int lineNumber, Breakpoint *&foundBreakpoint,
                                           bool *conditionError )
 {
-    // m_mutex is locked
-
+    QMutexLocker locker( m_mutex );
     if ( m_currentScriptId == -1 ) {
         kDebug() << "scriptId == -1";
         return false;
@@ -1394,71 +1275,46 @@ bool DebuggerAgent::findActiveBreakpoint( int lineNumber, Breakpoint *&foundBrea
         // No breakpoint for the current file found
         return false;
     } else if ( breakpoint.isEnabled() ) {
-        // Found a breakpoint
-        // Test breakpoint condition if any,
-        // unlock m_mutex while m_engineMutex could be locked longer
+        // Found a breakpoint, test breakpoint condition if any
         if ( !breakpoint.condition().isEmpty() ) {
-            m_mutex->unlockInline();
-            const bool conditionSatisfied = breakpoint.testCondition( this, conditionError );
-            m_mutex->lockInline();
-
-            if ( !conditionSatisfied ) {
-//                 kDebug() << "Breakpoint at" << lineNumber << "reached but it's condition"
-//                          << breakpoint.condition() << "did not match";
+            if ( !breakpoint.testCondition(this, conditionError) ) {
+                // Breakpoint reached but it's condition was not satisfied
                 return false;
             }
         }
+
         // The found breakpoint is enabled
-        kDebug() << "Breakpoint reached:" << lineNumber;
+        DEBUGGER_EVENT( "Breakpoint reached:" << lineNumber << breakpoint.fileName() );
         breakpoint.reached(); // Increase hit count, etc.
 
         // Condition satisfied or no condition, active breakpoint found
         foundBreakpoint = &breakpoint;
         return true;
     } else {
-        kDebug() << "Breakpoint at" << lineNumber << "reached but it is disabled";
+        DEBUGGER_EVENT( "Breakpoint at" << lineNumber << "reached but it is disabled"
+                        << breakpoint.fileName() );
         return false;
     }
 }
 
 void DebuggerAgent::setState( DebuggerState newState )
 {
-    m_mutex->lockInline();
+    QMutexLocker locker( m_mutex );
     if ( newState == m_state ) {
-        kDebug() << "State unchanged";
-        m_mutex->unlockInline();
         return;
     }
 
     const DebuggerState oldState = m_state;
+    DEBUGGER_STATE_CHANGE( oldState, newState );
     m_state = newState;
-    m_mutex->unlockInline();
-
     emit stateChanged( newState, oldState );
 }
 
 void DebuggerAgent::doInterrupt( bool injectedProgram ) {
-    // Unlock engine while being interrupted
-    // The engine should be locked here, ie. before starting an evaluation, that
-    // got interrupted here
-//         Q_ASSERT( !m_engineMutex->tryLock() );
-//         m_engineMutex->unlockInline();
-
-    kDebug() << "Interrupt";
     m_mutex->lockInline();
-    if ( m_injectedScriptState != InjectedScriptAborting ) {
-        m_checkRunningTimer->start( CHECK_RUNNING_WHILE_INTERRUPTED_INTERVAL );
-        setState( Interrupted );
-        m_mutex->unlockInline();
-
-        // Emit changes in the backtrace/variables
-        emitChanges();
-
-        if ( !injectedProgram ) {
-            emit interrupted();
-        }
-    } else {
-        kDebug() << "ABORT EVALUATION";
+    DEBUGGER_EVENT("Interrupt");
+    if ( m_injectedScriptState == InjectedScriptAborting ) {
+        DEBUGGER_EVENT("Abort evaluation of injected script");
         m_injectedScriptState = InjectedScriptNotRunning;
         m_injectedScriptId = -1;
         m_mutex->unlockInline();
@@ -1466,34 +1322,52 @@ void DebuggerAgent::doInterrupt( bool injectedProgram ) {
         // Emit signal to inform that the evaluation was aborted
         emit evaluationInContextAborted( i18nc("@info", "Evaluation did not finish in time. "
                                                "Maybe there is an infinite loop?") );
+    } else {
+        m_checkRunningTimer->start( CHECK_RUNNING_WHILE_INTERRUPTED_INTERVAL );
+        setState( Interrupted );
+        const QDateTime timestamp = QDateTime::currentDateTime();
+        const int lineNumber = m_lineNumber;
+        const QString fileName = m_scriptIdToFileName[ m_currentScriptId ];
+        m_mutex->unlockInline();
+
+        // Emit changes in the backtrace/variables
+        emitChanges();
+
+        if ( !injectedProgram ) {
+            emit interrupted( lineNumber, fileName, timestamp );
+        }
     }
 
     forever {
         // Wait here until the debugger gets continued
         m_interruptMutex->lockInline();
-        kDebug() << "Wait" << thread();
         m_interruptWaiter->wait( m_interruptMutex/*, 500*/ );
         m_interruptMutex->unlockInline();
 
         // Continued, update the execution control value, which might have changed
         m_mutex->lockInline();
         ExecutionControl executionControl = m_executionControl;
+        DEBUGGER_EVENT("Woke up from interrupt, to do now:" << executionControl);
         m_mutex->unlockInline();
 
-        if ( executionControl == ExecuteAbort ) {
+        bool continueExecution = false;
+        switch ( executionControl ) {
+        case ExecuteAbort: {
             // Continued to be aborted
             const bool locked = m_engineMutex->tryLock( 250 );
             engine()->abortEvaluation();
-            if ( locked ) {
-                m_engineMutex->unlockInline();
+            if ( !locked ) {
+                kWarning() << "Could not lock the engine";
             }
 
             // Shut the debugger down
             shutdown();
             return;
-        } else if ( executionControl == ExecuteAbortInjectedProgram ) {
+        }
+        case ExecuteAbortInjectedProgram:
             // Restore member variables
             m_mutex->lockInline();
+            DEBUGGER_EVENT("Abort injected program");
             m_injectedScriptState = InjectedScriptAborting; // Handled in doInterrupt
             m_executionControl = m_previousExecutionControl;
             m_mutex->unlockInline();
@@ -1502,54 +1376,62 @@ void DebuggerAgent::doInterrupt( bool injectedProgram ) {
             // it should be aborted by terminating the executing thread
             doInterrupt( true );
             return;
-        }
 
         // Check if execution should be interrupted again, ie. if it was just woken to do something
-        if ( executionControl == ExecuteInterrupt ) {
-            kDebug() << "Still interrupted";
+        case ExecuteInterrupt:
             m_mutex->lockInline();
+            DEBUGGER_EVENT("Still interrupted");
+
             // A hint was set in functionExit() to trigger a call to emitChanges() after script
             // code was evaluated in the script context (in another thread) and might have changed
             // variables. In scriptUnload() a 0-timer gets started to call wakeFromInterrupt() so
             // that the variables in the script context and in the script execution thread are
-            // available here.
+            // available here. TODO
             if ( m_injectedScriptState == InjectedScriptUpdateVariablesInParentContext ) {
                 m_injectedScriptId = -1;
-                m_mutex->unlockInline();
-
-                // Update after evaluation in context,
-                // which might have changed variables in script context
-                emitChanges();
-            } else {
-                m_mutex->unlockInline();
             }
-        } else {
+            m_mutex->unlockInline();
+
+            // Update variables/backtrace
+            emitChanges();
+
+            // Let directly connected slots be executed in this agent's thread,
+            // while execution is interrupted
+            emit doSomething();
+            break;
+
+        default:
             // Continue script execution
+            continueExecution = true;
+            break;
+        }
+
+        if ( continueExecution ) {
             break;
         }
     }
 
-    kDebug() << "Continue";
     m_mutex->lockInline();
     ExecutionControl executionControl = m_executionControl;
-    setState( Running );
     m_checkRunningTimer->start( CHECK_RUNNING_INTERVAL );
+    const QDateTime timestamp = QDateTime::currentDateTime();
     m_mutex->unlockInline();
 
+    setState( Running );
+
     if ( executionControl != ExecuteRunInjectedProgram ) {
-        emit continued( executionControl != ExecuteContinue && executionControl != ExecuteRun );
+        emit continued( timestamp,
+                        executionControl != ExecuteContinue && executionControl != ExecuteRun );
     }
 }
 
 int DebuggerAgent::currentFunctionLineNumber() const
 {
+    QMutexLocker locker( m_mutex );
     if ( !m_currentContext ) {
         return -1;
     }
-
-//     QMutexLocker engineLocker( m_engineMutex );
     QScriptContext *context = m_currentContext;
-
     while ( context ) {
         if ( context->thisObject().isFunction() ) {
             return QScriptContextInfo( context ).lineNumber();
@@ -1559,6 +1441,7 @@ int DebuggerAgent::currentFunctionLineNumber() const
     return -1;
 }
 
+// TODO Remove?
 void DebuggerAgent::checkExecution()
 {
     checkHasExited();
@@ -1566,11 +1449,8 @@ void DebuggerAgent::checkExecution()
 
 bool DebuggerAgent::checkHasExited()
 {
-    m_mutex->lockInline();
-    DebuggerState state = m_state;
-    m_mutex->unlockInline();
-
-    if ( state == NotRunning ) {
+    QMutexLocker locker( m_mutex );
+    if ( m_state == NotRunning ) {
         return true;
     } else if ( isInterrupted() ) {
         // If script execution is interrupted it is not finished
@@ -1583,12 +1463,14 @@ bool DebuggerAgent::checkHasExited()
         m_engineMutex->unlockInline();
     } else {
         kWarning() << "Cannot lock the engine";
-        engine()->abortEvaluation();
+        if ( m_state == Aborting ) {
+            engine()->abortEvaluation();
+        }
         shutdown();
-        return true;
+        return false;
     }
 
-    if ( state != NotRunning && !isEvaluating ) {
+    if ( m_state != NotRunning && !isEvaluating ) {
         shutdown();
         return true;
     } else {
@@ -1598,34 +1480,32 @@ bool DebuggerAgent::checkHasExited()
 
 void DebuggerAgent::fireup()
 {
-    // First lock the engine (m_engineMutex), then the agents member variables (m_mutex),
-    // otherwise m_mutex would lock as long as m_engineMutex does
-    m_engineMutex->lockInline();
-    const QScriptValue globalObject = engine()->globalObject();
-    m_engineMutex->unlockInline();
+    QMutexLocker locker( m_mutex );
+    DEBUGGER_EVENT("Execution started");
+    // First store start time
+    const QDateTime timestamp = QDateTime::currentDateTime();
 
     setState( Running );
-
-    m_mutex->lockInline();
-    m_globalObject = globalObject;
     m_lastRunAborted = false;
     m_hasUncaughtException = false;
     m_uncaughtExceptionLineNumber = -1;
     m_checkRunningTimer->start( CHECK_RUNNING_INTERVAL );
-    m_mutex->unlockInline();
 
-    emit started();
+    emit started( timestamp );
 }
 
 void DebuggerAgent::shutdown()
 {
-    m_mutex->lockInline();
+    QMutexLocker locker( m_mutex );
     m_checkRunningTimer->stop();
     if ( m_state == NotRunning ) {
-        m_mutex->unlockInline();
         kDebug() << "Not running";
         return;
     }
+    DEBUGGER_EVENT("Execution stopped");
+
+    // First store end time
+    const QDateTime timestamp = QDateTime::currentDateTime();
 
     m_functionDepth = 0;
     const bool isPositionChanged = m_lineNumber != -1 || m_columnNumber != -1;
@@ -1633,32 +1513,48 @@ void DebuggerAgent::shutdown()
     // Context will be invalid
     m_currentContext = 0;
 
-    DebuggerState oldState = m_state;
-    m_mutex->unlockInline();
+    const DebuggerState oldState = m_state;
 
+    // Engine mutex is still locked here
     if ( oldState == Aborting ) {
         if ( engine()->isEvaluating() ) {
             kDebug() << "Still evaluating, abort";
             engine()->abortEvaluation();
         }
+
+        DEBUGGER_EVENT("Was aborted");
+        m_engineMutex->unlockInline();
         emit aborted();
+        m_engineMutex->lockInline();
     }
+
     engine()->clearExceptions();
+
+    setState( NotRunning );
+    m_engineMutex->unlockInline();
 
     if ( isPositionChanged ) {
         const int oldLineNumber = m_lineNumber;
         const int oldColumnNumber = m_columnNumber;
-
-        m_mutex->lockInline();
         m_lineNumber = -1;
         m_columnNumber = -1;
-        m_mutex->unlockInline();
 
         emit positionChanged( -1, -1, oldLineNumber, oldColumnNumber );
     }
 
-    setState( NotRunning );
-    emit stopped( oldState == Aborting );
+    Scripting::Network *scriptNetwork = qobject_cast< Scripting::Network* >(
+            engine()->globalObject().property("network").toQObject() );
+    bool hasRunningRequests = scriptNetwork ? scriptNetwork->hasRunningRequests() : false;
+    const int uncaughtExceptionLineNumber = m_uncaughtExceptionLineNumber;
+    const QString uncaughtException = m_uncaughtException.toString();
+    const QStringList backtrace = m_uncaughtExceptionBacktrace;
+
+    emit stopped( timestamp, oldState == Aborting, hasRunningRequests,
+                  uncaughtExceptionLineNumber, uncaughtException, backtrace );
+
+    // Restore locked state of the engine mutex after execution ends
+    // (needs to be locked before execution starts with eg. QScriptEngine::evaluate())
+    m_engineMutex->lockInline();
 }
 
 void DebuggerAgent::exceptionCatch( qint64 scriptId, const QScriptValue &exception )
@@ -1670,38 +1566,38 @@ void DebuggerAgent::exceptionThrow( qint64 scriptId, const QScriptValue &excepti
                                     bool hasHandler )
 {
     Q_UNUSED( scriptId );
-    if ( !hasHandler && m_injectedScriptState != InjectedScriptEvaluating ) {
-        QScriptEngine *_engine = engine();
-        int uncaughtExceptionLineNumber = _engine->uncaughtExceptionLineNumber();
-        m_engineMutex->unlockInline();
-
+    if ( !hasHandler ) {
         m_mutex->lockInline();
-        if ( uncaughtExceptionLineNumber < 0 ) {
-            uncaughtExceptionLineNumber = m_lineNumber;
+        if ( m_injectedScriptState == InjectedScriptEvaluating ) {
+            // Exception was thrown from injected code
+            m_mutex->unlockInline();
+        } else {
+            int uncaughtExceptionLineNumber = m_lineNumber;
+            m_hasUncaughtException = true;
+            m_uncaughtExceptionLineNumber = uncaughtExceptionLineNumber;
+            m_uncaughtException = exceptionValue;
+            m_uncaughtExceptionBacktrace = engine()->uncaughtExceptionBacktrace();
+            const DebugFlags debugFlags = m_debugFlags;
+            const QString fileName = m_scriptIdToFileName[scriptId];
+            DEBUGGER_EVENT("Uncatched exception in" << QFileInfo(fileName).fileName()
+                           << "line" << uncaughtExceptionLineNumber << exceptionValue.toString());
+            m_mutex->unlockInline();
+
+            emit exception( uncaughtExceptionLineNumber, exceptionValue.toString(), fileName );
+
+            if ( debugFlags.testFlag(InterruptOnExceptions) ) {
+                // Interrupt at the exception
+                doInterrupt();
+            }
+
+            abortDebugger();
         }
-        m_hasUncaughtException = true;
-        m_uncaughtExceptionLineNumber = uncaughtExceptionLineNumber;
-        m_uncaughtException = exceptionValue;
-        const DebugFlags debugFlags = m_debugFlags;
-        const QString fileName = m_scriptIdToFileName[scriptId];
-        kDebug() << "Uncatched exception in" << QFileInfo(fileName).fileName()
-                 << "line" << uncaughtExceptionLineNumber << exceptionValue.toString();
-        m_mutex->unlockInline();
-
-        emit exception( uncaughtExceptionLineNumber, exceptionValue.toString(), fileName );
-
-        if ( debugFlags.testFlag(InterruptOnExceptions) ) {
-            // Interrupt at the exception
-            doInterrupt();
-        }
-
-        abortDebugger();
     }
 }
 
-QVariant DebuggerAgent::extension( QScriptEngineAgent::Extension extension, const QVariant &argument )
+QVariant DebuggerAgent::extension( QScriptEngineAgent::Extension extension,
+                                   const QVariant &argument )
 {
-    kDebug() << extension << argument.toString();
     return QScriptEngineAgent::extension( extension, argument );
 }
 

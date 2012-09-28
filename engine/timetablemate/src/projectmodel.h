@@ -22,13 +22,21 @@
 
 // Own includes
 #include "config.h"
-#include "enums.h"
+#include "tabs/tabs.h"
+#include "javascriptparser.h"
+#include "testmodel.h" // For TestModel::Test
 
 // Qt includes
 #include <QAbstractItemModel>
 
+namespace ThreadWeaver {
+    class WeaverInterface;
+}
+typedef QSharedPointer< ThreadWeaver::WeaverInterface > WeaverInterfacePointer;
+
 class Project;
 class ProjectModel;
+class QTimer;
 
 /** @brief An item of ProjectModel. */
 class ProjectModelItem {
@@ -44,14 +52,17 @@ public:
           document, ie the service provider plugin XML document. */
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         ScriptItem, /**< A child of the project item, represents the script document. */
+        IncludedScriptItem, /**< A child of the project item, represents an included script document. */
+        CodeItem, /**< A child of the script item, represents a code node. */
 #endif
         WebItem, /**< A child of the project item, represents the web view. */
         PlasmaPreviewItem /**< A child of the project item, represents the plasma preview. */
+
     };
 
     virtual ~ProjectModelItem();
 
-    QString text() const;
+    virtual QString text() const;
 
     Project *project() const { return m_project; };
     ProjectModelItem *parent() const { return m_parent; };
@@ -64,8 +75,10 @@ public:
     inline bool isProjectSourceItem() const { return m_type == ProjectSourceItem; };
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     inline bool isScriptItem() const { return m_type == ScriptItem; };
+    inline bool isIncludedScriptItem() const { return m_type == IncludedScriptItem; };
 #else
     inline bool isScriptItem() const { return false; };
+    inline bool isIncludedScriptItem() const { return false; };
 #endif
     inline bool isPlasmaPreviewItem() const { return m_type == PlasmaPreviewItem; };
     inline bool isWebItem() const { return m_type == WebItem; };
@@ -87,12 +100,54 @@ protected:
             return new ProjectModelItem( project, WebItem ); };
 
     void addChild( ProjectModelItem *item );
+    void insertChild( int index, ProjectModelItem *item );
+    void removeChildren( const QList< ProjectModelItem* > &items );
+    void clearChildren();
 
 private:
     Project *m_project;
     ProjectModelItem *m_parent;
     QList< ProjectModelItem* > m_children;
     Type m_type;
+};
+
+/**
+ * @brief An item of ProjectModel, which represents child items of script items.
+ **/
+class ProjectModelCodeItem : public ProjectModelItem {
+    friend class ProjectModel;
+
+public:
+    virtual QString text() const { return m_node->text(); };
+    CodeNode::Ptr node() const { return m_node; };
+
+protected:
+    ProjectModelCodeItem( Project *project, const CodeNode::Ptr &node,
+                          ProjectModelItem *parent = 0 )
+            : ProjectModelItem(project, CodeItem, parent), m_node(node) {};
+
+private:
+    CodeNode::Ptr m_node;
+};
+
+/**
+ * @brief An item of ProjectModel, which represents an included script document.
+ **/
+class ProjectModelIncludedScriptItem : public ProjectModelItem {
+    friend class ProjectModel;
+
+public:
+    virtual QString text() const { return fileName(); };
+    QString fileName() const;
+    QString filePath() const { return m_filePath; };
+
+protected:
+    ProjectModelIncludedScriptItem( Project *project, const QString &filePath,
+                                    ProjectModelItem *parent = 0 )
+            : ProjectModelItem(project, IncludedScriptItem, parent), m_filePath(filePath) {};
+
+private:
+    QString m_filePath;
 };
 
 /**
@@ -150,6 +205,9 @@ public:
     inline bool isProjectLoaded( const QString &projectFilePath ) const {
             return projectFromFilePath(projectFilePath) != 0; };
 
+    bool isIdle() const;
+    WeaverInterfacePointer weaver() const { return m_weaver; };
+
 signals:
     /** @brief Emitted when @p project gets added to the model. */
     void projectAdded( Project *project );
@@ -166,6 +224,10 @@ signals:
     /** @brief Emitted when the active project changed from @p previousProject to @p project. */
     void activeProjectChanged( Project *project, Project *previousProject );
 
+    void testProgress( int finishedTestCount, int totalTestCount );
+    void testProgress( const QHash< Project*, QList< TestModel::Test > > &finishedTests,
+                       const QHash< Project*, QList< TestModel::Test > > &allTests );
+
 public slots:
     /** @brief Append @p project to the list of projects in this model. */
     void appendProject( Project *project );
@@ -181,14 +243,27 @@ public slots:
         ProjectModelItem *projectItem = projectItemFromRow( row );
         setActiveProject( projectItem ? projectItem->project() : 0 );
     };
+    void scriptSaved();
+
+    void testAllProjects();
 
 protected slots:
     void slotProjectModified();
     void setAsActiveProjectRequest();
+    void updateProjects();
+    void projectTestProgress( const QList< TestModel::Test > &finishedTests,
+                              const QList< TestModel::Test > &startedTests );
 
 private:
+    void insertCodeNodes( ProjectModelItem *scriptItem, bool emitSignals = true );
+
     QList< ProjectModelItem* > m_projects;
     Project *m_activeProject; // Only to be changed using setActiveProject()
+    QTimer *m_updateProjectsTimer;
+    QList< Project* > m_changedScriptProjects;
+    QHash< Project*, QList< TestModel::Test > > m_startedTests;
+    QHash< Project*, QList< TestModel::Test > > m_finishedTests;
+    WeaverInterfacePointer m_weaver;
 };
 
 #endif // Multiple inclusion guard

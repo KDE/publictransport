@@ -58,7 +58,8 @@ public slots:
 
 protected slots:
     void activeProjectAboutToChange( Project *project, Project *previousProject );
-    void debuggerContinued( bool willInterruptAfterNextStatement = false );
+    void debuggerContinued( const QDateTime &timestamp,
+                            bool willInterruptAfterNextStatement = false );
     void debuggerStateChanged( DebuggerState newState, DebuggerState oldState );
     void contextMenu( const QPoint &pos );
 

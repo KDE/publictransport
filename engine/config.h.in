@@ -1,3 +1,18 @@
 #cmakedefine BUILD_PROVIDER_TYPE_SCRIPT
 #cmakedefine BUILD_PROVIDER_TYPE_GTFS
 #cmakedefine BUILD_GTFS_REALTIME
+#cmakedefine ENABLE_DEBUG_NETWORK
+#cmakedefine ENABLE_DEBUG_SCRIPT_HELPER
+
+// Debug output for network events in the script
+#ifdef ENABLE_DEBUG_NETWORK
+    #define DEBUG_NETWORK(msg) kDebug() << msg
+#else
+    #define DEBUG_NETWORK(msg)
+#endif
+
+#ifdef ENABLE_DEBUG_SCRIPT_HELPER
+    #define DEBUG_SCRIPT_HELPER(msg) kDebug() << msg
+#else
+    #define DEBUG_SCRIPT_HELPER(msg)
+#endif

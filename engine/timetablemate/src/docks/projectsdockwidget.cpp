@@ -108,6 +108,22 @@ void ProjectsDockWidget::projectItemDoubleClicked( const QModelIndex &index )
         case ProjectModelItem::ScriptItem:
             project->showScriptTab( this );
             break;
+        case ProjectModelItem::IncludedScriptItem: {
+            ProjectModelIncludedScriptItem *includedScriptItem =
+                    dynamic_cast< ProjectModelIncludedScriptItem* >( projectItem );
+            project->showExternalScriptTab( includedScriptItem->filePath(), this );
+            break;
+        }
+        case ProjectModelItem::CodeItem: {
+            ProjectModelCodeItem *codeItem = dynamic_cast< ProjectModelCodeItem* >( projectItem );
+            ProjectModelIncludedScriptItem *includedScriptItem = // TODO
+                    dynamic_cast< ProjectModelIncludedScriptItem* >( codeItem->parent() );
+            ScriptTab *scriptTab = includedScriptItem
+                    ? project->showExternalScriptTab(includedScriptItem->filePath(), this)
+                    : project->showScriptTab(this);
+            scriptTab->goToLine( codeItem->node()->line() );
+            break;
+        }
 #endif
         case ProjectModelItem::PlasmaPreviewItem:
             project->showPlasmaPreviewTab( this );
@@ -133,22 +149,29 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
     }
 
     ProjectModelItem *projectItem = m_model->projectItemFromIndex( index );
+    Project *project = projectItem->project();
     if ( index.parent().isValid() ) {
         // Show context menu for child item
         KMenu *projectMenu = new KMenu( this );
         const TabType tabType = ProjectModelItem::tabTypeFromProjectItemType( projectItem->type() );
         QAction *openInTabAction = 0;
+        QAction *showCodeNodeAction = 0;
         QAction *closeTabAction = 0;
         QAction *documentSaveAction = 0;
-        ProjectSourceTab *projectSourceTab = projectItem->project()->projectSourceTab();
+        ProjectSourceTab *projectSourceTab = project->projectSourceTab();
+        ProjectModelCodeItem *codeItem = dynamic_cast< ProjectModelCodeItem* >( projectItem );
+        ProjectModelIncludedScriptItem *includedScriptItem =
+                dynamic_cast< ProjectModelIncludedScriptItem* >( projectItem );
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        ScriptTab *scriptTab = projectItem->project()->scriptTab();
+        ScriptTab *scriptTab = projectItem->isIncludedScriptItem()
+                ? project->scriptTab(includedScriptItem->filePath()) : project->scriptTab();
 #else
         AbstractTab *scriptTab = 0; // Dummy for less #ifdefs
 #endif
 
         // Add a tab/document title
-        AbstractTab *tab = projectItem->project()->tab( tabType );
+        AbstractTab *tab = includedScriptItem ? project->scriptTab(includedScriptItem->filePath())
+                                              : project->tab(tabType);
         if ( tab ) {
             projectMenu->addTitle( tab->icon(), tab->title() );
         } else {
@@ -157,65 +180,84 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
         }
 
         // Add an action to open the associated tab / create the document and open it in a tab
-        const bool tabOpened = projectItem->project()->isTabOpened( tabType );
-        if ( !tabOpened ) {
-            // Tab for the project item is not opened, add an open/create action
-            openInTabAction = projectItem->project()->scriptFileName().isEmpty()
-                    ? projectMenu->addAction(KIcon("document-new"),
-                                             i18nc("@item:inmenu", "Create From Template"))
-                    : projectMenu->addAction(KIcon("document-open"),
-                                             i18nc("@item:inmenu", "Open in Tab"));
-        }
+        if ( codeItem ) {
+            showCodeNodeAction = projectMenu->addAction( KIcon("arrow-right"),
+                                           i18nc("@item:inmenu", "Show in Script Tab"));
+        } else {
+            const bool tabOpened = includedScriptItem
+                    ? bool(scriptTab) : project->isTabOpened(tabType);
+            if ( !tabOpened ) {
+                // Tab for the project item is not opened, add an open/create action
+                const QString fileName = includedScriptItem
+                        ? includedScriptItem->filePath() : project->scriptFileName();
+                openInTabAction = fileName.isEmpty()
+                        ? projectMenu->addAction(KIcon("document-new"),
+                                                 i18nc("@item:inmenu", "Create From Template"))
+                        : projectMenu->addAction(KIcon("document-open"),
+                                                 i18nc("@item:inmenu", "Open in Tab"));
+            }
 
-        // Add an action to open external script files for the script item
-        if ( projectItem->isScriptItem() ) {
-            QAction *openExternalAction =
-                    projectItem->project()->projectAction( Project::ShowExternalScript );
-            projectMenu->addAction( openExternalAction );
-        }
+            // Add an action to open external script files for the script item
+            if ( projectItem->isScriptItem() ) {
+                QAction *openExternalAction = project->projectAction( Project::ShowExternalScript );
+                projectMenu->addAction( openExternalAction );
+            }
 
-        // Add a save action for document items
-        if ( projectItem->isProjectSourceItem() || projectItem->isScriptItem() ) {
-            documentSaveAction = projectMenu->addAction( KIcon("document-save"),
-                                                         i18nc("@item:inmenu", "Save Document") );
-            documentSaveAction->setEnabled(
-                    (projectItem->isProjectSourceItem() && projectSourceTab && projectSourceTab->isModified()) ||
-                    (projectItem->isScriptItem() && scriptTab && scriptTab->isModified()) );
-        }
+            // Add a save action for document items
+            if ( projectItem->isProjectSourceItem() || projectItem->isScriptItem() ||
+                 projectItem->isIncludedScriptItem() )
+            {
+                documentSaveAction = projectMenu->addAction( KIcon("document-save"),
+                                                            i18nc("@item:inmenu", "Save Document") );
+                documentSaveAction->setEnabled(
+                        (projectItem->isProjectSourceItem() && projectSourceTab && projectSourceTab->isModified()) ||
+                        ((projectItem->isScriptItem() || projectItem->isIncludedScriptItem()) &&
+                         scriptTab && scriptTab->isModified()) );
+            }
 
-        // Add a tab close action
-        if ( tabOpened ) {
-            // Tab for the project item is already opened
-            closeTabAction = projectMenu->addAction(KIcon("tab-close"),
-                    i18nc("@item:inmenu", "Close Tab"));
+            // Add a tab close action
+            if ( tabOpened ) {
+                // Tab for the project item is already opened
+                closeTabAction = projectMenu->addAction(KIcon("tab-close"),
+                        i18nc("@item:inmenu", "Close Tab"));
+            }
         }
 
         // Add a title "Project" and context menu actions of the project
         projectMenu->addTitle( KIcon("project-development"),
                                i18nc("@title:menu In-menu title", "Project") );
-        projectMenu->addActions( projectItem->project()->contextMenuActions(this) );
+        projectMenu->addActions( project->contextMenuActions(this) );
 
         // Show the context menu
         QAction *triggeredAction = projectMenu->exec( m_projectsWidget->mapToGlobal(pos) );
         delete projectMenu;
 
-        if ( triggeredAction == openInTabAction && openInTabAction ) {
+        if ( triggeredAction == 0 ) {
+            return;
+        } else if ( triggeredAction == openInTabAction ) {
             // Open project item in a tab
             projectItemDoubleClicked( index );
-        } else if ( triggeredAction == closeTabAction && closeTabAction ) {
+        } else if ( triggeredAction == closeTabAction ) {
             // Close the tab
-            projectItem->project()->closeTab( tabType );
+            project->closeTab( tab );
         } else if ( triggeredAction == documentSaveAction ) {
             // Save project item
             if ( projectItem->isProjectSourceItem() && projectSourceTab ) {
                 projectSourceTab->save();
-            } else if ( projectItem->isScriptItem() && scriptTab ) {
+            } else if ( scriptTab &&
+                        (projectItem->isScriptItem() || projectItem->isIncludedScriptItem()) )
+            {
                 scriptTab->save();
             }
+        } else if ( triggeredAction == showCodeNodeAction ) {
+            ScriptTab *scriptTab = projectItem->isIncludedScriptItem()
+                    ? project->showExternalScriptTab(includedScriptItem->filePath(), this)
+                    : project->showScriptTab( this );
+            scriptTab->goToLine( codeItem->node()->line() );
         }
     } else {
         // A project item was clicked, open the project context menu
-        projectItem->project()->showProjectContextMenu( m_projectsWidget->mapToGlobal(pos) );
+        project->showProjectContextMenu( m_projectsWidget->mapToGlobal(pos) );
     }
 }
 

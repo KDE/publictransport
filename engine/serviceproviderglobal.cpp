@@ -123,6 +123,7 @@ QString ServiceProviderGlobal::fileNameFromId( const QString &serviceProviderId 
     }
 
     // File not found
+    kDebug() << "No service provider plugin found with this ID:" << serviceProviderId;
     return QString();
 }
 
