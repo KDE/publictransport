@@ -111,6 +111,7 @@ private:
     Type m_type;
 };
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
 /**
  * @brief An item of ProjectModel, which represents child items of script items.
  **/
@@ -149,6 +150,7 @@ protected:
 private:
     QString m_filePath;
 };
+#endif
 
 /**
  * @brief A model for TimetableMate projects.
@@ -250,12 +252,17 @@ public slots:
 protected slots:
     void slotProjectModified();
     void setAsActiveProjectRequest();
-    void updateProjects();
     void projectTestProgress( const QList< TestModel::Test > &finishedTests,
                               const QList< TestModel::Test > &startedTests );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    void updateProjects();
+#endif
+
 private:
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     void insertCodeNodes( ProjectModelItem *scriptItem, bool emitSignals = true );
+#endif
 
     QList< ProjectModelItem* > m_projects;
     Project *m_activeProject; // Only to be changed using setActiveProject()

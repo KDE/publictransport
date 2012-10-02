@@ -20,11 +20,13 @@
 // Header
 #include "request.h"
 
-// Own includes
-#include "script/serviceproviderscript.h"
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    // Own includes
+    #include "script/serviceproviderscript.h"
 
-// Qt includes
-#include <QScriptEngine>
+    // Qt includes
+    #include <QScriptEngine>
+#endif
 
 QString AbstractRequest::parseModeName() const
 {
@@ -48,27 +50,6 @@ QString AbstractRequest::parseModeName( ParseDocumentMode parseMode )
     default:
         return "unknown";
     }
-}
-
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-QString StopSuggestionRequest::functionName() const
-{
-    return ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
-}
-
-QString DepartureRequest::functionName() const
-{ // Same name for ArrivalRequest
-    return ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
-}
-
-QString JourneyRequest::functionName() const
-{
-    return ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS;
-}
-
-QString AdditionalDataRequest::functionName() const
-{
-    return ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA;
 }
 
 QString DepartureRequest::argumentsString() const
@@ -108,6 +89,27 @@ QString JourneyRequest::argumentsString() const
                    "targetStop: \"%5\", dateTime: %6}")
             .arg(stop, city).arg(maxCount)
             .arg(stop, targetStop, dateTime.toString(Qt::SystemLocaleShortDate));
+}
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+QString StopSuggestionRequest::functionName() const
+{
+    return ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
+}
+
+QString DepartureRequest::functionName() const
+{ // Same name for ArrivalRequest
+    return ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
+}
+
+QString JourneyRequest::functionName() const
+{
+    return ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS;
+}
+
+QString AdditionalDataRequest::functionName() const
+{
+    return ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA;
 }
 
 QScriptValue StopSuggestionRequest::toScriptValue( QScriptEngine *engine ) const
@@ -173,5 +175,4 @@ QScriptValue AdditionalDataRequest::toScriptValue( QScriptEngine *engine ) const
     value.setProperty( QLatin1String("routeDataUrl"), routeDataUrl );
     return value;
 }
-
 #endif // BUILD_PROVIDER_TYPE_SCRIPT

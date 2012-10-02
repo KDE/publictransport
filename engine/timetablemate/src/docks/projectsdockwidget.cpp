@@ -159,19 +159,21 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
         QAction *closeTabAction = 0;
         QAction *documentSaveAction = 0;
         ProjectSourceTab *projectSourceTab = project->projectSourceTab();
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         ProjectModelCodeItem *codeItem = dynamic_cast< ProjectModelCodeItem* >( projectItem );
         ProjectModelIncludedScriptItem *includedScriptItem =
                 dynamic_cast< ProjectModelIncludedScriptItem* >( projectItem );
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         ScriptTab *scriptTab = projectItem->isIncludedScriptItem()
                 ? project->scriptTab(includedScriptItem->filePath()) : project->scriptTab();
-#else
-        AbstractTab *scriptTab = 0; // Dummy for less #ifdefs
-#endif
-
-        // Add a tab/document title
         AbstractTab *tab = includedScriptItem ? project->scriptTab(includedScriptItem->filePath())
                                               : project->tab(tabType);
+#else
+        AbstractTab *scriptTab = 0; // Dummy for less #ifdefs
+        bool includedScriptItem = false;
+        AbstractTab *tab = project->tab( tabType );
+#endif
+
+
         if ( tab ) {
             projectMenu->addTitle( tab->icon(), tab->title() );
         } else {
@@ -179,17 +181,24 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
                                    m_model->data(index, Qt::DisplayRole).toString() );
         }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         // Add an action to open the associated tab / create the document and open it in a tab
         if ( codeItem ) {
             showCodeNodeAction = projectMenu->addAction( KIcon("arrow-right"),
                                            i18nc("@item:inmenu", "Show in Script Tab"));
-        } else {
+        } else
+#endif
+        {
             const bool tabOpened = includedScriptItem
                     ? bool(scriptTab) : project->isTabOpened(tabType);
             if ( !tabOpened ) {
                 // Tab for the project item is not opened, add an open/create action
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
                 const QString fileName = includedScriptItem
                         ? includedScriptItem->filePath() : project->scriptFileName();
+#else
+                const QString fileName = project->scriptFileName();
+#endif
                 openInTabAction = fileName.isEmpty()
                         ? projectMenu->addAction(KIcon("document-new"),
                                                  i18nc("@item:inmenu", "Create From Template"))
@@ -197,11 +206,13 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
                                                  i18nc("@item:inmenu", "Open in Tab"));
             }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
             // Add an action to open external script files for the script item
             if ( projectItem->isScriptItem() ) {
                 QAction *openExternalAction = project->projectAction( Project::ShowExternalScript );
                 projectMenu->addAction( openExternalAction );
             }
+#endif
 
             // Add a save action for document items
             if ( projectItem->isProjectSourceItem() || projectItem->isScriptItem() ||
@@ -249,12 +260,15 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
             {
                 scriptTab->save();
             }
-        } else if ( triggeredAction == showCodeNodeAction ) {
+        }
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        else if ( triggeredAction == showCodeNodeAction ) {
             ScriptTab *scriptTab = projectItem->isIncludedScriptItem()
                     ? project->showExternalScriptTab(includedScriptItem->filePath(), this)
                     : project->showScriptTab( this );
             scriptTab->goToLine( codeItem->node()->line() );
         }
+#endif
     } else {
         // A project item was clicked, open the project context menu
         project->showProjectContextMenu( m_projectsWidget->mapToGlobal(pos) );

@@ -873,8 +873,10 @@ public slots:
     /** @brief Emit a request to make this project active. */
     void setAsActiveProject() { emit setAsActiveProjectRequest(); };
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Aborts the debugger if it is running or updates the UI state to the debugger state. */
     void abortDebugger();
+#endif
 
     /**
      * @brief Test the project, eg. for syntax errors in the script, correct results.
@@ -1066,15 +1068,15 @@ protected slots:
 
     void scriptTabDestroyed();
     void externalScriptTabDestroyed( QObject *tab );
+
+    void evaluationResult( const EvaluationResult &result );
+    void commandExecutionResult( const QString &returnValue, bool error = false );
 #endif
 
     void dashboardTabDestroyed();
     void projectSourceTabDestroyed();
     void plasmaPreviewTabDestroyed();
     void webTabDestroyed();
-
-    void commandExecutionResult( const QString &returnValue, bool error = false );
-    void evaluationResult( const EvaluationResult &result );
 
     void testJobStarted( TestModel::Test test, JobType type, const QString &useCase );
     void testJobDone( TestModel::Test test, JobType type, const QString &useCase,

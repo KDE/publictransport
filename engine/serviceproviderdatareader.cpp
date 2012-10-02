@@ -258,7 +258,7 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
         serviceProviderTypeString = ServiceProviderGlobal::typeToString( serviceProviderType );
 #else
     #ifdef BUILD_PROVIDER_TYPE_GTFS
-        serviceProviderType = GtfsProvider;
+        serviceProviderType = Enums::GtfsProvider;
         serviceProviderTypeString = ServiceProviderGlobal::typeToString( serviceProviderType );
     #else
         kFatal() << "Internal error: No known provider type is supported, "
