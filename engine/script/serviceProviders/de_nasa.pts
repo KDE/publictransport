@@ -9,7 +9,7 @@
     </author>
     <url>http://www.nasa.de/</url>
     <shortUrl>www.nasa.de</shortUrl>
-    <script>de_nasa.js</script>
+    <script extensions="qt.core,qt.xml">de_nasa.js</script>
     <cities>
         <city>Leipzig</city>
         <city>Halle</city>
@@ -32,9 +32,12 @@
     </cities>
     <changelog>
         <entry version="1.1" engineVersion="0.10">Ported to a script.</entry>
-        <entry version="2.0">Update to new Script API</entry>
+        <entry version="2.0">Use base_hafas.js, shorter data sources, stops by geo position</entry>
     </changelog>
     <samples>
+        <stop>Magdeburg, Formstr.</stop>
         <stop>Kirkel Bahnhof</stop>
+        <longitude>11.6167</longitude>
+        <latitude>52.1363</latitude>
     </samples>
 </serviceProvider>

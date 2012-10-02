@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<serviceProvider fileVersion="1.0" version="1.3" type="Script">
+<serviceProvider fileVersion="1.0" version="2.0" type="script">
     <name lang="de">ÖBB-Konzern</name>
     <name lang="en">ÖBB-Group</name>
     <description lang="en">This service provider works for cities in Austria and also for many cities in Europe. Cities in Austria include trams, buses, subways and interurban trains, while cities in other countries may only include trains.</description>
@@ -10,16 +10,18 @@
     </author>
     <url>http://www.oebb.at/</url>
     <shortUrl>www.oebb.at</shortUrl>
-    <fallbackCharset>latin1</fallbackCharset>
-    <script>at_oebb.js</script>
+    <script extensions="qt,qt.core,qt.xml">at_oebb.js</script>
     <changelog>
         <entry version="1.0" engineVersion="0.5.2">Initial version.</entry>
         <entry version="1.1" engineVersion="0.10">Better stop suggestion support, faster by requiring less data to be transfered, added stop weights.</entry>
         <entry version="1.2" engineVersion="0.10">Wrote a script for at_oebb and updated URLs and parsing. It can now also parse route information, journey news, platform and delays.</entry>
         <entry version="1.3" engineVersion="0.10">Update to new script API, construct URLs in the script itself.</entry>
+        <entry version="2.0">Use base_hafas.js, shorter data sources, add implementations for additional data, stops by geo position</entry>
     </changelog>
     <samples>
-        <stop>Wien Augasse</stop>
+        <stop>Wien Augasse (Augasse/Althanstraße)</stop>
         <stop>Wien</stop>
+        <longitude>16.3722</longitude>
+        <latitude>48.1986</latitude>
     </samples>
 </serviceProvider>

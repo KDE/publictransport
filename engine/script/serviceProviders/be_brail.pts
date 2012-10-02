@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<serviceProvider fileVersion="1.0" version="1.2" type="Script">
+<serviceProvider fileVersion="1.0" version="2.0" type="script">
     <name lang="en">NMBS/SNCB</name>
     <description lang="de">Dieser Service-Provider liefert Ergebnisse für Städte in Belgien und auch für einige andere Städte in Europa. </description>
     <description lang="en">This service provider works for cities in Belgium and some other cities in europe.</description>
@@ -10,13 +10,17 @@
     </author>
     <url>http://www.b-rail.be</url>
     <shortUrl>www.b-rail.be</shortUrl>
-    <script>be_brail.js</script>
+    <script extensions="qt.core,qt.xml">be_brail.js</script>
     <changelog>
-        <entry since="1.0" releasedWith="0.6.3">Initial version.</entry>
-        <entry since="1.1" releasedWith="0.7">Corrected the url for favicons.</entry>
-        <entry since="1.2" releasedWith="0.10">Update to new script API, construct URLs in the script itself.</entry>
+        <entry version="1.0" engineVersion="0.6.3">Initial version.</entry>
+        <entry version="1.1" engineVersion="0.7">Corrected the url for favicons.</entry>
+        <entry version="1.2" engineVersion="0.10">Update to new script API, construct URLs in the script itself.</entry>
+        <entry version="2.0">Use base_hafas.js, shorter data sources, add implementations for additional data, stops by geo position</entry>
     </changelog>
     <samples>
-        <stop>Basel Bahnhof</stop>
+        <stop>Basel (ch)</stop>
+        <stop>Bastogne Gare Du Sud - Quai 3 [T]</stop>
+        <longitude>4.35694</longitude>
+        <latitude>50.8417</latitude>
     </samples>
 </serviceProvider>

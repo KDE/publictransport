@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<serviceProvider fileVersion="1.0" version="1.1" type="Script">
+<serviceProvider fileVersion="1.0" version="2.0" type="script">
     <name lang="en">Berliner Verkehrsbetriebe (BVG)</name>
     <description lang="en">Provides departure information for Berlin in Germany.</description>
     <author>
@@ -9,17 +9,20 @@
     </author>
     <url>http://www.bvg.de</url>
     <shortUrl>www.bvg.de</shortUrl>
-    <script>de_bvg.js</script>
+    <script extensions="qt.core,qt.xml">de_bvg.js</script>
     <cities>
         <city>Berlin</city>
     </cities>
     <changelog>
-        <entry since="1.0.1" releasedWith="0.7">Corrected the url for favicons.</entry>
-        <entry since="1.0" releasedWith="0.3">Initial version.</entry>
-        <entry since="1.1" releasedWith="0.10">Ported to a script.</entry>
+        <entry version="1.0" engineVersion="0.3">Initial version.</entry>
+        <entry version="1.0.1" engineVersion="0.7">Corrected the url for favicons.</entry>
+        <entry version="1.1" engineVersion="0.10">Ported to a script.</entry>
+        <entry version="2.0">Use base_hafas.js, shorter data sources, add implementations for additional data, stops by geo position</entry>
     </changelog>
     <samples>
         <stop>Berlin Hbf</stop>
         <stop>Alexanderplatz (Berlin)</stop>
+        <longitude>13.3667</longitude>
+        <latitude>52.5139</latitude>
     </samples>
 </serviceProvider>

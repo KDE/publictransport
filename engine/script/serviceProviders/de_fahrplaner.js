@@ -1,158 +1,97 @@
 /** Service provider www.fahrplaner.de (germany).
- * © 2011, Friedrich Pülz */
+ * © 2012, Friedrich Pülz */
 
-function usedTimetableInformations() {
-    return [ 'StopID', 'StopWeight', 'Platform', 'Delay', 'JourneyNews' ];
+include("base_hafas.js");
+
+// Create instance of Hafas
+var hafas = Hafas({
+    baseUrl: "http://www.fahrplaner.de",
+    binDir: "hafas",
+    productBits: 11 });
+
+hafas.stopSuggestions.parserGeoPosition.options.fixJson = true;
+
+function features() {
+    return hafas.stopSuggestions.features.concat(
+            hafas.timetable.features,
+            hafas.timetable.additionalData.features,
+            hafas.journeys.features );
 }
 
-function getTimetable( values ) {
-    var url = "TODO";
-    var request = network.createRequest( url );
-    request.finished.connect( parseTimetable );
-    network.get( request );
-}
+var getStopSuggestions = hafas.stopSuggestions.get;
+var getTimetable = hafas.timetable.get;
+var getAdditionalData = hafas.timetable.additionalData.get;
+var getJourneys = hafas.journeys.get;
 
-// This function parses a given HTML document for departure/arrival data.
-function parseTimetable( html ) {
-    // Find block of departures
-//     var str = helper.extractBlock( html, '<table departure_table>', '</table>' );
-    var str = html;
-
-    var tableRegExp = /<table [^>]*class="hafasResult \s*fullwidth"[^>]*>([\s\S]*?)<\/table>/ig;
-    var tableContent = tableRegExp.exec( str );
-    if ( !tableContent ) {
-        helper.error("Couldn't find results table", str);
-        continue;
+// Needed to get route data URLs for additional data
+hafas.timetable.parser.parseHtmlMobile = function( html ) {
+    if ( html.length == 0 ) {
+        throw Error("Received HTML document is empty");
     }
-    str = tableContent[1];
-
-    var tableRowRegExp = /<tr[^>]*>([\s\S]*?)<\/tr>/ig;
-    var tableColumnRegExp = /<td[^>]*>([\s\S]*?)<\/td>/ig;
-    var delayRegExp = /<span [^>]*class="prognosis"[^>]*>[\s\S]*?<span [^>]*title="([0-9]{2}:[0-9]{2})"[^>]*>[^<]*<\/span>/ig;
-    var targetRegExp = /<span [^>]*class="bold"[^>]*>([\s\S]*?)<\/span>/i;
-    var routeBlocksRegExp = /\r?\n\s*(-|&#149;)\s*\r?\n/gi;
-    var routeBlockEndOfExactRouteMarkerRegExp = /&#149;/i;
+    html = helper.decode( html, "latin1" );
+    
+    var timeCol = -1, routeDataCol = -1, targetCol = -1;
+    var headerColumns = helper.findHtmlTags(html, "th",
+             {position: 0, attributes: {"class": "sq"}})
+    for ( i = 0; i < headerColumns.length; ++i ) {
+	switch ( helper.trim(headerColumns[i].contents).toLowerCase() ) {
+	case "zeit": case "time": timeCol = i;
+	case "fahrt": case "train": routeDataCol = i;
+	case "in richtung": case "timetable": targetCol = i;
+	}
+    }
+    if ( timeCol == -1 || routeDataCol == -1 || targetCol == -1 ) {
+	throw Error( "Did not find all required columns" );
+    }
 
     // Go through all departure blocks
-    while ( (departureRow = tableRowRegExp.exec(str)) ) {
-        var columns = new Array();
-        while ( (departureColumn = tableColumnRegExp.exec(departureRow[1])) ) {
-            columns.push( departureColumn[1] );
-        }
-        tableColumnRegExp.lastIndex = 0; // Reset regexp
+    var departures = [];
+    var departureRow = { position: -1 };
+    while ( (departureRow = helper.findFirstHtmlTag(html, "tr",
+             {position: departureRow.position + 1,
+              attributes: {"class": "(?:dep|arr)BoardCol(?:1|2)"}})).found )
+    {
+	var columns = helper.findHtmlTags(departureRow.contents, "td" );
+	if ( columns.length < 3 ) {
+	    print( "Did not find enough columns: " + columns.length );
+	    continue;
+	}
 
-        if ( columns.length < 4 ) {
-            helper.error("Too few columns (min. 4): " + columns.length, departureRow[1]);
+        var departure = {}
+        var routeData = helper.findFirstHtmlTag( 
+		columns[routeDataCol].contents, "a",
+		{attributes: {"href": ""}} );
+        departure.RouteDataUrl = routeData.attributes.href
+		.replace( /\/([a-z])o\b/, "/$1ox" )
+		.replace( /L=[^&]+/, "" );
+
+	var transportLine = helper.simplify( helper.stripTags(routeData.contents) );
+        departure.TransportLine = transportLine.replace( /^((?:Bus|STR)\s+)/g, "" );
+
+	var matches = /^([a-z]+)/i.exec( transportLine );
+	if ( matches != null ) {
+	    departure.TypeOfVehicle = hafas.vehicleFromString( matches[1] );
+	}
+
+        var target = helper.findFirstHtmlTag( 
+		columns[targetCol].contents, "span",
+		{attributes: {"class": "bold"}} );
+	departure.Target = helper.decodeHtmlEntities(
+	    helper.trim(helper.stripTags(target.contents)) );
+
+        var timeString = helper.stripTags( columns[timeCol].contents );
+        var time = helper.matchTime( timeString, "hh:mm" );
+        if ( time.error ) {
+            helper.error( "Could not match time", timeString );
             continue;
         }
-        var colTime = 0, colDelay = 1, colVehicleType = 2, colTransportLine = 2,
-            colTarget = 3, colRoute = 3, colPlatform = 4;
+        var dateTime = new Date();
+        dateTime.setHours( time.hour, time.minute, 0, 0 );
+        departure.DepartureDateTime = dateTime;
 
-        // Parse time column
-        var timeString = helper.trim( helper.stripTags(columns[colTime]) );
-        time = helper.matchTime( timeString, "hh:mm" );
-        if ( time.length != 2 ) {
-            helper.error("Unexpected string in time column", columns[colTime]);
-            continue;
-        }
-
-        // Parse delay
-        delay = delayRegExp.exec( columns[colDelay] );
-        if ( delay ) {
-            delay = helper.duration( timeString, delay[1] );
-        } else {
-            delay = -1;
-        }
-
-        var vehicleTransportLineString = helper.trim( helper.stripTags(columns[colVehicleType]) );
-        var vehicleTypeEnd = vehicleTransportLineString.indexOf(" ");
-        if ( vehicleTypeEnd <= 0 ) {
-            vehicleTypeEnd = vehicleTransportLineString.search(/\d/i);
-        }
-        var typeOfVehicle = vehicleTypeEnd <= 0 ? vehicleTransportLineString
-                : vehicleTransportLineString.substring(0, vehicleTypeEnd);
-        var transportLine = vehicleTypeEnd <= 0 ? vehicleTransportLineString
-                : helper.trim(vehicleTransportLineString.substring(vehicleTypeEnd));
-        var platform = "";
-        if ( columns.length > colPlatform ) {
-            platform = helper.trim( helper.stripTags(columns[colPlatform]) );
-        }
-
-        var route = helper.trim( columns[colTarget] );
-        var targetString = targetRegExp.exec( route );
-        if ( targetString ) {
-            targetString = helper.trim( helper.stripTags(targetString[1]) );
-        } else {
-            targetString = "";
-            helper.error("Unexpected string in target column", columns[colTarget]);
-        }
-
-        var posRoute = route.indexOf( "<br />" );
-        var routeStops = new Array;
-        var routeTimes = new Array;
-        var exactRouteStops = 0;
-        if ( posRoute != -1 && route.length > posRoute + 6 ) {
-            route = route.substr( posRoute + 6 );
-            var routeBlocks = route.split( routeBlocksRegExp );
-
-            if ( !routeBlockEndOfExactRouteMarkerRegExp.test(route) ) {
-                exactRouteStops = routeBlocks.length;
-            } else {
-                while ( (splitter = routeBlocksRegExp.exec(route)) ) {
-                    ++exactRouteStops;
-                    if ( routeBlockEndOfExactRouteMarkerRegExp.test(splitter) ) {
-                        break;
-                    }
-                }
-            }
-
-            for ( var n = 0; n < routeBlocks.length; ++n ) {
-                var lines = helper.splitSkipEmptyParts( routeBlocks[n], "\n" );
-
-                if ( lines.count < 4 )
-                    continue;
-
-                routeStops.push( lines[1] );
-                routeTimes.push( lines[3] );
-            }
-        }
-
-        // Add departure to the result set
-        timetableData.clear();
-        timetableData.set( 'DepartureHour', time[0] );
-        timetableData.set( 'DepartureMinute', time[1] );
-        timetableData.set( 'TransportLine', transportLine );
-        timetableData.set( 'TypeOfVehicle', typeOfVehicle );
-        timetableData.set( 'Target', targetString );
-//         timetableData.set( 'JourneyNews', journeyNews );
-        timetableData.set( 'Delay', delay );
-        timetableData.set( 'Platform', platform );
-        timetableData.set( 'RouteStops', routeStops );
-        timetableData.set( 'RouteTimes', routeTimes );
-        timetableData.set( 'RouteExactStops', exactRouteStops );
-        result.addData( timetableData );
-    }
-}
-
-// This function parses a given HTML document for stop suggestions.
-function parseStopSuggestions( html ) {
-    // Initialize regular expressions (compile them only once)
-    var stopRegExp = /{"value":"([^"]*?)","id":"[^"]*?@L=([0-9]+)@[^"]*?"[^}]*?"weight":"(\d+)"[^}]*?}/ig;
-
-    // Go through all stop options
-    while ( (stop = stopRegExp.exec(html)) ) {
-		var stopName = stop[1];
-		var stopID = stop[2];
-		var stopWeight = stop[3];
-
-		// Add stop
-		timetableData.clear();
-		timetableData.set( 'StopName', stopName );
-		timetableData.set( 'StopID', stopID );
-		timetableData.set( 'StopWeight', stopWeight );
-		result.addData( timetableData );
+        departures.push( departure );
+	result.addData( departure );
     }
 
-    return result.hasData();
-}
-
+    return departures;
+};

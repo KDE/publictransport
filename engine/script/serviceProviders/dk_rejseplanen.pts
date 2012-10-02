@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<serviceProvider fileVersion="1.0" version="1.1" type="Script">
+<serviceProvider fileVersion="1.0" version="2.0" type="script">
     <name lang="en">Rejseplanen A/S</name>
     <description lang="de">Dieser Service-Provider liefert Ergebnisse für Städte in Dänemark und auch für einige andere Städte in Europa. </description>
     <description lang="en">This service provider works for cities in Denmark and some other cities in europe.</description>
@@ -10,13 +10,16 @@
     </author>
     <url>http://www.rejseplanen.dk</url>
     <shortUrl>www.rejseplanen.dk</shortUrl>
-    <fallbackCharset>latin1</fallbackCharset>
-    <script>dk_rejseplanen.js</script>
+    <script extensions="qt.core,qt.xml">dk_rejseplanen.js</script>
     <changelog>
-        <entry since="1.0" releasedWith="0.6.3">Initial version.</entry>
-        <entry since="1.1" releasedWith="0.10">Updated to new website layout, making it pass the unit test.</entry>
+        <entry version="1.0" engineVersion="0.6.3">Initial version.</entry>
+        <entry version="1.1" engineVersion="0.10">Updated to new website layout, making it pass the unit test.</entry>
+        <entry version="2.0">Use base_hafas.js, shorter data sources, stops by geo position</entry>
     </changelog>
     <samples>
         <stop>Oslovej / Ringvejen</stop>
+        <stop>Norgesvej / Oslovej (N) (Nordfyn Kommune)</stop>
+        <longitude>12.5333</longitude>
+        <latitude>55.6833</latitude>
     </samples>
 </serviceProvider>

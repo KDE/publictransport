@@ -1,121 +1,129 @@
+/** Service provider http://www.fahrinfo-berlin.de (BVG, Berlin).
+ * © 2012, Friedrich Pülz */
 
-// This function returns a list of all features supported by this script.
-function usedTimetableInformations() {
-    return [];
+include("base_hafas.js");
+
+// Create instance of Hafas
+var hafas = Hafas({
+    baseUrl: "http://www.fahrinfo-berlin.de/Fahrinfo",
+    productBits: 8,
+    programExtension: "bin" });
+
+function features() {
+    return hafas.stopSuggestions.features.concat(
+            hafas.timetable.features,
+            hafas.timetable.additionalData.features,
+            hafas.journeys.features );
 }
 
-function getTimetable( values ) {
-    var url = "http://www.fahrinfo-berlin.de/IstAbfahrtzeiten/index;ref=3?" +
-            "input=" + values.stop + "&submit=Anzeigen";
+var getStopSuggestions = hafas.stopSuggestions.get;
+var getTimetable = hafas.timetable.get;
+var getAdditionalData = hafas.timetable.additionalData.get;
+var getJourneys = hafas.journeys.get;
 
-    var request = network.createRequest( url );
-    request.finished.connect( parseTimetable );
-    network.get( request );
-}
+// No departure/arrival data source in XML format available,
+// use mobile HTML format instead. It also contains RouteDataUrls
+// for each departure/arrival. Data sources for route data are also
+// not available in XML format (or text format), also use mobile
+// HTML format here:
+hafas.timetable.options.format = Hafas.HtmlMobileFormat;
+hafas.routeData.options.format = Hafas.HtmlMobileFormat;
 
-// This function parses a given HTML document for departure/arrival data.
-function parseTimetable( html ) {
-    // Find result table
-    var pos = html.search( /<h2 class=\"ivuHeadline\">\s*Ist-Abfahrtzeiten - Übersicht/i );
-    if ( pos == -1 ) {
-// 		helper.error("Result table not found!", html);
-        str = html;
-    } else {
-        str = html.substr( pos );
+// Implement parser for departure/arrival data in mobile HTML format
+hafas.timetable.parser.parseHtmlMobile = function( html ) {
+    if ( html.length == 0 ) {
+        throw Error("Received HTML document is empty");
     }
-
-    var dateRegExp = /<input .*?value="([^"]*)" name="date" id="home_date"[^>]*?>/i;
-//     var dateRegExp = /<td class="ivuTableLabel">\s*Datum:\s*<\/td>\s*<td>\s*([\s\S]*?)\s*<\/td>/i;
-    var date = dateRegExp.exec( html );
-    if ( date == null ) {
-        var now = new Date();
-        date = [ now.getDate(), now.getMonth() + 1, now.getFullYear() ];
-    } else {
-        date = helper.matchDate( helper.stripTags(date[1]), "dd.MM.yy" );
-    }
-
-    // Initialize regular expressions
-    var departuresRegExp = /<tr[^>]*?>([\s\S]*?)<\/tr>/ig;
-    var columnsRegExp = /<td[^>]*?>([\s\S]*?)<\/td>/ig;
-    var typeOfVehicleRegExp = /<img src="[^"]*" class="ivuTDProductPicture" alt="[^"]*"\s*class="ivuTDProductPicture" \/>(\w{1,10})\s*((?:\w*\s*)?[0-9]+)/i; // Matches type of vehicle [0] and transport line [1]
-
-    var timeCol = 0, typeOfVehicleCol = 1, transportLineCol = 1, targetCol = 2;
+    html = helper.decode( html, "latin1" );
 
     // Go through all departure blocks
-    while ( (departureRow = departuresRegExp.exec(str)) ) {
-        // This gets the current departure row
-        departureRow = departureRow[1];
+    var departures = [];
+    var departureRow = { position: -1 };
+    while ( (departureRow = helper.findFirstHtmlTag(html, "tr",
+             {position: departureRow.position + 1,
+              attributes: {"class": "ivu_table_bg(?:1|2)"}})).found )
+    {
+	var columns = helper.findHtmlTags(departureRow.contents, "td" );
+	if ( columns.length < 3 ) {
+	    print( "Did not find enough columns: " + columns.length );
+	    continue;
+	}
 
-        // Get column contents
-        var columns = new Array;
-        while ( (col = columnsRegExp.exec(departureRow)) ) {
-            columns.push( col[1] );
-        }
-        columnsRegExp.lastIndex = 0;
+        var departure = {}
+        var routeData = helper.findFirstHtmlTag( columns[1].contents, "a",
+                            {attributes: {"href": ""}} );
+        departure.RouteDataUrl = routeData.attributes.href
+		.replace( /([a-z])l/, "$1ox" )
+		.replace( /L=[^&]+/, "" );
+	if ( departure.RouteDataUrl.substr(0, 7) != "http://" ) {
+	    departure.RouteDataUrl = "http://www.fahrinfo-berlin.de" +
+				     departure.RouteDataUrl;
+	}
 
-        if ( columns.length < 3 ) {
-            if ( departureRow.indexOf("<th") == -1 && departureRow.indexOf("ivuTableFootRow") == -1 ) {
-                helper.error("Too less columns in a departure row found (" + columns.length + ") " + departureRow);
-            }
-            continue;
-        }
+	var transportLine = helper.simplify( helper.stripTags(routeData.contents) );
+        departure.TransportLine = transportLine.replace( /^((?:Bus|STR)\s+)/g, "" );
 
-        var departure = {};
+	var matches = /^([a-z]+)/i.exec( transportLine );
+	if ( matches != null ) {
+	    departure.TypeOfVehicle = hafas.vehicleFromString( matches[1] );
+	}
 
-        // Parse time column
-        time = helper.matchTime( helper.trim(helper.stripTags(columns[timeCol])), "hh:mm" );
+	departure.Target = helper.decodeHtmlEntities(
+	    helper.trim(helper.stripTags(columns[2].contents)) );
+
+        var timeString = helper.stripTags( columns[0].contents );
+        var time = helper.matchTime( timeString, "hh:mm" );
         if ( time.error ) {
-            helper.error("Unexpected string in time column", columns[timeCol]);
+            helper.error( "Could not match time", other );
             continue;
         }
-        departure.DepartureDateTime = new Date( date[2], date[1], date[0],
-                                                time.hour, time.minute, 0, 0 );
-        print( departure.DepartureDateTime );
+        var dateTime = new Date();
+        dateTime.setHours( time.hour, time.minute, 0, 0 );
+        departure.DepartureDateTime = dateTime;
 
-        // Parse type of vehicle column
-        var typeOfVehicle = typeOfVehicleRegExp.exec(columns[typeOfVehicleCol]);
-        if ( typeOfVehicle != null ) {
-            departure.TransportLine = typeOfVehicle[2];
-            departure.TypeOfVehicle = typeOfVehicle[1];
-        } else {
-            helper.error("Unexpected string in type of vehicle column", columns[typeOfVehicleCol]);
-            departure.TypeOfVehicle = "Unknown";
-            departure.TransportLine = "Unknown";
-        }
-
-        // Parse target column
-        departure.Target = helper.trim( helper.stripTags(columns[targetCol]) );
-
-        // Add departure to the result set
-        result.addData( departure );
+        departures.push( departure );
+	result.addData( departure );
     }
-}
 
-function getStopSuggestions( stop, maxCount, city  ) {
-    var url = "http://www.fahrinfo-berlin.de/IstAbfahrtzeiten/index;ref=3?input=" + stop +
-              "&submit=Anzeigen";
-    var html = network.getSynchronous( url );
+    return departures;
+};
 
-    if ( !network.lastDownloadAborted ) {
-        // Find block of stops
-        var stopRangeRegExp = /<select [^>]*class="ivuSelectBox"[^>]*>\s*([\s\S]*?)\s*<\/select>/i;
-        var range = stopRangeRegExp.exec( html );
-        if ( range == null ) {
-            helper.error( "Stop range not found", html );
-            return false;
-        }
-        range = range[1];
-
-        // Initialize regular expressions (compile them only once)
-        var stopRegExp = /<option value="[^"]*">\s*([^<]*)\s*<\/option>/ig;
-
-        // Go through all stop options
-        while ( (stop = stopRegExp.exec(range)) ) {
-            result.addData({ StopName: helper.trim(stop[1]) });
-        }
-
-        return result.hasData();
-    } else {
-        return false;
+// Implement parser for route data in mobile HTML format
+hafas.routeData.parser.parseHtmlMobile = function( html, stop, firstTime ) {
+    if ( html.length == 0 ) {
+        throw Error("Received HTML document is empty");
     }
-}
+    html = helper.decode( html, "latin1" );
+
+    // Go through all departure blocks
+    var departureRow = { position: -1 };
+    var routeData = { RouteStops: [], RouteTimes: [] };
+    var inRange = firstTime == undefined;
+    while ( (departureRow = helper.findFirstHtmlTag(html, "tr",
+             {position: departureRow.position + 1})).found )
+    {
+	var columns = helper.findHtmlTags(departureRow.contents, "td" );
+	if ( columns.length < 3 ) {
+	    print( "Did not find enough columns: " + columns.length );
+	    continue;
+	}
+	var routeStop = helper.decodeHtmlEntities( helper.trim(columns[2].contents) );
+
+	var timeString = helper.trim( columns[1].contents );
+	time = helper.matchTime( timeString, "hh:mm" );
+	if ( time.error ) {
+	    helper.error( "Could not match route time", timeString );
+	    continue;
+	}
+	timeValue = new Date( firstTime.getFullYear(), firstTime.getMonth(),
+			       firstTime.getDate(), time.hour, time.minute, 0, 0 );
+
+	if ( inRange || routeStop == stop || firstTime.getTime() <= timeValue.getTime() ) {
+	    inRange = true;
+	    routeData.RouteStops.push( routeStop );
+	    routeData.RouteTimes.push( timeValue );
+	}
+    }
+
+    return routeData;
+};

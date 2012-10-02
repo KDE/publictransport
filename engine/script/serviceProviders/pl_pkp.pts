@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<serviceProvider fileVersion="1.0" version="1.4" type="script">
+<serviceProvider fileVersion="1.0" version="2.0" type="script">
     <name lang="en">Polskie Koleje Państwowe</name>
     <description lang="en">This service provider has static data. That means, that displayed departures may actually not be valid for today. Please view the journey news, to see if a departure is valid for today (e.g. 'Mo-Fr').</description>
     <author>
@@ -9,14 +9,18 @@
     </author>
     <url>http://rozklad-pkp.pl/?q=en/node/143</url>
     <shortUrl>rozklad-pkp.pl</shortUrl>
-    <script>pl_pkp.js</script>
+    <script extensions="qt.core,qt.xml">pl_pkp.js</script>
     <changelog>
-        <entry author="fpuelz" version="1.4">Update to new script API</entry>
-        <entry author="fpuelz" version="1.3" engineVersion="0.10">Updated to new website layout, add delay parsing.</entry>
-        <entry author="fpuelz" version="1.2" engineVersion="0.10">Ported to a script.</entry>
         <entry author="fpuelz" version="1.0">Initial version.</entry>
+        <entry author="fpuelz" version="1.2" engineVersion="0.10">Ported to a script.</entry>
+        <entry author="fpuelz" version="1.3" engineVersion="0.10">Updated to new website layout, add delay parsing.</entry>
+        <entry author="fpuelz" version="1.4">Update to new script API</entry>
+        <entry author="fpuelz" version="2.0">Use base_hafas.js, shorter data sources, stops by geo position</entry>
     </changelog>
     <samples>
         <stop>Warszawa Centralna</stop>
+        <stop>Warszawa Praga</stop>
+        <longitude>21</longitude>
+        <latitude>52.2667</latitude>
     </samples>
 </serviceProvider>
