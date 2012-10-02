@@ -71,6 +71,7 @@ class ServiceProviderData : public QObject {
     Q_PROPERTY( QString shortUrl READ shortUrl CONSTANT )
     Q_PROPERTY( QString country READ country CONSTANT )
     Q_PROPERTY( QStringList cities READ cities CONSTANT )
+    Q_PROPERTY( Enums::VehicleType defaultVehicleType READ defaultVehicleType CONSTANT )
     Q_PROPERTY( QString credit READ credit CONSTANT )
     Q_PROPERTY( QByteArray charsetForUrlEncoding READ charsetForUrlEncoding CONSTANT )
     Q_PROPERTY( QByteArray fallbackCharset READ fallbackCharset CONSTANT )

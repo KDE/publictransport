@@ -45,7 +45,7 @@ public:
 
     Global() {};
 
-    /** @brief Gets the VehicleType enumerable for the given string. */
+    /** @brief Gets the VehicleType enumerable for the given string (case sensitive). */
     static Enums::VehicleType vehicleTypeFromString( QString sVehicleType );
 
     /** Gets the name of the given type of vehicle. */

@@ -31,42 +31,6 @@
 Enums::VehicleType Global::vehicleTypeFromString( QString sVehicleType )
 {
     return Enums::stringToVehicleType( sVehicleType.toAscii().data() );
-    QString sLower = sVehicleType.toLower();
-    if ( sLower == QLatin1String("unknown") ) {
-        return Enums::UnknownVehicleType;
-    } else if ( sLower == QLatin1String("tram") ) {
-        return Enums::Tram;
-    } else if ( sLower == QLatin1String("bus") ) {
-        return Enums::Bus;
-    } else if ( sLower == QLatin1String("subway") ) {
-        return Enums::Subway;
-    } else if ( sLower == QLatin1String("interurbantrain") ) {
-        return Enums::InterurbanTrain;
-    } else if ( sLower == QLatin1String("metro") ) {
-        return Enums::Metro;
-    } else if ( sLower == QLatin1String("trolleybus") ) {
-        return Enums::TrolleyBus;
-    } else if ( sLower == QLatin1String("regionaltrain") ) {
-        return Enums::RegionalTrain;
-    } else if ( sLower == QLatin1String("regionalexpresstrain") ) {
-        return Enums::RegionalExpressTrain;
-    } else if ( sLower == QLatin1String("interregionaltrain") ) {
-        return Enums::InterregionalTrain;
-    } else if ( sLower == QLatin1String("intercitytrain") ) {
-        return Enums::IntercityTrain;
-    } else if ( sLower == QLatin1String("highspeedtrain") ) {
-        return Enums::HighSpeedTrain;
-    } else if ( sLower == QLatin1String("feet") ) {
-        return Enums::Feet;
-    } else if ( sLower == QLatin1String("ferry") ) {
-        return Enums::Ferry;
-    } else if ( sLower == QLatin1String("ship") ) {
-        return Enums::Ship;
-    } else if ( sLower == QLatin1String("plane") ) {
-        return Enums::Plane;
-    } else {
-        return Enums::InvalidVehicleType;
-    }
 }
 
 QString Global::vehicleTypeToString( const Enums::VehicleType& vehicleType, bool plural )

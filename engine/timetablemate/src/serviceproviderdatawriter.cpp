@@ -117,8 +117,7 @@ bool ServiceProviderDataWriter::write( QIODevice *device, const ServiceProvider 
         writeTextElement( "credit", data->credit() );
     }
     if( data->defaultVehicleType() != Enums::UnknownVehicleType ) {
-        writeTextElement( "defaultVehicleType",
-                          Global::vehicleTypeToString(data->defaultVehicleType()) );
+        writeTextElement( "defaultVehicleType", Enums::toString(data->defaultVehicleType()) );
     }
     if( data->minFetchWait() > 2 ) {
         writeTextElement( "minFetchWait", QString::number( data->minFetchWait() ) );

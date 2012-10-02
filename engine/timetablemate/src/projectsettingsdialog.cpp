@@ -224,43 +224,40 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
              this, SLOT(changelogEntryWidgetAdded(ChangelogEntryWidget*)) );
 
     // Add vehicle types with icons to the default vehicle type combo box
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "status_unknown" ), i18nc( "@item:listbox", "Unknown" ), "Unknown" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_tram" ), i18nc( "@item:listbox", "Tram" ), "Tram" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_bus" ), i18nc( "@item:listbox", "Bus" ), "Bus" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_subway" ), i18nc( "@item:listbox", "Subway" ), "Subway" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_train_interurban" ),
-        i18nc( "@item:listbox", "Interurban Train" ), "TrainInterurban" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_metro" ), i18nc( "@item:listbox", "Metro" ), "Metro" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_trolleybus" ),
-        i18nc( "@item:listbox", "Trolley Bus" ), "TrolleyBus" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_train_regional" ), // TODO: Currently no special icon
-        i18nc( "@item:listbox", "Regional Train" ), "TrainRegional" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_train_regional" ),
-        i18nc( "@item:listbox", "Regional Express Train" ), "TrainRegionalExpress" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_train_interregional" ),
-        i18nc( "@item:listbox", "Interregional Train" ), "TrainInterregio" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_train_intercity" ),
-        i18nc( "@item:listbox", "Intercity/Eurocity Train" ), "TrainIntercityEurocity" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_train_highspeed" ),
-        i18nc( "@item:listbox", "Intercity Express Train" ), "TrainIntercityExpress" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_ferry" ), i18nc( "@item:listbox", "Ferry" ), "Ferry" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_ferry" ), i18nc( "@item:listbox", "Ship" ), "Ship" );
-    ui_provider->defaultVehicleType->addItem(
-        KIcon( "vehicle_type_plane" ), i18nc( "@item:listbox", "Plane" ), "Plane" );
+    ui_provider->defaultVehicleType->addItem( KIcon("status_unknown"),
+            i18nc("@item:listbox", "Unknown"), Enums::toString(Enums::UnknownVehicleType) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_tram"),
+            i18nc("@item:listbox", "Tram"), Enums::toString(Enums::Tram) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_bus"),
+            i18nc("@item:listbox", "Bus"), Enums::toString(Enums::Bus) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_subway"),
+            i18nc("@item:listbox", "Subway"), Enums::toString(Enums::Subway) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_train_interurban"),
+            i18nc("@item:listbox", "Interurban Train"), Enums::toString(Enums::InterurbanTrain) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_metro"),
+            i18nc("@item:listbox", "Metro"), Enums::toString(Enums::Metro) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_trolleybus"),
+            i18nc( "@item:listbox", "Trolley Bus"), Enums::toString(Enums::TrolleyBus) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_train_regional"), // TODO: Currently no special icon
+            i18nc("@item:listbox", "Regional Train"), Enums::toString(Enums::RegionalTrain) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_train_regional"),
+            i18nc("@item:listbox", "Regional Express Train"),
+            Enums::toString(Enums::RegionalExpressTrain) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_train_interregional"),
+            i18nc("@item:listbox", "Interregional Train"),
+            Enums::toString(Enums::InterregionalTrain) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_train_intercity"),
+            i18nc("@item:listbox", "Intercity/Eurocity Train"),
+            Enums::toString(Enums::IntercityTrain) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_train_highspeed"),
+            i18nc("@item:listbox", "Intercity Express Train"),
+            Enums::toString(Enums::HighSpeedTrain) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_ferry"),
+            i18nc("@item:listbox", "Ferry"), Enums::toString(Enums::Ferry) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_ferry"),
+            i18nc("@item:listbox", "Ship"), Enums::toString(Enums::Ship) );
+    ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_plane"),
+            i18nc("@item:listbox", "Plane"), Enums::toString(Enums::Plane) );
 
     // Initialize Marble::LatLonEdit widgets
     ui_provider->sampleLongitude->setDimension( Marble::Longitude );
@@ -926,7 +923,7 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *data,
     ui_provider->shortAuthor->setText( data->shortAuthor() );
     ui_provider->email->setText( data->email() );
     int defaultVehicleTypeIndex =
-            ui_provider->defaultVehicleType->findData( data->defaultVehicleType() );
+            ui_provider->defaultVehicleType->findData( Enums::toString(data->defaultVehicleType()) );
     ui_provider->defaultVehicleType->setCurrentIndex(
             defaultVehicleTypeIndex > 0 ? defaultVehicleTypeIndex : 0 );
     ui_provider->fileVersion->setText( data->fileFormatVersion() );
