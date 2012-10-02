@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.0" version="1.0" type="script">
+    <name lang="en">Verkehrsverbund Berlin-Brandenburg (VBB)</name>
+    <description lang="en">A provider for Berlin-Brandenburg in Germany.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.vbb-fahrinfo.de</url>
+    <shortUrl>www.vbb-fahrinfo.de</shortUrl>
+    <script extensions="qt.core,qt.xml">de_vbb.js</script>
+    <changelog>
+        <entry version="1.0">Use base_hafas.js, shorter data sources, stops by geo position</entry>
+    </changelog>
+    <samples>
+        <stop>Berlin Gesundbrunnen</stop>
+        <stop>Berlin Hauptbahnhof</stop>
+        <longitude>13.3333</longitude>
+        <latitude>52.3333</latitude>
+    </samples>
+</serviceProvider>
