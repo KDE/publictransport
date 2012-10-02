@@ -760,11 +760,11 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
             disconnect( m_backtraceDock, SIGNAL(activeFrameDepthChanged(int)),
                         debugger->variableModel(), SLOT(switchToVariableStack(int)) );
         }
-#endif
         if ( m_testDock ) {
             disconnect( m_testDock, SIGNAL(clickedTestErrorItem(int,QString)),
                         previousProject, SLOT(showScriptLineNumber(int)) );
         }
+#endif
     }
 
     if ( project ) {
@@ -795,12 +795,11 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
             connect( m_backtraceDock, SIGNAL(activeFrameDepthChanged(int)),
                      debugger->variableModel(), SLOT(switchToVariableStack(int)) );
         }
-#endif
         if ( m_testDock ) {
             connect( m_testDock, SIGNAL(clickedTestErrorItem(int,QString)),
                      project, SLOT(showScriptLineNumber(int)) );
         }
-
+#endif
         stateChanged( "project_opened" );
 
         // Update text of the choose active project action
@@ -847,6 +846,7 @@ void TimetableMate::updateWindowTitle() {
         tab = projectTabAt( m_tabWidget->currentIndex() );
         const ProjectModelItem::Type type =
                 ProjectModelItem::projectItemTypeFromTabType( tab->type() );
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         if ( type != ProjectModelItem::ScriptItem || tab->fileName() == project->scriptFileName() ) {
             // Get caption from the model by tab type, but not for external script tabs
             caption = m_projectModel->projectItemChildFromProject( project, type )->text();
@@ -858,6 +858,9 @@ void TimetableMate::updateWindowTitle() {
             caption = KDialog::makeStandardCaption( name, 0,
                     tab && tab->isModified() ? KDialog::ModifiedCaption : KDialog::NoCaptionFlags );
         }
+#else
+        caption = m_projectModel->projectItemChildFromProject( project, type )->text();
+#endif
 
         // Add project name
         caption += " - " + tab->project()->projectName();

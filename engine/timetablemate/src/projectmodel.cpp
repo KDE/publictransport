@@ -261,11 +261,12 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                     return font;
                 }
             } break;
+
+            case ProjectModelItem::CodeItem:
 #endif
             case ProjectModelItem::PlasmaPreviewItem:
             case ProjectModelItem::WebItem:
             case ProjectModelItem::DashboardItem:
-            case ProjectModelItem::CodeItem:
             default:
                 return QVariant();
             }
@@ -461,6 +462,12 @@ bool ProjectModel::isIdle() const
     return true;
 }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+QString ProjectModelIncludedScriptItem::fileName() const
+{
+    return QFileInfo( m_filePath ).fileName();
+}
+
 void ProjectModel::updateProjects()
 {
     if ( !isIdle() ) {
@@ -512,24 +519,6 @@ void ProjectModel::updateProjects()
     m_changedScriptProjects.clear();
 }
 
-void ProjectModel::scriptSaved()
-{
-    Project *project = qobject_cast< Project* >( sender() );
-    Q_ASSERT( project );
-    if ( !m_changedScriptProjects.contains(project) ) {
-        m_changedScriptProjects << project;
-    }
-
-    if ( project->suppressMessages() ) {
-        return;
-    }
-    if ( !m_updateProjectsTimer ) {
-        m_updateProjectsTimer = new QTimer( this );
-        connect( m_updateProjectsTimer, SIGNAL(timeout()), this, SLOT(updateProjects()) );
-    }
-    m_updateProjectsTimer->start( 250 );
-}
-
 void ProjectModel::insertCodeNodes( ProjectModelItem *scriptItem, bool emitSignals )
 {
     // Parse script
@@ -570,6 +559,27 @@ void ProjectModel::insertCodeNodes( ProjectModelItem *scriptItem, bool emitSigna
         endInsertRows();
     }
 }
+#endif
+
+void ProjectModel::scriptSaved()
+{
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    Project *project = qobject_cast< Project* >( sender() );
+    Q_ASSERT( project );
+    if ( !m_changedScriptProjects.contains(project) ) {
+        m_changedScriptProjects << project;
+    }
+
+    if ( project->suppressMessages() ) {
+        return;
+    }
+    if ( !m_updateProjectsTimer ) {
+        m_updateProjectsTimer = new QTimer( this );
+        connect( m_updateProjectsTimer, SIGNAL(timeout()), this, SLOT(updateProjects()) );
+    }
+    m_updateProjectsTimer->start( 250 );
+#endif
+}
 
 void ProjectModel::setAsActiveProjectRequest()
 {
@@ -588,16 +598,17 @@ TabType ProjectModelItem::tabTypeFromProjectItemType( ProjectModelItem::Type pro
         return Tabs::Dashboard;
     case ProjectSourceItem:
         return Tabs::ProjectSource;
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    case ScriptItem:
-    case IncludedScriptItem:
-        return Tabs::Script;
-#endif
     case PlasmaPreviewItem:
         return Tabs::PlasmaPreview;
     case WebItem:
         return Tabs::Web;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    case ScriptItem:
+    case IncludedScriptItem:
+        return Tabs::Script;
+
     case CodeItem:
+#endif
     case ProjectItem:
     default:
         return Tabs::NoTab;
@@ -623,11 +634,6 @@ ProjectModelItem::Type ProjectModelItem::projectItemTypeFromTabType( TabType tab
     default:
         return ProjectItem;
     }
-}
-
-QString ProjectModelIncludedScriptItem::fileName() const
-{
-    return QFileInfo( m_filePath ).fileName();
 }
 
 void ProjectModel::slotProjectModified()

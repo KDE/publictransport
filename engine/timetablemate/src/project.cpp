@@ -359,14 +359,16 @@ public:
 
         setXmlFilePath( projectSourceFile );
         state = Project::ProjectSuccessfullyLoaded;
-        scriptState = ScriptNotLoaded;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        scriptState = ScriptNotLoaded;
+
         // Load script file referenced by the XML
         loadScript();
-#endif
 
         q->scriptSaved();
+#endif
+
         return true;
     };
 
@@ -392,11 +394,14 @@ public:
 
     bool isModified() const
     {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         foreach ( ScriptTab *tab, externalScriptTabs ) {
             if ( tab->isModified() ) {
                 return true;
             }
         }
+#endif
+
         return isScriptModified() || isProjectSourceModified() ||
             (plasmaPreviewTab && plasmaPreviewTab->isModified()) ||
             (webTab && webTab->isModified());
@@ -907,10 +912,13 @@ public:
         case Project::DebugGetStopSuggestions:
         case Project::DebugGetStopSuggestionsByGeoPosition:
         case Project::DebugGetJourneys:
-#endif
             // Only enabled if the debugger and the test are both currently not running
             return !isTestRunning() && !isDebuggerRunning() &&
                     debugger->scriptState() == Debugger::Debugger::ScriptLoaded;
+#else
+            // Only enabled if the debugger and the test are both currently not running
+            return !isTestRunning() && !isDebuggerRunning();
+#endif
 
         default:
             kDebug() << "Unknown project action" << projectAction;
@@ -1567,6 +1575,7 @@ public:
 
         bool success;
         const TestModel::TestCase testCase = TestModel::testCaseOfTest( test );
+        bool scriptExecutionTestCase = false;
         switch ( testCase ) {
         case TestModel::ServiceProviderDataTestCase: {
             testModel->markTestAsStarted( test );
@@ -1583,6 +1592,7 @@ public:
     #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case TestModel::ScriptExecutionTestCase:
             success = startScriptExecutionTest( test );
+            scriptExecutionTestCase = true;
             break;
     #endif
 
@@ -1592,7 +1602,7 @@ public:
             break;
         }
 
-        if ( finishedAfterThisTest && testCase != TestModel::ScriptExecutionTestCase ) {
+        if ( finishedAfterThisTest && !scriptExecutionTestCase ) {
             endTesting();
         } else if ( !success ) {
             // Test could not be started
@@ -1846,6 +1856,7 @@ public:
         return true;
     };
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     // Get the currently shown script tab, if any.
     // Otherwise any of the currently opened script tabs gets returned.
     ScriptTab *currentScriptTab()
@@ -1869,10 +1880,12 @@ public:
             return 0;
         }
     };
+#endif
 
     // Check if the features test result contains all given features,
     // and add error test results for the given test if a feature is not available
     bool hasFeatures( TestModel::Test test, const QList< Enums::ProviderFeature > &features ) {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Q_Q( Project );
         const QList< TimetableData > featuresResults =
                 testModel->testResults( TestModel::FeaturesTest );
@@ -1919,6 +1932,9 @@ public:
         }
 
         return true;
+#else
+        return false;
+#endif
     };
 
     inline bool hasFeature( TestModel::Test test, Enums::ProviderFeature feature ) {
@@ -2052,11 +2068,13 @@ Project::~Project()
         kWarning() << "Destroying project with modifications";
     }
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     disconnect( d->debugger, 0, this, 0 );
     d->debugger->weaver()->requestAbort();
     d->debugger->abortDebugger();
     d->debugger->finish();
     delete d_ptr;
+#endif
 }
 
 bool Project::loadProject( const QString &projectSoureFile )
@@ -2125,9 +2143,9 @@ void Project::scriptOutput( const QString &message, const QScriptContextInfo &co
 }
 
 void Project::scriptMessageReceived( const QString &errorMessage,
-                                   const QScriptContextInfo &context,
-                                   const QString &failedParseText,
-                                   Helper::ErrorSeverity severity )
+                                     const QScriptContextInfo &context,
+                                     const QString &failedParseText,
+                                     Helper::ErrorSeverity severity )
 {
     Q_UNUSED( failedParseText );
     QColor color;
@@ -2326,7 +2344,10 @@ void Project::setProjectModel( ProjectModel *projectModel )
 {
     Q_D( Project );
     d->projectModel = projectModel;
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     scriptSaved();
+#endif
 }
 
 const char *Project::projectActionName( Project::ProjectAction actionType )
@@ -3509,7 +3530,11 @@ bool Project::startTestCase( TestModel::TestCase testCase )
         }
     }
 
-    if ( finishedAfterThisTestCase && testCase != TestModel::ScriptExecutionTestCase ) {
+    if ( finishedAfterThisTestCase
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        && testCase != TestModel::ScriptExecutionTestCase
+#endif
+    ) {
         d->endTesting();
     }
     return success;
@@ -3565,6 +3590,7 @@ void Project::clearTestResults()
 
 TestModel::Test Project::testFromObjectName( const QString &objectName )
 {
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     if ( objectName == QLatin1String("TEST_LOAD") ) {
         return TestModel::LoadScriptTest;
     } else if ( objectName == QLatin1String("TEST_DEPARTURES") ) {
@@ -3581,7 +3607,9 @@ TestModel::Test Project::testFromObjectName( const QString &objectName )
         return TestModel::JourneyTest;
     } else if ( objectName == QLatin1String("TEST_FEATURES") ) {
         return TestModel::FeaturesTest;
-    } else {
+    } else
+#endif
+    {
         return TestModel::InvalidTest;
     }
 }
