@@ -9,7 +9,7 @@ include_directories(
    ${CMAKE_CURRENT_SOURCE_DIR}/../
    ${CMAKE_CURRENT_BINARY_DIR}/../ # For config.h, javascriptcompletiongeneric.h
    ${CMAKE_CURRENT_BINARY_DIR}/../../../ # For config.h
-    /usr/include/marble
+   ${MARBLE_INCLUDE_DIR}
 )
 
 if ( BUILD_PROVIDER_TYPE_SCRIPT )
@@ -29,9 +29,6 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
     add_test( JavaScriptParserTest JavaScriptParserTest )
     target_link_libraries( JavaScriptParserTest
         ${QT_QTTEST_LIBRARY} ${QT_QTGUI_LIBRARY} ${KDE4_KDECORE_LIBS} )
-
-
-    qt4_wrap_cpp( engine_MOC_SRCS ../../../enums.h )
 
     # Run moc manually, alternatively add #include "moc_foo.cpp" to the end of the source files
     qt4_wrap_cpp( timetablemate_MOC_SRCS
@@ -132,9 +129,9 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
         ${KDE4_THREADWEAVER_LIBS} # For the debugger and for includes from the engine
         ${QT_QTSCRIPT_LIBRARY}
         ${QT_QTDECLARATIVE_LIBRARY} # For the dashboard main view tabs
+        ${MARBLE_LIBRARIES}
         kdeclarative # For KDeclarative, no ${KDE4_KDECLARATIVE_LIBS} available..
         publictransporthelper
-        marblewidget
         z # zlib
     )
 

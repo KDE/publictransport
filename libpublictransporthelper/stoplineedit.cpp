@@ -21,7 +21,7 @@
 #include "stoplineedit.h"
 #include "stopsettings.h"
 
-#ifdef BUILD_MARBLE_MAP
+#ifdef MARBLE_FOUND
     #include "publictransportmapwidget.h"
     #include "publictransportlayer.h"
     #include "popuphandler.h"
@@ -118,7 +118,7 @@ public:
 
     ~StopLineEditPrivate()
     {
-#ifdef BUILD_MARBLE_MAP
+#ifdef MARBLE_FOUND
         delete mapPopup;
 #endif
         if ( dataEngineManager ) {
@@ -254,7 +254,7 @@ public:
     QList<Button> buttons;
     Plasma::ServiceJob *importJob; // A currently running import job or 0 if no import is running
 
-#ifdef BUILD_MARBLE_MAP
+#ifdef MARBLE_FOUND
     PublicTransportMapWidget *mapPopup;
 #endif
 
@@ -268,7 +268,7 @@ StopLineEdit::StopLineEdit( QWidget* parent, const QString &serviceProvider,
                             KGlobalSettings::Completion completion )
         : KLineEdit( parent ), d_ptr( new StopLineEditPrivate(serviceProvider, this) )
 {
-#ifdef BUILD_MARBLE_MAP
+#ifdef MARBLE_FOUND
     Q_D( StopLineEdit );
     d->mapPopup = new PublicTransportMapWidget( serviceProvider,
                                                 PublicTransportMapWidget::DefaultFlags, this );
@@ -294,7 +294,7 @@ void StopLineEdit::updateToDataEngineState()
     setServiceProvider( d->serviceProvider );
 }
 
-#ifdef BUILD_MARBLE_MAP
+#ifdef MARBLE_FOUND
 void StopLineEdit::popupHidden()
 {
     setFocus( Qt::PopupFocusReason );
@@ -317,7 +317,7 @@ void StopLineEdit::setServiceProvider( const QString& serviceProvider )
         d->publicTransportEngine->disconnectSource( d->sourceName, this );
     }
 
-#ifdef BUILD_MARBLE_MAP
+#ifdef MARBLE_FOUND
     d->mapPopup->setServiceProvider( serviceProvider );
 #endif
 
@@ -410,7 +410,7 @@ bool StopLineEdit::cancelImport()
 
 void StopLineEdit::changed( const QString &newText )
 {
-#ifdef BUILD_MARBLE_MAP
+#ifdef MARBLE_FOUND
     Q_D( StopLineEdit );
     if ( newText.isEmpty() ) {
         kDebug() << "Empty, hide map";
@@ -887,7 +887,7 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
                 : text().remove(selectionStart(), selectedText().length());
         doCompletion( input );
 
-#ifdef BUILD_MARBLE_MAP
+#ifdef MARBLE_FOUND
         const QStringList activeStopNames = completionObject()->substringCompletion( input );
         d->mapPopup->setStops( d->stops, text(), activeStopNames );
         if ( !d->mapPopup->publicTransportLayer()->stops().isEmpty() ) {

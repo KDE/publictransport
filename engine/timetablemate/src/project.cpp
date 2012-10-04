@@ -73,7 +73,10 @@
 #include <KTextEditor/TemplateInterface>
 #include <KTextEditor/MarkInterface>
 #include <ThreadWeaver/WeaverInterface>
-#include <marble/LatLonEdit.h>
+
+#ifdef MARBLE_FOUND
+    #include <LatLonEdit.h>
+#endif
 
 // Qt includes
 #include <QWidget>
@@ -3950,6 +3953,7 @@ StopSuggestionFromGeoPositionRequest Project::getStopSuggestionFromGeoPositionRe
     Q_D( const Project );
     parent = d->parentWidget( parent );
 
+#ifdef MARBLE_FOUND
     QPointer<KDialog> dialog = new KDialog( parent );
     QWidget *w = new QWidget( dialog );
     QFormLayout *l = new QFormLayout( w );
@@ -3978,6 +3982,12 @@ StopSuggestionFromGeoPositionRequest Project::getStopSuggestionFromGeoPositionRe
 
     delete dialog;
     return request;
+#else
+    // Marble was not found
+    KMessageBox::information( parent, i18nc("@info", "Cannot use Marble widgets for "
+                                                     "latitude/longitude input.") );
+    return StopSuggestionFromGeoPositionRequest();
+#endif
 }
 
 JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) const

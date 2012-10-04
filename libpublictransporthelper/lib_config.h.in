@@ -1,1 +1,1 @@
-#cmakedefine BUILD_MARBLE_MAP
+#cmakedefine MARBLE_FOUND

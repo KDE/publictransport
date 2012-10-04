@@ -21,6 +21,7 @@
 #define PROJECTSETTINGSDIALOG_H
 
 // Own includes
+#include "lib_config.h"
 #include "project.h"
 
 // PublicTransport engine includes
@@ -29,6 +30,12 @@
 // KDE includes
 #include <KDialog>
 #include <KEditListBox>
+
+#ifdef MARBLE_FOUND
+namespace Marble {
+    class LatLonEdit;
+}
+#endif
 
 namespace Ui
 {
@@ -141,6 +148,10 @@ private:
 #endif
 
     Ui::timetablemateview_base *ui_provider;
+#ifdef MARBLE_FOUND
+    Marble::LatLonEdit *ui_sampleLatitude;
+    Marble::LatLonEdit *ui_sampleLongitude;
+#endif
 
     QString m_openedPath;
     QString m_currentServiceProviderID;

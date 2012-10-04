@@ -3,10 +3,7 @@ project( publictransporthelper )
 # Find the required Libaries
 find_package( KDE4 REQUIRED )
 include( KDE4Defaults )
-
 add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
-
-option( BUILD_MARBLE_MAP "Use the MarbleWidget to show stops in it" ON )
 
 # Create lib_config.h from lib_config.h.in, ie.
 # create #define's for each enabled variable from above
@@ -18,9 +15,9 @@ set( include_dirs
     ${KDE4_INCLUDES}
     ${CMAKE_CURRENT_BINARY_DIR} # For "lib_config.h"
 )
-if ( BUILD_MARBLE_MAP )
-    list ( APPEND include_dirs /usr/include/marble )
-endif ( BUILD_MARBLE_MAP )
+if ( MARBLE_FOUND )
+    list ( APPEND include_dirs ${MARBLE_INCLUDE_DIR}/marble )
+endif ( MARBLE_FOUND )
 
 include_directories( ${include_dirs} )
 
@@ -43,12 +40,12 @@ set( publictransporthelper_LIB_SRCS
 	filterwidget.cpp
 	departureinfo.cpp
 )
-if ( BUILD_MARBLE_MAP )
+if ( MARBLE_FOUND )
     list ( APPEND publictransporthelper_LIB_SRCS
            publictransportmapwidget.cpp
            popuphandler.cpp
            publictransportlayer.cpp )
-endif ( BUILD_MARBLE_MAP )
+endif ( MARBLE_FOUND )
 
 set( publictransporthelper_LIB_HDRS
 	publictransporthelper_export.h
@@ -80,12 +77,12 @@ set( publictransporthelper_LIB_HDRS
 	departureinfo.h
 )
 # TODO
-# if ( BUILD_MARBLE_MAP )
+# if ( MARBLE_FOUND )
 #     list ( APPEND publictransporthelper_LIB_SRCS
            #   publictransportmapwidget.h
            #    popuphandler.h
            #    publictransportlayer.h )
-# endif ( BUILD_MARBLE_MAP )
+# endif ( MARBLE_FOUND )
 
 kde4_add_ui_files( publictransporthelper_LIB_SRCS
     providerData.ui
@@ -104,10 +101,10 @@ set( libraries
 	${KDE4_KIO_LIBS}
 	${KDE4_KNEWSTUFF3_LIBS}
 )
-if ( BUILD_MARBLE_MAP )
-    message( "   - Build marble map" )
-    list ( APPEND libraries marblewidget )
-endif ( BUILD_MARBLE_MAP )
+if ( MARBLE_FOUND )
+    message( "   - Marble found, used to show stops in a map" )
+    list ( APPEND libraries ${MARBLE_LIBRARIES} )
+endif ( MARBLE_FOUND )
 target_link_libraries( ${libraries} )
 
 set_target_properties( publictransporthelper

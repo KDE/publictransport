@@ -29,7 +29,7 @@
 #include <KLineEdit> // Base class of StopLineEdit
 #include <Plasma/DataEngine> // For Plasma::DataEngine::Data in StopLineEdit::dataUpdated()
 
-#ifdef BUILD_MARBLE_MAP
+#ifdef MARBLE_FOUND
     #include <GeoDataCoordinates.h>
     using namespace Marble;
 #endif
@@ -148,7 +148,7 @@ protected Q_SLOTS:
     /** @brief Ask if timetable data import should be started, show a start button. */
     void askToImportTimetableData();
 
-#ifdef BUILD_MARBLE_MAP
+#ifdef MARBLE_FOUND
     /** @brief Called, when the map popup gets hidden. */
     void popupHidden();
 

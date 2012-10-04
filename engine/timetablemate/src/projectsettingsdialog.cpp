@@ -45,6 +45,10 @@
 #include <KLineEdit>
 #include <KActionCollection>
 
+#ifdef MARBLE_FOUND
+    #include <LatLonEdit.h>
+#endif
+
 // Qt includes
 #include <QtGui/QLabel>
 #include <QMenu>
@@ -259,9 +263,14 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     ui_provider->defaultVehicleType->addItem( KIcon("vehicle_type_plane"),
             i18nc("@item:listbox", "Plane"), Enums::toString(Enums::Plane) );
 
-    // Initialize Marble::LatLonEdit widgets
-    ui_provider->sampleLongitude->setDimension( Marble::Longitude );
-    ui_provider->sampleLatitude->setDimension( Marble::Latitude );
+#ifdef MARBLE_FOUND
+    // Create and insert Marble::LatLonEdit widgets
+    ui_sampleLongitude = new Marble::LatLonEdit( widget, Marble::Longitude );
+    ui_sampleLatitude = new Marble::LatLonEdit( widget, Marble::Latitude );
+    QFormLayout *layout = qobject_cast< QFormLayout* >( ui_provider->tabSamples->layout() );
+    layout->addRow( i18nc("@info", "Sample &Longitude:"), ui_sampleLongitude );
+    layout->addRow( i18nc("@info", "Sample &Latitude:"), ui_sampleLatitude );
+#endif
 
     providerTypeChanged( ui_provider->type->currentIndex() );
     connect( ui_provider->type, SIGNAL(currentIndexChanged(int)),
@@ -286,6 +295,12 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     m_mapper->setMapping( ui_provider->gtfsAlerts, ui_provider->gtfsAlerts );
     m_mapper->setMapping( ui_provider->timeZone, ui_provider->timeZone );
 #endif
+#ifdef MARBLE_FOUND
+    connect( ui_sampleLongitude, SIGNAL(valueChanged(qreal)), m_mapper, SLOT(map()) );
+    connect( ui_sampleLatitude, SIGNAL(valueChanged(qreal)), m_mapper, SLOT(map()) );
+    m_mapper->setMapping( ui_sampleLongitude, ui_sampleLongitude );
+    m_mapper->setMapping( ui_sampleLatitude, ui_sampleLatitude );
+#endif
     connect( ui_provider->name, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->description, SIGNAL(textChanged()), m_mapper, SLOT(map()) );
     connect( ui_provider->version, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
@@ -302,8 +317,6 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     connect( ui_provider->predefinedCities, SIGNAL(changed()), m_mapper, SLOT(map()) );
     connect( ui_provider->sampleStopNames, SIGNAL(changed()), m_mapper, SLOT(map()) );
     connect( ui_provider->sampleCity, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
-    connect( ui_provider->sampleLongitude, SIGNAL(valueChanged(qreal)), m_mapper, SLOT(map()) );
-    connect( ui_provider->sampleLatitude, SIGNAL(valueChanged(qreal)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(added(QWidget*)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(removed(QWidget*,int)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(changed()), m_mapper, SLOT(map()) );
@@ -325,8 +338,6 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     m_mapper->setMapping( ui_provider->predefinedCities, ui_provider->predefinedCities );
     m_mapper->setMapping( ui_provider->sampleStopNames, ui_provider->sampleStopNames );
     m_mapper->setMapping( ui_provider->sampleCity, ui_provider->sampleCity );
-    m_mapper->setMapping( ui_provider->sampleLongitude, ui_provider->sampleLongitude );
-    m_mapper->setMapping( ui_provider->sampleLatitude, ui_provider->sampleLatitude );
     m_mapper->setMapping( m_changelog, m_changelog );
     connect( m_mapper, SIGNAL(mapped(QWidget*)), this, SLOT(slotChanged(QWidget*)) );
 }
@@ -600,9 +611,12 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     m_providerData->setCityNameToValueReplacementHash( cityNameReplacements );
     m_providerData->setSampleCity( ui_provider->sampleCity->text() );
     m_providerData->setSampleStops( ui_provider->sampleStopNames->items() );
-    m_providerData->setSampleCoordinates( ui_provider->sampleLongitude->value(),
-                                          ui_provider->sampleLatitude->value() );
+#ifdef MARBLE_FOUND
+    m_providerData->setSampleCoordinates( ui_sampleLongitude->value(),
+                                          ui_sampleLatitude->value() );
+#endif
     m_providerData->setNotes( ui_provider->notes->textOrHtml() );
+
     switch ( providerType ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Enums::ScriptedProvider:
@@ -943,8 +957,10 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *data,
 
     ui_provider->sampleStopNames->setItems( data->sampleStopNames() );
     ui_provider->sampleCity->setText( data->sampleCity() );
-    ui_provider->sampleLongitude->setValue( data->sampleLongitude() );
-    ui_provider->sampleLatitude->setValue( data->sampleLatitude() );
+#ifdef MARBLE_FOUND
+    ui_sampleLongitude->setValue( data->sampleLongitude() );
+    ui_sampleLatitude->setValue( data->sampleLatitude() );
+#endif
 
     ui_provider->notes->setText( data->notes() );
 

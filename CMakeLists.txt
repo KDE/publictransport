@@ -2,6 +2,10 @@ project( plasma-publictransport )
 
 # Find the required Libaries
 find_package( KDE4 REQUIRED )
+macro_optional_find_package( Marble )
+macro_log_feature( MARBLE_FOUND "Marble" "Public transport stop map, longitude/latitude widgets"
+    "http://marble.kde.org" FALSE "" "RECOMMENDED: Marble is used to show public transport stops in a map." )
+
 include( KDE4Defaults )
 add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
 include_directories(
@@ -42,11 +46,11 @@ add_subdirectory( libpublictransporthelper )
 # Include directory of publictransporthelper, to be used by other components using the library
 set( PUBLICTRANSPORTHELPER_INCLUDES
     ${CMAKE_SOURCE_DIR}/libpublictransporthelper/
-    ${CMAKE_BINARY_DIR}/libpublictransporthelper/ # for config.h
+    ${CMAKE_BINARY_DIR}/libpublictransporthelper/ # for lib_config.h
 )
-if ( BUILD_MARBLE_MAP )
-    list ( APPEND PUBLICTRANSPORTHELPER_INCLUDES /usr/include/marble )
-endif ( BUILD_MARBLE_MAP )
+if ( MARBLE_FOUND )
+    list ( APPEND PUBLICTRANSPORTHELPER_INCLUDES ${MARBLE_INCLUDE_DIR}/marble )
+endif ( MARBLE_FOUND )
 
 message( " - PublicTransport Data Engine" )
 add_subdirectory( engine )
@@ -83,3 +87,6 @@ if ( INSTALL_RUNNER )
 endif ( INSTALL_RUNNER )
 
 message( "*****************************************************" )
+
+# Show which external packages were found
+macro_display_feature_log()

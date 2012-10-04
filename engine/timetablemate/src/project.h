@@ -22,6 +22,7 @@
 
 // Own includes
 #include "config.h"
+#include "lib_config.h"
 #include "tabs/tabs.h" // For TabType
 #include "testmodel.h" // For TestModel::Test, TestModel::TestCase
 #include "debugger/debuggerstructures.h"

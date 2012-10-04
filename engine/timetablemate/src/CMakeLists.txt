@@ -1,9 +1,14 @@
 
-# Mark GTFS protocol buffer files from the engine as generated
-set_source_files_properties( ../../gtfs-realtime.pb.h ../../gtfs-realtime.pb.cc
-                             PROPERTIES GENERATED TRUE )
+set( include_dirs
+    ${KDE4_INCLUDES}
+    ${PUBLICTRANSPORTHELPER_INCLUDES} # For "lib_config.h"
+    ${CMAKE_CURRENT_BINARY_DIR} # For "debug_config.h"
+)
+if ( MARBLE_FOUND )
+    list ( APPEND include_dirs ${MARBLE_INCLUDE_DIR}/marble )
+endif ( MARBLE_FOUND )
 
-include_directories( /usr/include/marble ${CMAKE_CURRENT_BINARY_DIR} )
+include_directories( ${include_dirs} )
 
 # Create some variables to control debug output
 option( ENABLE_DEBUGGER_EVENT "Enable debug output for eg. \"Execution started\", \"Interrupted\", \"Continued\", \"Aborted\", ..." OFF )
@@ -105,11 +110,10 @@ if ( BUILD_PROVIDER_TYPE_GTFS )
     endif ( BUILD_GTFS_REALTIME )
 endif ( BUILD_PROVIDER_TYPE_GTFS )
 
-# if ( BUILD_MARBLE_MAP )
-#     message( "   - Build marble map" )
-# Always add Marble library for TimetableMate?
-    set ( LIBS ${LIBS} marblewidget )
-# endif ( BUILD_MARBLE_MAP )
+if ( MARBLE_FOUND )
+    message( "     - Build with marble widgets (eg. LatLonEdit)" )
+    set ( LIBS ${LIBS} ${MARBLE_LIBRARIES} )
+endif ( MARBLE_FOUND )
 
 target_link_libraries( timetablemate ${LIBS} )
 
@@ -152,7 +156,6 @@ install( FILES timetablemateui.rc katepartui.rc DESTINATION ${DATA_INSTALL_DIR}/
 kde4_install_auth_actions( org.kde.timetablemate timetablemate.actions )
 
 kde4_add_executable( timetablematehelper timetablematehelper.cpp )
-target_link_libraries( timetablematehelper
-                       ${KDE4_KDECORE_LIBS} )
+target_link_libraries( timetablematehelper ${KDE4_KDECORE_LIBS} )
 install( TARGETS timetablematehelper DESTINATION ${LIBEXEC_INSTALL_DIR} )
 kde4_install_auth_helper_files( timetablematehelper org.kde.timetablemate root )
