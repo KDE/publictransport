@@ -20,6 +20,7 @@
 #ifndef POPUPHANDLER_H
 #define POPUPHANDLER_H
 
+#include "publictransporthelper_export.h"
 #include <QObject>
 
 class QToolButton;
@@ -37,7 +38,7 @@ class PopupHandlerPrivate;
  * The popup widget can be shown on above or below the widget triggering the popup.
  * It can have a close button (ShowCloseButton) and it can be resized (AllowPopupResizing).
  **/
-class PopupHandler : public QObject
+class PUBLICTRANSPORTHELPER_EXPORT PopupHandler : public QObject
 {
     Q_OBJECT
     Q_ENUMS( PopupFlag Position )

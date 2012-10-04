@@ -20,6 +20,7 @@
 #ifndef PUBLICTRANSPORTMAPWIDGET_H
 #define PUBLICTRANSPORTMAPWIDGET_H
 
+#include "publictransporthelper_export.h"
 #include <MarbleWidget.h>
 
 class QToolButton;
@@ -42,7 +43,7 @@ class PublicTransportMapWidgetPrivate;
  * the selected stop use publicTransportLayer() and call PublicTransportLayer::setSelectedStop()
  * on it.
  **/
-class PublicTransportMapWidget : public MarbleWidget
+class PUBLICTRANSPORTHELPER_EXPORT PublicTransportMapWidget : public MarbleWidget
 {
     Q_OBJECT
     friend class PublicTransportLayer;

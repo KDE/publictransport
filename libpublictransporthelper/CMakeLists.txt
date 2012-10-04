@@ -76,13 +76,13 @@ set( publictransporthelper_LIB_HDRS
 	filter.h
 	departureinfo.h
 )
-# TODO
-# if ( MARBLE_FOUND )
-#     list ( APPEND publictransporthelper_LIB_SRCS
-           #   publictransportmapwidget.h
-           #    popuphandler.h
-           #    publictransportlayer.h )
-# endif ( MARBLE_FOUND )
+
+if ( MARBLE_FOUND )
+    list ( APPEND publictransporthelper_LIB_HDRS
+           publictransportmapwidget.h
+           popuphandler.h
+           publictransportlayer.h )
+endif ( MARBLE_FOUND )
 
 kde4_add_ui_files( publictransporthelper_LIB_SRCS
     providerData.ui

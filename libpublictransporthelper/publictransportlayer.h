@@ -25,6 +25,7 @@
 #define PUBLICTRANSPORTLAYER_H
 
 // Own includes
+#include "publictransporthelper_export.h"
 #include "stopsettings.h"
 
 // Marble includes
@@ -59,7 +60,7 @@ class PublicTransportLayerPrivate;
  * used for stop suggestion requests needs to be given. The provider needs to support the features
  * ProvidesStopPosition and ProvidesStopSuggestionsByPosition.
  **/
-class PublicTransportLayer : public QObject, public LayerInterface
+class PUBLICTRANSPORTHELPER_EXPORT PublicTransportLayer : public QObject, public LayerInterface
 {
     Q_OBJECT
     friend class PublicTransportMapWidget;
