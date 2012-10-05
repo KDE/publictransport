@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.0" version="1.0" type="script">
+    <name lang="en">Swiss Public Transport API</name>
+    <description lang="en">Only departures for the current time, no arrivals.
+
+The Transport API allows interested developers to build their own applications using public timetable data, whether they're on the web, the desktop or mobile devices.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fieti1983@gmx.de</email>
+    </author>
+    <url>http://transport.opendata.ch/</url>
+    <shortUrl>transport.opendata.ch</shortUrl>
+    <script extensions="qt,qt.core,qt.xml">ch_opendata.js</script>
+    <samples>
+        <stop>Bern</stop>
+        <stop>Zürich</stop>
+        <longitude>8.51722</longitude>
+        <latitude>47.3853</latitude>
+    </samples>
+</serviceProvider>
