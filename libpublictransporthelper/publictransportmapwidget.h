@@ -48,6 +48,11 @@ class PUBLICTRANSPORTHELPER_EXPORT PublicTransportMapWidget : public MarbleWidge
     Q_OBJECT
     friend class PublicTransportLayer;
 
+    // For some reason this is needed to use the correct D-Bus interface,
+    // eg. org.kde.plasma-desktop.PublicTransport.PublicTransportMapWidget would be wrong
+    // and leads to crashes
+    Q_CLASSINFO("D-Bus Interface", "org.kde.MarbleWidget")
+
 public:
     /** @brief Flags for PublicTransportMapWidget widgets. */
     enum Flag {
