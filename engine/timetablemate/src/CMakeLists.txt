@@ -5,7 +5,7 @@ set( include_dirs
     ${CMAKE_CURRENT_BINARY_DIR} # For "debug_config.h"
 )
 if ( MARBLE_FOUND )
-    list ( APPEND include_dirs ${MARBLE_INCLUDE_DIR}/marble )
+    list ( APPEND include_dirs ${MARBLE_INCLUDE_DIR} )
 endif ( MARBLE_FOUND )
 
 include_directories( ${include_dirs} )

@@ -29,7 +29,7 @@
 #include "stopsettings.h"
 
 // Marble includes
-#include <LayerInterface.h>
+#include <marble/LayerInterface.h>
 
 // Plasma includes
 #include <Plasma/DataEngine>

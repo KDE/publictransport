@@ -30,7 +30,7 @@
 #include <Plasma/DataEngine> // For Plasma::DataEngine::Data in StopLineEdit::dataUpdated()
 
 #ifdef MARBLE_FOUND
-    #include <GeoDataCoordinates.h>
+    #include <marble/GeoDataCoordinates.h>
     using namespace Marble;
 #endif
 

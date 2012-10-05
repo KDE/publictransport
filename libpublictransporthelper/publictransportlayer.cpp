@@ -28,11 +28,11 @@
 #include <Plasma/DataEngineManager>
 
 // Marble includes
-#include <MarbleWidget.h>
-#include <MarbleModel.h>
-#include <ViewportParams.h>
-#include <GeoPainter.h>
-#include <GeoDataLatLonAltBox.h>
+#include <marble/MarbleWidget.h>
+#include <marble/MarbleModel.h>
+#include <marble/ViewportParams.h>
+#include <marble/GeoPainter.h>
+#include <marble/GeoDataLatLonAltBox.h>
 
 // Qt includes
 #include <qmath.h>

@@ -46,7 +46,7 @@
 #include <KActionCollection>
 
 #ifdef MARBLE_FOUND
-    #include <LatLonEdit.h>
+    #include <marble/LatLonEdit.h>
 #endif
 
 // Qt includes

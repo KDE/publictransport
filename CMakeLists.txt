@@ -49,7 +49,7 @@ set( PUBLICTRANSPORTHELPER_INCLUDES
     ${CMAKE_BINARY_DIR}/libpublictransporthelper/ # for lib_config.h
 )
 if ( MARBLE_FOUND )
-    list ( APPEND PUBLICTRANSPORTHELPER_INCLUDES ${MARBLE_INCLUDE_DIR}/marble )
+    list ( APPEND PUBLICTRANSPORTHELPER_INCLUDES ${MARBLE_INCLUDE_DIR} )
 endif ( MARBLE_FOUND )
 
 message( " - PublicTransport Data Engine" )

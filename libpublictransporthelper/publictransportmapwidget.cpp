@@ -31,7 +31,7 @@
 #include <KDebug>
 
 // Marble includes
-#include <ViewportParams.h>
+#include <marble/ViewportParams.h>
 
 // Qt includes
 #include <QPaintEvent>

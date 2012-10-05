@@ -21,7 +21,7 @@
 #define PUBLICTRANSPORTMAPWIDGET_H
 
 #include "publictransporthelper_export.h"
-#include <MarbleWidget.h>
+#include <marble/MarbleWidget.h>
 
 class QToolButton;
 using namespace Marble;
