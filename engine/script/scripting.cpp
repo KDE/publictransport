@@ -1054,7 +1054,10 @@ void ResultObject::addData( const QVariantMap& map )
             emit invalidDataReceived( info, message, context()->parentContext(), count, map );
             m_mutex->lockInline();
             continue;
-        } else if ( !value.isValid() || value.isNull() ) {
+        } else if ( value.isNull() ) {
+            // Null value received, simply leave the data empty
+            continue;
+        } else if ( !value.isValid() ) {
             kDebug() << "Value for" << info << "is invalid or null" << value;
             const QString message = i18nc("@info/plain", "Invalid value received for \"%1\"",
                                           it.key());
