@@ -257,10 +257,24 @@ TopLevelItem::TopLevelItem( const Info* info )
 
 void DepartureItem::setLeavingSoon( bool leavingSoon )
 {
-    m_leavingSoon = leavingSoon;
+    if ( leavingSoon ) {
+        m_flags |= IsLeavingSoon;
+    } else {
+        m_flags &= ~IsLeavingSoon;
+    }
+
     if ( m_model ) {
         // Notify model about the change
         m_model->itemChanged( this, 0, 0 );
+    }
+}
+
+void DepartureItem::setAdditionalDataRequested( bool additionalDataWasRequested )
+{
+    if ( additionalDataWasRequested ) {
+        m_flags |= AdditionalDataWasRequested;
+    } else {
+        m_flags &= ~AdditionalDataWasRequested;
     }
 }
 
@@ -786,7 +800,7 @@ ChildItem* JourneyItem::createRouteItem()
 DepartureItem::DepartureItem( const DepartureInfo &departureInfo, const Info *info )
         : TopLevelItem( info )
 {
-    m_leavingSoon = false;
+    m_flags = NoFlags;
     m_alarm = NoAlarm;
     m_alarmColorIntensity = 0.0;
     setDepartureInfo( departureInfo );
@@ -1099,7 +1113,7 @@ QVariant DepartureItem::data( int role, int column ) const
     if ( column < m_columnData.count() && m_columnData[column].contains(role) ) {
         return m_columnData[column].value( role );
     } else if ( role == IsLeavingSoonRole ) {
-        return m_leavingSoon;
+        return isLeavingSoon();
     } else if ( role == DrawAlarmBackgroundRole ) {
         return m_alarm.testFlag( AlarmPending ) || !qFuzzyIsNull( m_alarmColorIntensity );
     } else if ( role == AlarmColorIntensityRole ) {

@@ -415,6 +415,13 @@ class DepartureItem : public TopLevelItem {
     Q_PROPERTY( qreal alarmColorIntensity READ alarmColorIntensity WRITE setAlarmColorIntensity )
 
 public:
+    enum Flag {
+        NoFlags = 0x00,
+        IsLeavingSoon = 0x01,
+        AdditionalDataWasRequested = 0x02
+    };
+    Q_DECLARE_FLAGS( Flags, Flag );
+
     DepartureItem( const DepartureInfo &departureInfo, const Info *info );
 
     /** @brief The row of this departure item in the model. */
@@ -434,8 +441,11 @@ public:
     virtual QString dataSource() const { return m_departureInfo.dataSource(); };
     int dataSourceIndex() const { return m_departureInfo.index(); };
 
-    bool isLeavingSoon() const { return m_leavingSoon; };
+    bool isLeavingSoon() const { return m_flags.testFlag(IsLeavingSoon); };
     void setLeavingSoon( bool leavingSoon = true );
+
+    bool wasAdditionalDataRequested() const { return m_flags.testFlag(AdditionalDataWasRequested); };
+    void setAdditionalDataRequested( bool additionalDataWasRequested = true );
 
     /** @brief Sets the alarm states. */
     void setAlarmStates( AlarmStates alarmStates );
@@ -495,7 +505,7 @@ protected:
 
     DepartureInfo m_departureInfo;
     qreal m_alarmColorIntensity;
-    bool m_leavingSoon;
+    Flags m_flags;
 };
 
 /**
