@@ -59,6 +59,13 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
             }
             break;
         case FilterByVia: {
+            // Always match if no route items are available.
+            // Route items may not be available for the current provider at all or they might
+            // need to be requested first. Return true as long as route items are unknown.
+            if ( departureInfo.routeStops().isEmpty() ) {
+                return true;
+            }
+
             bool viaMatched = false;
             foreach( const QString &via, departureInfo.routeStops() ) {
                 if ( matchString(constraint.variant, constraint.value.toString(), via) ) {
@@ -67,7 +74,7 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
                 }
             }
 
-            // If no route stop matches or no route items are available, try to match the target
+            // If no route stop matches, try to match the target
             if ( !viaMatched && !matchString(constraint.variant, constraint.value.toString(),
                                              departureInfo.target()) )
             {
@@ -76,8 +83,15 @@ bool Filter::match( const DepartureInfo& departureInfo ) const
             break;
         }
         case FilterByNextStop: {
+            // Always match if no route items are available.
+            // Route items may not be available for the current provider at all or they might
+            // need to be requested first. Return true as long as route items are unknown.
+            if ( departureInfo.routeStops().isEmpty() ) {
+                return true;
+            }
+
             if ( departureInfo.routeStops().count() < 2 || departureInfo.routeExactStops() == 1 ) {
-                // If too less or no route stops are available use the target as next stop
+                // If too less route stops are available use the target as next stop
                 return matchString( constraint.variant, constraint.value.toString(),
                                     departureInfo.target() );
             }
