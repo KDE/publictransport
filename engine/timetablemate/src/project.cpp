@@ -3161,7 +3161,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         break;
     case RunGetStopSuggestionsByGeoPosition:
         action = new KAction( KIcon("system-run"), text, parent );
-        action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getStopSuggestions()'"
+        action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getStopSuggestions()' "
                                                    "with a geo position as argument") );
         action->setEnabled( false );
         break;
