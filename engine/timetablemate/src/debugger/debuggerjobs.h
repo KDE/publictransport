@@ -544,7 +544,6 @@ protected:
                                        const QString &useCase = QString(),
                                        DebuggerJob *runningJob = 0, QObject* parent = 0 );
 
-    virtual void debuggerRun();
     virtual bool runInForeignAgent( DebuggerAgent *agent );
 
 private:

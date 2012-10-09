@@ -563,27 +563,6 @@ void LoadScriptJob::debuggerRun()
     m_engineMutex->unlockInline();
 }
 
-void ExecuteConsoleCommandJob::debuggerRun()
-{
-    m_mutex->lockInline();
-    const ConsoleCommand command = m_command;
-    const QPointer<DebuggerAgent> agent = m_agent;
-    m_mutex->unlockInline();
-
-    if ( command.commandExecutesScriptCode() ) {
-        ForeignAgentJob::debuggerRun();
-    } else if ( agent ) {
-        runInForeignAgent( agent );
-
-        QMutexLocker locker( m_mutex );
-        m_agent = 0;
-        m_objects.clear();
-        m_engineMutex = 0; // Do not delete, used by the other thread
-    } else {
-        kWarning() << "No running agent found, cannot send command";
-    }
-}
-
 bool ExecuteConsoleCommandJob::runInForeignAgent( DebuggerAgent *agent )
 {
     // Execute the command
@@ -615,8 +594,10 @@ bool ForeignAgentJob::waitForFinish( DebuggerAgent *agent, const ScriptObjects &
     }
 
     // Wait for the evaluation to finish after having received network data,
-    // ie. wait until execution gets interrupted again in the parent thread
-    if ( !waitFor(agent, SIGNAL(interrupted(int,QString,QDateTime)), WaitForInterrupt) ) {
+    // ie. wait until execution gets interrupted again in the parent thread, if any
+    if ( m_parentJob &&
+         !waitFor(agent, SIGNAL(interrupted(int,QString,QDateTime)), WaitForInterrupt) )
+    {
         return false;
     }
 
@@ -662,6 +643,7 @@ void ForeignAgentJob::debuggerRun()
         m_engineMutex->lockInline();
         m_mutex->lockInline();
         agent = createAgent();
+        objects = m_objects;
         m_mutex->unlockInline();
 
         if ( !agent ) {
