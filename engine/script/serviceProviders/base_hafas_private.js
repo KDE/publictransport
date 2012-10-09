@@ -81,7 +81,7 @@ var HafasPrivate = {
         var _values = {};// values;
         for ( var index in values ) {
             _values[index] = values[index];
-	}
+        }
         for ( var index in defaultValues ) {
             _values[index] = HafasPrivate.defaultArgument( values[index], defaultValues[index] );
         }
@@ -89,16 +89,15 @@ var HafasPrivate = {
     },
     prepareOptions: function( options, defaultOptions, publicOptions ) {
         // Extend with default options, then global options, fix it and return
-//         var _options = HafasPrivate.extend( options, defaultOptions );
         var options = HafasPrivate.extend( HafasPrivate.extend(options, defaultOptions),
-					   publicOptions );
+                                           publicOptions );
         options.additionalUrlQueryItems = HafasPrivate.fixAdditionalUrlParameters(
                 options.additionalUrlQueryItems );
 
         // If a string is given as charset, create a function that returns that string
         // for all formats, except BinaryFormat. Otherwise use latin1 as default charset.
         var charset = typeof(options.charset) == 'string'
-            ? options.charset : "iso-8859-1";
+                ? options.charset : "iso-8859-1";
         options.charset = function( format ) {
             switch ( format ) {
             case HafasPrivate.formats.XmlFormat:
@@ -117,9 +116,9 @@ var HafasPrivate = {
         }
 
         switch ( options.format ) {
-	case HafasPrivate.formats.XmlFormat:
+        case HafasPrivate.formats.XmlFormat:
         case HafasPrivate.formats.JsonFormat:
-	case HafasPrivate.formats.JavaScriptFormat:
+        case HafasPrivate.formats.JavaScriptFormat:
             if ( options.layout == undefined ) {
                 options.layout = "vs_java3";
             }
@@ -128,38 +127,38 @@ var HafasPrivate = {
                         ? options.type.replace(/(ox|l)/, "n") : "n";
             }
             break;
-	case HafasPrivate.formats.TextFormat:
+        case HafasPrivate.formats.TextFormat:
             if ( options.type == undefined ) {
                 options.type = typeof(options.type) == 'string'
                         ? options.type.replace(/(ox|n)/, "l") : "l";
             }
             options.layout = undefined;
             break;
-	case HafasPrivate.formats.HtmlFormat:
+        case HafasPrivate.formats.HtmlFormat:
             if ( options.type == undefined ) {
                 options.type = typeof(options.type) == 'string'
                         ? options.type.replace(/(ox|l)/, "n") : "n";
             }
             options.layout = undefined;
             break;
-	case HafasPrivate.formats.HtmlMobileFormat:
+        case HafasPrivate.formats.HtmlMobileFormat:
             if ( options.type == undefined ) {
                 options.type = typeof(options.type) == 'string'
                         ? options.type.replace(/(n|l)/, "ox") : "ox";
             }
             options.layout = undefined;
             break;
-	default:
-	    break;
+        default:
+            break;
         }
         return options;
     },
     getUrl: function( options, query ) {
-	query = options.encodeUrlQuery ? QUrl.toPercentEncoding(query).toString() + "" : query;
-	return options.baseUrl + "/" + options.binDir + "/" + 
-		options.program + "." + options.programExtension + "/" + 
-		options.language + options.type +
-		(query.length == 0 ? "" : "?" + query);
+        query = options.encodeUrlQuery ? QUrl.toPercentEncoding(query).toString() + "" : query;
+        return options.baseUrl + "/" + options.binDir + "/" +
+            options.program + "." + options.programExtension + "/" +
+            options.language + options.type +
+            (query.length == 0 ? "" : "?" + query);
     },
     checkXmlForErrors: function( docElement ) {
         // Errors are inside an <Err> tag
@@ -171,15 +170,15 @@ var HafasPrivate = {
             // Error codes:
             // - H730: Invalid input
             // - H890: No trains in result (fatal)
-	    if ( errLevel.toLowerCase() == 'e' ) {
-		helper.error( "Hafas fatal error: " + errCode + " " + errMessage + " level: " + errLevel,
-			      docElement.text() );
-		return false;
-	    } else {
-		helper.warning( "Hafas error: " + errCode + " " + errMessage + " level: " + errLevel,
-				docElement.text() );
-		return true;
-	    }
+            if ( errLevel.toLowerCase() == 'e' ) {
+                helper.error( "Hafas fatal error: " + errCode + " " + errMessage +
+                              " level: " + errLevel, docElement.text() );
+                return false;
+            } else {
+                helper.warning( "Hafas error: " + errCode + " " + errMessage +
+                                " level: " + errLevel, docElement.text() );
+                return true;
+            }
         };
 
         if ( docElement.tagName() == "Err" ) {
@@ -189,10 +188,10 @@ var HafasPrivate = {
             if ( errNodes.isEmpty() ) {
                 return true;
             } else {
-		var hasFatalError = false;
+                var hasFatalError = false;
                 for ( i = 0; i < errNodes.count(); ++i ) {
                     if ( !handleErrElement(errNodes.item(i).toElement()) ) {
-			hasFatalError = true;
+                        hasFatalError = true;
                     }
                 }
                 return !hasFatalError;
@@ -217,7 +216,7 @@ var HafasPrivate = {
     isXml: function( document ) {
         return document instanceof QByteArray
                 ? document.startsWith(new QByteArray("<?xml"))
-		: document.startsWith("<?xml");
+                : document.startsWith("<?xml");
     },
     expectFormat: function( format, document ) {
         if ( document == undefined || document.length == 0 ) {
@@ -369,7 +368,7 @@ var HafasPrivate = {
     * @return {String} The full operator name.
     **/
     operatorFromAbbreviation: function( abbr ) {
-	abbr = abbr.toLowerCase();
+        abbr = abbr.toLowerCase();
         if ( abbr == "ice" || abbr == "ic" || abbr == "ec" || abbr == "ire" ||
              abbr == "re" || abbr == "rb" || abbr == "cnl" || abbr == "en" ) return "Deutsche Bahn AG";
         else if ( abbr == "tha" ) return "Thalys International";
@@ -442,39 +441,39 @@ var HafasPrivate = {
     },
 
     vehicleFromOperatorAbbreviation: function ( abbr ) {
-	abbr = abbr.toLowerCase();
+        abbr = abbr.toLowerCase();
         switch ( abbr ) {
-	case "ice": case "tha": case "rj":
-	    return PublicTransport.HighSpeedTrain;
+        case "ice": case "tha": case "rj":
+            return PublicTransport.HighSpeedTrain;
 
-	case "ic":  case "ec": case "ire": case "cnl":
-	case "en": case "est":
-	    return PublicTransport.IntercityTrain;
+        case "ic": case "ec": case "ire": case "cnl":
+        case "en": case "est":
+            return PublicTransport.IntercityTrain;
 
-	case "re":  case "me":  case "rer": case "vx":
-	case "tlx": case "alx": case "ebx": case "ses":
-	    return PublicTransport.RegionalExpressTrain;
+        case "re":  case "me":  case "rer": case "vx":
+        case "tlx": case "alx": case "ebx": case "ses":
+            return PublicTransport.RegionalExpressTrain;
 
-	case "mer": case "rb":  case "wfb": case "nwb":
-	case "osb": case "swe": case "ktb": case "wkd":
-	case "skm": case "skw": case "erx": case "hex":
-	case "pe":  case "peg": case "ne": case "mrb":
-	case "erb": case "hlb": case "hsb": case "vbg":
-	case "akn": case "ola": case "ubb": case "can":
-	case "brb": case "vec": case "hzl": case "abr":
-	case "cb":  case "weg": case "neb": case "eb":
-	case "ven": case "bob": case "sbs": case "evb":
-	case "stb": case "pre": case "dbg": case "nob":
-	case "rtb": case "blb": case "nbe": case "soe":
-	case "sdg": case "dab": case "htb": case "feg":
-	case "neg": case "rbg": case "mbb": case "veb":
-	case "msb": case "öba": case "wb": case "rnv":
-	case "dwe":
-	    return PublicTransport.RegionalTrain;
+        case "mer": case "rb":  case "wfb": case "nwb":
+        case "osb": case "swe": case "ktb": case "wkd":
+        case "skm": case "skw": case "erx": case "hex":
+        case "pe":  case "peg": case "ne": case "mrb":
+        case "erb": case "hlb": case "hsb": case "vbg":
+        case "akn": case "ola": case "ubb": case "can":
+        case "brb": case "vec": case "hzl": case "abr":
+        case "cb":  case "weg": case "neb": case "eb":
+        case "ven": case "bob": case "sbs": case "evb":
+        case "stb": case "pre": case "dbg": case "nob":
+        case "rtb": case "blb": case "nbe": case "soe":
+        case "sdg": case "dab": case "htb": case "feg":
+        case "neg": case "rbg": case "mbb": case "veb":
+        case "msb": case "öba": case "wb": case "rnv":
+        case "dwe":
+            return PublicTransport.RegionalTrain;
 
         default:
-	    return PublicTransport.UnknownVehicleType;
-	}
+            return PublicTransport.UnknownVehicleType;
+        }
     },
 
     /**
@@ -498,13 +497,13 @@ var HafasPrivate = {
         switch ( string ) {
         case "bus":
         case "buss": // Buss for no_dri TODO Move there
-	case "b":
+        case "b":
             return PublicTransport.Bus;
-	case "tro":
+        case "tro":
             return PublicTransport.TrolleyBus;
         case "tram":
         case "str":
-	case "t":
+        case "t":
             return PublicTransport.Tram;
         case "s":
         case "sbahn":
@@ -516,7 +515,7 @@ var HafasPrivate = {
             return PublicTransport.Subway;
         case "met":
         case "metro":
-	case "m":
+        case "m":
             return PublicTransport.Metro;
         case "ice": // InterCityExpress, Germany
         case "tgv": // Train à grande vitesse, France

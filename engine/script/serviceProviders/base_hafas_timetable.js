@@ -62,8 +62,8 @@ var __hafas_timetable = function(hafas) {
         **/
         url: function( values, options ) {
             var options = HafasPrivate.prepareOptions( HafasPrivate.extend(options, processor.options),
-                  {program: "stboard", additionalUrlQueryItems: "", 
-		   language: "d", type: "n", layout: "vs_java3"}, hafas.options );
+                    {program: "stboard", additionalUrlQueryItems: "",
+                     language: "d", type: "n", layout: "vs_java3"}, hafas.options );
 
             if ( typeof options.baseUrl != "string" || options.baseUrl.length == 0 )
                 throw TypeError("Hafas.timetable.url(): The option baseUrl must be a non-empty string");
@@ -167,7 +167,7 @@ var __hafas_timetable = function(hafas) {
                             }
                             vehicleType = hafas.vehicleFromString( vehicleTypeString );
                         } else {
-			    transportLine = product;
+                            transportLine = product;
                         }
                     } else {
                         transportLine = product.substr( 0, pos );
@@ -237,13 +237,14 @@ var __hafas_timetable = function(hafas) {
                     // Error codes:
                     // - H890: No trains in result (fatal)
                     if ( errLevel.toLower() == "e" ) {
-                    // Error is fatal, don't proceed
-                    helper.error( "Fatal error: " + errCode + " " + errMessage + " level: " + errLevel );
-                    return false;
+                        // Error is fatal, don't proceed
+                        helper.error( "Fatal error: " + errCode + " " + errMessage + " level: " + errLevel );
+                        return false;
                     } else {
-                    helper.warning( "Received a non fatal error: " + errCode + " " + errMessage + " level: " + errLevel +
-                        (errLevel.toLower() == "e" ? "Error is fatal" : "Error isn't fatal") );
-		    }
+                        helper.warning( "Received a non fatal error: " + errCode + " " +
+                                errMessage + " level: " + errLevel +
+                                (errLevel.toLower() == "e" ? "Error is fatal" : "Error isn't fatal") );
+                    }
                 }
 
                 // Use date of the first departure (inside <StartT>) as date for newly parsed departures.
@@ -258,19 +259,18 @@ var __hafas_timetable = function(hafas) {
                 } else {
                     var startTimeElement = docElement.elementsByTagName( "StartT" ).at( 0 ).toElement();
                     if ( startTimeElement.hasAttribute("date") ) {
-                    dateTime = helper.matchDate( startTimeElement.attribute("date"), "yyyyMMdd" );
-                    if ( dateTime.getFullYear() < 1970 ) {
-                        dateTime = new Date();
-                    }
+                        dateTime = helper.matchDate( startTimeElement.attribute("date"), "yyyyMMdd" );
+                        if ( dateTime.getFullYear() < 1970 ) {
+                            dateTime = new Date();
+                        }
                     } else {
-                    dateTime = new Date();
+                        dateTime = new Date();
                     }
                 }
 
                 // Find all <Journey> tags, which contain information about a departure/arrival
                 var journeyNodes = docElement.elementsByTagName("Journey");
                 var count = journeyNodes.count();
-                //     QTime lastTime( 0, 0 );
                 for ( var i = 0; i < count; ++i ) {
                     var node = journeyNodes.at( i );
                     var departure = { JourneyNews: "",
@@ -279,7 +279,6 @@ var __hafas_timetable = function(hafas) {
                     // <Product> tag contains the line string
                     departure.TransportLine = helper.trim(
                         node.firstChildElement("Product").attributeNode("name").nodeValue() );
-                //         line = line.remove( "tram", Qt::CaseInsensitive ).trimmed(); TODO
 
                     // <InfoTextList> tag contains <InfoText> tags, which contain journey news
                     var journeyNewsNodes = node.firstChildElement("InfoTextList").elementsByTagName("InfoText");
@@ -377,19 +376,10 @@ var __hafas_timetable = function(hafas) {
                         journeyAttribute = journeyAttribute.nextSiblingElement("JourneyAttribute");
                     }
 
-                //         // Parse time string
-                //         if ( lastTime.secsTo(time) < -60 * 60 * 3 ) {
-                //             // Add one day to the departure date
-                //             // if the last departure time is more than 3 hours before the current departure time
-                //             currentDate = currentDate.addDays( 1 );
-                //         }
-                //         departure.DepartureDate = currentDate;
-
                     // Add departure to the journey list
                     result.addData( departure );
                 }
 
-                //     TODO result.sort() ?!?
                 return count > 0;
             }
         }),
@@ -489,14 +479,14 @@ var __hafas_timetable = function(hafas) {
                         processor.additionalData.options, hafas.options );
 
                 var routeDataUrl = typeof(values.routeDataUrl) == 'string'
-			? values.routeDataUrl : "";
+                        ? values.routeDataUrl : "";
                 if ( routeDataUrl.length == 0 ) {
                     // No RouteDataUrl value given, get it from HTML data source or the cache
                     var key = "lastTrainData_" + values.stop;
                     var findRouteDataUrl = function( items, values ) {
                         for ( i = 0; i < items.length; ++i ) {
                             if ( items[i].DepartureDateTime.getTime() == values.dateTime.getTime() &&
-                                items[i].TransportLine == values.transportLine )
+                                 items[i].TransportLine == values.transportLine )
                             {
                                 // Found the route data URL cached in the storage
                                 return items[i].RouteDataUrl;

@@ -1250,7 +1250,6 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
     m_runningSources.removeOne( nonAmbiguousName );
     QVariantHash dataSource;
     QVariantList journeysData;
-    int id = 0;
     foreach( const JourneyInfoPtr &journeyInfo, journeys ) {
         if ( !journeyInfo->isValid() ) {
             continue;

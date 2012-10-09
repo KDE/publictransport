@@ -56,18 +56,17 @@ var __hafas_routedata = function(hafas) {
                 var inRange = firstTime == undefined;
                 for ( var i = 0; i < count; ++i ) {
                     var node = stopNodes.at( i ).toElement();
-
-		    var routeStop = helper.decodeHtmlEntities( node.attributeNode("name").nodeValue() );
-		    var arrival = node.attributeNode("arrTime").nodeValue();
-		    var departure = node.attributeNode("depTime").nodeValue();
-		    var timeString = arrival.length < 5 ? departure : arrival;
-		    time = helper.matchTime( timeString, "hh:mm" );
-		    if ( time.error ) {
-			helper.warning( "Hafas.routeData.parseXml(): Could not match route time: '" + timeString + "'", timeString );
-			continue;
-		    }
-		    timeValue = new Date( firstTime.getFullYear(), firstTime.getMonth(),
-					   firstTime.getDate(), time.hour, time.minute, 0, 0 );
+                    var routeStop = helper.decodeHtmlEntities( node.attributeNode("name").nodeValue() );
+                    var arrival = node.attributeNode("arrTime").nodeValue();
+                    var departure = node.attributeNode("depTime").nodeValue();
+                    var timeString = arrival.length < 5 ? departure : arrival;
+                    time = helper.matchTime( timeString, "hh:mm" );
+                    if ( time.error ) {
+                        helper.warning( "Hafas.routeData.parseXml(): Could not match route time: '" + timeString + "'", timeString );
+                        continue;
+                    }
+                    timeValue = new Date( firstTime.getFullYear(), firstTime.getMonth(),
+                            firstTime.getDate(), time.hour, time.minute, 0, 0 );
 
                     if ( inRange || routeStop == stop || firstTime.getTime() <= timeValue.getTime() ) {
                         inRange = true;
@@ -79,17 +78,17 @@ var __hafas_routedata = function(hafas) {
             },
 
             /**
-	    * Parse train info document in Hafas.formats.HtmlFormatformat.
-	    * This function needs to be implemented outside this script to support the text format.
-	    * It should not access the "result" object. It should only be used to get train info URLs
-	    * for departures/arrivals.
-	    * @param {String} document Contents of a train info document in HTML text format received
-	    *   from the HAFAS provider.
-	    * @param {String} stop The name of the stop of the departure, should one of the
-	    *    found route stops
-	    * @param {Date} [firstTime] Date and time of the departure at stop
-	    * @return {Object} An object with these properties: RouteStops, RouteTimes.
-	    **/
+            * Parse train info document in Hafas.formats.HtmlFormatformat.
+            * This function needs to be implemented outside this script to support the text format.
+            * It should not access the "result" object. It should only be used to get train info URLs
+            * for departures/arrivals.
+            * @param {String} document Contents of a train info document in HTML text format received
+            *   from the HAFAS provider.
+            * @param {String} stop The name of the stop of the departure, should one of the
+            *    found route stops
+            * @param {Date} [firstTime] Date and time of the departure at stop
+            * @return {Object} An object with these properties: RouteStops, RouteTimes.
+            **/
             parseHtml: function( html, stop, firstTime ) {
                 var options = HafasPrivate.prepareOptions( processor.options, hafas.options );
                 html = helper.decode( html, options.charset(Hafas.HtmlFormat) );
@@ -122,18 +121,18 @@ var __hafas_routedata = function(hafas) {
 
                     // Check that all needed columns are found
                     if ( !columns.names.contains("station") || !columns.names.contains("arrival") ||
-                        !columns.names.contains("departure") )
+                         !columns.names.contains("departure") )
                     {
                         if ( trainRow.contents.indexOf("<th") == -1 ) {
                             // There's only an error, if this isn't the header row of the table
                             helper.error("Hafas.routeData.parseHtml(): Did not find all columns in a row of " +
-                                        "the result table! Found: " + columns.names, trainRow.contents);
+                                         "the result table! Found: " + columns.names, trainRow.contents);
                         }
                         continue; // Not all columns where not found
                     }
 
-                    var timeString = helper.decodeHtmlEntities(columns["departure"].contents).length < 5 ?
-                        columns["arrival"].contents : columns["departure"].contents;
+                    var timeString = helper.decodeHtmlEntities(columns["departure"].contents).length < 5
+                            ? columns["arrival"].contents : columns["departure"].contents;
 
                     time = helper.matchTime( timeString, "hh:mm" );
                     if ( time.error ) {

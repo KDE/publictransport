@@ -353,10 +353,10 @@ var __hafas_journeys = function(hafas) {
                     case 1:
                         throw Error("Session expired"); // TEST
                     case 890:
-		        // No journeys, proceeding would throw an exception
-		        // because journeyDetailsPos is 0
+                        // No journeys, proceeding would throw an exception
+                        // because journeyDetailsPos is 0
                         helper.warning("No journeys in result set.");
-			buffer.close();
+                        buffer.close();
                         return;
                     case 9220:
                         throw Error("Unresolvable address");
@@ -483,7 +483,7 @@ var __hafas_journeys = function(hafas) {
                     // TODO journey.JourneyID, add TimetableInformation enumerable
                     var journeyId;
                     if ( attributesPos != 0 && attributesPos + j * 2 < data.length() ) {
-			stream.seek( attributesPos + j * 2 );
+                        stream.seek( attributesPos + j * 2 );
                         var attributesIndex = readUInt16();
                         stream.seek( attributesOffset + attributesIndex * 4 );
                         while ( true ) {
@@ -527,16 +527,16 @@ var __hafas_journeys = function(hafas) {
                         var type = readUInt16();
 
                         var vehicleTypeAndTransportLine = readNextString();
-			var pos = vehicleTypeAndTransportLine.indexOf( "#" );
-			var transportLine, vehicleTypeString;
-			if ( pos < 0 ) {
-			    transportLine = vehicleTypeString = vehicleTypeAndTransportLine;
-			} else {
-			    transportLine = vehicleTypeAndTransportLine.substr( 0, pos );
-			    vehicleTypeString = vehicleTypeAndTransportLine.substr( pos + 1 );
-			}
+                        var pos = vehicleTypeAndTransportLine.indexOf( "#" );
+                        var transportLine, vehicleTypeString;
+                        if ( pos < 0 ) {
+                            transportLine = vehicleTypeString = vehicleTypeAndTransportLine;
+                        } else {
+                            transportLine = vehicleTypeAndTransportLine.substr( 0, pos );
+                            vehicleTypeString = vehicleTypeAndTransportLine.substr( pos + 1 );
+                        }
                         transportLine = helper.simplify(
-				transportLine.replace(/^((?:Bus|STR)\s+)/i, "") );
+                                transportLine.replace(/^((?:Bus|STR)\s+)/i, "") );
 
                         journey.RouteTransportLines.push( transportLine );
 
@@ -553,7 +553,6 @@ var __hafas_journeys = function(hafas) {
                             // Add comment to journey news
                             var comment = readNextString();
                             routeNews += routeNews.length > 0 ? ", \n" + comment : comment;
-            //                             appendRouteJourneyNews( journey, comment );
                         }
 
                         stream.seek( attributesOffset + partAttributeIndex * 4 );
@@ -576,38 +575,38 @@ var __hafas_journeys = function(hafas) {
                                 }
                                 journey.Operator += readNextString();
                             } else if ( key == "Category" ) {
-				category = readNextString();
-				if ( vehicleType == PublicTransport.UnknownVehicleType ) {
-				    vehicleType = hafas.vehicleFromString( category,
-					    {unknownVehicleWarning: false} );
-				}
+                                category = readNextString();
+                                if ( vehicleType == PublicTransport.UnknownVehicleType ) {
+                                    vehicleType = hafas.vehicleFromString( category,
+                                            {unknownVehicleWarning: false} );
+                                }
                             //     } else if ( key == "Direction" ) { // TODO Rename to Direction or use both Direction and Target?
                                 //         journey.Target = readNextString();
                             } else if ( key == "Class" ) {
                                 lineClass = parseInt( readNextString() );
-				if ( vehicleType == PublicTransport.UnknownVehicleType ) {
-				    vehicleType = hafas.vehicleFromClass( lineClass,
-					    {unknownVehicleWarning: false} );
-				}
+                                if ( vehicleType == PublicTransport.UnknownVehicleType ) {
+                                    vehicleType = hafas.vehicleFromClass( lineClass,
+                                            {unknownVehicleWarning: false} );
+                                }
                             } else {
                                 stream.seek( stream.pos + 2 );
                             }
                         }
-                        
+
                         if ( vehicleType == PublicTransport.UnknownVehicleType ) {
                             var vehicleTypeRegExp = /^\s*([a-z]+)/i;
                             var vehicleString = vehicleTypeRegExp.exec( vehicleTypeString );
                             if ( vehicleString != null ) {
                                 vehicleType = hafas.vehicleFromString( vehicleString[1] );
-			    }
+                            }
 
-			    if ( vehicleType == PublicTransport.UnknownVehicleType ) {
-				helper.warning( "Unknown vehicle type (category: " + category + 
-					      ", class: " + lineClass + ")" );
-			    }
+                            if ( vehicleType == PublicTransport.UnknownVehicleType ) {
+                                helper.warning( "Unknown vehicle type (category: " + category +
+                                                ", class: " + lineClass + ")" );
+                            }
                         }
-			journey.RouteTypesOfVehicles.push( vehicleType );
-			journey.TypesOfVehicleInJourney.push( vehicleType );
+                        journey.RouteTypesOfVehicles.push( vehicleType );
+                        journey.TypesOfVehicleInJourney.push( vehicleType );
 
                         var getPredictedPlatform = function( plannedPlatform, predictedPlatform ) {
                             return predictedPlatform.length == 0
@@ -679,8 +678,6 @@ var __hafas_journeys = function(hafas) {
                             RouteTimesArrival: new Array(stopCount),
                             RouteTimesDepartureDelay: new Array(stopCount),
                             RouteTimesArrivalDelay: new Array(stopCount),
-                            RouteTimesDepartureDelay: new Array(stopCount),
-                            RouteTimesArrivalDelay: new Array(stopCount)
                         };
                         if ( stopCount > 0 ) {
                             stream.seek( journeyDetailsPos + stopsOffset +

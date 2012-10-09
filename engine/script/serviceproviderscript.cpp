@@ -508,7 +508,6 @@ void ServiceProviderScript::additionDataReady( const TimetableData &data,
                            i18nc("@info/plain", "No additional data found."),
                            url, &request );
     } else {
-        kDebug() << "Additional data is ready:" << data;
         emit additionalDataReceived( this, url, data, request );
     }
 }

@@ -52,8 +52,8 @@ var __hafas_stopsuggestions = function(hafas) {
                                         {type: "ny"}, hafas.options );
             var fromGeoPosition = values.stop == undefined &&
                     values.longitude != undefined && values.latitude != undefined;
-            if ( fromGeoPosition && 
-	         !processor.features.contains(PublicTransport.ProvidesStopSuggestionsByPosition) )
+            if ( fromGeoPosition &&
+                 !processor.features.contains(PublicTransport.ProvidesStopSuggestionsByPosition) )
             {
                 // Stop suggestions were requested by position, but the features were modified
                 // to not allow this, ie. it's not supported by the provider using the Hafas object
@@ -83,25 +83,25 @@ var __hafas_stopsuggestions = function(hafas) {
         *   {String} baseUrl The provider specific base URL, until "/bin/..." (excluding).
         *   {String} program The name of the Hafas program to use, the default is "ajax-getstop.exe".
         *   {String} language One character for the language.
-        *   {String} type Can be "n" for a normal layout or "l" for a Lynx text layout. 
-	*       A special value is "ox" for a mobile HTML language.
+        *   {String} type Can be "n" for a normal layout or "l" for a Lynx text layout.
+        *       A special value is "ox" for a mobile HTML language.
         *   {String} additionalUrlQueryItems Can be used to add additional URL parameters.
         **/
         url: function( values, options ) {
             // Apply default options
             var options = HafasPrivate.prepareOptions(
-		    HafasPrivate.extend(options, processor.options),
+                    HafasPrivate.extend(options, processor.options),
                     {program: "ajax-getstop", type: "ny"}, hafas.options );
             if ( typeof options.baseUrl != "string" || options.baseUrl.length == 0 )
                 throw TypeError("Hafas.stopSuggestions.url(): No base URL given");
 
-	    var query = "REQ0JourneyStopsS0A=1" + // Stop type(s) to request, 1 for normal stops,
+            var query = "REQ0JourneyStopsS0A=1" + // Stop type(s) to request, 1 for normal stops,
                           // 2 for addresses, 3 for normal stops AND addresses, 4 for POIs, ...
                     "&REQ0JourneyStopsS0G=" + values.stop + options.additionalUrlQueryItems;
             return HafasPrivate.getUrl( options, query );
         },
 
-	/** Contains functions to parse normal stop suggestions documents. */
+        /** Contains functions to parse normal stop suggestions documents. */
         parser: new HafasPrivate.Parser({
             /**
             * Parse stop suggestions in HAFAS JavaScript format, from the ajax-getstop.exe program.
@@ -122,14 +122,14 @@ var __hafas_stopsuggestions = function(hafas) {
                 }
 
                 var options = HafasPrivate.prepareOptions( processor.options,
-			{program: "query", language: "d", type: "ny", additionalUrlQueryItems: ""}, 
-			hafas.options );
+                        {program: "query", language: "d", type: "ny", additionalUrlQueryItems: ""},
+                         hafas.options );
                 var json = helper.decode( js.mid(23, js.length() - 46),
-                                           options.charset(Hafas.JavaScriptFormat) );
+                                          options.charset(Hafas.JavaScriptFormat) );
 
-		// QtScript's JSON.parse() does not like "\'" inside JSON strings,
-		// in a browser it works..
-		json = json.replace( /\\'/g, "'" );
+                // QtScript's JSON.parse() does not like "\'" inside JSON strings,
+                // in a browser it works..
+                json = json.replace( /\\'/g, "'" );
 
                 // Parse JSON, expected is a list of objects with these properties
                 // describing the found stops:
@@ -178,10 +178,7 @@ var __hafas_stopsuggestions = function(hafas) {
             if ( typeof options.baseUrl != "string" || options.baseUrl.length == 0 )
                 throw TypeError("Hafas.stopSuggestions.urlGeoPosition(): No base URL given");
 
-            return options.baseUrl + "/" + options.binDir + "/" +
-		options.program + "." + options.programExtension + "/" +
-		options.language + options.type +
-                "?performLocating=2" +
+            var query = "performLocating=2" +
                 "&tpl=stop2json" +
                 "&look_maxno=" + (values.maxCount != undefined ? Math.min(values.maxCount, 999) : 200) +
                 "&look_maxdist=" + (values.distance != undefined ? values.distance : 500) + // maximal distance in meters
@@ -189,9 +186,10 @@ var __hafas_stopsuggestions = function(hafas) {
                 "&look_nv=deleteDoubles|yes" + //get_stopweight|yes" +
                 "&look_x=" + Math.round(values.longitude * 1000000) +
                 "&look_y=" + Math.round(values.latitude * 1000000);
+            return HafasPrivate.getUrl( options, query );
         },
 
-	/** Contains functions to parse stop suggestion documents for specific geo positions. */
+        /** Contains functions to parse stop suggestion documents for specific geo positions. */
         parserGeoPosition: new HafasPrivate.Parser({
             options: { fixJson: false },
 
@@ -213,10 +211,10 @@ var __hafas_stopsuggestions = function(hafas) {
                         processor.options, hafas.options );
                 var json = helper.decode( js, options.charset(Hafas.JavaScriptFormat) );
 
-		if ( options.fixJson ) {
-		    // Add quotation marks around keys
-		    json = json.replace( /\b(\w+)\b\s*:/g, "\"$1\":" ); // TODO
-		}
+                if ( options.fixJson ) {
+                    // Add quotation marks around keys
+                    json = json.replace( /\b(\w+)\b\s*:/g, "\"$1\":" ); // TODO
+                }
 
                 // Parse JSON, expected is an object with these properties:
                 // "prods": A bitfield as string with "1" for enabled products, eg. "11111111111111",
@@ -234,7 +232,7 @@ var __hafas_stopsuggestions = function(hafas) {
                 // "numberofstops" (useless): Number of stop objects in "stops"
                 var stopData;
                 try {
-		    stopData = JSON.parse( json ); // TODO only works with {"property": "value"}, not working: {property: "value"}
+                    stopData = JSON.parse( json ); // TODO only works with {"property": "value"}, not working: {property: "value"}
                 } catch ( err ) {
                     throw Error("Error while parsing stop suggestions in JSON format: " +
                         err.message + ", JSON content: " + json );

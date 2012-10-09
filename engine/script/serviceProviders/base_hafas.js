@@ -1,6 +1,6 @@
 /**
  * @projectDescription Base for PublicTransport engine script provider plugins using the HAFAS API.
- * 
+ *
  * @note This script needs the qt.core and qt.xml extensions.
  *
  * @author   Friedrich Pülz fpuelz@gmx.de
@@ -21,17 +21,17 @@ include("base_hafas_journeys.js");
  * The constructor accepts options as argument, the options can also be changed/read
  * later using the "options" property. For a list of available options see the options
  * property of the public interface of the Hafas class.
- * 
+ *
  * The data processors also use an options property, which override the global options
- * (eg. hafas.timetable.options). For example the data format of stopSuggestions data 
+ * (eg. hafas.timetable.options). For example the data format of stopSuggestions data
  * can be changed like this: {@code hafas.stopSuggestions.options.format = Hafas.TextFormat;}
- * This changes the used parser function, that gets called to parse a stop suggestions 
- * document. In this case the hafas.stopSuggestions.parser.parseText() function needs 
+ * This changes the used parser function, that gets called to parse a stop suggestions
+ * document. In this case the hafas.stopSuggestions.parser.parseText() function needs
  * to be implemented (it is not implemented in this class).
  *
  * The functions provided by this class can be used to implement the main script functions,
  * eg. getStopSuggestions(). If no options are needed other than those specified in
- * hafas.options (eg. baseUrl) or hafas.stopSuggestions.options (in this case) the 
+ * hafas.options (eg. baseUrl) or hafas.stopSuggestions.options (in this case) the
  * associated function can be used directly like here:
  * {@code var getStopSuggestions = hafas.stopSuggestions.get;}
  *
@@ -42,12 +42,12 @@ include("base_hafas_journeys.js");
  *     return hafas.stopSuggestions.get( values, options );
  * }
  * }
- * 
+ *
  * There are four main types of data supported by this class, for each a property exists:
  * "timetable" (for departures/arrivals), "stopSuggestions", "journeys" and "routeData".
  * Each of these properties has a "get" method and a list of "features".
  *
- * If there are unknown vehicle types in the results, the hafas.otherVehicleFromString() 
+ * If there are unknown vehicle types in the results, the hafas.otherVehicleFromString()
  * and/or hafas.otherVehicleFromClass() functions should be implemented.
  *
  * @note This class needs the qt.core extension.
@@ -102,8 +102,8 @@ var Hafas = function( options ) {
 
         /**
         * Get the type of vehicle enumerable from a HAFAS vehicle type string.
-	* To return vehicle types for non standard strings, implement the 
-	* Hafas.otherVehicleFromString() function.
+        * To return vehicle types for non standard strings, implement the
+        * Hafas.otherVehicleFromString() function.
         * @param {String} string The string to get the associated vehicle type enumerable for.
         * @return {PublicTransport.VehicleType} The vehicle type enumerable associated with the
         *   given string or PublicTransport.UnknownVehicleType if the string cannot be associated
@@ -116,15 +116,17 @@ var Hafas = function( options ) {
                 if ( vehicleType == undefined ||
                      vehicleType == PublicTransport.UnknownVehicleType )
                 {
-		    vehicleType = public.vehicleFromOperatorAbbreviation( string );
-		    if ( vehicleType == PublicTransport.UnknownVehicleType ) {
-		        // Use default vehicle type, warn if it's still unknown
-			vehicleType = provider.defaultVehicleType;
-		        options = HafasPrivate.extend( options, {unknownVehicleWarning: true} );
-			if ( options.unknownVehicleWarning && vehicleType == PublicTransport.UnknownVehicleType ) {
-			    helper.warning( "Unknown vehicle type string: '" + string + "'" );
-			}
-		    }
+                    vehicleType = public.vehicleFromOperatorAbbreviation( string );
+                    if ( vehicleType == PublicTransport.UnknownVehicleType ) {
+                        // Use default vehicle type, warn if it's still unknown
+                        vehicleType = provider.defaultVehicleType;
+                        options = HafasPrivate.extend( options, {unknownVehicleWarning: true} );
+                        if ( options.unknownVehicleWarning &&
+                             vehicleType == PublicTransport.UnknownVehicleType )
+                        {
+                            helper.warning( "Unknown vehicle type string: '" + string + "'" );
+                        }
+                    }
                 }
             }
             return vehicleType;
@@ -132,8 +134,8 @@ var Hafas = function( options ) {
 
         /**
         * Get the type of vehicle enumerable from a HAFAS class ID.
-	* To return vehicle types for non standard IDs, implement the 
-	* Hafas.otherVehicleFromClass() function.
+        * To return vehicle types for non standard IDs, implement the
+        * Hafas.otherVehicleFromClass() function.
         * @param {int} classId The ID to get the associated vehicle type enumerable for.
         * @return {PublicTransport.VehicleType} The vehicle type enumerable associated with the
         *   given class ID or PublicTransport.UnknownVehicleType if the ID cannot be associated
@@ -146,12 +148,14 @@ var Hafas = function( options ) {
                 if ( vehicleType == undefined ||
                      vehicleType == PublicTransport.UnknownVehicleType )
                 {
-		    // Use default vehicle type, warn if it's still unknown
-		    vehicleType = provider.defaultVehicleType;
-		    options = HafasPrivate.extend( options, {unknownVehicleWarning: true} );
-		    if ( options.unknownVehicleWarning && vehicleType == PublicTransport.UnknownVehicleType ) {
-			helper.warning( "Unknown vehicle type class: '" + classId + "'" );
-		    }
+                    // Use default vehicle type, warn if it's still unknown
+                    vehicleType = provider.defaultVehicleType;
+                    options = HafasPrivate.extend( options, {unknownVehicleWarning: true} );
+                    if ( options.unknownVehicleWarning &&
+                         vehicleType == PublicTransport.UnknownVehicleType )
+                    {
+                        helper.warning( "Unknown vehicle type class: '" + classId + "'" );
+                    }
                 }
             }
             return vehicleType;
