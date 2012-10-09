@@ -4049,7 +4049,7 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
 void Project::abortDebugger()
 {
     Q_D( Project );
-    if ( !d->debugger->isRunning() ) {
+    if ( !d->debugger->isRunning() && !d->debugger->isInterrupted() ) {
         // The abort action should have been disabled,
         // no stopped signal received? Update UI state to debugger state
         kDebug() << "Internal error, debugger not running, update UI state";
