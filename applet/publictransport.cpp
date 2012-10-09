@@ -494,6 +494,38 @@ void PublicTransportApplet::departuresProcessed( const QString& sourceName,
         updatePopupIcon();
         d->createTooltip();
     }
+
+    // Request additional data for new items
+    if ( d->settings.additionalDataRequestType() == Settings::RequestAdditionalDataDirectly ) {
+        Plasma::Service *service = dataEngine("publictransport")->serviceForSource( sourceName );
+        if ( !service ) {
+            kWarning() << "No Timetable Service!";
+            return;
+        }
+
+        int itemBegin = 999999999;
+        int itemEnd = 0;
+        foreach ( ItemBase *item, d->model->items() ) {
+            DepartureItem *departure = dynamic_cast< DepartureItem* >( item );
+            if ( !departure->wasAdditionalDataRequested() &&
+                 departure->departureInfo()->routeStops().isEmpty() )
+            {
+                departure->setAdditionalDataRequested();
+                const int index = departure->departureInfo()->index();
+                itemBegin = qMin( itemBegin, index );
+                itemEnd = qMax( itemEnd, index );
+            }
+        }
+
+        if ( itemBegin < 999999999 ) {
+            KConfigGroup op = service->operationDescription("requestAdditionalDataRange");
+            op.writeEntry( "itemnumberbegin", itemBegin );
+            op.writeEntry( "itemnumberend", itemEnd );
+            Plasma::ServiceJob *additionDataJob = service->startOperationCall( op );
+            connect( additionDataJob, SIGNAL(result(KJob*)), this, SLOT(additionalDataResult(KJob*)) );
+            connect( additionDataJob, SIGNAL(finished(KJob*)), service, SLOT(deleteLater()) );
+        }
+    }
 }
 
 void PublicTransportApplet::handleDataError( const QString& /*sourceName*/,
@@ -1195,15 +1227,21 @@ void PublicTransportApplet::oldItemAnimationFinished()
 
 void PublicTransportApplet::expandedStateChanged( PublicTransportGraphicsItem *item, bool expanded )
 {
+    Q_D( PublicTransportApplet );
     // When an item gets expanded for the first time, try to load additional data
     // using the timetable service of the PublicTransport engine
     DepartureGraphicsItem *departureItem = qobject_cast< DepartureGraphicsItem* >( item );
-    if ( expanded && departureItem ) {
+    if ( expanded && departureItem &&
+         !departureItem->departureItem()->wasAdditionalDataRequested() &&
+         (d->settings.additionalDataRequestType() == Settings::RequestAdditionalDataWhenNeeded ||
+          d->settings.additionalDataRequestType() == Settings::RequestAdditionalDataDirectly) )
+    {
         const QString dataSource = departureItem->departureItem()->dataSource();
         Plasma::Service *service = dataEngine("publictransport")->serviceForSource( dataSource );
         if ( service ) {
             KConfigGroup op = service->operationDescription("requestAdditionalData");
             op.writeEntry( "itemnumber", departureItem->departureItem()->dataSourceIndex() );
+            departureItem->departureItem()->setAdditionalDataRequested();
             Plasma::ServiceJob *additionDataJob = service->startOperationCall( op );
             connect( additionDataJob, SIGNAL(result(KJob*)), this, SLOT(additionalDataResult(KJob*)) );
             connect( additionDataJob, SIGNAL(finished(KJob*)), service, SLOT(deleteLater()) );

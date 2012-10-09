@@ -20,9 +20,10 @@
 // Own includes
 #include "settings.h"
 
-Settings::Settings()
+Settings::Settings() : m_settingsFlags(DefaultSettingsFlags),
+        m_departureTimeFlags(DefaultDepartureTimeFlags),
+        m_additionalDataRequestType(DefaultAdditionalDataRequestType), m_currentStopIndex(0)
 {
-    m_currentStopIndex = 0;
 }
 
 Settings::Settings( const Settings& other )

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>345</width>
-    <height>168</height>
+    <width>449</width>
+    <height>144</height>
    </rect>
   </property>
   <layout class="QFormLayout" name="formLayout_3">
@@ -144,12 +144,53 @@
      </property>
     </widget>
    </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="lblAdditionalData">
+     <property name="text">
+      <string comment="@label:spinbox">Additional Timetable Data:</string>
+     </property>
+     <property name="buddy">
+      <cstring>additionalData</cstring>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="1">
+    <widget class="KComboBox" name="additionalData">
+     <property name="currentIndex">
+      <number>1</number>
+     </property>
+     <item>
+      <property name="text">
+       <string>Request all data directly (more network usage)</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Request when needed (recommended)</string>
+      </property>
+     </item>
+     <item>
+      <property name="text">
+       <string>Never request</string>
+      </property>
+     </item>
+    </widget>
+   </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>KComboBox</class>
+   <extends>QComboBox</extends>
+   <header>kcombobox.h</header>
+  </customwidget>
+ </customwidgets>
  <tabstops>
+  <tabstop>updateAutomatically</tabstop>
   <tabstop>showDepartures</tabstop>
   <tabstop>showArrivals</tabstop>
   <tabstop>maximalNumberOfDepartures</tabstop>
+  <tabstop>additionalData</tabstop>
  </tabstops>
  <resources/>
  <connections/>

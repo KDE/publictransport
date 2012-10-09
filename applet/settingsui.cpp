@@ -136,14 +136,22 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
             "Check each stop you want to use the selected filter configuration in the "
             "<interface>Used With</interface> combobox. You can also select the filters to be used "
             "by a specific stop in the stop settings or in the applet itself.</para>"
-            "<para><emphasis strong='1'>Filter Types</emphasis><list>"
+            "<subtitle>Filter Types</subtitle>"
+            "<para><list>"
             "<item><emphasis>Vehicle:</emphasis> Filters by vehicle types.</item>"
             "<item><emphasis>Line String:</emphasis> Filters by transport line strings.</item>"
             "<item><emphasis>Line number:</emphasis> Filters by transport line numbers.</item>"
             "<item><emphasis>Target:</emphasis> Filters by target/origin.</item>"
+            "<item><emphasis>Delay:</emphasis> Filters by delay.</item>"
+            "</list></para>"
+            "<subtitle>Filters that need route data</subtitle>"
+            "<para><emphasis>Warning:</emphasis> The following filters need route data, which may "
+            "need to be requested explicitly as additional timetable data for your provider. See "
+            "the <interface>Advanced</interface> tab in the general settings to adjust, when "
+            "additional timetable data should be requested."
+            "<list>"
             "<item><emphasis>Via:</emphasis> Filters by intermediate stops.</item>"
             "<item><emphasis>Next Stop:</emphasis> Filters by the next intermediate stop.</item>"
-            "<item><emphasis>Delay:</emphasis> Filters by delay.</item>"
             "</list></para>" ) );
     m_uiFilter.affectedStops->setMultipleSelectionOptions( CheckCombobox::ShowStringList );
     connect( m_uiFilter.filters, SIGNAL( changed() ), this, SLOT( filtersChanged() ) );
@@ -668,6 +676,15 @@ void SettingsUiManager::setValuesOfAdvancedConfig( const Settings &settings )
     m_uiAdvanced.showArrivals->setChecked( settings.departureArrivalListType() == ArrivalList );
     m_uiAdvanced.updateAutomatically->setChecked( settings.autoUpdate() );
     m_uiAdvanced.maximalNumberOfDepartures->setValue( settings.maximalNumberOfDepartures() );
+    switch ( settings.additionalDataRequestType() ) {
+    case Settings::NeverRequestAdditionalData:
+        m_uiAppearance.cmbDepartureColumnInfos->setCurrentIndex( 2 );
+    case Settings::RequestAdditionalDataDirectly:
+        m_uiAppearance.cmbDepartureColumnInfos->setCurrentIndex( 0 );
+    case Settings::RequestAdditionalDataWhenNeeded:
+    default:
+        m_uiAppearance.cmbDepartureColumnInfos->setCurrentIndex( 1 );
+    }
 }
 
 void SettingsUiManager::setValuesOfAppearanceConfig( const Settings &settings )
@@ -881,6 +898,23 @@ Settings SettingsUiManager::settings()
         flags |= Settings::ColorizeDepartureGroups;
     }
     ret.setSettingsFlags( flags );
+
+    switch ( m_uiAdvanced.additionalData->currentIndex() ) {
+    case 2:
+        ret.setAdditionalDataRequestType( Settings::NeverRequestAdditionalData );
+        break;
+    case 0:
+        ret.setAdditionalDataRequestType( Settings::RequestAdditionalDataDirectly );
+        break;
+    case 1:
+        ret.setAdditionalDataRequestType( Settings::RequestAdditionalDataWhenNeeded );
+        break;
+    default:
+        kDebug() << "Unknown additional data request type index:" << m_uiAdvanced.additionalData->currentIndex()
+                 << "Using default type:" << Settings::DefaultAdditionalDataRequestType;
+        ret.setAdditionalDataRequestType( Settings::DefaultAdditionalDataRequestType );
+        break;
+    }
 
     // Set appearance settings
     Settings::DepartureTimeFlags timeFlags = Settings::DoNotShowDepartureTime;

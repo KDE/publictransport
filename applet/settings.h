@@ -201,7 +201,10 @@ public:
         UpdateAutomatically     = 0x0002,
         DrawShadows             = 0x0004,
         HideTargetColumn        = 0x0008,
-        UseThemeFont            = 0x0010
+        UseThemeFont            = 0x0010,
+
+        DefaultSettingsFlags    = ColorizeDepartureGroups | UpdateAutomatically |
+                                  DrawShadows | UseThemeFont
     };
     Q_DECLARE_FLAGS( SettingsFlags, SettingsFlag );
 
@@ -217,6 +220,16 @@ public:
         DefaultDepartureTimeFlags = ShowTimeAndRemainingTime | DisplayDepartureTimeBold
     };
     Q_DECLARE_FLAGS( DepartureTimeFlags, DepartureTimeFlag );
+
+    /** @brief Different ways to request additional timetable data. */
+    enum AdditionalDataRequestType {
+        NeverRequestAdditionalData,
+
+        RequestAdditionalDataWhenNeeded,
+        RequestAdditionalDataDirectly,
+
+        DefaultAdditionalDataRequestType = RequestAdditionalDataWhenNeeded
+    };
 
     /**
      * @brief Gets the size factor to be used for the given @p size value.
@@ -450,6 +463,9 @@ public:
      **/
     inline DepartureTimeFlags departureTimeFlags() const { return m_departureTimeFlags; };
 
+    inline AdditionalDataRequestType additionalDataRequestType() const {
+            return m_additionalDataRequestType; };
+
     /**
      * @brief The font to be used in the applet.
      *
@@ -520,6 +536,9 @@ public:
     void setDepartureTimeFlags( DepartureTimeFlags departureTimeFlags ) {
         m_departureTimeFlags = departureTimeFlags; };
 
+    void setAdditionalDataRequestType( AdditionalDataRequestType additionalDataRequestType ) {
+        m_additionalDataRequestType = additionalDataRequestType; };
+
     /** @brief Sets a list of JourneySearchItem's for the current stop settings. */
     void setCurrentJourneySearches( const QList<JourneySearchItem> &journeySearches ) {
         StopSettings &stop = currentStop();
@@ -571,6 +590,7 @@ public:
 private:
     SettingsFlags m_settingsFlags;
     DepartureTimeFlags m_departureTimeFlags;
+    AdditionalDataRequestType m_additionalDataRequestType;
 
     StopSettingsList m_stops;
     FilterSettingsList m_filters;

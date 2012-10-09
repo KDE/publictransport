@@ -49,6 +49,10 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
                 cg.readEntry("departureTimeFlags", static_cast<int>(Settings::DefaultDepartureTimeFlags))) );
     }
 
+    const Settings::AdditionalDataRequestType requestType = static_cast< Settings::AdditionalDataRequestType >(
+            cg.readEntry("additionalDataRequestType", static_cast<int>(Settings::DefaultAdditionalDataRequestType)));
+    settings.setAdditionalDataRequestType( requestType );
+
     // Read stop settings TODO: Store in config groups like filters
     StopSettingsList stopSettingsList;
     int stopSettingCount = cgGlobal.readEntry( "stopSettings", 1 );
@@ -337,6 +341,11 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
     if ( settings.departureTimeFlags() != oldSettings.departureTimeFlags() ) {
         cg.writeEntry( "departureTimeFlags", static_cast<int>(settings.departureTimeFlags()) );
         changed |= IsChanged | ChangedDepartureTimeSettings;
+    }
+
+    if ( settings.additionalDataRequestType() != oldSettings.additionalDataRequestType() ) {
+        cg.writeEntry( "additionalDataRequestType", static_cast<int>(settings.additionalDataRequestType()) );
+        changed |= IsChanged;
     }
 
     if ( settings.maximalNumberOfDepartures() != oldSettings.maximalNumberOfDepartures() ) {

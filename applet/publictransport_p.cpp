@@ -619,7 +619,7 @@ QString PublicTransportAppletPrivate::stripDateAndTimeValues( const QString &sou
 void PublicTransportAppletPrivate::fillModel( const QList<DepartureInfo> &departures )
 {
     bool modelFilled = model->rowCount() >= settings.maximalNumberOfDepartures();
-    foreach( const DepartureInfo & departureInfo, departures ) {
+    foreach( const DepartureInfo &departureInfo, departures ) {
         QModelIndex index = model->indexFromInfo( departureInfo );
         if ( !index.isValid() ) {
             // Departure wasn't in the model
