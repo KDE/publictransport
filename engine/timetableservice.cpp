@@ -29,9 +29,15 @@
 
 RequestAdditionalDataJob::RequestAdditionalDataJob( const QString &destination,
         const QString &operation, const QMap< QString, QVariant > &parameters, QObject *parent )
-        : ServiceJob(destination, operation, parameters, parent)
+        : ServiceJob(destination, operation, parameters, parent), m_itemsDone(0)
 {
-    m_updateItem = parameters["itemnumber"].toInt();
+    if ( parameters.contains("itemnumberbegin") && parameters.contains("itemnumberend") ) {
+        m_updateItem = parameters["itemnumberbegin"].toInt();
+        m_updateItemEnd = parameters["itemnumberend"].toInt();
+        Q_ASSERT( m_updateItemEnd >= m_updateItem );
+    } else {
+        m_updateItem = m_updateItemEnd = parameters["itemnumber"].toInt();
+    }
 }
 
 RequestAdditionalDataJob::~RequestAdditionalDataJob()
@@ -40,7 +46,7 @@ RequestAdditionalDataJob::~RequestAdditionalDataJob()
 
 void RequestAdditionalDataJob::start()
 {
-    kDebug() << "Start RequestAdditionalDataJob" << m_updateItem;
+    kDebug() << "Start RequestAdditionalDataJob" << m_updateItem << m_updateItemEnd;
     TimetableService *service = qobject_cast< TimetableService* >( parent() );
     Plasma::DataEngine *engine = qobject_cast< Plasma::DataEngine* >( service->parent() );
     Q_ASSERT( engine );
@@ -57,9 +63,10 @@ void RequestAdditionalDataJob::start()
              this, SLOT(additionalDataRequestFinished(QVariantHash,bool,QString)) );
 
     // Invoke the slot to request additional data
-    meta->method( slotIndex ).invoke( engine, Qt::QueuedConnection,
-                                      Q_ARG(QString, destination()),
-                                      Q_ARG(int, m_updateItem) );
+    for ( int item = m_updateItem; item <= m_updateItemEnd; ++item ) {
+        meta->method( slotIndex ).invoke( engine, Qt::QueuedConnection,
+                                          Q_ARG(QString, destination()), Q_ARG(int, item) );
+    }
 }
 
 void RequestAdditionalDataJob::additionalDataRequestFinished( const QVariantHash &newData,
@@ -71,7 +78,14 @@ void RequestAdditionalDataJob::additionalDataRequestFinished( const QVariantHash
         setError( KJob::UserDefinedError );
         setErrorText( errorMessage );
     }
-    setResult( success );
+    ++m_itemsDone;
+    const int totalItemsToUpdate = m_updateItemEnd - m_updateItem + 1;
+    setPercent( m_itemsDone / totalItemsToUpdate );
+
+    if ( m_itemsDone == totalItemsToUpdate ) {
+        // Last item is done
+        setResult( success );
+    }
 }
 
 TimetableService::TimetableService( const QString &name, QObject *parent )
@@ -84,7 +98,7 @@ TimetableService::TimetableService( const QString &name, QObject *parent )
 Plasma::ServiceJob* TimetableService::createJob(
         const QString &operation, QMap< QString, QVariant > &parameters )
 {
-    if ( operation == "requestAdditionalData" ) {
+    if ( operation == "requestAdditionalData" || operation == "requestAdditionalDataRange" ) {
         return new RequestAdditionalDataJob( m_name, operation, parameters, this );
     } else {
         kWarning() << "Operation" << operation << "not supported";

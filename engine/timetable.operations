@@ -8,4 +8,14 @@
                    The first item has the number 0.</label>
         </entry>
     </group>
+    <group name="requestAdditionalDataRange">
+        <entry name="itemnumberbegin" type="int">
+            <label>The first number in the data source, under which the items to update are stored.
+                   The first item has the number 0.</label>
+        </entry>
+        <entry name="itemnumberend" type="int">
+            <label>The last number in the data source, under which the items to update are stored.
+                   The first item has the number 0.</label>
+        </entry>
+    </group>
 </kcfg>

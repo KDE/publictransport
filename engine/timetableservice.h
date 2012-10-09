@@ -51,6 +51,8 @@ protected slots:
 
 private:
     int m_updateItem;
+    int m_updateItemEnd;
+    int m_itemsDone;
 };
 
 /**

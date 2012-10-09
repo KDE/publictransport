@@ -262,6 +262,8 @@ protected slots:
             const QUrl &requestUrl, const TimetableData &data,
             const AdditionalDataRequest &request );
 
+    void updateDataSourcesWithNewAdditionData();
+
     /**
      * @brief An error was received.
      *
@@ -485,6 +487,7 @@ private:
     QVariantHash m_erroneousProviders; // List of erroneous service providers as keys
                                        // and error messages as values
     QHash< QString, TimerData* > m_updateTimers; // List of timers to update data sources periodically
+    QHash< QString, QTimer* > m_updateAdditionalDataDelayTimers; // List of timers to update data sources with new additional timetable data
     QFileSystemWatcher *m_fileSystemWatcher; // Watch the service provider directory
 
     // The next times at which new downloads will have sufficient changes
@@ -493,7 +496,7 @@ private:
     QHash< QString, QDateTime > m_nextDownloadTimeProposals;
 
     QTimer *m_providerUpdateDelayTimer;
-    QTimer *m_sourceUpdateTimer;
+    QTimer *m_sourceUpdateTimer; // TODO Unused
     QStringList m_runningSources; // Sources which are currently being processed
 };
 

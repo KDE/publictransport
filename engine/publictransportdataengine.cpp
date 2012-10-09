@@ -1176,10 +1176,46 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     items[ request.itemNumber ] = item;
     dataSource[ key ] = items;
     m_dataSources[ sourceToUpdate ] = dataSource;
-    setData( request.sourceName, dataSource );
+
+    QTimer *updateDelayTimer;
+    if ( m_updateAdditionalDataDelayTimers.contains(request.sourceName) ) {
+        // Use existing timer, restart it with a longer interval and
+        // update the data source after the timeout
+        updateDelayTimer = m_updateAdditionalDataDelayTimers[ request.sourceName ];
+        updateDelayTimer->setInterval( 250 );
+    } else {
+        // Create timer with a shorter interval, but directly update the data source.
+        // The timer is used here to delay further updates
+        setData( request.sourceName, dataSource );
+        updateDelayTimer = new QTimer( this );
+        updateDelayTimer->setInterval( 150 );
+        connect( updateDelayTimer, SIGNAL(timeout()),
+                 this, SLOT(updateDataSourcesWithNewAdditionData()) );
+        m_updateAdditionalDataDelayTimers.insert( request.sourceName, updateDelayTimer );
+    }
+
+    // (Re-)start the additional data update timer
+    updateDelayTimer->start();
 
     // Emit result
     emit additionalDataRequestFinished( item, true );
+}
+
+void PublicTransportEngine::updateDataSourcesWithNewAdditionData()
+{
+    QTimer *updateDelayTimer = qobject_cast< QTimer* >( sender() );
+    Q_ASSERT( updateDelayTimer );
+    const QString sourceName = m_updateAdditionalDataDelayTimers.key( updateDelayTimer );
+    const int interval = updateDelayTimer->interval();
+    Q_ASSERT( !sourceName.isEmpty() );
+    delete m_updateAdditionalDataDelayTimers.take( sourceName );
+
+    // Do the upate, but only after long delays,
+    // because the update is already done before short delays
+    if ( interval > 150 ) {
+        // Was delayed for a longer time
+        setData( sourceName, m_dataSources[sourceName.toLower()].toHash() );
+    }
 }
 
 void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
