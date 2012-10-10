@@ -246,7 +246,8 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     FirstDepartureConfigMode firstDepartureConfigMode = m_firstDepartureConfigMode;
     const QTime &timeOfFirstDepartureCustom = m_timeOfFirstDepartureCustom;
     int timeOffsetOfFirstDeparture = m_timeOffsetOfFirstDeparture;
-    bool isArrival = m_isArrival;
+    const DepartureInfo::DepartureFlags globalFlags = m_isArrival
+            ? DepartureInfo::IsArrival : DepartureInfo::NoDepartureFlags;
     m_mutex->unlock();
 
     emit beginDepartureProcessing( sourceName );
@@ -270,7 +271,16 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
                 routeTimes << time.toTime();
             }
         }
-        DepartureInfo departureInfo( sourceName, i, departureData["Operator"].toString(),
+
+        // Check whether or not additional timetable data is included
+        DepartureInfo::DepartureFlags flags = globalFlags;
+        if ( departureData["IncludesAdditionalData"].toBool() ) {
+            // This departure includes additional timetable data,
+            // most other data is most probably unchanged
+            flags |= PublicTransport::DepartureInfo::IncludesAdditionalData;
+        }
+
+        DepartureInfo departureInfo( sourceName, i, flags, departureData["Operator"].toString(),
                 departureData["TransportLine"].toString(),
                 departureData["Target"].toString(), departureData["TargetShortened"].toString(),
                 departureData["DepartureDateTime"].toDateTime(),
@@ -280,7 +290,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
                 departureData["DelayReason"].toString(), departureData["JourneyNews"].toString(),
                 departureData["RouteStops"].toStringList(),
                 departureData["RouteStopsShortened"].toStringList(),
-                routeTimes, departureData["RouteExactStops"].toInt(), isArrival );
+                routeTimes, departureData["RouteExactStops"].toInt() );
 
         // Update the list of alarms that match the current departure
         departureInfo.matchedAlarms().clear();
@@ -300,7 +310,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
              || filters.filterOut(departureInfo)
              || colorGroups.filterOut(departureInfo) )
         {
-            departureInfo.setFilteredOut( true );
+            departureInfo.setFlag( PublicTransport::DepartureInfo::IsFilteredOut );
 //          kDebug() << "Filter out" << filters.filterOut(departureInfo)
 //              << Global::vehicleTypeToString(departureInfo.vehicleType()) << departureInfo.lineString()
 //              << departureInfo.target();
@@ -548,7 +558,7 @@ void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJ
                                 timeOffsetOfFirstDeparture) ) {
             newlyNotFiltered << departureInfo;
         }
-        departureInfo.setFilteredOut( filterOut );
+        departureInfo.setFlag( PublicTransport::DepartureInfo::IsFilteredOut, filterOut );
     }
 
     m_mutex->lock();

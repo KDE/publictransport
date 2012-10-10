@@ -657,30 +657,47 @@ void PublicTransportEngine::requestAdditionalData( const QString &sourceName, in
     const QString providerId = providerIdFromSourceName( sourceName );
     const ProviderPointer provider = providerFromId( providerId );
     if ( provider.isNull() ) {
+        emit additionalDataRequestFinished( QVariantHash(), false,
+                QString("Service provider %1 could not be created").arg(providerId) );
         return; // Service provider couldn't be created
     }
 
     // Test if the source with the given name is cached
     const QString nonAmbiguousName = sourceName.toLower();
     if ( !m_dataSources.contains(nonAmbiguousName) ) {
-        kWarning() << "Data source to update not found";
+        emit additionalDataRequestFinished( QVariantHash(), false,
+                                            "Data source to update not found: " + sourceName );
         return;
     }
 
     // Get the data list, currently only for departures/arrivals TODO: journeys
-    const QVariantHash dataSource = m_dataSources[ nonAmbiguousName ].toHash();
+    QVariantHash dataSource = m_dataSources[ nonAmbiguousName ].toHash();
     const QString key = dataSource.contains("departures") ? "departures"
                         : (dataSource.contains("arrivals") ? "arrivals"
                            : (dataSource.contains("journeys") ? "journeys" : "stops"));
-    const QVariantList items = dataSource[key].toList();
+    QVariantList items = dataSource[key].toList();
     if ( itemNumber >= items.count() || itemNumber < 0 ) {
-        kWarning() << "Item to update not found in data source";
+        emit additionalDataRequestFinished( QVariantHash(), false,
+                                            "Item to update not found in data source" );
         return;
     }
 
-    // Get the timetable data stored in the data source at the index itemNumber
-    // and extract values
-    const QVariantHash item = items[ itemNumber ].toHash();
+    // Get the timetable item stored in the data source at the given index
+    QVariantHash item = items[ itemNumber ].toHash();
+
+    // Check if additional data is already included or was already requested
+    if ( item["IncludesAdditionalData"].toBool() ) {
+        emit additionalDataRequestFinished( QVariantHash(), false,
+                                            "Additional data is already included" );
+        return;
+    } else if ( item["WaitingForAdditionalData"].toBool() ) {
+        emit additionalDataRequestFinished( QVariantHash(), false,
+                                            "Additional data already was requested, please wait" );
+        return;
+    }
+
+    // Check if the timetable item is valid,
+    // extract values needed for the additional data request job
     const QDateTime dateTime = item[ "DepartureDateTime" ].toDateTime();
     const QString transportLine = item[ "TransportLine" ].toString();
     const QString target = item[ "Target" ].toString();
@@ -688,9 +705,17 @@ void PublicTransportEngine::requestAdditionalData( const QString &sourceName, in
     if ( routeDataUrl.isEmpty() &&
          (!dateTime.isValid() || transportLine.isEmpty() || target.isEmpty()) )
     {
-        kWarning() << "Item to update is invalid:" << dateTime << transportLine << target;
+        emit additionalDataRequestFinished( QVariantHash(), false,
+                                            QString("Item to update is invalid: %1, %2, %3")
+                                            .arg(dateTime.toString()).arg(transportLine, target) );
         return;
     }
+
+    // Store state of additional data in the timetable item
+    item["WaitingForAdditionalData"] = true;
+    items[ itemNumber ] = item;
+    dataSource[ key ] = items;
+    m_dataSources[ nonAmbiguousName ] = dataSource;
 
     // Found data of the timetable item to update
     const SourceData sourceData( sourceName );
@@ -1171,6 +1196,8 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     for ( TimetableData::ConstIterator it = data.constBegin(); it != data.constEnd(); ++it ) {
         item.insert( Global::timetableInformationToString(it.key()), it.value() );
     }
+    item[ "IncludesAdditionalData" ] = true;
+    item.remove( "WaitingForAdditionalData" );
 
     // Store the changed item back into the item list of the data source
     items[ request.itemNumber ] = item;

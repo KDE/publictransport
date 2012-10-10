@@ -505,13 +505,9 @@ void PublicTransportApplet::departuresProcessed( const QString& sourceName,
 
         int itemBegin = 999999999;
         int itemEnd = 0;
-        foreach ( ItemBase *item, d->model->items() ) {
-            DepartureItem *departure = dynamic_cast< DepartureItem* >( item );
-            if ( !departure->wasAdditionalDataRequested() &&
-                 departure->departureInfo()->routeStops().isEmpty() )
-            {
-                departure->setAdditionalDataRequested();
-                const int index = departure->departureInfo()->index();
+        foreach ( const DepartureInfo departure, departures ) {
+            if ( !departure.includesAdditionalData() ) {
+                const int index = departure.index();
                 itemBegin = qMin( itemBegin, index );
                 itemEnd = qMax( itemEnd, index );
             }
@@ -1232,7 +1228,7 @@ void PublicTransportApplet::expandedStateChanged( PublicTransportGraphicsItem *i
     // using the timetable service of the PublicTransport engine
     DepartureGraphicsItem *departureItem = qobject_cast< DepartureGraphicsItem* >( item );
     if ( expanded && departureItem &&
-         !departureItem->departureItem()->wasAdditionalDataRequested() &&
+         !departureItem->departureItem()->includesAdditionalData() &&
          (d->settings.additionalDataRequestType() == Settings::RequestAdditionalDataWhenNeeded ||
           d->settings.additionalDataRequestType() == Settings::RequestAdditionalDataDirectly) )
     {
@@ -1241,7 +1237,6 @@ void PublicTransportApplet::expandedStateChanged( PublicTransportGraphicsItem *i
         if ( service ) {
             KConfigGroup op = service->operationDescription("requestAdditionalData");
             op.writeEntry( "itemnumber", departureItem->departureItem()->dataSourceIndex() );
-            departureItem->departureItem()->setAdditionalDataRequested();
             Plasma::ServiceJob *additionDataJob = service->startOperationCall( op );
             connect( additionDataJob, SIGNAL(result(KJob*)), this, SLOT(additionalDataResult(KJob*)) );
             connect( additionDataJob, SIGNAL(finished(KJob*)), service, SLOT(deleteLater()) );

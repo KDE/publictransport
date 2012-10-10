@@ -269,15 +269,6 @@ void DepartureItem::setLeavingSoon( bool leavingSoon )
     }
 }
 
-void DepartureItem::setAdditionalDataRequested( bool additionalDataWasRequested )
-{
-    if ( additionalDataWasRequested ) {
-        m_flags |= AdditionalDataWasRequested;
-    } else {
-        m_flags &= ~AdditionalDataWasRequested;
-    }
-}
-
 void TopLevelItem::setData( Columns column, const QVariant& data, int role )
 {
     m_columnData[ column ][ role ] = data;
@@ -1472,6 +1463,7 @@ void JourneyModel::updateItemAlarm( JourneyItem* journeyItem )
     VehicleType vehicleType = journeyInfo.routeVehicleTypes().isEmpty()
             ? UnknownVehicleType : journeyInfo.routeVehicleTypes().first();
     DepartureInfo departureInfo( /* Data source: */ QString(), /* index: */ -1,
+                                 PublicTransport::DepartureInfo::NoDepartureFlags,
                                  QString(), lineString, QString(), QString(),
                                  journeyInfo.departure(), vehicleType );
     AlarmStates alarmStates = NoAlarm;

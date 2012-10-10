@@ -417,8 +417,7 @@ class DepartureItem : public TopLevelItem {
 public:
     enum Flag {
         NoFlags = 0x00,
-        IsLeavingSoon = 0x01,
-        AdditionalDataWasRequested = 0x02
+        IsLeavingSoon = 0x01
     };
     Q_DECLARE_FLAGS( Flags, Flag );
 
@@ -444,8 +443,7 @@ public:
     bool isLeavingSoon() const { return m_flags.testFlag(IsLeavingSoon); };
     void setLeavingSoon( bool leavingSoon = true );
 
-    bool wasAdditionalDataRequested() const { return m_flags.testFlag(AdditionalDataWasRequested); };
-    void setAdditionalDataRequested( bool additionalDataWasRequested = true );
+    bool includesAdditionalData() const { return m_departureInfo.includesAdditionalData(); };
 
     /** @brief Sets the alarm states. */
     void setAlarmStates( AlarmStates alarmStates );

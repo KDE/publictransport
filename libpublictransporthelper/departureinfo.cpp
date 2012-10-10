@@ -272,7 +272,8 @@ QString DepartureInfo::durationString( bool showDelay ) const
     return showDelay ? sDuration + delayString() : sDuration;
 }
 
-void DepartureInfo::init( const QString &dataSource, int index, const QString &operatorName,
+void DepartureInfo::init( const QString &dataSource, int index, DepartureFlags flags,
+                          const QString &operatorName,
                           const QString &line,
                           const QString &target, const QString &targetShortened,
                           const QDateTime &departure,
@@ -281,9 +282,9 @@ void DepartureInfo::init( const QString &dataSource, int index, const QString &o
                           const QString &delayReason, const QString &journeyNews,
                           const QStringList &routeStops, const QStringList &routeStopsShortened,
                           const QList<QTime> &routeTimes,
-                          int routeExactStops, bool arrival )
+                          int routeExactStops )
 {
-    m_filteredOut = false;
+    m_flags = flags;
     m_dataSource = dataSource;
     m_index = index;
 
@@ -311,8 +312,6 @@ void DepartureInfo::init( const QString &dataSource, int index, const QString &o
     m_routeStopsShortened = routeStopsShortened.isEmpty() ? routeStops : routeStopsShortened;
     m_routeTimes = routeTimes;
     m_routeExactStops = routeExactStops;
-
-    m_arrival = arrival;
 
     generateHash();
 }

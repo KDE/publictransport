@@ -258,32 +258,35 @@ bool PUBLICTRANSPORTHELPER_EXPORT operator <( const JourneyInfo &ji1, const Jour
  * @ingroup models */
 class PUBLICTRANSPORTHELPER_EXPORT DepartureInfo : public PublicTransportInfo {
 public:
+    /** @brief Flags for departures/arrivals. */
+    enum DepartureFlag {
+        NoDepartureFlags        = 0x00, /**< No flags. */
+        IsArrival               = 0x01, /**< Whether or not the object describes an arrival or
+                                           * a departure. */
+        IsFilteredOut           = 0x02, /**< Whether or not the departure/arrival is filtered out.
+                                           * Can be used for custom filter mechanisms. */
+        IncludesAdditionalData  = 0x04  /**< Whether or not the object includes additional data
+                                           * that was requested using the timetable service. */
+    };
+    Q_DECLARE_FLAGS( DepartureFlags, DepartureFlag );
+
     /** Creates an invalid DepartureInfo object. */
     DepartureInfo() : PublicTransportInfo() {
     };
 
-    DepartureInfo( const QString &dataSource, int index, const QString &operatorName,
-                   const QString &line, const QString &target, const QString &targetShortened,
-                   const QDateTime &departure, VehicleType lineType,
+    DepartureInfo( const QString &dataSource, int index, DepartureFlags flags = NoDepartureFlags,
+                   const QString &operatorName = QString(), const QString &line = QString(),
+                   const QString &target = QString(), const QString &targetShortened = QString(),
+                   const QDateTime &departure = QDateTime(),
+                   VehicleType lineType = UnknownVehicleType, bool nightLine = false,
+                   bool expressLine = false, const QString &platform = QString(),
+                   int delay = -1, const QString &delayReason = QString(),
+                   const QString &journeyNews = QString(),
                    const QStringList &routeStops = QStringList(),
                    const QStringList &routeStopsShortened = QStringList(),
                    const QList<QTime> &routeTimes = QList<QTime>(),
-                   int routeExactStops = 0, bool arrival = false ) : PublicTransportInfo()
+                   int routeExactStops = 0 ) : PublicTransportInfo()
     {
-        init( dataSource, index, operatorName, line, target, targetShortened, departure, lineType,
-              NoLineService, QString(), -1, QString(), QString(), routeStops, routeStopsShortened,
-              routeTimes, routeExactStops, arrival );
-    };
-
-    DepartureInfo( const QString &dataSource, int index, const QString &operatorName,
-                   const QString &line, const QString &target, const QString &targetShortened,
-                   const QDateTime &departure, VehicleType lineType, bool nightLine,
-                   bool expressLine, const QString &platform = QString(), int delay = -1,
-                   const QString &delayReason = QString(), const QString &journeyNews = QString(),
-                   const QStringList &routeStops = QStringList(),
-                   const QStringList &routeStopsShortened = QStringList(),
-                   const QList<QTime> &routeTimes = QList<QTime>(),
-                   int routeExactStops = 0, bool arrival = false ) : PublicTransportInfo() {
         LineServices lineServices = NoLineService;
         if ( nightLine ) {
             lineServices |= NightLine;
@@ -291,31 +294,27 @@ public:
         if ( expressLine ) {
             lineServices |= ExpressLine;
         }
-        init( dataSource, index, operatorName, line, target, targetShortened, departure, lineType,
-              lineServices, platform, delay, delayReason, journeyNews, routeStops,
-              routeStopsShortened, routeTimes, routeExactStops, arrival );
-    };
-
-    DepartureInfo( const QString &dataSource, int index, const QString &operatorName,
-                   const QString &line, const QString &target, const QString &targetShortened,
-                   const QDateTime &departure, VehicleType lineType, LineServices lineServices,
-                   const QString &platform = QString(), int delay = -1,
-                   const QString &delayReason = QString(), const QString &journeyNews = QString(),
-                   const QStringList &routeStops = QStringList(),
-                   const QStringList &routeStopsShortened = QStringList(),
-                   const QList<QTime> &routeTimes = QList<QTime>(),
-                   int routeExactStops = 0, bool arrival = false ) : PublicTransportInfo() {
-        init( dataSource, index, operatorName, line, target, targetShortened, departure, lineType, lineServices,
-              platform, delay, delayReason, journeyNews, routeStops, routeStopsShortened,
-              routeTimes, routeExactStops, arrival );
+        init( dataSource, index, flags, operatorName, line, target, targetShortened, departure,
+              lineType, lineServices, platform, delay, delayReason, journeyNews, routeStops,
+              routeStopsShortened, routeTimes, routeExactStops );
     };
 
     static QString formatDateFancyFuture( const QDate& date );
 
     bool operator ==( const DepartureInfo &other ) const;
 
-    bool isFilteredOut() const { return m_filteredOut; };
-    void setFilteredOut( bool filteredOut = false ) { m_filteredOut = filteredOut; };
+    /** @brief Whether or not this is an arrival. */
+    bool isArrival() const { return m_flags.testFlag(IsArrival); };
+
+    /** @brief Whether or not the departure/arrival is filtered out. */
+    bool isFilteredOut() const { return m_flags.testFlag(IsFilteredOut); };
+
+    /** @brief Whether or not additional data is included. */
+    bool includesAdditionalData() const { return m_flags.testFlag(IncludesAdditionalData); };
+
+    /** @brief Enable/disable @p flag. */
+    void setFlag( DepartureFlag flag, bool enable = true ) {
+            m_flags = enable ? m_flags | flag : m_flags & ~flag; };
 
     /**
      * @brief Whether or not this DepartureInfo object is valid.
@@ -330,8 +329,6 @@ public:
     QString departureText( bool htmlFormatted, bool displayTimeBold, bool showRemainingMinutes,
                            bool showDepartureTime, int linesPerRow ) const;
 
-    /** @brief Whether or not this is an arrival. */
-    bool isArrival() const { return m_arrival; };
 
     /** @brief Whether or not the line number of this departure / arrival is valid. */
     bool isLineNumberValid() const {
@@ -431,16 +428,16 @@ public:
     int index() const { return m_index; };
 
 private:
-    void init( const QString &dataSource, int index, const QString &operatorName,
-               const QString &line, const QString &target, const QString &targetShortened,
-               const QDateTime &departure, VehicleType lineType,
+    void init( const QString &dataSource, int index, DepartureFlags flags = NoDepartureFlags,
+               const QString &operatorName = QString(), const QString &line = QString(),
+               const QString &target = QString(), const QString &targetShortened = QString(),
+               const QDateTime &departure = QDateTime(), VehicleType lineType = UnknownVehicleType,
                LineServices lineServices = NoLineService, const QString &platform = QString(),
                int delay = -1, const QString &delayReason = QString(),
                const QString &journeyNews = QString(),
                const QStringList &routeStops = QStringList(),
                const QStringList &routeStopsShortened = QStringList(),
-               const QList<QTime> &routeTimes = QList<QTime>(), int routeExactStops = 0,
-               bool arrival = false );
+               const QList<QTime> &routeTimes = QList<QTime>(), int routeExactStops = 0 );
 
     void generateHash();
 
@@ -455,12 +452,12 @@ private:
     QStringList m_routeStopsShortened;
     QList<QTime> m_routeTimes;
     int m_routeExactStops;
-    bool m_arrival;
-    bool m_filteredOut;
+    DepartureFlags m_flags;
     QList< int > m_matchedAlarms;
     QString m_dataSource;
     int m_index;
 };
+Q_DECLARE_OPERATORS_FOR_FLAGS( DepartureInfo::DepartureFlags )
 
 uint PUBLICTRANSPORTHELPER_EXPORT qHash( const DepartureInfo &departureInfo );
 bool PUBLICTRANSPORTHELPER_EXPORT operator <( const DepartureInfo &di1, const DepartureInfo &di2 );
