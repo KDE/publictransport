@@ -778,6 +778,7 @@ void PublicTransportEngine::reloadChangedProviders()
             // Remove data source for the current provider
             // and remove the provider object (deletes it)
             m_dataSources.remove( cachedSource );
+            m_additionalData.remove( cachedSource );
             m_providers.remove( providerId );
             m_erroneousProviders.remove( providerId );
         }
@@ -1078,6 +1079,10 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
     m_runningSources.removeOne( nonAmbiguousName );
     QVariantHash dataSource;
     QVariantList departuresData;
+    const QString itemKey = isDepartureData ? "departures" : "arrivals";
+
+    QHash< uint, TimetableData > oldAdditionalData = m_additionalData[ nonAmbiguousName ];
+    QHash< uint, TimetableData > stillUsedAdditionalData;
     foreach( const DepartureInfoPtr &departureInfo, items ) {
         QVariantHash departureData;
         TimetableData departure = departureInfo->data();
@@ -1097,10 +1102,26 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
         departureData.insert( "Nightline", departureInfo->isNightLine() );
         departureData.insert( "Expressline", departureInfo->isExpressLine() );
 
+        // Add existing additional data
+        const uint hash = hashForDeparture( departure );
+        if ( oldAdditionalData.contains(hash) ) {
+            // Found already downloaded additional data, add it to the updated departure data
+            const TimetableData additionalData = oldAdditionalData[ hash ];
+            for ( TimetableData::ConstIterator it = additionalData.constBegin();
+                  it != additionalData.constEnd(); ++it )
+            {
+                departureData.insert( Global::timetableInformationToString(it.key()), it.value() );
+            }
+            departureData[ "IncludesAdditionalData" ] = true;
+
+            stillUsedAdditionalData.insert( hash, additionalData );
+        }
+
         departuresData << departureData;
     }
 
-    const QString itemKey = isDepartureData ? "departures" : "arrivals";
+    // Store still used additional data, ie. remove no longer used additional data
+    m_additionalData[ nonAmbiguousName ] = stillUsedAdditionalData;
     dataSource.insert( itemKey, departuresData );
 
     QDateTime last = items.isEmpty() ? QDateTime::currentDateTime()
@@ -1203,6 +1224,11 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     items[ request.itemNumber ] = item;
     dataSource[ key ] = items;
     m_dataSources[ sourceToUpdate ] = dataSource;
+
+    // Also store received additional data separately
+    // to not loose additional data after updating the data source
+    const uint hash = hashForDeparture( item );
+    m_additionalData[ sourceToUpdate ][ hash ] = data;
 
     QTimer *updateDelayTimer;
     if ( m_updateAdditionalDataDelayTimers.contains(request.sourceName) ) {

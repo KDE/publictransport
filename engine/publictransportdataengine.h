@@ -454,6 +454,29 @@ private:
 
     QString stripDateAndTimeValues( const QString &sourceName );
 
+    inline static uint hashForDeparture( const QVariantHash &departure ) {
+        return hashForDeparture( departure[Enums::toString(Enums::DepartureDateTime)].toDateTime(),
+                static_cast<Enums::VehicleType>(departure[Enums::toString(Enums::TypeOfVehicle)].toInt()),
+                departure[Enums::toString(Enums::TransportLine)].toString(),
+                departure[Enums::toString(Enums::Target)].toString() );
+    };
+
+    inline static uint hashForDeparture( const TimetableData &departure ) {
+        return hashForDeparture( departure[Enums::DepartureDateTime].toDateTime(),
+                static_cast<Enums::VehicleType>(departure[Enums::TypeOfVehicle].toInt()),
+                departure[Enums::TransportLine].toString(),
+                departure[Enums::Target].toString() );
+    };
+
+    static uint hashForDeparture( const QDateTime &departure, Enums::VehicleType vehicleType,
+                                  const QString &lineString, const QString &target )
+    {
+        return qHash( QString("%1%2%3%4").arg(departure.toString("dMMyyhhmmss"))
+                      .arg(static_cast<int>(vehicleType))
+                      .arg(lineString)
+                      .arg(target.trimmed().toLower()) );
+    };
+
     /**
      * @brief Get the service provider with the given @p serviceProviderId, if any.
      *
@@ -484,6 +507,7 @@ private:
 
     QHash< QString, ProviderPointer > m_providers; // List of already loaded service providers
     QVariantHash m_dataSources; // List of already used data sources TODO also store original data source name, to be able to update data with different capitalization
+    QHash< QString, QHash<uint, TimetableData> > m_additionalData; // Already downloaded additional data per data source, stored by a hash value for the associated departure
     QVariantHash m_erroneousProviders; // List of erroneous service providers as keys
                                        // and error messages as values
     QHash< QString, TimerData* > m_updateTimers; // List of timers to update data sources periodically
