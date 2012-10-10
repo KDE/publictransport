@@ -423,7 +423,6 @@ void PublicTransportApplet::departuresFiltered( const QString& sourceName,
     d->popupIcon->createDepartureGroups();
     updatePopupIcon();
     d->createTooltip();
-    d->updateColorGroupSettings();
 }
 
 void PublicTransportApplet::beginJourneyProcessing( const QString &/*sourceName*/ )
