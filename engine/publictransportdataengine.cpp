@@ -73,7 +73,7 @@ Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
 
 PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantList& args )
         : Plasma::DataEngine( parent, args ),
-        m_fileSystemWatcher(0), m_providerUpdateDelayTimer(0), m_sourceUpdateTimer(0)
+        m_fileSystemWatcher(0), m_providerUpdateDelayTimer(0)
 {
     // We ignore any arguments - data engines do not have much use for them
     Q_UNUSED( args )
@@ -89,6 +89,8 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
 PublicTransportEngine::~PublicTransportEngine()
 {
     delete m_fileSystemWatcher;
+    delete m_providerUpdateDelayTimer;
+    qDeleteAll( m_dataSources );
 }
 
 QStringList PublicTransportEngine::sources() const
@@ -111,12 +113,11 @@ bool PublicTransportEngine::isProviderUsed( const QString &serviceProviderId )
         }
     }
 
-    for ( QVariantHash::ConstIterator it = m_dataSources.constBegin();
+    for ( QHash< QString, DataSourceData* >::ConstIterator it = m_dataSources.constBegin();
           it != m_dataSources.constEnd(); ++it )
     {
-        const QVariantHash otherDataHash = it->toHash();
-        if ( otherDataHash.contains("serviceProvider") ) {
-            const QString otherProviderId = otherDataHash["serviceProvider"].toString().toLower();
+        if ( (*it)->data.contains("serviceProvider") ) {
+            const QString otherProviderId = (*it)->data["serviceProvider"].toString().toLower();
             if ( otherProviderId == serviceProviderId ) {
                 return true;
             }
@@ -129,22 +130,20 @@ bool PublicTransportEngine::isProviderUsed( const QString &serviceProviderId )
 void PublicTransportEngine::slotSourceRemoved( const QString& name )
 {
     const QString nonAmbiguousName = name.toLower();
+    if ( m_dataSources.contains(nonAmbiguousName) ) {
+        const DataSourceData *dataSource = m_dataSources.take( nonAmbiguousName );
+//      kDebug() << "Source" << name << "removed, still cached data sources" << m_dataSources.count();
 
-    // Delete the update timer for the source if any
-    if ( m_updateTimers.contains(nonAmbiguousName) ) {
-        delete m_updateTimers.take( nonAmbiguousName );
-    }
-
-    const QVariant data = m_dataSources.take( nonAmbiguousName );
-//     kDebug() << "Source" << name << "removed, still cached data sources" << m_dataSources.count();
-
-    // If a provider was used by the source, remove the provider if it is not used in another source
-    const QVariantHash dataHash = data.toHash();
-    if ( dataHash.contains("serviceProvider") ) {
-        const QString providerId = dataHash["serviceProvider"].toString().toLower();
-        if ( !providerId.isEmpty() && !isProviderUsed(providerId) ) {
-            m_providers.remove( providerId );
+        // If a provider was used by the source, remove the provider if it is not used in another source
+        if ( dataSource->data.contains("serviceProvider") ) {
+            const QString providerId = dataSource->data["serviceProvider"].toString().toLower();
+            if ( !providerId.isEmpty() && !isProviderUsed(providerId) ) {
+                m_providers.remove( providerId );
+            }
         }
+
+        // Data source is no longer used
+        delete dataSource;
     }
 }
 
@@ -314,7 +313,6 @@ bool PublicTransportEngine::sourceRequestEvent( const QString &name )
         setData( name, DataEngine::Data() ); // Create source, TODO: check if [name] is valid
     }
 
-//     m_sourceUpdateTimer
 //     TODO call forceImmediateUpdateOfAllVisualizations() after the data is available
     return updateSourceEvent( name );
 }
@@ -369,7 +367,7 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const SourceD
 
         // The defaultParameter stored in data is a location code
         // (ie. "international" or a two letter country code)
-        QVariantHash locations = m_dataSources[ sourceTypeKeyword(LocationsSource) ].toHash();
+        QVariantHash locations = m_dataSources[ sourceTypeKeyword(LocationsSource) ]->data;
         QVariantHash locationCountry = locations[ data.defaultParameter.toLower() ].toHash();
         QString defaultProvider = locationCountry[ "defaultProvider" ].toString();
         if ( defaultProvider.isEmpty() ) {
@@ -394,10 +392,10 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const SourceD
 bool PublicTransportEngine::updateServiceProviderSource()
 {
     const QString name = sourceTypeKeyword( ServiceProvidersSource );
-    QVariantHash dataSource;
+    QVariantHash data;
     if ( m_dataSources.contains(name) ) {
         // kDebug() << "Data source" << name << "is up to date";
-        dataSource = m_dataSources[ name ].toHash();
+        data = m_dataSources[ name ]->data;
     } else {
         if ( !m_fileSystemWatcher ) {
             const QStringList dirs = KGlobal::dirs()->findDirs( "data",
@@ -421,7 +419,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
             QVariantHash providerData;
             QString errorMessage;
             if ( testServiceProvider(providerId, &providerData, &errorMessage) ) {
-                dataSource.insert( providerId, providerData );
+                data.insert( providerId, providerData );
                 loadedProviders << providerId;
             }
         }
@@ -432,12 +430,12 @@ bool PublicTransportEngine::updateServiceProviderSource()
                      << m_erroneousProviders;
         }
 
-        m_dataSources.insert( name, dataSource );
+        m_dataSources.insert( name, new DataSourceData(name, data) );
     }
 
     // Remove all old data, some service providers may have been updated and are now erroneous
     removeAllData( name );
-    setData( name, dataSource );
+    setData( name, data );
     return true;
 }
 
@@ -562,10 +560,11 @@ bool PublicTransportEngine::updateErroneousServiceProviderSource()
 bool PublicTransportEngine::updateLocationSource()
 {
     const QLatin1String name = sourceTypeKeyword( LocationsSource );
-    QVariantHash dataSource = m_dataSources.contains(name)
-            ? m_dataSources[name].toHash() : locations();
-    m_dataSources.insert( name, dataSource );
-    setData( name, dataSource );
+    if ( !m_dataSources.contains(name) ) {
+        DataSourceData *dataSource = new DataSourceData( name, locations() );
+        m_dataSources.insert( name, dataSource );
+        setData( name, dataSource->data );
+    }
     return true;
 }
 
@@ -607,13 +606,13 @@ bool PublicTransportEngine::updateTimetableDataSource( const SourceData &data )
     bool containsDataSource = m_dataSources.contains( nonAmbiguousName );
     if ( containsDataSource && isSourceUpToDate(nonAmbiguousName) ) { // Data is stored in the map and up to date
         kDebug() << "Data source" << data.name << "is up to date";
-        setData( data.name, m_dataSources[nonAmbiguousName].toHash() );
+        setData( data.name, m_dataSources[nonAmbiguousName]->data );
     } else if ( m_runningSources.contains(nonAmbiguousName) ) {
         // Source gets already processed
         kDebug() << "Source already gets processed, please wait" << data.name;
     } else { // Request new data
         if ( containsDataSource ) {
-            m_dataSources.remove( nonAmbiguousName ); // Clear old data
+            m_dataSources[ nonAmbiguousName ]->data.clear(); // Clear old data
         }
         if ( data.parseMode == ParseInvalid || !data.request ) {
             return false;
@@ -669,7 +668,7 @@ void PublicTransportEngine::requestAdditionalData( const QString &sourceName, in
     }
 
     // Get the data list, currently only for departures/arrivals TODO: journeys
-    QVariantHash dataSource = m_dataSources[ nonAmbiguousName ].toHash();
+    QVariantHash dataSource = m_dataSources[ nonAmbiguousName ]->data;
     const QString key = dataSource.contains("departures") ? "departures"
                         : (dataSource.contains("arrivals") ? "arrivals"
                            : (dataSource.contains("journeys") ? "journeys" : "stops"));
@@ -713,7 +712,7 @@ void PublicTransportEngine::requestAdditionalData( const QString &sourceName, in
     item["WaitingForAdditionalData"] = true;
     items[ itemNumber ] = item;
     dataSource[ key ] = items;
-    m_dataSources[ nonAmbiguousName ] = dataSource;
+    m_dataSources[ nonAmbiguousName ]->data = dataSource;
 
     // Found data of the timetable item to update
     const SourceData sourceData( sourceName );
@@ -760,8 +759,8 @@ void PublicTransportEngine::reloadChangedProviders()
     m_providerUpdateDelayTimer = 0;
 
     // Remove cached service providers / locations source
-    m_dataSources.remove( sourceTypeKeyword(ServiceProvidersSource) );
-    m_dataSources.remove( sourceTypeKeyword(LocationsSource) );
+    delete m_dataSources.take( sourceTypeKeyword(ServiceProvidersSource) );
+    delete m_dataSources.take( sourceTypeKeyword(LocationsSource) );
 
     // Clear all cached data (use the new provider to parse the data again)
     const QStringList cachedSources = m_dataSources.keys();
@@ -777,8 +776,7 @@ void PublicTransportEngine::reloadChangedProviders()
         {
             // Remove data source for the current provider
             // and remove the provider object (deletes it)
-            m_dataSources.remove( cachedSource );
-            m_additionalData.remove( cachedSource );
+            delete m_dataSources.take( cachedSource );
             m_providers.remove( providerId );
             m_erroneousProviders.remove( providerId );
         }
@@ -1075,13 +1073,12 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
                        << "received" << sourceName );
 
     const QString nonAmbiguousName = sourceName.toLower();
-    m_dataSources.remove( nonAmbiguousName );
+    DataSourceData *dataSource = m_dataSources.contains(nonAmbiguousName)
+            ? m_dataSources[nonAmbiguousName] : new DataSourceData(sourceName);
     m_runningSources.removeOne( nonAmbiguousName );
-    QVariantHash dataSource;
     QVariantList departuresData;
     const QString itemKey = isDepartureData ? "departures" : "arrivals";
 
-    QHash< uint, TimetableData > oldAdditionalData = m_additionalData[ nonAmbiguousName ];
     QHash< uint, TimetableData > stillUsedAdditionalData;
     foreach( const DepartureInfoPtr &departureInfo, items ) {
         QVariantHash departureData;
@@ -1104,9 +1101,9 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
 
         // Add existing additional data
         const uint hash = hashForDeparture( departure );
-        if ( oldAdditionalData.contains(hash) ) {
+        if ( dataSource->additionalData.contains(hash) ) {
             // Found already downloaded additional data, add it to the updated departure data
-            const TimetableData additionalData = oldAdditionalData[ hash ];
+            const TimetableData additionalData = dataSource->additionalData[ hash ];
             for ( TimetableData::ConstIterator it = additionalData.constBegin();
                   it != additionalData.constEnd(); ++it )
             {
@@ -1121,8 +1118,8 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
     }
 
     // Store still used additional data, ie. remove no longer used additional data
-    m_additionalData[ nonAmbiguousName ] = stillUsedAdditionalData;
-    dataSource.insert( itemKey, departuresData );
+    dataSource->additionalData = stillUsedAdditionalData;
+    dataSource->data[ itemKey ] = departuresData;
 
     QDateTime last = items.isEmpty() ? QDateTime::currentDateTime()
             : items.last()->value(Enums::DepartureDateTime).toDateTime();
@@ -1132,38 +1129,37 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
 //     }
 
     // Store a proposal for the next download time
-    int secs = QDateTime::currentDateTime().secsTo( last ) / 3;
-    QDateTime downloadTime = QDateTime::currentDateTime().addSecs( secs );
-    m_nextDownloadTimeProposals[ stripDateAndTimeValues(sourceName) ] = downloadTime;
+    const int secs = QDateTime::currentDateTime().secsTo( last ) / 3;
+    dataSource->nextDownloadTimeProposal = QDateTime::currentDateTime().addSecs( secs );
 
     DEBUG_ENGINE_JOBS( "Update data source in"
                        << KGlobal::locale()->prettyFormatDuration(secs * 1000) );
-    if ( m_updateTimers.contains(nonAmbiguousName) ) {
+    if ( dataSource->updateTimer ) {
         // Restart the timer
-        m_updateTimers[nonAmbiguousName]->timer->start( (secs + 1) * 1000 );
+        dataSource->updateTimer->start( (secs + 1) * 1000 );
     } else {
-        QTimer *timer = new QTimer( this );
-        timer->setInterval( (secs + 1) * 1000 );
-        connect( timer, SIGNAL(timeout()), this, SLOT(updateTimeout()) );
-        m_updateTimers.insert( nonAmbiguousName, new TimerData(sourceName, timer) );
-        timer->start();
+        dataSource->updateTimer = new QTimer( this );
+        dataSource->updateTimer->setInterval( (secs + 1) * 1000 );
+        connect( dataSource->updateTimer, SIGNAL(timeout()), this, SLOT(updateTimeout()) );
+        dataSource->updateTimer->start();
     }
 //     kDebug() << "Set next download time proposal:" << downloadTime;
 
     // Store received data in the data source map
-    dataSource.insert( "serviceProvider", provider->id() );
-    dataSource.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
-    dataSource.insert( "requestUrl", requestUrl );
-    dataSource.insert( "parseMode", request.parseModeName() );
-    dataSource.insert( "error", false );
-    dataSource.insert( "updated", QDateTime::currentDateTime() );
-    setData( sourceName, dataSource );
-    m_dataSources.insert( sourceName.toLower(), dataSource );
+    dataSource->data.insert( "serviceProvider", provider->id() );
+    dataSource->data.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
+    dataSource->data.insert( "requestUrl", requestUrl );
+    dataSource->data.insert( "parseMode", request.parseModeName() );
+    dataSource->data.insert( "error", false );
+    dataSource->data.insert( "updated", QDateTime::currentDateTime() );
+    setData( sourceName, dataSource->data );
+    m_dataSources[ nonAmbiguousName ] = dataSource;
 }
 
-PublicTransportEngine::TimerData::~TimerData()
+PublicTransportEngine::DataSourceData::~DataSourceData()
 {
-    delete timer;
+    delete updateTimer;
+    delete updateAdditionalDataDelayTimer;
 }
 
 void PublicTransportEngine::updateTimeout()
@@ -1172,11 +1168,11 @@ void PublicTransportEngine::updateTimeout()
     QString sourceName;
     QTimer *timer = qobject_cast< QTimer* >( sender() );
     kDebug() << "TIMEOUT" << timer->interval();
-    for ( QHash<QString,TimerData*>::ConstIterator it = m_updateTimers.constBegin();
-          it != m_updateTimers.constEnd(); ++it )
+    for ( QHash<QString,DataSourceData*>::ConstIterator it = m_dataSources.constBegin();
+          it != m_dataSources.constEnd(); ++it )
     {
-        if ( it.value()->timer == timer ) {
-            sourceName = it.value()->dataSource;
+        if ( it.value()->updateTimer == timer ) {
+            sourceName = it.value()->name;
             break;
         }
     }
@@ -1200,11 +1196,11 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     }
 
     // Get the list of timetable items from the existing data source
-    QVariantHash dataSource = m_dataSources[ sourceToUpdate ].toHash();
-    const QString key = dataSource.contains("departures") ? "departures"
-                        : (dataSource.contains("arrivals") ? "arrivals"
-                           : (dataSource.contains("journeys") ? "journeys" : "stops"));
-    QVariantList items = dataSource[ key ].toList();
+    DataSourceData *dataSource = m_dataSources[ sourceToUpdate ];
+    const QString key = dataSource->data.contains("departures") ? "departures"
+                        : (dataSource->data.contains("arrivals") ? "arrivals"
+                           : (dataSource->data.contains("journeys") ? "journeys" : "stops"));
+    QVariantList items = dataSource->data[ key ].toList();
     if ( request.itemNumber >= items.count() ) {
         emit additionalDataRequestFinished( QVariantHash(), false,
                                             "Item to update not found in the data source" );
@@ -1222,29 +1218,28 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
 
     // Store the changed item back into the item list of the data source
     items[ request.itemNumber ] = item;
-    dataSource[ key ] = items;
-    m_dataSources[ sourceToUpdate ] = dataSource;
+    dataSource->data[ key ] = items;
 
     // Also store received additional data separately
     // to not loose additional data after updating the data source
     const uint hash = hashForDeparture( item );
-    m_additionalData[ sourceToUpdate ][ hash ] = data;
+    dataSource->additionalData[ hash ] = data;
 
     QTimer *updateDelayTimer;
-    if ( m_updateAdditionalDataDelayTimers.contains(request.sourceName) ) {
+    if ( dataSource->updateAdditionalDataDelayTimer ) {
         // Use existing timer, restart it with a longer interval and
         // update the data source after the timeout
-        updateDelayTimer = m_updateAdditionalDataDelayTimers[ request.sourceName ];
+        updateDelayTimer = dataSource->updateAdditionalDataDelayTimer;
         updateDelayTimer->setInterval( 250 );
     } else {
         // Create timer with a shorter interval, but directly update the data source.
         // The timer is used here to delay further updates
-        setData( request.sourceName, dataSource );
+        setData( request.sourceName, dataSource->data );
         updateDelayTimer = new QTimer( this );
         updateDelayTimer->setInterval( 150 );
         connect( updateDelayTimer, SIGNAL(timeout()),
                  this, SLOT(updateDataSourcesWithNewAdditionData()) );
-        m_updateAdditionalDataDelayTimers.insert( request.sourceName, updateDelayTimer );
+        dataSource->updateAdditionalDataDelayTimer = updateDelayTimer;
     }
 
     // (Re-)start the additional data update timer
@@ -1254,20 +1249,40 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     emit additionalDataRequestFinished( item, true );
 }
 
+PublicTransportEngine::DataSourceData *PublicTransportEngine::dataSourceFromAdditionDataTimer(
+        QTimer *timer ) const
+{
+    for ( QHash< QString, DataSourceData* >::ConstIterator it = m_dataSources.constBegin();
+          it != m_dataSources.constEnd(); ++it )
+    {
+        if ( (*it)->updateAdditionalDataDelayTimer == timer ) {
+            return *it;
+        }
+    }
+
+    // The timer is not used any longer
+    return 0;
+}
+
 void PublicTransportEngine::updateDataSourcesWithNewAdditionData()
 {
     QTimer *updateDelayTimer = qobject_cast< QTimer* >( sender() );
     Q_ASSERT( updateDelayTimer );
-    const QString sourceName = m_updateAdditionalDataDelayTimers.key( updateDelayTimer );
+    DataSourceData *dataSource = dataSourceFromAdditionDataTimer( updateDelayTimer );
+    if ( !dataSource ) {
+        kWarning() << "Data source was already removed";
+        return;
+    }
+
     const int interval = updateDelayTimer->interval();
-    Q_ASSERT( !sourceName.isEmpty() );
-    delete m_updateAdditionalDataDelayTimers.take( sourceName );
+    delete dataSource->updateAdditionalDataDelayTimer;
+    dataSource->updateAdditionalDataDelayTimer = 0;
 
     // Do the upate, but only after long delays,
     // because the update is already done before short delays
     if ( interval > 150 ) {
         // Was delayed for a longer time
-        setData( sourceName, m_dataSources[sourceName.toLower()].toHash() );
+        setData( dataSource->name, dataSource->data );
     }
 }
 
@@ -1299,9 +1314,10 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
     DEBUG_ENGINE_JOBS( journeys.count() << "journeys received" << sourceName );
 
     const QString nonAmbiguousName = sourceName.toLower();
-    m_dataSources.remove( nonAmbiguousName );
+    DataSourceData *dataSource = m_dataSources.contains(nonAmbiguousName)
+            ? m_dataSources[nonAmbiguousName] : new DataSourceData(sourceName);
+    dataSource->data.clear();
     m_runningSources.removeOne( nonAmbiguousName );
-    QVariantHash dataSource;
     QVariantList journeysData;
     foreach( const JourneyInfoPtr &journeyInfo, journeys ) {
         if ( !journeyInfo->isValid() ) {
@@ -1324,7 +1340,7 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
         journeysData << journeyData;
     }
 
-    dataSource.insert( "journeys", journeysData );
+    dataSource->data.insert( "journeys", journeysData );
 
     int journeyCount = journeys.count();
     QDateTime first, last;
@@ -1334,24 +1350,24 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
     } else {
         first = last = QDateTime::currentDateTime();
     }
-    if ( deleteJourneyInfos ) {
+//     if ( deleteJourneyInfos ) {
 //         qDeleteAll( journeys ); TODO
-    }
+//     }
 
     // Store a proposal for the next download time
     int secs = ( journeyCount / 3 ) * first.secsTo( last );
     QDateTime downloadTime = QDateTime::currentDateTime().addSecs( secs );
-    m_nextDownloadTimeProposals[ stripDateAndTimeValues(sourceName) ] = downloadTime;
+    dataSource->nextDownloadTimeProposal = downloadTime;
 
     // Store received data in the data source map
-    dataSource.insert( "serviceProvider", provider->id() );
-    dataSource.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
-    dataSource.insert( "requestUrl", requestUrl );
-    dataSource.insert( "parseMode", request.parseModeName() );
-    dataSource.insert( "error", false );
-    dataSource.insert( "updated", QDateTime::currentDateTime() );
-    setData( sourceName, dataSource );
-    m_dataSources.insert( sourceName.toLower(), dataSource );
+    dataSource->data.insert( "serviceProvider", provider->id() );
+    dataSource->data.insert( "delayInfoAvailable", globalInfo.delayInfoAvailable );
+    dataSource->data.insert( "requestUrl", requestUrl );
+    dataSource->data.insert( "parseMode", request.parseModeName() );
+    dataSource->data.insert( "error", false );
+    dataSource->data.insert( "updated", QDateTime::currentDateTime() );
+    setData( sourceName, dataSource->data );
+    m_dataSources[ nonAmbiguousName ] = dataSource;
 }
 
 void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
@@ -1429,14 +1445,14 @@ void PublicTransportEngine::progress( ServiceProvider *provider, qreal progress,
 bool PublicTransportEngine::isSourceUpToDate( const QString& name )
 {
     const QString nonAmbiguousName = name.toLower();
-    if ( !m_dataSources.contains(nonAmbiguousName.toLower()) ) {
+    if ( !m_dataSources.contains(nonAmbiguousName) ) {
         return false;
     }
 
     // Data source stays up to date for max(UPDATE_TIMEOUT, minFetchWait) seconds
-    QVariantHash dataSource = m_dataSources[ nonAmbiguousName ].toHash();
+    DataSourceData *dataSource = m_dataSources[ nonAmbiguousName ];
 
-    QString providerId = dataSource[ "serviceProvider" ].toString();
+    QString providerId = dataSource->data[ "serviceProvider" ].toString();
     if ( providerId.isEmpty() ) {
         kWarning() << "Internal error: Service provider unknown"; // Could get provider id from <name>
         return false;
@@ -1446,13 +1462,12 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
         return false;
     }
 
-    QDateTime downloadTime = m_nextDownloadTimeProposals[ stripDateAndTimeValues(nonAmbiguousName) ];
-    int minForSufficientChanges = downloadTime.isValid()
-            ? QDateTime::currentDateTime().secsTo( downloadTime ) : 0;
+    int minForSufficientChanges = dataSource->nextDownloadTimeProposal.isValid()
+            ? QDateTime::currentDateTime().secsTo( dataSource->nextDownloadTimeProposal ) : 0;
     int minFetchWait;
 
     // If delays are available set maximum fetch wait
-    const int secsSinceLastUpdate = dataSource["updated"].toDateTime().secsTo(
+    const int secsSinceLastUpdate = dataSource->data["updated"].toDateTime().secsTo(
                                     QDateTime::currentDateTime() );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     if ( provider->type() == Enums::GtfsProvider ) {
@@ -1470,7 +1485,7 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
     } else
 #endif
     if ( provider->features().contains(Enums::ProvidesDelays) &&
-         dataSource["delayInfoAvailable"].toBool() )
+         dataSource->data["delayInfoAvailable"].toBool() )
     {
         minFetchWait = qBound((int)MIN_UPDATE_TIMEOUT, minForSufficientChanges,
                               (int)MAX_UPDATE_TIMEOUT_DELAY );

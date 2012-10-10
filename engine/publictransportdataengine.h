@@ -496,31 +496,40 @@ private:
     static ServiceProvider *createProviderForData( const ServiceProviderData *data,
             QObject *parent = 0, const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
 
-    /** @brief Data for a timer to update a data source. */
-    struct TimerData {
-        TimerData( const QString &dataSource = QString(), QTimer *timer = 0 )
-                : dataSource(dataSource), timer(timer) {};
-        ~TimerData();
-        QString dataSource;
-        QTimer *timer;
+    /** @brief Data for a data source. */
+    struct DataSourceData {
+        DataSourceData( const QString &dataSource = QString(),
+                        const QVariantHash &data = QVariantHash() )
+                : name(dataSource), data(data),
+                  updateTimer(0), updateAdditionalDataDelayTimer(0) {};
+        ~DataSourceData();
+
+        QString name; /**< The data source name with it's original capitalization. */
+        QVariantHash data; /**< Data stored for the data source. */
+
+        /** Already downloaded additional data,
+         * stored by a hash value for the associated timetable item. */
+        QHash<uint, TimetableData> additionalData;
+
+        /** The next time at which new downloads will have sufficient changes
+         * (enough timetable items in past or maybe changed delays, estimated). */
+        QDateTime nextDownloadTimeProposal;
+
+        QTimer *updateTimer; /**< Timer to update the data source periodically. */
+
+        /** Timer to delay updates to additional timetable data of timetable items. */
+        QTimer *updateAdditionalDataDelayTimer;
     };
 
+    DataSourceData *dataSourceFromAdditionDataTimer( QTimer *timer ) const;
+
     QHash< QString, ProviderPointer > m_providers; // List of already loaded service providers
-    QVariantHash m_dataSources; // List of already used data sources TODO also store original data source name, to be able to update data with different capitalization
-    QHash< QString, QHash<uint, TimetableData> > m_additionalData; // Already downloaded additional data per data source, stored by a hash value for the associated departure
     QVariantHash m_erroneousProviders; // List of erroneous service providers as keys
                                        // and error messages as values
-    QHash< QString, TimerData* > m_updateTimers; // List of timers to update data sources periodically
-    QHash< QString, QTimer* > m_updateAdditionalDataDelayTimers; // List of timers to update data sources with new additional timetable data
+    QHash< QString, DataSourceData* > m_dataSources; // List of timers to update data sources periodically
     QFileSystemWatcher *m_fileSystemWatcher; // Watch the service provider directory
 
-    // The next times at which new downloads will have sufficient changes
-    // (enough departures in past or maybe changed delays, estimated),
-    // for each data source name.
-    QHash< QString, QDateTime > m_nextDownloadTimeProposals;
-
     QTimer *m_providerUpdateDelayTimer;
-    QTimer *m_sourceUpdateTimer; // TODO Unused
     QStringList m_runningSources; // Sources which are currently being processed
 };
 
