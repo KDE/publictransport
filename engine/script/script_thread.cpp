@@ -521,7 +521,12 @@ bool ScriptJob::loadScript( QScriptProgram *script )
     // stored data after each request.
     m_objects.createObjects( m_data );
     m_objects.attachToEngine( m_engine, m_data );
-    connect( m_objects.result.data(), SIGNAL(publish()), this, SLOT(publish()) );
+
+    // Connect the publish() signal directly (the result object lives in the thread that gets
+    // run by this job, this job itself lives in the GUI thread). Connect directly to ensure
+    // the script objects and the request are still valid (prevent crashes).
+    connect( m_objects.result.data(), SIGNAL(publish()), this, SLOT(publish()),
+             Qt::DirectConnection );
 
     // Load the script program
     m_engine->evaluate( *script );
@@ -549,6 +554,7 @@ bool ScriptJob::hasDataToBePublished() const
 
 void ScriptJob::publish()
 {
+    // This slot gets run in the thread of this job
     // Only publish, if there is data which is not already published
     QMutexLocker locker( m_mutex );
     if ( hasDataToBePublished() ) {
