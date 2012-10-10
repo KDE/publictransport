@@ -1,8 +1,17 @@
 #cmakedefine BUILD_PROVIDER_TYPE_SCRIPT
 #cmakedefine BUILD_PROVIDER_TYPE_GTFS
 #cmakedefine BUILD_GTFS_REALTIME
+#cmakedefine ENABLE_DEBUG_ENGINE_JOBS
 #cmakedefine ENABLE_DEBUG_NETWORK
 #cmakedefine ENABLE_DEBUG_SCRIPT_HELPER
+#cmakedefine ENABLE_DEBUG_SCRIPT_ERROR
+
+// Debug output for started/finished jobs in the engine
+#ifdef ENABLE_DEBUG_ENGINE_JOBS
+    #define DEBUG_ENGINE_JOBS(msg) kDebug() << msg
+#else
+    #define DEBUG_ENGINE_JOBS(msg)
+#endif
 
 // Debug output for network events in the script
 #ifdef ENABLE_DEBUG_NETWORK
@@ -11,8 +20,16 @@
     #define DEBUG_NETWORK(msg)
 #endif
 
+// Debug output for the Helper script object
 #ifdef ENABLE_DEBUG_SCRIPT_HELPER
     #define DEBUG_SCRIPT_HELPER(msg) kDebug() << msg
 #else
     #define DEBUG_SCRIPT_HELPER(msg)
+#endif
+
+// Debug output for error messages from the script
+#ifdef ENABLE_DEBUG_SCRIPT_ERROR
+    #define DEBUG_SCRIPT_ERROR(msg) kDebug() << msg
+#else
+    #define DEBUG_SCRIPT_ERROR(msg)
 #endif

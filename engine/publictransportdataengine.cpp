@@ -136,7 +136,7 @@ void PublicTransportEngine::slotSourceRemoved( const QString& name )
     }
 
     const QVariant data = m_dataSources.take( nonAmbiguousName );
-    kDebug() << "Source" << name << "removed, still cached data sources" << m_dataSources.count();
+//     kDebug() << "Source" << name << "removed, still cached data sources" << m_dataSources.count();
 
     // If a provider was used by the source, remove the provider if it is not used in another source
     const QVariantHash dataHash = data.toHash();
@@ -323,13 +323,11 @@ PublicTransportEngine::ProviderPointer PublicTransportEngine::providerFromId(
         const QString &id, bool *newlyCreated )
 {
     if ( m_providers.contains(id) ) {
-        kDebug() << "Provider" << id << "already created";
         if ( newlyCreated ) {
             *newlyCreated = false;
         }
         return m_providers[ id ];
     } else {
-        kDebug() << "Create provider" << id;
         if ( newlyCreated ) {
             *newlyCreated = true;
         }
@@ -1072,8 +1070,8 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
         bool deleteDepartureInfos, bool isDepartureData )
 {
     const QString sourceName = request.sourceName;
-    kDebug() << items.count() << (isDepartureData ? "departures" : "arrivals")
-             << "received" << sourceName;
+    DEBUG_ENGINE_JOBS( items.count() << (isDepartureData ? "departures" : "arrivals")
+                       << "received" << sourceName );
 
     const QString nonAmbiguousName = sourceName.toLower();
     m_dataSources.remove( nonAmbiguousName );
@@ -1117,7 +1115,8 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
     QDateTime downloadTime = QDateTime::currentDateTime().addSecs( secs );
     m_nextDownloadTimeProposals[ stripDateAndTimeValues(sourceName) ] = downloadTime;
 
-    kDebug() << "Update data source in" << secs << "seconds";
+    DEBUG_ENGINE_JOBS( "Update data source in"
+                       << KGlobal::locale()->prettyFormatDuration(secs * 1000) );
     if ( m_updateTimers.contains(nonAmbiguousName) ) {
         // Restart the timer
         m_updateTimers[nonAmbiguousName]->timer->start( (secs + 1) * 1000 );
@@ -1172,7 +1171,8 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     // Check if the destination data source exists
     const QString sourceToUpdate = request.sourceName.toLower();
     if ( !m_dataSources.contains(sourceToUpdate) ) {
-        kDebug() << "Additional data received for a source that was already removed:" << sourceToUpdate;
+        kWarning() << "Additional data received for a source that was already removed:"
+                   << sourceToUpdate;
         emit additionalDataRequestFinished( QVariantHash(), false,
                                             "Data source to update was already removed" );
         return;
@@ -1270,7 +1270,7 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
 {
     Q_UNUSED( provider );
     const QString sourceName = request.sourceName;
-    kDebug() << journeys.count() << "journeys received" << sourceName;
+    DEBUG_ENGINE_JOBS( journeys.count() << "journeys received" << sourceName );
 
     const QString nonAmbiguousName = sourceName.toLower();
     m_dataSources.remove( nonAmbiguousName );
@@ -1337,6 +1337,7 @@ void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
 
     const QString sourceName = request.sourceName;
     m_runningSources.removeOne( sourceName );
+    DEBUG_ENGINE_JOBS( stops.count() << "stop suggestions received" << sourceName );
 
     QVariantList stopsData;
     foreach( const StopInfoPtr &stopInfo, stops ) {
@@ -1361,10 +1362,6 @@ void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
 //     if ( deleteStopInfos ) {
 //         qDeleteAll( stops ); TODO
 //     }
-
-    kDebug() << "DONE" << request.sourceName;
-//     kDebug() << m_runningSources.count() << "running sources" << m_runningSources;
-//     kDebug() << m_dataSources.count() << "data sources" << m_dataSources;
 }
 
 void PublicTransportEngine::errorParsing( ServiceProvider *provider,
@@ -1437,10 +1434,10 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
         // TODO: Check for an updated GTFS feed every X seconds, eg. once an hour
         const QSharedPointer<ServiceProviderGtfs> gtfsAccessor =
                 provider.objectCast<ServiceProviderGtfs>();
-        kDebug() << "Wait time until next update from GTFS provider:"
-                 << KGlobal::locale()->prettyFormatDuration(1000 *
-                    (gtfsAccessor->isRealtimeDataAvailable()
-                     ? 60 - secsSinceLastUpdate : 60 * 60 * 24 - secsSinceLastUpdate));
+        DEBUG_ENGINE_JOBS( "Wait time until next update from GTFS provider:"
+                << KGlobal::locale()->prettyFormatDuration(1000 *
+                (gtfsAccessor->isRealtimeDataAvailable()
+                ? 60 - secsSinceLastUpdate : 60 * 60 * 24 - secsSinceLastUpdate)) );
         return gtfsAccessor->isRealtimeDataAvailable()
                 ? secsSinceLastUpdate < 60 // Update maximally once a minute if realtime data is available
                 : secsSinceLastUpdate < 60 * 60 * 24; // Update GTFS feed once a day without realtime data
@@ -1456,8 +1453,9 @@ bool PublicTransportEngine::isSourceUpToDate( const QString& name )
     }
 
     minFetchWait = qMax( minFetchWait, provider->minFetchWait() );
-    kDebug() << "Wait time until next download:"
-             << ((minFetchWait - secsSinceLastUpdate) / 60) << "min";
+
+    DEBUG_ENGINE_JOBS( "Wait time until next download:"
+            << ((minFetchWait - secsSinceLastUpdate) / 60) << "min" );
     return secsSinceLastUpdate < minFetchWait;
 }
 

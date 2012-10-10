@@ -989,16 +989,16 @@ void Helper::messageReceived( const QString& message, const QString &failedParse
     }
     shortParseText = shortParseText.replace('\n', "\n    "); // Indent
 
-#ifdef QT_DEBUG
-    kDebug() << QString("Error in %1-script, function %2(), file %3, line %4")
+#ifdef ENABLE_DEBUG_SCRIPT_ERROR
+    DEBUG_SCRIPT_ERROR( QString("Error in %1-script, function %2(), file %3, line %4")
             .arg(m_serviceProviderId)
             .arg(info.functionName().isEmpty() ? "[anonymous]" : info.functionName())
             .arg(QFileInfo(info.fileName()).fileName())
-            .arg(info.lineNumber());
-    kDebug() << message;
+            .arg(info.lineNumber()) );
+    DEBUG_SCRIPT_ERROR( message );
     if ( !shortParseText.isEmpty() ) {
-        kDebug() << QString("The text of the document where parsing failed is: \"%1\"")
-                    .arg(shortParseText);
+        DEBUG_SCRIPT_ERROR( QString("The text of the document where parsing failed is: \"%1\"")
+                            .arg(shortParseText) );
     }
 #endif
 

@@ -394,7 +394,9 @@ void PublicTransportApplet::departuresFiltered( const QString& sourceName,
     }
 
     // Remove previously visible and now filtered out departures
-    kDebug() << "Remove" << newlyFiltered.count() << "previously unfiltered departures, if they are visible";
+    if ( !newlyFiltered.isEmpty() ) {
+        kDebug() << "Remove" << newlyFiltered.count() << "previously unfiltered departures";
+    }
     foreach( const DepartureInfo &departureInfo, newlyFiltered ) {
         int row = d->model->indexFromInfo( departureInfo ).row();
         if ( row == -1 ) {
@@ -405,7 +407,9 @@ void PublicTransportApplet::departuresFiltered( const QString& sourceName,
     }
 
     // Append previously filtered out departures
-    kDebug() << "Add" << newlyNotFiltered.count() << "previously filtered departures";
+    if ( !newlyNotFiltered.isEmpty() ) {
+        kDebug() << "Add" << newlyNotFiltered.count() << "previously filtered departures";
+    }
     foreach( const DepartureInfo &departureInfo, newlyNotFiltered ) {
         d->model->addItem( departureInfo );
     }

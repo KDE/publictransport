@@ -207,8 +207,8 @@ void DepartureProcessor::run()
         } else if ( job->type == ProcessJourneys ) {
             doJourneyJob( static_cast<JourneyJobInfo*>( job ) );
         }
-        kDebug() << " > Job" << job->type << "finished after"
-                 << (time.elapsed() / 1000.0) << "seconds";
+//         kDebug() << " > Job" << job->type << "finished after"
+//                  << (time.elapsed() / 1000.0) << "seconds";
 
         m_mutex->lock();
         if ( !m_requeueCurrentJob ) {
@@ -261,7 +261,6 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
                                                               : data["arrivals"].toList();
 
 //     Q_ASSERT( departureJob->alreadyProcessed <= count );
-    kDebug() << "  - " << departuresData.count() << "departures to be processed";
     for ( int i = departureJob->alreadyProcessed; i < departuresData.count(); ++i ) {
         QVariantHash departureData = departuresData[ i ].toHash();
         QList< QTime > routeTimes;
@@ -362,7 +361,6 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
     if ( journeyJob->alreadyProcessed > journeysData.count() ) {
         kDebug() << "There was an error with the journey data source (journeyJob->alreadyProcessed > count)";
     }
-    kDebug() << "  - " << journeysData.count() << "journeys to be processed";
     for ( int i = journeyJob->alreadyProcessed; i < journeysData.count(); ++i ) {
         QVariantHash journeyData = journeysData[i].toHash();
         QList<QTime> routeTimesDeparture, routeTimesArrival;
@@ -532,7 +530,6 @@ void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJ
     m_mutex->unlock();
 
     emit beginFiltering( filterJob->sourceName );
-    kDebug() << "  - " << departures.count() << "departures to be filtered";
     for ( int i = 0; i < departures.count(); ++i ) {
         DepartureInfo &departureInfo = departures[ i ];
         const bool filterOut = filters.filterOut( departureInfo )

@@ -21,6 +21,7 @@
 #include "script_thread.h"
 
 // Own includes
+#include "config.h"
 #include "scripting.h"
 #include "script/serviceproviderscript.h"
 #include "serviceproviderdata.h"
@@ -191,8 +192,8 @@ void ScriptJob::run()
     m_lastUrl = objects.network->lastUrl(); // TODO Store all URLs
 
     // Inform about script run time
-    kDebug() << "Script finished in" << (timer.elapsed() / 1000.0)
-             << "seconds: " << m_data.provider.scriptFileName() << request()->parseMode;
+    DEBUG_ENGINE_JOBS( "Script finished in" << (timer.elapsed() / 1000.0)
+            << "seconds: " << m_data.provider.scriptFileName() << request()->parseMode );
 
     // If data for the current job has already been published, do not emit
     // xxxReady() with an empty resultset

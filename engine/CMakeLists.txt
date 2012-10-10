@@ -27,8 +27,10 @@ find_package( SharedMimeInfo )
 # each provider type can be disabled, ie. not build, but at least one needs to be enabled
 option( BUILD_PROVIDER_TYPE_SCRIPT "Build with support for scripted providers" ON )
 option( BUILD_PROVIDER_TYPE_GTFS "Build with support for GTFS providers" ON )
+option( ENABLE_DEBUG_ENGINE_JOBS "Enable debug output for started/finished jobs in the engine" OFF )
 option( ENABLE_DEBUG_NETWORK "Enable debug output for network events in scripts" OFF )
 option( ENABLE_DEBUG_SCRIPT_HELPER "Enable debug output for warnings/errors in the script 'helper' object, eg. when debugging scripts that use the 'helper' object" OFF )
+option( ENABLE_DEBUG_SCRIPT_ERROR "Enable debug output for error messages from scripts" OFF )
 
 # Fatal error if no provider types are enabled
 if ( NOT BUILD_PROVIDER_TYPE_SCRIPT AND NOT BUILD_PROVIDER_TYPE_GTFS )

@@ -46,7 +46,6 @@ RequestAdditionalDataJob::~RequestAdditionalDataJob()
 
 void RequestAdditionalDataJob::start()
 {
-    kDebug() << "Start RequestAdditionalDataJob" << m_updateItem << m_updateItemEnd;
     TimetableService *service = qobject_cast< TimetableService* >( parent() );
     Plasma::DataEngine *engine = qobject_cast< Plasma::DataEngine* >( service->parent() );
     Q_ASSERT( engine );
