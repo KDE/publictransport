@@ -73,16 +73,17 @@ public:
 
         // Create layout
         QFormLayout *infoLayout = new QFormLayout;
+        stopLabel = new QLabel( q );
         stop = new QLabel( q );
         provider = new QLabel( q );
+        updateStopLabel();
 
         stop->setWordWrap( true );
         provider->setWordWrap( true );
-        stop->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
+        stop->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred );
+        provider->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Preferred );
 
-        infoLayout->addRow( i18ncp("@info Label for the read only text label containing the "
-                                   "stop name", "Stop:", "Stops:", stopSettings.stops().count()),
-                            stop );
+        infoLayout->addRow( stopLabel, stop );
         infoLayout->addRow( i18nc("@info Label for the read only text label containing the "
                                   "service provider name", "Service Provider:"),
                             provider );
@@ -105,9 +106,15 @@ public:
         }
     };
 
+    void updateStopLabel( int stopCount = 1 ) {
+        stopLabel->setText( i18ncp("@info Label for the read only text label containing the "
+                                   "stop name(s)", "Stop:", "Stops:", qMax(1, stopCount)) );
+    };
+
     bool newlyAdded;
     StopSettings stopSettings;
     FilterSettingsList *filterConfigurations;
+    QLabel *stopLabel;
     QLabel *stop;
     QLabel *provider;
     ServiceProviderModel *modelServiceProviders; // Model of service providers
@@ -176,6 +183,7 @@ void StopWidget::setStopSettings( const StopSettings& stopSettings )
             : i18nc("@info Shown in a read-only widget (StopWidget) with a city "
                     "(%1: stop name(s), %2: city)", "%1 in %2",
                     stopSettings.stops().join( ",<nl/>" ), stopSettings[CitySetting].toString()) );
+    d->updateStopLabel( stopSettings.stopList().count() );
 
     QModelIndex index = d->modelServiceProviders->indexOfServiceProvider(
             stopSettings[ServiceProviderSetting].toString() );
