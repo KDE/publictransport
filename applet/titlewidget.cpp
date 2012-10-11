@@ -41,6 +41,7 @@
 #include <QLabel>
 #include <QGraphicsLinearLayout>
 #include <QVBoxLayout>
+#include <QGraphicsSceneEvent>
 #include <qmath.h>
 
 TitleWidget::TitleWidget( TitleType titleType, Settings *settings, bool journeysSupported,
@@ -66,6 +67,8 @@ TitleWidget::TitleWidget( TitleType titleType, Settings *settings, bool journeys
     // Add a title label
     Plasma::Label *title = new Plasma::Label( this );
     title->setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
+    title->setWordWrap( false );
+    title->setMinimumWidth( 75 );
     QLabel *_title = title->nativeWidget();
     _title->setTextInteractionFlags( Qt::LinksAccessibleByMouse );
     addWidget( title, WidgetTitle );
@@ -610,12 +613,13 @@ void TitleWidget::settingsChanged()
 void TitleWidget::resizeEvent( QGraphicsSceneResizeEvent *event )
 {
     QGraphicsWidget::resizeEvent( event );
+
+    m_title->setMinimumWidth( qMin(100, int(event->newSize().width() / 3)) );
     updateTitle();
 }
 
 void TitleWidget::updateTitle()
 {
-    QFontMetrics fm( m_title->font() );
     qreal maxStopNameWidth = contentsRect().width() - m_icon->boundingRect().right() - 10;
     if ( m_filterWidget ) {
         maxStopNameWidth -= m_filterWidget->boundingRect().width();
@@ -625,7 +629,29 @@ void TitleWidget::updateTitle()
     }
 
     if ( !m_titleText.contains(QRegExp("<\\/?[^>]+>")) ) {
-        m_title->setText( fm.elidedText(m_titleText, Qt::ElideRight, maxStopNameWidth * 2.0) );
+        const QFontMetrics fm( m_title->font() );
+        QString _title = m_titleText;
+        const int width = fm.width( _title );
+        if ( width > maxStopNameWidth ) {
+            // Try to break into two lines
+            const int wrapPos = _title.lastIndexOf( ' ', _title.length() / 2 );
+            QStringList lines;
+            if ( wrapPos == -1 ) {
+                lines << _title;
+            } else {
+                lines << _title.left( wrapPos ) << _title.mid( wrapPos + 1);
+            }
+
+            // Elide each text line and construct new title
+            _title.clear();
+            foreach ( const QString &line, lines ) {
+                if ( !_title.isEmpty() ) {
+                    _title.append( "<br />" );
+                }
+                _title.append( fm.elidedText(line, Qt::ElideRight, maxStopNameWidth) );
+            }
+        }
+        m_title->setText( _title );
     } else {
         m_title->setText( m_titleText );
     }
