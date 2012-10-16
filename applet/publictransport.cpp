@@ -323,7 +323,7 @@ QList< QAction* > PublicTransportApplet::contextualActions()
 
     // Add filter action if there is at least one filter or color group
     KAction *actionFilter = 0;
-    if ( !d->settings.filters().isEmpty() &&
+    if ( !d->settings.filters().isEmpty() ||
          !d->settings.colorGroups().isEmpty() )
     {
         actionFilter = qobject_cast< KAction* >( action("filterConfiguration") );
@@ -349,10 +349,11 @@ QList< QAction* > PublicTransportApplet::contextualActions()
         QAction *goBackAction = action("backToDepartures");
         goBackAction->setText( i18nc("@action:inmenu", "&Back To Original Stop") );
         actions << goBackAction;
-    } else if ( d->settings.stops().count() > 1 ) {
-        actions << d->createSwitchStopAction( this );
+    } else {
+        if ( d->settings.stops().count() > 1 ) {
+            actions << d->createSwitchStopAction( this );
+        }
         if ( d->currentServiceProviderFeatures.contains("ProvidesJourneys") ) {
-//             updateJourneyActionMenu();
             actions << action("journeys");
         }
     }
@@ -833,7 +834,6 @@ void PublicTransportApplet::showActionButtons()
                 ? action("showArrivals") : action("showDepartures"));
     }
     if ( d->currentServiceProviderFeatures.contains("ProvidesJourneys") ) {
-//         updateJourneyActionMenu();
         actions << action("journeys");
     }
 
