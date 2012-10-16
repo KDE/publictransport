@@ -806,18 +806,6 @@ int DepartureItem::row() const
     }
 }
 
-QHash< ItemType, ChildItem* > DepartureItem::typedChildren() const
-{
-    QHash< ItemType, ChildItem* > children;
-    foreach( ChildItem *child, m_children ) {
-        if ( child->type() != OtherItem ) {
-            children.insert( child->type(), child );
-        }
-    }
-
-    return children;
-}
-
 void DepartureItem::setAlarmColorIntensity( qreal alarmColorIntensity )
 {
     m_alarmColorIntensity = alarmColorIntensity;
@@ -829,21 +817,16 @@ void DepartureItem::setAlarmColorIntensity( qreal alarmColorIntensity )
 
 void DepartureItem::setDepartureInfo( const DepartureInfo &departureInfo )
 {
-    if ( m_departureInfo.isValid() ) {
-        if ( m_departureInfo == departureInfo ) {
-            // Unchanged, but matchedAlarms may have changed
-            m_departureInfo = departureInfo;
-            return;
-        }
-
+    if ( m_departureInfo == departureInfo ) {
+        // Timetable data is unchanged, but matchedAlarms may have changed
         m_departureInfo = departureInfo;
-        updateValues();
-        updateChildren();
-    } else {
-        m_departureInfo = departureInfo;
-        updateValues();
-        createChildren();
+        return;
     }
+
+    // Timetable data has changed, update values and children
+    m_departureInfo = departureInfo;
+    updateValues();
+    updateChildren();
 }
 
 void DepartureItem::updateValues()
@@ -869,18 +852,32 @@ void DepartureItem::updateValues()
 
 void DepartureItem::updateChildren()
 {
-    QHash< ItemType, ChildItem* > children = typedChildren();
-    QList< ItemType > types;
-    types << PlatformItem << JourneyNewsItem << DelayItem << OperatorItem << RouteItem;
+    // Create a list with all item types used as children for departure items
+    QList< ItemType > types = QList< ItemType >()
+            << PlatformItem << JourneyNewsItem << DelayItem << OperatorItem << RouteItem;
+
+    // Check for updates of child items and remove children which no longer have data available
+    int i = 0;
+    while ( i < m_children.count() ) {
+        ChildItem *child = m_children[ i ];
+        const ItemType type = child->type();
+        if ( hasDataForChildType(type) ) {
+            // There is still data for the current child, update it
+            updateChild( type, child, i );
+            ++i;
+        } else {
+            // No data is available for the current child any longer, remove it
+            removeChild( child );
+        }
+
+        // Remove processed type from children type list
+        types.removeOne( type );
+    }
+
+    // Append new children
     foreach( ItemType type, types ) {
         if ( hasDataForChildType(type) ) {
-            if ( children.contains(type) ) {
-                updateChild( type, children[type] );
-            } else {
-                appendNewChild( type );
-            }
-        } else if ( children.contains(type) ) {
-            removeChild( children[type] );
+            appendNewChild( type );
         }
     }
 }
@@ -896,10 +893,11 @@ void DepartureItem::createChildren()
     }
 }
 
-void DepartureItem::updateChild( ItemType itemType, ChildItem* child )
+void DepartureItem::updateChild( ItemType itemType, ChildItem* child, int childIndex )
 {
     if ( itemType == RouteItem ) {
-        m_model->removeRows( child->row(), 1, child->parent()->index() );
+        m_model->removeRows( childIndex == -1 ? child->row() : childIndex,
+                             1, child->parent()->index() );
         appendNewChild( RouteItem );
     } else {
         int linesPerRow;

@@ -431,9 +431,6 @@ public:
 
     RouteStopFlags routeStopFlags( int routeStopIndex = 0, int *minsFromFirstRouteStop = 0 );
 
-    /** @returns a hash with child items by their type. */
-    QHash< ItemType, ChildItem* > typedChildren() const;
-
     /** @brief Gets the data for the given @p role in @p column. */
     virtual QVariant data( int role = Qt::DisplayRole, int column = 0 ) const;
 
@@ -484,7 +481,7 @@ protected:
     ChildItem *appendNewChild( ItemType itemType );
 
     /** @brief Updates the given @p child item which is of type @p itemType. */
-    void updateChild( ItemType itemType, ChildItem *child );
+    void updateChild( ItemType itemType, ChildItem *child, int childIndex = -1 );
 
     /** @returns true, if there's data to be shown for the given @p itemType. */
     bool hasDataForChildType( ItemType itemType );
