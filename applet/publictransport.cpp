@@ -205,7 +205,7 @@ void PublicTransportApplet::setupActions()
     Q_D( PublicTransportApplet );
 
     KAction *actionUpdate = new KAction( KIcon("view-refresh"),
-                                         i18nc("@action:inmenu", "&Update timetable"), this );
+                                         i18nc("@action:inmenu", "&Update Timetable"), this );
     connect( actionUpdate, SIGNAL(triggered()), this, SLOT(updateDataSource()) );
     addAction( "updateTimetable", actionUpdate );
 
@@ -375,8 +375,61 @@ void PublicTransportApplet::updateDataSource()
     if ( d->isStateActive("journeyView") ) {
         d->reconnectJourneySource();
     } else {
-        d->reconnectSource();
+        // Disable the update action until the update has finished
+        disableUpdateAction();
+
+        // Update all connected data sources
+        for( int n = 0; n < d->stopIndexToSourceName.count(); ++n ) {
+            const QString sourceName = d->stripDateAndTimeValues( d->stopIndexToSourceName[n] );
+            Plasma::Service *service = dataEngine("publictransport")->serviceForSource( sourceName );
+            if ( !service ) {
+                kWarning() << "No Timetable Service!";
+                break;
+            }
+
+            // Start the update job and increase number of running update requests
+            ++d->runningUpdateRequests;
+            KConfigGroup op = service->operationDescription("requestUpdate");
+            Plasma::ServiceJob *updateJob = service->startOperationCall( op );
+            connect( updateJob, SIGNAL(finished(KJob*)), service, SLOT(deleteLater()) );
+            connect( updateJob, SIGNAL(finished(KJob*)), this, SLOT(updateRequestFinished(KJob*)) );
+        }
+
+        // Enable the update action again, if no update requests were started
+        if ( d->runningUpdateRequests == 0 ) {
+            QAction *updateAction = action("updateTimetable");
+            updateAction->setEnabled( true );
+            updateAction->setText( i18nc("@action:inmenu", "&Update Timetable") );
+        }
     }
+}
+
+void PublicTransportApplet::updateRequestFinished( KJob *job )
+{
+    Q_UNUSED( job )
+    Q_D( PublicTransportApplet );
+
+    // Decrease number of running update requests, if no more updates are running,
+    // enable the update action again after one minute
+    --d->runningUpdateRequests;
+}
+
+void PublicTransportApplet::enableUpdateAction()
+{
+    Q_D( PublicTransportApplet );
+    // Enable the update action again and delete the timer
+    QAction *updateAction = action("updateTimetable");
+    updateAction->setEnabled( true );
+    updateAction->setText( i18nc("@action:inmenu", "&Update Timetable") );
+    delete d->updateTimer;
+    d->updateTimer = 0;
+}
+
+void PublicTransportApplet::disableUpdateAction()
+{
+    QAction *updateAction = action("updateTimetable");
+    updateAction->setEnabled( false );
+    updateAction->setText( i18nc("@action:inmenu", "&Update Timetable (please wait…)") );
 }
 
 void PublicTransportApplet::departuresFiltered( const QString& sourceName,
@@ -462,7 +515,8 @@ void PublicTransportApplet::beginDepartureProcessing( const QString& sourceName 
 
 void PublicTransportApplet::departuresProcessed( const QString& sourceName,
         const QList< DepartureInfo > &departures, const QUrl &requestUrl,
-        const QDateTime &lastUpdate, int departuresToGo )
+        const QDateTime &lastUpdate, const QDateTime &nextAutomaticUpdate,
+        const QDateTime &minManualUpdateTime, int departuresToGo )
 {
     Q_D( PublicTransportApplet );
 
@@ -484,8 +538,25 @@ void PublicTransportApplet::departuresProcessed( const QString& sourceName,
     // Update "last update" time
     if ( lastUpdate > d->lastSourceUpdate ) {
         d->lastSourceUpdate = lastUpdate;
+        d->nextAutomaticSourceUpdate = nextAutomaticUpdate;
+        d->minManualSourceUpdateTime = minManualUpdateTime;
     }
-    d->labelInfo->setText( d->infoText() );
+    d->updateInfoText();
+
+    // Disable the update action until the minimal next (manual) update time
+    disableUpdateAction();
+    if ( d->runningUpdateRequests == 0 && departuresToGo == 0 ) {
+        const int interval = QDateTime::currentDateTime().msecsTo( minManualUpdateTime );
+        if ( interval > 0 ) {
+            if ( !d->updateTimer ) {
+                d->updateTimer = new QTimer( this );
+                connect( d->updateTimer, SIGNAL(timeout()), this, SLOT(enableUpdateAction()) );
+            }
+            d->updateTimer->start( interval + 5 );
+        } else {
+            enableUpdateAction();
+        }
+    }
 
     // Fill the model with the received departures
     d->fillModel( departures );
@@ -623,6 +694,10 @@ void PublicTransportApplet::dataUpdated( const QString& sourceName,
             kDebug() << "Received journey data, but journey list is hidden.";
         }
     } else if ( data.contains("departures") || data.contains("arrivals") ) {
+        // Disable the update action, it will get enabled when update requests will be accepted
+        // again by the engine (see departuresProcessed())
+        disableUpdateAction();
+
         // List of departures / arrivals received
         emit validDepartureDataReceived();
         d->departureProcessor->processDepartures( sourceName, data );
@@ -1163,6 +1238,8 @@ bool PublicTransportApplet::eventFilter( QObject *watched, QEvent *event )
         default:
             break;
         }
+    } else if ( watched == d->labelInfo->nativeWidget() && event->type() == QEvent::ToolTip ) {
+        d->labelInfo->setToolTip( d->infoTooltip() );
     }
 
     return Plasma::PopupApplet::eventFilter( watched, event );

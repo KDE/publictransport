@@ -624,3 +624,11 @@ void ServiceProviderScript::import( const QString &import, QScriptEngine *engine
 {
     engine->importExtension( import );
 }
+
+int ServiceProviderScript::minFetchWait( UpdateFlags updateFlags ) const
+{
+    // If an update was requested wait minimally one minute,
+    // otherwise wait minimally 15 minutes between automatic updates
+    return qMax( updateFlags.testFlag(UpdateWasRequestedManually) ? 60 : 15 * 60,
+                 ServiceProvider::minFetchWait() );
+}

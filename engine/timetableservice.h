@@ -40,7 +40,7 @@ class RequestAdditionalDataJob : public Plasma::ServiceJob {
 public:
     RequestAdditionalDataJob( const QString &destination, const QString &operation,
                               const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
-    virtual ~RequestAdditionalDataJob();
+    virtual ~RequestAdditionalDataJob() {};
 
     /** @brief Starts the additional data request. */
     virtual void start();
@@ -55,6 +55,18 @@ private:
     int m_itemsDone;
 };
 
+class UpdateRequestJob : public Plasma::ServiceJob {
+    Q_OBJECT
+
+public:
+    UpdateRequestJob( const QString &destination, const QString &operation,
+                              const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
+    virtual ~UpdateRequestJob() {};
+
+    /** @brief Starts the update request. */
+    virtual void start();
+};
+
 /**
  * @brief A service for timetable data sources of the PublicTransport data engine.
  *
@@ -65,6 +77,11 @@ class TimetableService : public Plasma::Service {
     Q_OBJECT
 
 public:
+    enum ErrorCode {
+        InvalidErrorCode = Plasma::ServiceJob::UserDefinedError,
+        UnknownError
+    };
+
     explicit TimetableService( const QString &name, QObject *parent = 0 );
 
 protected:

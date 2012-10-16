@@ -206,12 +206,17 @@ signals:
      * @param sourceName The data engine source name for the departure data.
      * @param departures A list of departures that were read.
      * @param requestUrl The url that was used to download the departure data.
-     * @param lastUpdate The date and time of the last update of the data.
+     * @param lastUpdate The date and time of the last update of the data source.
+     * @param nextAutomaticUpdate The date and time of the next automatic update of the data source.
+     * @param minManualUpdateTime The minimal date and time of the next (manual) update of the
+     *   data source. Earlier update requests will be rejected.
      * @param departuresToGo The number of departures to still be processed. If this isn't 0
      *   this signal gets emitted again after the next batch of departures has been processed.
      **/
     void departuresProcessed( const QString &sourceName, const QList< DepartureInfo > &departures,
-            const QUrl &requestUrl, const QDateTime &lastUpdate, int departuresToGo = 0 );
+            const QUrl &requestUrl, const QDateTime &lastUpdate,
+            const QDateTime &nextAutomaticUpdate, const QDateTime &minManualUpdateTime,
+            int departuresToGo = 0 );
 
     /**
      * @brief A journey processing job now gets started.

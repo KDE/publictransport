@@ -145,6 +145,8 @@ public:
 
     virtual void requestAdditionalData( const AdditionalDataRequest &request );
 
+    virtual int minFetchWait( UpdateFlags updateFlags = DefaultUpdateFlags ) const;
+
 protected slots:
     void departuresReady( const QList<TimetableData> &data,
                           ResultObject::Features features, ResultObject::Hints hints,

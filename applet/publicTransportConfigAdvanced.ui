@@ -15,35 +15,6 @@
     <enum>QFormLayout::ExpandingFieldsGrow</enum>
    </property>
    <item row="0" column="0">
-    <widget class="QLabel" name="lblUpdateAutomatically">
-     <property name="text">
-      <string comment="@label">Update &amp;Automatically:</string>
-     </property>
-     <property name="alignment">
-      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-     </property>
-     <property name="buddy">
-      <cstring>updateAutomatically</cstring>
-     </property>
-    </widget>
-   </item>
-   <item row="0" column="1">
-    <widget class="QCheckBox" name="updateAutomatically">
-     <property name="sizePolicy">
-      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-       <horstretch>0</horstretch>
-       <verstretch>0</verstretch>
-      </sizepolicy>
-     </property>
-     <property name="text">
-      <string comment="@option:check">Enabled</string>
-     </property>
-     <property name="checked">
-      <bool>true</bool>
-     </property>
-    </widget>
-   </item>
-   <item row="1" column="0">
     <widget class="QLabel" name="lblDefaultView">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
@@ -59,7 +30,7 @@
      </property>
     </widget>
    </item>
-   <item row="1" column="1">
+   <item row="0" column="1">
     <widget class="QWidget" name="widget_2" native="true">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
@@ -103,7 +74,7 @@
      </layout>
     </widget>
    </item>
-   <item row="2" column="0">
+   <item row="1" column="0">
     <widget class="QLabel" name="lblMaximalNumberOfDepartures">
      <property name="text">
       <string comment="@label:spinbox">&amp;Maximum Departures:</string>
@@ -116,7 +87,7 @@
      </property>
     </widget>
    </item>
-   <item row="2" column="1">
+   <item row="1" column="1">
     <widget class="QSpinBox" name="maximalNumberOfDepartures">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
@@ -144,7 +115,7 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="0">
+   <item row="2" column="0">
     <widget class="QLabel" name="lblAdditionalData">
      <property name="text">
       <string comment="@label:spinbox">Additional Timetable Data:</string>
@@ -154,8 +125,25 @@
      </property>
     </widget>
    </item>
-   <item row="3" column="1">
+   <item row="2" column="1">
     <widget class="KComboBox" name="additionalData">
+     <property name="toolTip">
+      <string/>
+     </property>
+     <property name="whatsThis">
+      <string comment="@info:whatsthis">&lt;title&gt;Additional Timetable Data&lt;/title&gt;
+&lt;para&gt;
+Decide when additional timetable data should be requested. Additional timetable data can be eg. route data.
+
+&lt;list&gt;
+&lt;item&gt;&lt;interface&gt;Request all data directly&lt;/interface&gt; should only be used when needed, because it causes more network and CPU usage. It should be used when filters are enabled that depend on the additional data (departures will not get filtered out until the needed additional data was received). For example the &lt;interface&gt;Via&lt;/interface&gt; and &lt;interface&gt;Next Stop&lt;/interface&gt; filters depend on route data, which gets provided as additional data by some providers.&lt;/item&gt;
+
+&lt;item&gt;&lt;interface&gt;Request when needed&lt;/interface&gt; Additional timetable data gets requested when a departure gets unfolded for the first time to show available additional data. This is the default.&lt;/item&gt;
+
+&lt;item&gt;&lt;interface&gt;Never Request&lt;/interface&gt; No additional data gets requested.&lt;/item&gt;
+&lt;/list&gt;
+&lt;/para&gt;</string>
+     </property>
      <property name="currentIndex">
       <number>1</number>
      </property>
@@ -186,7 +174,6 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>updateAutomatically</tabstop>
   <tabstop>showDepartures</tabstop>
   <tabstop>showArrivals</tabstop>
   <tabstop>maximalNumberOfDepartures</tabstop>

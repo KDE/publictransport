@@ -40,10 +40,6 @@ RequestAdditionalDataJob::RequestAdditionalDataJob( const QString &destination,
     }
 }
 
-RequestAdditionalDataJob::~RequestAdditionalDataJob()
-{
-}
-
 void RequestAdditionalDataJob::start()
 {
     TimetableService *service = qobject_cast< TimetableService* >( parent() );
@@ -65,6 +61,38 @@ void RequestAdditionalDataJob::start()
     for ( int item = m_updateItem; item <= m_updateItemEnd; ++item ) {
         meta->method( slotIndex ).invoke( engine, Qt::QueuedConnection,
                                           Q_ARG(QString, destination()), Q_ARG(int, item) );
+    }
+}
+
+UpdateRequestJob::UpdateRequestJob( const QString &destination, const QString &operation,
+                                    const QMap< QString, QVariant > &parameters, QObject *parent )
+        : ServiceJob( destination, operation, parameters, parent )
+{
+}
+
+void UpdateRequestJob::start()
+{
+    TimetableService *service = qobject_cast< TimetableService* >( parent() );
+    Plasma::DataEngine *engine = qobject_cast< Plasma::DataEngine* >( service->parent() );
+    Q_ASSERT( engine );
+
+    // Get the QMetaObject of the engine
+    const QMetaObject *meta = engine->metaObject();
+
+    // Find the slot of the engine to start the request
+    const int slotIndex = meta->indexOfMethod( "requestUpdate(QString,QString*)" );
+    Q_ASSERT( slotIndex != -1 );
+
+    bool success;
+    QString errorMessage;
+    meta->method( slotIndex ).invoke( engine, Qt::DirectConnection,
+                                      Q_RETURN_ARG(bool, success),
+                                      Q_ARG(QString, destination()),
+                                      Q_ARG(QString*, &errorMessage) );
+    setResult( success );
+    if ( !success ) {
+        setError( TimetableService::UnknownError );
+        setErrorText( errorMessage );
     }
 }
 
@@ -99,6 +127,8 @@ Plasma::ServiceJob* TimetableService::createJob(
 {
     if ( operation == "requestAdditionalData" || operation == "requestAdditionalDataRange" ) {
         return new RequestAdditionalDataJob( m_name, operation, parameters, this );
+    } else if ( operation == "requestUpdate" ) {
+        return new UpdateRequestJob( m_name, operation, parameters, this );
     } else {
         kWarning() << "Operation" << operation << "not supported";
         return 0;

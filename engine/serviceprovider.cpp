@@ -219,9 +219,44 @@ Enums::ServiceProviderType ServiceProvider::type() const
     return m_data->type();
 }
 
-int ServiceProvider::minFetchWait() const
+int ServiceProvider::minFetchWait( UpdateFlags updateFlags ) const
 {
+    Q_UNUSED( updateFlags )
     return m_data->minFetchWait();
+}
+
+QDateTime ServiceProvider::nextUpdateTime( UpdateFlags updateFlags, const QDateTime &lastUpdate,
+                                           const QDateTime &nextDownloadTimeProposal,
+                                           const QVariantHash &data ) const
+{
+    if ( updateFlags.testFlag(UpdateWasRequestedManually) ) {
+        return lastUpdate.addSecs( minFetchWait(updateFlags) );
+    }
+
+    // If the requested time is constant, wait until next midnight
+    const QDateTime dateTime = QDateTime::currentDateTime();
+    QDateTime minForSufficientChanges = updateFlags.testFlag(SourceHasConstantTime)
+            ? QDateTime(dateTime.date().addDays(1)) : nextDownloadTimeProposal;
+
+    if ( isRealtimeDataAvailable(data) ) {
+        // Wait maximally 30 minutes until an update if realtime data is available,
+        // for more updates the timetable service must be used to request an update manually
+        return qBound( lastUpdate.addSecs(minFetchWait(updateFlags)), minForSufficientChanges,
+                       lastUpdate.addSecs(30 * 60) );
+    } else {
+        // No realtime data, no need to update existing timetable items,
+        // only update to have enough valid items for the data source.
+        // With constant time update only at midnight for dynamic date.
+        // With dynamic time (eg. the current time) update to have enough items available
+        // while old ones get removed as time passes by.
+        return qMax( lastUpdate.addSecs(minFetchWait()), minForSufficientChanges );
+    }
+}
+
+bool ServiceProvider::isRealtimeDataAvailable( const QVariantHash &data ) const
+{
+    return features().contains(Enums::ProvidesDelays) &&
+           data.contains("delayInfoAvailable") ? data["delayInfoAvailable"].toBool() : false;
 }
 
 QString ServiceProvider::country() const

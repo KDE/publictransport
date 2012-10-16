@@ -38,6 +38,8 @@ struct ArrivalRequest;
 struct JourneyRequest;
 struct AdditionalDataRequest;
 
+struct DataSource;
+struct TimetableDataSource;
 class ServiceProvider;
 class ServiceProviderData;
 class DepartureInfo;
@@ -99,12 +101,12 @@ public:
     ~PublicTransportEngine();
 
     /** @brief Contains data read from a data source name. */
-    struct SourceData {
+    struct SourceRequestData {
         /** @brief Reads the given data source @p name and fills member variables. */
-        SourceData( const QString &name );
+        SourceRequestData( const QString &name );
 
         /** @brief Deletes the request object if it was created. */
-        ~SourceData();
+        ~SourceRequestData();
 
         /** @brief Whether or not the source name is valid. */
         bool isValid() const;
@@ -136,20 +138,53 @@ public:
     virtual QStringList sources() const;
 
     /**
-     * @brief Minimum timeout in seconds to request new data.
+     * @brief Get the number of seconds until the next automatic update of @p sourceName.
      *
-     * Before the timeout is over, old stored data from previous requests is used.
+     * Timetable data sources update their data periodically, based on the needs of the data source
+     * (is realtime data available?, until when are departures already available?, etc.). To update
+     * a timetable data source before the automatic update, use requestUpdate().
+     * @param sourceName The name of the data source to query for the next automatic update time.
+     * @param errorMessage If not 0, this gets set to a message describing the error if -1
+     *   gets returned.
+     * @returns The number of seconds until the next automatic update of @p sourceName or -1 if
+     *   no data source with @p sourceName is available or is not a timetable data source.
+     * @see requestUpdate()
      **/
-    static const int MIN_UPDATE_TIMEOUT;
+    int secsUntilUpdate( const QString &sourceName, QString *errorMessage = 0 );
 
     /**
-     * @brief Maximum timeout in seconds to request new data, if delays are avaiable.
+     * @brief Get the minimum number of seconds until the next (manual) update of @p sourceName.
      *
-     * This timeout gets used instead of MIN_UPDATE_TIMEOUT, if delays are available for the
-     * used service provider.
-     * Before the timeout is over, old stored data from previous requests is used.
-     */
-    static const int MAX_UPDATE_TIMEOUT_DELAY;
+     * Timetable data sources can be updated before the next automatic update using requestUpdate().
+     * But a minimum number of seconds needs to have passed before another update request will
+     * be accepted.
+     * @param sourceName The name of the data source to query for the minimal next update time.
+     * @param errorMessage If not 0, this gets set to a message describing the error if -1
+     *   gets returned.
+     * @returns The minumal number of seconds until the next update request of @p sourceName
+     *   will be accepted or -1 if no data source with @p sourceName is available or is not a
+     *   timetable data source.
+     * @see requestUpdate()
+     **/
+    int minSecsUntilUpdate( const QString &sourceName, QString *errorMessage = 0 );
+
+    /**
+     * @brief Requests an update for @p sourceName.
+     *
+     * Can be used to update a timetable data source before the next calculated automatic update
+     * time. This allows for more updates in the same time, but not unlimited. The waiting time
+     * between two updates is lower when using requestUpdate(), compared to automatic updates.
+     * @note This is marked with Q_INVOKABLE so that it can be invoked using QMetaObject from the
+     *   timetable service for that source.
+     * @param sourceName The name of the data source to request an update for.
+     * @param errorMessage If not 0, this gets set to a message describing the error if @c false
+     *   gets returned.
+     * @returns @c True, if the update gets processed, @c false otherwise, eg. if not enough time
+     *   has passed since the last update.
+     * @see minSecsUntilUpdate()
+     * @see secsUntilUpdate()
+     **/
+    Q_INVOKABLE bool requestUpdate( const QString &sourceName, QString *errorMessage = 0 );
 
     /**
      * @brief The default time offset from now for the first departure/arrival/journey in results.
@@ -337,6 +372,8 @@ protected:
      **/
     bool updateSourceEvent( const QString &name );
 
+    bool requestOrUpdateSourceEvent( const QString &name );
+
     /**
      * @brief Updates the ServiceProviders data source.
      *
@@ -358,7 +395,7 @@ protected:
      *   "ServiceProvider de_db".
      * @return True, if the data source could be updated successfully. False, otherwise.
      **/
-    bool updateServiceProviderForCountrySource( const SourceData &sourceData );
+    bool updateServiceProviderForCountrySource( const SourceRequestData &sourceData );
 
     /**
      * @brief Updates the ErrornousServiceProviders data source.
@@ -392,15 +429,20 @@ protected:
      *
      * @return True, if the data source could be updated successfully. False, otherwise.
      **/
-    bool updateTimetableDataSource( const SourceData &data );
+    bool updateTimetableDataSource( const SourceRequestData &data );
 
     /**
      * @brief Wheather or not the data source with the given @p name is up to date.
      *
-     * @param name The name of the source to be checked.
+     * @param nonAmbiguousName The (non ambiguous) name of the source to be checked.
      * @return True, if the data source is up to date. False, otherwise.
+     * @see disambiguateSourceName()
      **/
-    bool isSourceUpToDate( const QString &name );
+    bool isSourceUpToDate( const QString &nonAmbiguousName,
+                           UpdateFlags updateFlags = DefaultUpdateFlags );
+
+    int getSecsUntilUpdate( const QString &sourceName, QString *errorMessage = 0,
+                            UpdateFlags updateFlags = DefaultUpdateFlags );
 
     /**
      * @brief Gets the service for the data source with the given @p name.
@@ -416,7 +458,15 @@ protected:
     bool testServiceProvider( const QString &providerId, QVariantHash *providerData,
                               QString *errorMessage );
 
+    bool request( const SourceRequestData &data );
+    inline bool request( const QString &sourceName ) {
+        return request( SourceRequestData(sourceName) );
+    };
+
 private:
+    QDateTime sourceUpdateTime( TimetableDataSource *dataSource,
+                                UpdateFlags updateFlags = DefaultUpdateFlags );
+
     /** Handler for departureListReceived() (@p isDepartureData true) and arrivalListReceived() */
     void timetableDataReceived( ServiceProvider *provider,
             const QUrl &requestUrl, const DepartureInfoList &items,
@@ -452,7 +502,17 @@ private:
     /** @brief Checks if the provider with the given ID is used by a connected source. */
     bool isProviderUsed( const QString &serviceProviderId );
 
-    QString stripDateAndTimeValues( const QString &sourceName );
+    /**
+     * @brief Remove all ambiguous parts from @p sourceName and make it lower case.
+     *
+     * TODO
+     *
+     * Ambiguous parts are date and time parameters. Timetable items should be shared between
+     * data sources for the same stop, also if their date and/or time values differ.
+     * Without removing these parameters eg. departure data sources with a little different time
+     * values will not share it's departures and download them twice (at least the overlapping ones).
+     **/
+    static QString disambiguateSourceName( const QString &sourceName );
 
     inline static uint hashForDeparture( const QVariantHash &departure ) {
         return hashForDeparture( departure[Enums::toString(Enums::DepartureDateTime)].toDateTime(),
@@ -496,37 +556,14 @@ private:
     static ServiceProvider *createProviderForData( const ServiceProviderData *data,
             QObject *parent = 0, const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
 
-    /** @brief Data for a data source. */
-    struct DataSourceData {
-        DataSourceData( const QString &dataSource = QString(),
-                        const QVariantHash &data = QVariantHash() )
-                : name(dataSource), data(data),
-                  updateTimer(0), updateAdditionalDataDelayTimer(0) {};
-        ~DataSourceData();
+    TimetableDataSource *dataSourceFromAdditionDataTimer( QTimer *timer ) const;
+    bool enoughDataAvailable( DataSource *dataSource, const SourceRequestData &sourceData ) const;
 
-        QString name; /**< The data source name with it's original capitalization. */
-        QVariantHash data; /**< Data stored for the data source. */
-
-        /** Already downloaded additional data,
-         * stored by a hash value for the associated timetable item. */
-        QHash<uint, TimetableData> additionalData;
-
-        /** The next time at which new downloads will have sufficient changes
-         * (enough timetable items in past or maybe changed delays, estimated). */
-        QDateTime nextDownloadTimeProposal;
-
-        QTimer *updateTimer; /**< Timer to update the data source periodically. */
-
-        /** Timer to delay updates to additional timetable data of timetable items. */
-        QTimer *updateAdditionalDataDelayTimer;
-    };
-
-    DataSourceData *dataSourceFromAdditionDataTimer( QTimer *timer ) const;
-
-    QHash< QString, ProviderPointer > m_providers; // List of already loaded service providers
-    QVariantHash m_erroneousProviders; // List of erroneous service providers as keys
+    QHash< QString, ProviderPointer > m_providers; // Already loaded service providers by ID
+    QVariantHash m_erroneousProviders; // List of erroneous service provider IDs as keys
                                        // and error messages as values
-    QHash< QString, DataSourceData* > m_dataSources; // List of timers to update data sources periodically
+    QHash< QString, DataSource* > m_dataSources; // Data objects for data sources, stored by
+                                                 // unambiguous data source name
     QFileSystemWatcher *m_fileSystemWatcher; // Watch the service provider directory
 
     QTimer *m_providerUpdateDelayTimer;

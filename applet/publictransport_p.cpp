@@ -42,6 +42,7 @@
 #include <QPainter>
 #include <QGraphicsScene>
 #include <QList>
+#include <qmath.h>
 
 ToPropertyTransition::ToPropertyTransition( QObject *sender, const char *signal, QState *source,
                                             QObject *propertyObject, const char *targetStateProperty )
@@ -62,10 +63,11 @@ PublicTransportAppletPrivate::PublicTransportAppletPrivate( PublicTransportApple
         : graphicsWidget(0), mainGraphicsWidget(0),
         oldItem(0), titleWidget(0), labelInfo(0), timetable(0), journeyTimetable(0),
         labelJourneysNotSupported(0), listStopSuggestions(0), overlay(0), model(0),
-        popupIcon(0), titleToggleAnimation(0), modelJourneys(0), originalStopIndex(-1),
-        filtersGroup(0), colorFiltersGroup(0), departureProcessor(0), departurePainter(0),
-        stateMachine(0), journeySearchTransition1(0), journeySearchTransition2(0),
-        journeySearchTransition3(0), marble(0), longitude(0), latitude(0), q_ptr( q )
+        popupIcon(0), titleToggleAnimation(0), runningUpdateRequests(0), updateTimer(0),
+        modelJourneys(0), originalStopIndex(-1), filtersGroup(0), colorFiltersGroup(0),
+        departureProcessor(0), departurePainter(0), stateMachine(0), journeySearchTransition1(0),
+        journeySearchTransition2(0), journeySearchTransition3(0), marble(0),
+        longitude(0), latitude(0), q_ptr( q )
 {
 }
 
@@ -140,8 +142,7 @@ void PublicTransportAppletPrivate::onSettingsChanged( const Settings &_settings,
             modelJourneys->setAlarmMinsBeforeDeparture( alarmMinsBeforeDeparture );
         }
 
-        labelInfo->setToolTip( courtesyToolTip() );
-        labelInfo->setText( infoText() );
+        updateInfoText();
 
         settings.adjustColorGroupSettingsCount();
         clearDepartures();
@@ -484,8 +485,8 @@ void PublicTransportAppletPrivate::onOldItemAnimationFinished()
 
 void PublicTransportAppletPrivate::updateInfoText()
 {
-    labelInfo->setToolTip( courtesyToolTip() );
     labelInfo->setText( infoText() );
+    labelInfo->setToolTip( infoTooltip() );
 }
 
 void PublicTransportAppletPrivate::applyTheme()
@@ -868,8 +869,6 @@ void PublicTransportAppletPrivate::reconnectSource()
     emit q->requestedNewDepartureData();
 
     foreach( const QString & currentSource, sources ) {
-        kDebug() << "Connect data source" << currentSource
-                 << "Autoupdate" << settings.autoUpdate();
         currentSources << currentSource;
         // TODO Remove "auto update" setting, the data engine pushes new data when available
         // and now additionaly updates timetable data periodically
@@ -1064,6 +1063,39 @@ QString PublicTransportAppletPrivate::infoText()
         // Do not show "last update" text, but credits info, without "data by:" label
         return "<nobr>" + dataByLinkHtml + "</nobr>";
     }
+}
+
+QString PublicTransportAppletPrivate::infoTooltip()
+{
+    QString tooltip = courtesyToolTip();
+    if ( !nextAutomaticSourceUpdate.isValid() ) {
+        return tooltip;
+    }
+
+    // Add information about the next automatic update time (with minute precision)
+    qint64 msecs = QDateTime::currentDateTime().msecsTo( nextAutomaticSourceUpdate );
+    if ( msecs <= 0 ) {
+        return tooltip;
+    }
+    if ( !tooltip.isEmpty() ) {
+        tooltip += ", ";
+    }
+    tooltip += i18nc("@info:tooltip %1 is a duration string with minute precision, "
+                     "as returned by KLocale::prettyFormatDuration()",
+                     "Next automatic update in %1",
+                     KGlobal::locale()->prettyFormatDuration(qCeil(msecs / 60000.0) * 60000));
+
+    // Add information about the minimal next (malnual) update time (with second precision)
+    if ( minManualSourceUpdateTime.isValid() ) {
+        qint64 minMsecs = QDateTime::currentDateTime().msecsTo( minManualSourceUpdateTime );
+        if ( minMsecs > 0 ) {
+            tooltip += ", " + i18nc("@info:tooltip %1 is a duration string with second precision, "
+                                    "as returned by KLocale::prettyFormatDuration()",
+                                    "updates blocked for %1",
+                    KGlobal::locale()->prettyFormatDuration(qCeil(minMsecs / 1000.0) * 1000));
+        }
+    }
+    return tooltip;
 }
 
 Plasma::Animation *PublicTransportAppletPrivate::fadeOutOldAppearance()

@@ -198,13 +198,11 @@ public:
         NoSettingsFlags         = 0x0000,
 
         ColorizeDepartureGroups = 0x0001,
-        UpdateAutomatically     = 0x0002,
         DrawShadows             = 0x0004,
         HideTargetColumn        = 0x0008,
         UseThemeFont            = 0x0010,
 
-        DefaultSettingsFlags    = ColorizeDepartureGroups | UpdateAutomatically |
-                                  DrawShadows | UseThemeFont
+        DefaultSettingsFlags    = ColorizeDepartureGroups | DrawShadows | UseThemeFont
     };
     Q_DECLARE_FLAGS( SettingsFlags, SettingsFlag );
 
@@ -432,9 +430,6 @@ public:
     /** @brief Whether or not departures should be colorized by groups. */
     inline bool colorize() const { return m_settingsFlags.testFlag(ColorizeDepartureGroups); };
 
-    /** @brief Whether or not timetable data should be updated automatically. */
-    inline bool autoUpdate() const { return m_settingsFlags.testFlag(UpdateAutomatically); };
-
     /** @brief Whether or not the departure time should be shown in the timetable. */
     inline bool showDepartureTime() const {
             return m_departureTimeFlags.testFlag(ShowDepartureTime); };
@@ -506,12 +501,6 @@ public:
     void setColorize( bool colorize ) {
         if ( m_settingsFlags.testFlag(ColorizeDepartureGroups) != colorize )
             m_settingsFlags ^= ColorizeDepartureGroups;
-    };
-
-    /** @brief Whether or not timetable data should be updated automatically. */
-    void setAutoUpdate( bool autoUpdate ) {
-        if ( m_settingsFlags.testFlag(UpdateAutomatically) != autoUpdate )
-            m_settingsFlags ^= UpdateAutomatically;
     };
 
     void setShowDepartureTime( bool showDepartureTime ) {

@@ -431,6 +431,9 @@ protected slots:
      * @param departures A list of departures that were read by the worker thread.
      * @param requestUrl The url that was used to download the departure data.
      * @param lastUpdate The date and time of the last update of the data.
+     * @param nextAutomaticUpdate The date and time of the next automatic update of the data source.
+     * @param minManualUpdateTime The minimal date and time of the next (manual) update of the
+     *   data source. Earlier update requests will be rejected.
      * @param departuresToGo The number of departures to still be processed. If this isn't 0
      *   this slot gets called again after the next batch of departures has been processed.
      *
@@ -441,7 +444,8 @@ protected slots:
     void departuresProcessed( const QString &sourceName,
                               const QList< DepartureInfo > &departures,
                               const QUrl &requestUrl, const QDateTime &lastUpdate,
-                              int departuresToGo );
+                              const QDateTime &nextAutomaticUpdate,
+                              const QDateTime &minManualUpdateTime, int departuresToGo );
 
     /**
      * @brief The worker thread has finished filtering departures.
@@ -558,6 +562,9 @@ protected slots:
 
     void additionalDataResult( KJob *job );
 
+    void updateRequestFinished( KJob *job );
+    void enableUpdateAction();
+
 protected:
     /**
      * @brief Create the configuration dialog contents.
@@ -583,6 +590,8 @@ protected:
 
     /** @brief Create all used actions. */
     void setupActions();
+
+    void disableUpdateAction();
 
     /**
      * @brief Get an action with string and icon updated to the current settings.

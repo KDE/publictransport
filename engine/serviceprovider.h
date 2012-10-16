@@ -132,8 +132,13 @@ public:
     /** @brief Whether or not the source XML file was modified since the cache was last updated. */
     bool isSourceFileModified( const QSharedPointer<KConfig> &cache ) const;
 
-    /** @brief Get the minimum seconds to wait between two data-fetches from the service provider. */
-    virtual int minFetchWait() const;
+    virtual int minFetchWait( UpdateFlags updateFlags = DefaultUpdateFlags ) const;
+
+    /** @brief Get the date and time when new data should be fetched from the service provider. */
+    virtual QDateTime nextUpdateTime( UpdateFlags updateFlags = DefaultUpdateFlags,
+                                      const QDateTime &lastUpdate = QDateTime(),
+                                      const QDateTime &nextDownloadTimeProposal = QDateTime(),
+                                      const QVariantHash &data = QVariantHash() ) const;
 
     /**
      * @brief Get a list of features that this provider supports.
@@ -373,6 +378,15 @@ protected:
         KUrl url;
         AbstractRequest *request;
     };
+
+    /**
+     * @brief Whether or not realtime data is available in the @p data of a timetable data source.
+     *
+     * The default implementation checks for the provider feature @c Enums::ProvidesDelays and
+     * checks @p data for a "delayInfoAvailable" key and returns it's boolean value if it exists,
+     * otherwise it returns @c false.
+     */
+    virtual bool isRealtimeDataAvailable( const QVariantHash &data ) const;
 
 private:
     static QString gethex( ushort decimal );

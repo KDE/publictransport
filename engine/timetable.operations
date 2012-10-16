@@ -2,6 +2,7 @@
 <!DOCTYPE kcfg SYSTEM
     "http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
 <kcfg>
+    <group name="requestUpdate"></group>
     <group name="requestAdditionalData">
         <entry name="itemnumber" type="int">
             <label>The number in the data source, under which the item to update is stored.

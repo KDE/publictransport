@@ -112,6 +112,8 @@ public:
     /** @brief Gets a list of features that this provider supports. */
     virtual QList<Enums::ProviderFeature> features() const;
 
+    virtual int minFetchWait( UpdateFlags updateFlags = DefaultUpdateFlags ) const;
+
 #ifdef BUILD_GTFS_REALTIME
     /** @brief Returns true, if there is a GTFS-realtime source available. */
     bool isRealtimeDataAvailable() const;
@@ -190,6 +192,14 @@ protected:
     bool checkForDiskIoErrorInDatabase( const QSqlError &error, const AbstractRequest *request );
 
     StopInfoList stopsFromQuery( QSqlQuery *query, const StopSuggestionRequest *request = 0 ) const;
+
+    /**
+     * @brief Whether or not realtime data is available in the @p data of a timetable data source.
+     */
+    virtual bool isRealtimeDataAvailable( const QVariantHash &data ) const {
+        Q_UNUSED( data );
+        return isRealtimeDataAvailable();
+    };
 
 private:
     enum State {

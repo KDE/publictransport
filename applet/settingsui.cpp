@@ -196,7 +196,7 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
     connect( m_uiAdvanced.maximalNumberOfDepartures, SIGNAL(valueChanged(int)), this, SLOT(changed()) );
     connect( m_uiAdvanced.showArrivals, SIGNAL(toggled(bool)), this, SLOT(changed()) );
     connect( m_uiAdvanced.showDepartures, SIGNAL(toggled(bool)), this, SLOT(changed()) );
-    connect( m_uiAdvanced.updateAutomatically, SIGNAL(stateChanged(int)), this, SLOT(changed()) );
+    connect( m_uiAdvanced.additionalData, SIGNAL(currentIndexChanged(int)), this, SLOT(changed()) );
     connect( m_uiAlarms.affectedStops, SIGNAL(checkedItemsChanged()), this, SLOT(changed()) );
     connect( m_uiAlarms.alarmFilter, SIGNAL(changed()), this, SLOT(changed()) );
     connect( m_uiAlarms.alarmType, SIGNAL(currentIndexChanged(int)), this, SLOT(changed()) );
@@ -600,7 +600,7 @@ void SettingsUiManager::updateStopNamesInWidgets()
 
     // Get a string for each stop setting
     QStringList stopLabels;
-    foreach( const StopSettings & stopSettings, stopSettingsList ) {
+    foreach( const StopSettings &stopSettings, stopSettingsList ) {
         QString text = stopSettings.stops().join( ", " );
         if( !stopSettings.get<QString>( CitySetting ).isEmpty() ) {
             text += " in " + stopSettings.get<QString>( CitySetting );
@@ -674,7 +674,6 @@ void SettingsUiManager::setValuesOfAdvancedConfig( const Settings &settings )
 {
     m_uiAdvanced.showDepartures->setChecked( settings.departureArrivalListType() == DepartureList );
     m_uiAdvanced.showArrivals->setChecked( settings.departureArrivalListType() == ArrivalList );
-    m_uiAdvanced.updateAutomatically->setChecked( settings.autoUpdate() );
     m_uiAdvanced.maximalNumberOfDepartures->setValue( settings.maximalNumberOfDepartures() );
     switch ( settings.additionalDataRequestType() ) {
     case Settings::NeverRequestAdditionalData:
@@ -884,9 +883,6 @@ Settings SettingsUiManager::settings()
     Settings::SettingsFlags flags = Settings::NoSettingsFlags;
     if ( m_hideTargetColumn ) {
         flags |= Settings::HideTargetColumn;
-    }
-    if ( m_uiAdvanced.updateAutomatically->isChecked() ) {
-        flags |= Settings::UpdateAutomatically;
     }
     if ( m_uiAppearance.shadow->isChecked() ) {
         flags |= Settings::DrawShadows;

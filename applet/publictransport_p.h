@@ -197,11 +197,14 @@ public: // Other functions
     /** @brief Gets the text to be displayed as tooltip for the info label. */
     QString courtesyToolTip() const;
 
-    /** @brief Gets the text to be displayed on the bottom of the timetable.
-     *
+    /**
+     * @brief Gets the text to be displayed on the bottom of the timetable.
      * Contains courtesy information and is HTML formatted.
      **/
     QString infoText();
+
+    /** @brief Gets the text to be used as tooltip for the bottom label. */
+    QString infoTooltip();
 
     /** @brief Create a new pixmap widget showing the old appearance of the applet and fades it out. */
     Plasma::Animation* fadeOutOldAppearance();
@@ -232,8 +235,8 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         departureProcessor = new DepartureProcessor( q );
         q->connect( departureProcessor, SIGNAL(beginDepartureProcessing(QString)),
                     q, SLOT(beginDepartureProcessing(QString)) );
-        q->connect( departureProcessor, SIGNAL(departuresProcessed(QString,QList<DepartureInfo>,QUrl,QDateTime,int)),
-                    q, SLOT(departuresProcessed(QString,QList<DepartureInfo>,QUrl,QDateTime,int)) );
+        q->connect( departureProcessor, SIGNAL(departuresProcessed(QString,QList<DepartureInfo>,QUrl,QDateTime,QDateTime,QDateTime,int)),
+                    q, SLOT(departuresProcessed(QString,QList<DepartureInfo>,QUrl,QDateTime,QDateTime,QDateTime,int)) );
         q->connect( departureProcessor, SIGNAL(beginJourneyProcessing(QString)),
                     q, SLOT(beginJourneyProcessing(QString)) );
         q->connect( departureProcessor, SIGNAL(journeysProcessed(QString,QList<JourneyInfo>,QUrl,QDateTime)),
@@ -575,6 +578,9 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         _labelInfo->setWordWrap( true );
         _labelInfo->setText( infoText() );
 
+        // Watch for tooltip events and update the tooltip before showing it
+        _labelInfo->installEventFilter( q );
+
         // Create timetable item for departures/arrivals
         timetable = new TimetableWidget( settings.drawShadows()
                 ? PublicTransportWidget::DrawShadowsOrHalos : PublicTransportWidget::NoOption,
@@ -645,6 +651,8 @@ protected:
     QParallelAnimationGroup *titleToggleAnimation; // Hiding/Showing the title on resizing
     QHash< int, QString > stopIndexToSourceName; // A hash from the stop index to the source name.
     QStringList currentSources; // Current source names at the publictransport data engine.
+    int runningUpdateRequests; // The number of currently running update requests.
+    QTimer *updateTimer; // A timer used to enable the update action again
 
     JourneyModel *modelJourneys; // The model for journeys from or to the "home stop".
     QList<JourneyInfo> journeyInfos; // List of current journeys.
@@ -655,6 +663,8 @@ protected:
     QDateTime lastJourneyDateTime; // The last used date and time for journey search.
 
     QDateTime lastSourceUpdate; // The last update of the data source inside the data engine.
+    QDateTime nextAutomaticSourceUpdate; // The next automatic update of the data source.
+    QDateTime minManualSourceUpdateTime; // The minimal next (manual) update time.
     QUrl urlDeparturesArrivals, urlJourneys; // Urls to set as associated application urls,
             // when switching from/to journey mode.
 

@@ -244,7 +244,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     AlarmSettingsList alarms = m_alarms;
 
     FirstDepartureConfigMode firstDepartureConfigMode = m_firstDepartureConfigMode;
-    const QTime &timeOfFirstDepartureCustom = m_timeOfFirstDepartureCustom;
+    const QTime timeOfFirstDepartureCustom = m_timeOfFirstDepartureCustom;
     int timeOffsetOfFirstDeparture = m_timeOffsetOfFirstDeparture;
     const DepartureInfo::DepartureFlags globalFlags = m_isArrival
             ? DepartureInfo::IsArrival : DepartureInfo::NoDepartureFlags;
@@ -252,11 +252,11 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
 
     emit beginDepartureProcessing( sourceName );
 
-    QUrl url;
-    QDateTime updated;
     QList< DepartureInfo > departureInfos/*, alarmDepartures*/;
-    url = data["requestUrl"].toUrl();
-    updated = data["updated"].toDateTime();
+    const QUrl url = data["requestUrl"].toUrl();
+    const QDateTime updated = data["updated"].toDateTime();
+    const QDateTime nextAutomaticUpdate = data["nextAutomaticUpdate"].toDateTime();
+    const QDateTime minManualUpdateTime = data["minManualUpdateTime"].toDateTime();
     QVariantList departuresData = data.contains("departures") ? data["departures"].toList()
                                                               : data["arrivals"].toList();
 
@@ -322,6 +322,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
                 break;
             } else {
                 emit departuresProcessed( sourceName, departureInfos, url, updated,
+                                          nextAutomaticUpdate, minManualUpdateTime,
                                           departuresData.count() - i - 1 );
                 departureInfos.clear();
 //                 alarmDepartures.clear();
@@ -338,7 +339,8 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     // Emit remaining departures
     m_mutex->lock();
     if ( !m_abortCurrentJob && !departureInfos.isEmpty() ) {
-        emit departuresProcessed( sourceName, departureInfos, url, updated, 0 );
+        emit departuresProcessed( sourceName, departureInfos, url, updated,
+                                  nextAutomaticUpdate, minManualUpdateTime, 0 );
     }
     m_mutex->unlock();
 }

@@ -480,6 +480,16 @@ enum WaitForType {
     WaitForScriptFinish /**< Wait until script execution is finished. */
 };
 
+/** @brief Flags for data source updates. */
+enum UpdateFlag {
+    NoUpdateFlags = 0x00, /**< No update flags. */
+    SourceHasConstantTime = 0x01, /**< The data source to update contains timetable items
+            * for a constant time. */
+    UpdateWasRequestedManually = 0x02, /**< The update was requested manually. */
+    DefaultUpdateFlags = NoUpdateFlags /**< Default update flags. */
+};
+Q_DECLARE_FLAGS( UpdateFlags, UpdateFlag );
+
 /* Functions for nicer debug output */
 inline QDebug &operator <<( QDebug debug, ParseDocumentMode parseDocumentMode )
 {

@@ -43,6 +43,7 @@ endif ( NOT BUILD_PROVIDER_TYPE_SCRIPT AND NOT BUILD_PROVIDER_TYPE_GTFS )
 qt4_wrap_cpp( publictransport_engine_MOC_SRCS enums.h )
 set( publictransport_engine_SRCS
     publictransportdataengine.cpp
+    datasource.cpp
     timetableservice.cpp
     global.cpp
     departureinfo.cpp
@@ -69,6 +70,8 @@ if ( BUILD_PROVIDER_TYPE_GTFS )
 
     # Enable/disable GTFS-realtime support with ProtocolBuffers
     set( BUILD_GTFS_REALTIME PROTOBUF_FOUND )
+else ( BUILD_PROVIDER_TYPE_GTFS )
+    set( BUILD_GTFS_REALTIME FALSE )
 endif ( BUILD_PROVIDER_TYPE_GTFS )
 
 # Create config.h from config.h.in, ie. create #define's for each enabled variable from above

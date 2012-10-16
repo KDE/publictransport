@@ -133,7 +133,6 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
     settings.setDepartureArrivalListType( static_cast<DepartureArrivalListType>(
             cg.readEntry("departureArrivalListType", static_cast<int>(DepartureList))) );
 
-    settings.setAutoUpdate( cg.readEntry("autoUpdate", true) );
     settings.setDrawShadows( cg.readEntry("drawShadows", true) );
     settings.setHideTargetColumn( cg.readEntry("hideColumnTarget", false) );
     settings.setColorize( cg.readEntry("colorize", true) );
@@ -307,10 +306,6 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
     }
 
     if ( settings.settingsFlags() != oldSettings.settingsFlags() ) {
-        if ( settings.autoUpdate() != oldSettings.autoUpdate() ) {
-            cg.writeEntry( "autoUpdate", settings.autoUpdate() );
-            changed |= IsChanged;
-        }
         if ( settings.drawShadows() != oldSettings.drawShadows() ) {
             cg.writeEntry( "drawShadows", settings.drawShadows() );
             changed |= IsChanged | ChangedShadows;
