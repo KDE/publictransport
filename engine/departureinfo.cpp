@@ -277,12 +277,19 @@ StopInfo::StopInfo( const QHash< Enums::TimetableInformation, QVariant >& data, 
     m_isValid = contains( Enums::StopName );
 }
 
-StopInfo::StopInfo( const QString& name, const QString& id, int weight, const QString& city,
-                    const QString& countryCode,  QObject *parent  ) : PublicTransportInfo(parent)
+StopInfo::StopInfo( const QString &name, const QString& id, int weight,
+                    qreal longitude, qreal latitude, const QString &city,
+                    const QString &countryCode, QObject *parent ) : PublicTransportInfo(parent)
 {
     insert( Enums::StopName, name );
     if ( !id.isNull() ) {
         insert( Enums::StopID, id );
+    }
+    if ( longitude != 0.0 ) {
+        insert( Enums::StopLongitude, longitude );
+    }
+    if ( latitude != 0.0 ) {
+        insert( Enums::StopLatitude, latitude );
     }
     if ( !city.isNull() ) {
         insert( Enums::StopCity, city );

@@ -874,49 +874,86 @@ void ServiceProviderGtfs::requestStopSuggestions( const StopSuggestionRequest &r
         kDebug() << query.executedQuery();
         return;
     }
+    emit stopListReceived( this, QUrl(), stopsFromQuery(&query, &request), request );
+}
 
-    QSqlRecord record = query.record();
+void ServiceProviderGtfs::requestStopSuggestionsFromGeoPosition(
+        const StopSuggestionFromGeoPositionRequest &request )
+{
+    if ( !checkState(&request) ) {
+        return;
+    }
+
+    QSqlQuery query( QSqlDatabase::database(m_data->id()) );
+    query.setForwardOnly( true );
+    kDebug() << "Get stops near:" << request.distance << "meters ==" << (request.distance * 0.009 / 2);
+    if ( !query.prepare(QString("SELECT * FROM stops "
+                                "WHERE stop_lon between (%2-%4) and (%2+%4) "
+                                "AND stop_lat between (%3-%4) and (%3+%4) LIMIT %1")
+                        .arg(STOP_SUGGESTION_LIMIT).arg(request.longitude).arg(request.latitude)
+                        .arg(request.distance * 0.000009 / 2)) // Calculate degree from meters = 360/40,070,000
+         || !query.exec() )
+    {
+        // Check of the error is a "disk I/O error", ie. the database file may have been deleted
+        checkForDiskIoErrorInDatabase( query.lastError(), &request );
+        kDebug() << query.lastError();
+        kDebug() << query.executedQuery();
+        return;
+    }
+    emit stopListReceived( this, QUrl(), stopsFromQuery(&query, &request), request );
+}
+
+StopInfoList ServiceProviderGtfs::stopsFromQuery( QSqlQuery *query,
+                                                  const StopSuggestionRequest *request ) const {
+    QSqlRecord record = query->record();
     const int stopIdColumn = record.indexOf( "stop_id" );
     const int stopNameColumn = record.indexOf( "stop_name" );
-//     int stopLatitudeColumn = record.indexOf( "stop_lat" ); TODO
-//     int stopLongitudeColumn = record.indexOf( "stop_lon" );
+    const int stopLongitudeColumn = record.indexOf( "stop_lon" );
+    const int stopLatitudeColumn = record.indexOf( "stop_lat" );
 
     StopInfoList stops;
-    while ( query.next() ) {
-        const QString stopName = query.value(stopNameColumn).toString();
+    while ( query->next() ) {
+        const QString stopName = query->value(stopNameColumn).toString();
+        const QString id = query->value(stopIdColumn).toString();
+        const qreal longitude = query->value(stopLongitudeColumn).toReal();
+        const qreal latitude = query->value(stopLatitudeColumn).toReal();
+        int weight = -1;
 
-        // Compute a weight value for the found stop name.
-        // The less different the found stop name is compared to the search string, the higher
-        // it's weight gets. If the found name equals the search string, the weight becomes 100.
-        // Use 84 as maximal starting weight value (if stopName doesn't equal the search string),
-        // because maximally 15 bonus points are added which makes 99, less than total equality 100.
-        int weight = stopName == request.stop ? 100
-                : 84 - qMin( 84, qAbs(stopName.length() - request.stop.length()) );
+        if ( !dynamic_cast<const StopSuggestionFromGeoPositionRequest*>(request) ) {
+            // Compute a weight value for the found stop name.
+            // The less different the found stop name is compared to the search string, the higher
+            // it's weight gets. If the found name equals the search string, the weight becomes 100.
+            // Use 84 as maximal starting weight value (if stopName doesn't equal the search string),
+            // because maximally 15 bonus points are added which makes 99, less than total equality 100.
+            weight = stopName == request->stop ? 100
+                    : 84 - qMin( 84, qAbs(stopName.length() - request->stop.length()) );
 
-        if ( weight < 100 && stopName.startsWith(request.stop) ) {
-            // 15 weight points bonus if the found stop name starts with the search string
-            weight = qMin( 100, weight + 15 );
-        }
-        if ( weight < 100 ) {
-            // Test if the search string is the start of a new word in stopName
-            // Start at 2, because startsWith is already tested above and at least a space must
-            // follow to start a new word
-            int pos = stopName.indexOf( request.stop, 2, Qt::CaseInsensitive );
+            if ( weight < 100 && stopName.startsWith(request->stop) ) {
+                // 15 weight points bonus if the found stop name starts with the search string
+                weight = qMin( 100, weight + 15 );
+            }
+            if ( weight < 100 ) {
+                // Test if the search string is the start of a new word in stopName
+                // Start at 2, because startsWith is already tested above and at least a space must
+                // follow to start a new word
+                int pos = stopName.indexOf( request->stop, 2, Qt::CaseInsensitive );
 
-            if ( pos != -1 && stopName[pos - 1].isSpace() ) {
-                // 10 weight points bonus if a word in the found stop name
-                // starts with the search string
-                weight = qMin( 100, weight + 10 );
+                if ( pos != -1 && stopName[pos - 1].isSpace() ) {
+                    // 10 weight points bonus if a word in the found stop name
+                    // starts with the search string
+                    weight = qMin( 100, weight + 10 );
+                }
             }
         }
-        stops << StopInfoPtr( new StopInfo(stopName, query.value(stopIdColumn).toString(),
-                                           weight, request.city) );
+
+        stops << StopInfoPtr( new StopInfo(stopName, id, weight,
+                                           longitude, latitude, request->city) );
     }
 
     if ( stops.isEmpty() ) {
-        kDebug() << "No stop names found";
+        kDebug() << "No stops found";
     }
-    emit stopListReceived( this, QUrl(), stops, request );
+    return stops;
 }
 
 bool ServiceProviderGtfs::checkForDiskIoErrorInDatabase( const QSqlError &error,

@@ -163,6 +163,9 @@ protected:
      **/
     virtual void requestStopSuggestions( const StopSuggestionRequest &request );
 
+    virtual void requestStopSuggestionsFromGeoPosition(
+            const StopSuggestionFromGeoPositionRequest &request );
+
     /** @brief Run script provider specific tests. */
     virtual bool runTests( QString *errorMessage = 0 ) const;
 
@@ -185,6 +188,8 @@ protected:
 
     bool checkState( const AbstractRequest *request );
     bool checkForDiskIoErrorInDatabase( const QSqlError &error, const AbstractRequest *request );
+
+    StopInfoList stopsFromQuery( QSqlQuery *query, const StopSuggestionRequest *request = 0 ) const;
 
 private:
     enum State {

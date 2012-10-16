@@ -187,8 +187,8 @@ public:
      * @param countryCode The code of the country in which the stop is, if available.
      */
     StopInfo( const QString &name, const QString &id = QString(), int weight = -1,
-              const QString &city = QString(), const QString &countryCode = QString(),
-              QObject *parent = 0 );
+              qreal longitude = 0.0, qreal latitude = 0.0, const QString &city = QString(),
+              const QString &countryCode = QString(), QObject *parent = 0 );
 };
 
 typedef DepartureInfo ArrivalInfo;
