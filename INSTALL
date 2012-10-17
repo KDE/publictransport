@@ -1,19 +1,39 @@
 Public Transport
 ----------------
 
-You need KDE 4.6
+You need at least KDE 4.6 (not tested)
+Tested with KDE 4.9, 4.8
+
+-- Needed packages --
+
+    (Package names are from openSuse, may differ on your system, may not be complete)
+    - kdebase4-runtime-devel
+    - kdebase4-workspace-devel
+    - libqt4-devel
+    - zlib-devel
+    - cmake
+    - gcc
+    - marble-devel (Marble development files, always needed for FindMarble.cmake)
+
+
+-- Optional packages --
+
+    (Package names are from openSuse, may differ on your system)
+    - libmarblewidget (Marble widget, needed for stop maps)
+    - libprotoc, libprotobuf, protobuf-devel (Protocol Buffers, needed for GTFS-realtime)
+
 
 -- Build instructions --
 
 (you are in the main directory, ie. where this INSTALL file is)
-> mkdir build
-> cd build
-> cmake -DCMAKE_INSTALL_PREFIX=`kde4-config --prefix` ..
-> make
-> make install
-
-You might need to run kbuildsycoca4
-in order to get the .desktop file recognized.
+    > mkdir build
+    > cd build
+    > cmake -DCMAKE_INSTALL_PREFIX=`kde4-config --prefix` ..
+(note the '..' at the end!)
+    > make
+    > make install
+(you might need to run kbuildsycoca4 in order to get the .desktop file recognized)
+    > kbuildsycoca4
 
 
 -- Options for CMake --
@@ -29,6 +49,7 @@ Note: Add "-D" before the option name to the command line, like above.
     INSTALL_ENGINE_OPENSTREETMAP (default: ON)
             Only useful if you have GPS hardware.
             It can then be used to get stops near your current position
+            DEPRECATED: Replaced by new stop from geo position requests
     INSTALL_APPLET (default: ON)
             A plasma applet showing a departure/arrival board or journeys.
             Departures can be filtered and alarms can be set.
@@ -51,9 +72,6 @@ Note: Add "-D" before the option name to the command line, like above.
             Enable support scripted provider plugins. Needs QtScript.
     BUILD_PROVIDER_TYPE_GTFS (default: ON)
             Enalbe support GTFS provider plugins. Needs QtSql.
-    BUILD_GTFS_REALTIME (default: ON)
-            Enable support for GTFS-realtime (if support for GTFS provider plugins is also enbaled).
-            For GTFS-realtime, Protocol Buffers are needed (protoc, protobuf).
     BUILD_TESTS (default: OFF)
             Turn this option on to build unit tests.
 
