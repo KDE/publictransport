@@ -193,7 +193,7 @@ public slots:
 
 protected slots:
     /** @brief The geometry of the applet has changed. */
-    void geometryChanged();
+    void appletResized();
 
 //     /** @brief Settings have changed. */
 //     void configChanged();

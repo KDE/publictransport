@@ -550,9 +550,10 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         graphicsWidget = new QGraphicsWidget( q );
         graphicsWidget->setMinimumSize( 150, 150 ); // TODO allow smaller sizes, if zoom factor is small
         graphicsWidget->setPreferredSize( 400, 300 );
+        q->connect( graphicsWidget, SIGNAL(geometryChanged()), q, SLOT(appletResized()) );
 
         // Create a child graphics widget, eg. to apply a blur effect to it
-        // but not to an overlay widget (which then gets a child of m_graphicsWidget).
+        // but not to an overlay widget (which then gets a child of graphicsWidget).
         mainGraphicsWidget = new QGraphicsWidget( graphicsWidget );
         mainGraphicsWidget->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
         QGraphicsLinearLayout *mainLayout = new QGraphicsLinearLayout( Qt::Vertical );

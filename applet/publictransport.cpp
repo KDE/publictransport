@@ -102,8 +102,6 @@ void PublicTransportApplet::init()
         setPopupIcon( "public-transport-stop" );
     }
 
-    connect( this, SIGNAL(geometryChanged()), this, SLOT(geometryChanged()) );
-//     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
     connect( Plasma::Theme::defaultTheme(), SIGNAL(themeChanged()),
              this, SLOT(themeChanged()) );
     emit settingsChanged();
@@ -705,7 +703,7 @@ void PublicTransportApplet::dataUpdated( const QString& sourceName,
     }
 }
 
-void PublicTransportApplet::geometryChanged()
+void PublicTransportApplet::appletResized()
 {
     Q_D( PublicTransportApplet );
     d->onResized();
