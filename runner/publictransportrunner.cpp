@@ -26,11 +26,13 @@
 #include <QWaitCondition>
 #include <KToolInvocation>
 #include <QTimer>
+#include <QSemaphore>
 
 using namespace PublicTransport;
 
 PublicTransportRunner::PublicTransportRunner( QObject *parent, const QVariantList& args )
-        : Plasma::AbstractRunner( parent, args ), m_helper( new PublicTransportRunnerHelper( this ) )
+        : Plasma::AbstractRunner(parent, args),
+          m_helper(new PublicTransportRunnerHelper(this)), m_semaphore(new QSemaphore(1))
 {
     Q_UNUSED( args );
     setObjectName( QLatin1String( "PublicTransportRunner" ) );
@@ -49,6 +51,7 @@ PublicTransportRunner::PublicTransportRunner( QObject *parent, const QVariantLis
 PublicTransportRunner::~PublicTransportRunner()
 {
     delete m_helper;
+    delete m_semaphore;
 }
 
 void PublicTransportRunner::init()
@@ -107,6 +110,9 @@ void PublicTransportRunner::reloadConfiguration()
 
 void PublicTransportRunner::match( Plasma::RunnerContext &context )
 {
+    // Limit matches running in parallel
+    m_semaphore->acquire();
+
     // Used aseigo's change in the places runner to make it work with KIO's non-thread-safety
     Plasma::DataEngine *engine = dataEngine( "publictransport" );
     if ( QThread::currentThread() == QCoreApplication::instance()->thread() ) {
@@ -115,15 +121,22 @@ void PublicTransportRunner::match( Plasma::RunnerContext &context )
     } else {
         // from the non-gui thread
         emit doMatch( this, engine, &context );
+
+        // Wait for the matching to finish (the RunnerContext object needs to stay valid)
+        QEventLoop loop;
+        connect( m_helper, SIGNAL(matchFinished(FinishType)), &loop, SLOT(quit()) );
+        loop.exec();
     }
+
+    m_semaphore->release();
 }
 
 void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
         Plasma::DataEngine *engine, Plasma::RunnerContext* c )
 {
-    Plasma::RunnerContext &context = *c;
-    if ( !context.isValid() ) {
-        kDebug() << "context invalid";
+    QPointer< Plasma::RunnerContext > context = c;
+    if ( !context || !context->isValid() ) {
+        emit matchFinished( Aborted );
         return;
     }
 
@@ -163,8 +176,9 @@ void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
 
     PublicTransportRunner::Keywords keywords = PublicTransportRunner::NoKeyword;
 
-    QString term = context.query();
+    QString term = context->query();
     if ( term.length() < 3 ) {
+        emit matchFinished( FinishedWithErrors );
         return;
     }
 
@@ -181,11 +195,12 @@ void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
     }
 
     if ( keywords == PublicTransportRunner::NoKeyword ) {
-        if ( context.singleRunnerQueryMode() ) {
+        if ( context->singleRunnerQueryMode() ) {
             // Single runner query mode doesn't need a keyword, assume Departures (used as default syntax)
             keywords = PublicTransportRunner::Departures;
         } else {
             // When not in single runner query mode a keyword is needed
+            emit matchFinished( FinishedWithErrors );
             return;
         }
     }
@@ -193,6 +208,7 @@ void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
     // Dont't allow too short terms after the first keyword
     QString stop = term.trimmed();
     if ( stop.length() < 3 ) {
+        emit matchFinished( FinishedWithErrors );
         return;
     }
 
@@ -226,6 +242,7 @@ void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
         QRegExp rx( pattern, Qt::CaseInsensitive );
         if ( rx.indexIn(stop) == -1 ) {
             kDebug() << "Journey regexp pattern" << pattern << "not matched in" << stop;
+            emit matchFinished( FinishedWithErrors );
             return;
         }
 
@@ -246,12 +263,13 @@ void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
     mutex.unlock();
 
     // Check if the context is still valid
-    if ( !context.isValid() ) {
+    if ( !context || !context->isValid() ) {
+        emit matchFinished( Aborted );
         return;
     }
 
     // TODO: put the asyncUpdater-code into the helper class as methods?
-    AsyncDataEngineUpdater asyncUpdater( engine, &context, runner );
+    AsyncDataEngineUpdater asyncUpdater( engine, context.data(), runner );
 
     QEventLoop loop;
     connect( &asyncUpdater, SIGNAL(finished(bool)), &loop, SLOT(quit()) );
@@ -263,25 +281,27 @@ void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
     loop.exec();
 
     // Check if the context is still valid
-    if ( !context.isValid() ) {
+    if ( !context || !context->isValid() ) {
+        emit matchFinished( Aborted );
         return;
     }
 
     // Create a match for each result
-    const QList<AsyncDataEngineUpdater::Result> results = asyncUpdater.results();
+    const QList<Result> results = asyncUpdater.results();
     QList<Plasma::QueryMatch> matches;
-    foreach( const AsyncDataEngineUpdater::Result &result, results ) {
+    foreach( const Result &result, results ) {
         Plasma::QueryMatch m( runner );
         m.setType( Plasma::QueryMatch::HelperMatch );
         m.setIcon( result.icon );
         m.setText( result.text );
         m.setSubtext( result.subtext );
-        m.setData( result.url );
+        m.setData( QVariant::fromValue<Result>(result) );
         m.setRelevance( result.relevance );
         matches << m;
     }
 
-    context.addMatches( context.query(), matches );
+    context->addMatches( context->query(), matches );
+    emit matchFinished( FinishedSuccessfully );
 }
 
 void PublicTransportRunner::run( const Plasma::RunnerContext &context,
@@ -290,18 +310,23 @@ void PublicTransportRunner::run( const Plasma::RunnerContext &context,
     Q_UNUSED( context )
 
     // Open the page containing the departure/arrival/journey in a web browser
-    QString url = match.data().toString();
-    KToolInvocation::invokeBrowser( url );
+    Result result = match.data().value< Result >();
+    if ( result.data.contains("StopLongitude") && result.data.contains("StopLatitude") ) {
+        // TODO Use these values to show the stop in Marble
+        qDebug() << result.data["StopLongitude"] << result.data["StopLatitude"];
+    } else if ( !result.url.isEmpty() ) {
+        KToolInvocation::invokeBrowser( result.url.toString() );
+    }
 }
 
 AsyncDataEngineUpdater::AsyncDataEngineUpdater( Plasma::DataEngine *engine,
         Plasma::RunnerContext* context, PublicTransportRunner *runner )
-        : QObject( context ), m_engine( engine ), m_context( context ), m_runner( runner )
+        : QObject(0), m_engine(engine), m_context(context), m_runner(runner)
 {
     m_settings = m_runner->settings();
 }
 
-QList< AsyncDataEngineUpdater::Result > AsyncDataEngineUpdater::results() const
+QList< Result > AsyncDataEngineUpdater::results() const
 {
     return m_results;
 }
@@ -371,9 +396,10 @@ PublicTransportRunnerHelper::PublicTransportRunnerHelper( PublicTransportRunner*
     // The helper needs to be in the main thread of the data engine
     Q_ASSERT( QThread::currentThread() == QCoreApplication::instance()->thread() );
 
+    qRegisterMetaType< Result >( "Result" );
+    qRegisterMetaType< FinishType >( "FinishType" );
     connect( runner, SIGNAL(doMatch(PublicTransportRunner*,Plasma::DataEngine*,Plasma::RunnerContext*)),
-             this, SLOT(match(PublicTransportRunner*,Plasma::DataEngine*,Plasma::RunnerContext*)),
-             Qt::BlockingQueuedConnection );
+             this, SLOT(match(PublicTransportRunner*,Plasma::DataEngine*,Plasma::RunnerContext*)) );
 }
 
 void AsyncDataEngineUpdater::dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data )
@@ -480,7 +506,7 @@ void AsyncDataEngineUpdater::processDepartures( const QString &sourceName,
         int minsToDeparture = QDateTime::currentDateTime().secsTo( predictedDeparture ) / 60;
         QString duration = minsToDeparture == 0 ? i18n( "now" )
                 : i18nc("%1 is a formatted duration string",
-                        "in %1", KGlobal::locale()->formatDuration(minsToDeparture * 60 * 1000));
+                        "in %1", KGlobal::locale()->prettyFormatDuration(minsToDeparture * 60 * 1000));
         QString time = KGlobal::locale()->formatTime( predictedDeparture.time() );
         QString delayText = delay == 0
                 ? ", " + i18nc("Used to indicate that a train, bus, etc. is departing/arriving on time",
@@ -660,10 +686,10 @@ void AsyncDataEngineUpdater::processJourneys( const QString& sourceName, const P
 
         int minsToDeparture = QDateTime::currentDateTime().secsTo( predictedDeparture ) / 60;
         QString durationDep = minsToDeparture == 0
-                ? "" : KGlobal::locale()->formatDuration(minsToDeparture * 60 * 1000);
+                ? "" : KGlobal::locale()->prettyFormatDuration(minsToDeparture * 60 * 1000);
         int minsToArrival = QDateTime::currentDateTime().secsTo( predictedArrival ) / 60;
         QString durationArr = minsToArrival == 0
-                ? "" : KGlobal::locale()->formatDuration(minsToArrival * 60 * 1000);
+                ? "" : KGlobal::locale()->prettyFormatDuration(minsToArrival * 60 * 1000);
         QString timeDep = KGlobal::locale()->formatTime( predictedDeparture.time() );
         QString timeArr = KGlobal::locale()->formatTime( predictedArrival.time() );
 
@@ -683,7 +709,7 @@ void AsyncDataEngineUpdater::processJourneys( const QString& sourceName, const P
         }
         if ( journeyDuration > 0 ) {
             subtexts << i18nc( "The duration of a journey", "Duration: %1",
-                               KGlobal::locale()->formatDuration(journeyDuration * 60 * 1000) );
+                               KGlobal::locale()->prettyFormatDuration(journeyDuration * 60 * 1000) );
         }
         if ( changes >= 0 ) {
             subtexts << i18nc( "The number of changes between vehicles in a journey",
@@ -782,6 +808,8 @@ void AsyncDataEngineUpdater::processStopSuggestions( const QString& sourceName,
         QString stopName = stop["StopName"].toString();
         QString stopID = stop["StopID"].toString();
         int stopWeight = stop["StopWeight"].toInt();
+        qreal longitude = stop["StopLongitude"].toReal();
+        qreal latitude = stop["StopLatitude"].toReal();
         if ( stopWeight <= 0 ) {
             stopWeight = 0;
         }
@@ -791,7 +819,9 @@ void AsyncDataEngineUpdater::processStopSuggestions( const QString& sourceName,
         res.url = url;
         res.text = i18n( "Suggested Stop Name: \"%1\"", stopName );
         res.relevance = stopWeight;
-        res.data = stopID;
+        res.data["StopID"] = stopID;
+        res.data["StopLongitude"] = longitude;
+        res.data["StopLatitude"] = latitude;
         m_results << res;
 
         min = qMin( min, res.relevance );
@@ -812,7 +842,7 @@ void AsyncDataEngineUpdater::processStopSuggestions( const QString& sourceName,
         for ( int i = 0; i < m_results.length(); ++i ) {
             Result &res = m_results[i];
             res.subtext = i18n( "Relevance: %1%, Service Provider's Stop ID: %2",
-                                qRound( res.relevance * 100 ), res.data );
+                                qRound( res.relevance * 100 ), res.data["StopID"].toString() );
         }
     }
 }

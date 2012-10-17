@@ -25,6 +25,7 @@
 #include <Plasma/DataEngine>
 #include "config/publictransportrunner_config.h"
 
+class QSemaphore;
 class PublicTransportRunnerHelper;
 
 // Define our plasma Runner
@@ -36,19 +37,19 @@ public:
      * @brief Used to identify the given keywords.
      **/
     enum Keyword {
-        NoKeyword          = 0x0000,
+        NoKeyword           = 0x0000,
 
         // Main keywords
-        Journeys        = 0x0001,
-        Departures         = 0x0002,
-        Arrivals           = 0x0004,
-        StopSuggestions        = 0x0008,
+        Journeys            = 0x0001,
+        Departures          = 0x0002,
+        Arrivals            = 0x0004,
+        StopSuggestions     = 0x0008,
 
         // Filter keywords
-        OnlyPublicTransport    = 0x0010,
-        OnlyBuses        = 0x0020,
-        OnlyTrams        = 0x0040,
-        OnlyTrains        = 0x0080
+        OnlyPublicTransport = 0x0010,
+        OnlyBuses           = 0x0020,
+        OnlyTrams           = 0x0040,
+        OnlyTrains          = 0x0080
     };
     Q_DECLARE_FLAGS( Keywords, Keyword )
 
@@ -90,6 +91,7 @@ private:
     QMutex m_mutex;
     PublicTransportRunnerHelper *m_helper;
     Settings m_settings;
+    QSemaphore *m_semaphore;
 };
 // This is the command that links the runner to the .desktop file
 K_EXPORT_PLASMA_RUNNER(publictransport, PublicTransportRunner)
@@ -100,68 +102,80 @@ class PublicTransportRunnerHelper : public QObject {
     Q_OBJECT
 
 public:
+    enum FinishType {
+        FinishedSuccessfully = 0,
+        FinishedWithErrors,
+        Aborted
+    };
+
     explicit PublicTransportRunnerHelper( PublicTransportRunner *runner );
+
+signals:
+    void matchFinished( FinishType finishType = FinishedSuccessfully );
 
 public slots:
     void match( PublicTransportRunner *runner, Plasma::DataEngine *engine,
                 Plasma::RunnerContext *context );
 };
 
+/**
+* @brief Contains information about a single match from the search.
+*/
+class Result : public QObject {
+    Q_OBJECT
+
+public:
+    Result() : QObject(0) {
+    };
+
+    Result( const Result &other ) : QObject(0) {
+        this->text = other.text;
+        this->url = other.url;
+        this->icon = other.icon;
+        this->subtext = other.subtext;
+        this->relevance = other.relevance;
+        this->data = other.data;
+    };
+
+    Result &operator =( const Result &other ) {
+        this->text = other.text;
+        this->url = other.url;
+        this->icon = other.icon;
+        this->subtext = other.subtext;
+        this->relevance = other.relevance;
+        this->data = other.data;
+
+        return *this;
+    };
+
+    /** @brief The main text to show for this timetable result. */
+    QString text;
+
+    /** @brief Additional text to show for this timetable result. */
+    QString subtext;
+
+    /** @brief An icon showing the used vehicle type(s) for this timetable result. */
+    KIcon icon;
+
+    /** @brief The URL of the page containing the match, ie. the service provider. */
+    QUrl url;
+
+    /** @brief The relevance of this result, computed from sort by using @ref normalizeRelevance. */
+    qreal relevance;
+
+    /** @brief Additional data to store for the result. */
+    QVariantHash data;
+};
+Q_DECLARE_METATYPE( Result )
 
 class AsyncDataEngineUpdater : public QObject {
     Q_OBJECT
 
 public:
-    /**
-     * @brief Contains information about a single match from the search.
-     */
-    class Result {
-    public:
-        Result() {
-        };
-
-        Result( const Result &other ) {
-            this->text = other.text;
-            this->url = other.url;
-            this->icon = other.icon;
-            this->subtext = other.subtext;
-            this->relevance = other.relevance;
-            this->data = other.data;
-        };
-
-        Result &operator= (const Result &other) {
-            this->text = other.text;
-            this->url = other.url;
-            this->icon = other.icon;
-            this->subtext = other.subtext;
-            this->relevance = other.relevance;
-            this->data = other.data;
-
-            return *this;
-        };
-
-        /** @brief The main text to show for this timetable result. */
-        QString text;
-
-        /** @brief Additional text to show for this timetable result. */
-        QString subtext;
-
-        /** @brief An icon showing the used vehicle type(s) for this timetable result. */
-        KIcon icon;
-
-        /** @brief The URL of the page containing the match, ie. the service provider. */
-        QUrl url;
-
-        /** @brief The relevance of this result, computed from sort by using @ref normalizeRelevance. */
-        qreal relevance;
-
-        /** @brief Additional data to store for the result, could be QVariant,
-         * but it's currently only used to cache stop IDs of type QString. */
-        QString data;
-    };
 
     AsyncDataEngineUpdater( Plasma::DataEngine *engine, Plasma::RunnerContext *context,
                             PublicTransportRunner *runner );
+    virtual ~AsyncDataEngineUpdater() {};
 
     QList<Result> results() const;
     Plasma::DataEngine *engine() const;
@@ -199,7 +213,7 @@ private:
 
     QList<Result> m_results;
     Plasma::DataEngine *m_engine;
-    Plasma::RunnerContext *m_context;
+    QPointer< Plasma::RunnerContext > m_context;
     PublicTransportRunner::QueryData m_data;
     QString m_sourceName;
     PublicTransportRunner::Settings m_settings;
