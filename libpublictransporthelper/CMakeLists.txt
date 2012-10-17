@@ -39,6 +39,7 @@ set( publictransporthelper_LIB_SRCS
 	filter.cpp
 	filterwidget.cpp
 	departureinfo.cpp
+	marbleprocess.cpp
 )
 if ( MARBLE_FOUND )
     list ( APPEND publictransporthelper_LIB_SRCS
@@ -75,6 +76,7 @@ set( publictransporthelper_LIB_HDRS
 	stopfinder.h
 	filter.h
 	departureinfo.h
+	marbleprocess.h
 )
 
 if ( MARBLE_FOUND )

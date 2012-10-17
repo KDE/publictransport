@@ -374,21 +374,15 @@ protected slots:
     /** @brief The plasma theme has been changed. */
     void themeChanged();
 
-    /** @brief Start a marble process. */
-    void startMarble( const QString &stopName = QString() );
-
     /** @brief Shows the stop at the given coordinates in a running Marble process. */
     void showStopInMarble( const QString &stopName = QString(), bool coordinatesAreValid = false,
                            qreal lon = 0.0, qreal lat = 0.0 );
 
-    /** @brief The 'marble' process has been started. */
-    void marbleHasStarted();
-
     /** @brief The 'marble' process has finished. */
     void marbleFinished( int exitCode );
 
-    /** @brief There was an error in the 'marble' process. */
-    void errorMarble( QProcess::ProcessError processError );
+    /** @brief There was an error with Marble */
+    void marbleError( const QString &errorMessage );
 
     /** @brief The expanded state of @p item changed to @p expanded. */
     void expandedStateChanged( PublicTransportGraphicsItem *item, bool expanded );

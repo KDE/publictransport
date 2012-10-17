@@ -17,14 +17,21 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Header
 #include "publictransportrunner.h"
 
+// libpublictransporthelper includes
+#include "marbleprocess.h"
+
+// KDE includes
+#include <KToolInvocation>
 #include <KDebug>
 #include <KIcon>
+
+// Qt includes
 #include <QThread>
 #include <QCoreApplication>
 #include <QWaitCondition>
-#include <KToolInvocation>
 #include <QTimer>
 #include <QSemaphore>
 
@@ -32,7 +39,8 @@ using namespace PublicTransport;
 
 PublicTransportRunner::PublicTransportRunner( QObject *parent, const QVariantList& args )
         : Plasma::AbstractRunner(parent, args),
-          m_helper(new PublicTransportRunnerHelper(this)), m_semaphore(new QSemaphore(1))
+          m_helper(new PublicTransportRunnerHelper(this)),
+          m_semaphore(new QSemaphore(1)), m_marble(0)
 {
     Q_UNUSED( args );
     setObjectName( QLatin1String( "PublicTransportRunner" ) );
@@ -52,6 +60,7 @@ PublicTransportRunner::~PublicTransportRunner()
 {
     delete m_helper;
     delete m_semaphore;
+    delete m_marble;
 }
 
 void PublicTransportRunner::init()
@@ -312,11 +321,27 @@ void PublicTransportRunner::run( const Plasma::RunnerContext &context,
     // Open the page containing the departure/arrival/journey in a web browser
     Result result = match.data().value< Result >();
     if ( result.data.contains("StopLongitude") && result.data.contains("StopLatitude") ) {
-        // TODO Use these values to show the stop in Marble
-        qDebug() << result.data["StopLongitude"] << result.data["StopLatitude"];
+        // Use stop coordinates to show the stop in Marble
+        const QString stopName = result.data["StopName"].toString();
+        const qreal longitude = result.data["StopLongitude"].toReal();
+        const qreal latitude = result.data["StopLatitude"].toReal();
+        if ( m_marble ) {
+            // Marble is already running
+            m_marble->centerOnStop( stopName, longitude, latitude );
+        } else {
+            m_marble = new MarbleProcess( stopName, longitude, latitude, this );
+//             connect( m_marble, SIGNAL(marbleError(QString)), this, SLOT(marbleError(QString)) );
+            connect( m_marble, SIGNAL(finished(int)), this, SLOT(marbleFinished()) );
+            m_marble->start();
+        }
     } else if ( !result.url.isEmpty() ) {
         KToolInvocation::invokeBrowser( result.url.toString() );
     }
+}
+
+void PublicTransportRunner::marbleFinished()
+{
+    m_marble = 0;
 }
 
 AsyncDataEngineUpdater::AsyncDataEngineUpdater( Plasma::DataEngine *engine,
@@ -819,6 +844,7 @@ void AsyncDataEngineUpdater::processStopSuggestions( const QString& sourceName,
         res.url = url;
         res.text = i18n( "Suggested Stop Name: \"%1\"", stopName );
         res.relevance = stopWeight;
+        res.data["StopName"] = stopName;
         res.data["StopID"] = stopID;
         res.data["StopLongitude"] = longitude;
         res.data["StopLatitude"] = latitude;

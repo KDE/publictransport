@@ -26,6 +26,7 @@
 #include "config/publictransportrunner_config.h"
 
 class QSemaphore;
+class MarbleProcess;
 class PublicTransportRunnerHelper;
 
 // Define our plasma Runner
@@ -86,12 +87,14 @@ signals:
 
 protected slots:
     void init();
+    void marbleFinished();
 
 private:
     QMutex m_mutex;
     PublicTransportRunnerHelper *m_helper;
     Settings m_settings;
     QSemaphore *m_semaphore;
+    MarbleProcess *m_marble;
 };
 // This is the command that links the runner to the .desktop file
 K_EXPORT_PLASMA_RUNNER(publictransport, PublicTransportRunner)

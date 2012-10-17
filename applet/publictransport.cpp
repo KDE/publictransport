@@ -26,6 +26,7 @@
 #include "journeysearchmodel.h"
 #include "journeysearchlistview.h"
 #include "settingsui.h"
+#include "marbleprocess.h"
 
 // KDE includes
 #include <KNotification>
@@ -1608,7 +1609,6 @@ void PublicTransportApplet::requestStopAction( StopAction::Type stopAction,
             break;
         } case StopAction::ShowStopInMap: {
             // Start marble and center the map on the current stop
-            startMarble( stopName );
             const Stop stop = settings.currentStop().stop( 0 );
             if ( stop.hasValidCoordinates ) {
                 showStopInMarble( stop.name, true, stop.longitude, stop.latitude );
@@ -1663,145 +1663,35 @@ void PublicTransportApplet::requestStopAction( StopAction::Type stopAction,
     }
 }
 
-void PublicTransportApplet::errorMarble( QProcess::ProcessError processError )
-{
-    Q_D( PublicTransportApplet );
-
-    if ( processError == QProcess::FailedToStart ) {
-        int result = KMessageBox::questionYesNo( 0, i18nc("@info", "The map application "
-                "'marble' couldn't be started, error message: <message>%1</message>.<nl/>"
-                "Do you want to install 'marble' now?", d->marble->errorString()) );
-        if ( result == KMessageBox::Yes ) {
-            // Start KPackageKit to install marble
-            KProcess *kPackageKit = new KProcess( this );
-            kPackageKit->setProgram( "kpackagekit",
-                                     QStringList() << "--install-package-name" << "marble" );
-            kPackageKit->start();
-        }
-    } else if ( processError == QProcess::Crashed ) {
-        showMessage( KIcon("dialog-information"),
-                     i18nc("@info", "The map application 'marble' crashed"), Plasma::ButtonOk );
-    }
-    d->marble = 0;
-}
-
-void PublicTransportApplet::marbleHasStarted()
-{
-    Q_D( const PublicTransportApplet );
-    kDebug() << "Marble has started" << d->marble->pid();
-
-    // Wait for output from marble
-    for ( int i = 0; i < 10; ++i ) {
-        if ( d->marble->waitForReadyRead(50) ) {
-            break;
-        }
-    }
-
-    QTimer::singleShot( 250, this, SLOT(showStopInMarble()) );
-}
-
 void PublicTransportApplet::marbleFinished( int /*exitCode*/ )
 {
     Q_D( PublicTransportApplet );
-
-    kDebug() << "Marble finished";
     d->marble = 0;
 }
 
-void PublicTransportApplet::startMarble( const QString &stopName )
+void PublicTransportApplet::showStopInMarble( const QString &stopName, bool coordinatesAreValid,
+                                              qreal longitude, qreal latitude )
 {
     Q_D( PublicTransportApplet );
+    if ( !coordinatesAreValid ) {
+        kWarning() << "No valid coordinates available for stop" << stopName;
+        return;
+    }
 
-    if ( !d->marble ) {
-        QString command = "marble --caption " + i18nc("@title:window Caption for "
-                "marble windows started to show a stops position in a map. %1 is the "
-                "stop name.", "\"PublicTransport: %1\"", stopName);
-        d->marble = new KProcess( this );
-        d->marble->setProgram( "marble", QStringList() << "--caption"
-                << i18nc("@title:window Caption for "
-                "marble windows started to show a stops position in a map. %1 is the "
-                "stop name.", "\"PublicTransport: %1\"", stopName) );
-        connect( d->marble, SIGNAL(error(QProcess::ProcessError)),
-                this, SLOT(errorMarble(QProcess::ProcessError)) );
-        connect( d->marble, SIGNAL(started()), this, SLOT(marbleHasStarted()) );
+    if ( d->marble ) {
+        // Marble is already running
+        d->marble->centerOnStop( stopName, longitude, latitude );
+    } else {
+        d->marble = new MarbleProcess( stopName, longitude, latitude, this );
+        connect( d->marble, SIGNAL(marbleError(QString)), this, SLOT(marbleError(QString)) );
         connect( d->marble, SIGNAL(finished(int)), this, SLOT(marbleFinished(int)) );
         d->marble->start();
     }
 }
 
-void PublicTransportApplet::showStopInMarble( const QString &stopName, bool coordinatesAreValid,
-                                              qreal lon, qreal lat )
+void PublicTransportApplet::marbleError( const QString &errorMessage )
 {
-    Q_D( PublicTransportApplet );
-
-    if ( coordinatesAreValid ) {
-        // Store values to set them when marble has started
-        d->longitude = lon;
-        d->latitude = lat;
-    } else {
-        kWarning() << "No valid coordinates available for stop" << stopName;
-        return;
-    }
-
-    if ( !d->marble ) {
-        startMarble( stopName );
-        return;
-    }
-
-    if ( !coordinatesAreValid ) {
-        // Get stored coordinates, marble has been started now
-        lon = d->longitude;
-        lat = d->latitude;
-    }
-
-    QString destination = QString("org.kde.marble-%1").arg(d->marble->pid());
-
-    // Set new window title
-    if ( !stopName.isEmpty() ) {
-        QDBusMessage m0 = QDBusMessage::createMethodCall(destination,
-                "/marble/MainWindow_1", "org.kde.marble.KMainWindow", "setPlainCaption");
-        m0 << i18nc("@title:window Caption for marble windows started to show a stops "
-                "position in a map. %1 is the stop name.", "\"PublicTransport: %1\"",
-                stopName);
-        if ( !QDBusConnection::sessionBus().send(m0) ) {
-            kDebug() << "Couldn't set marble title with dbus" << m0.errorMessage();
-        }
-    }
-
-    // Load OpenStreetMap
-    QDBusMessage m1 = QDBusMessage::createMethodCall(destination,
-            "/MarbleMap", "org.kde.MarbleMap", "setMapThemeId");
-    m1 << "earth/openstreetmap/openstreetmap.dgml";
-    if ( !QDBusConnection::sessionBus().send(m1) ) {
-        showMessage( KIcon("marble"), i18nc("@info", "Couldn't interact with 'marble' "
-                "(DBus: %1).", m1.errorMessage()), Plasma::ButtonOk );
-    }
-
-    // Center on the stops coordinates
-    QDBusMessage m2 = QDBusMessage::createMethodCall(destination,
-            "/MarbleMap", "org.kde.MarbleMap", "centerOn"); // centerOn( lon, lat )
-    m2 << lon << lat;
-    if ( !QDBusConnection::sessionBus().send(m2) ) {
-        showMessage( KIcon("marble"), i18nc("@info", "Couldn't interact with 'marble' "
-                "(DBus: %1).", m2.errorMessage()), Plasma::ButtonOk );
-    }
-
-    // Set zoom factor
-    QDBusMessage m3 = QDBusMessage::createMethodCall(destination,
-            "/MarbleWidget", "org.kde.MarbleWidget", "zoomView");
-    m3 << 3080;
-    if ( !QDBusConnection::sessionBus().send(m3) ) {
-        showMessage( KIcon("marble"), i18nc("@info", "Couldn't interact with 'marble' "
-                "(DBus: %1).", m3.errorMessage()), Plasma::ButtonOk );
-    }
-
-    // Update map
-    QDBusMessage m4 = QDBusMessage::createMethodCall(destination,
-            "/MarbleMap", "org.kde.MarbleMap", "reload");
-    if ( !QDBusConnection::sessionBus().send(m4) ) {
-        showMessage( KIcon("marble"), i18nc("@info", "Couldn't interact with 'marble' "
-                "(DBus: %1).", m4.errorMessage()), Plasma::ButtonOk );
-    }
+    showMessage( KIcon("marble"), errorMessage, Plasma::ButtonOk );
 }
 
 void PublicTransportApplet::removeAlarmForDeparture( int row )

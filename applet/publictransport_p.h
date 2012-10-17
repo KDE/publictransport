@@ -53,6 +53,7 @@
 #include <QGraphicsLinearLayout>
 #include <QLabel>
 
+class MarbleProcess;
 class OverlayWidget;
 class JourneySearchSuggestionWidget;
 class JourneyTimetableWidget;
@@ -64,7 +65,6 @@ namespace Plasma
 {
     class Animation;
 }
-class KProcess;
 class KSelectAction;
 
 class QActionGroup;
@@ -689,8 +689,7 @@ protected:
     QAbstractTransition *journeySearchTransition2;
     QAbstractTransition *journeySearchTransition3;
 
-    KProcess *marble;
-    qreal longitude, latitude; // Coordinates for a given stop
+    MarbleProcess *marble;
 
 private:
     PublicTransportApplet *q_ptr;

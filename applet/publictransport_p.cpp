@@ -66,8 +66,7 @@ PublicTransportAppletPrivate::PublicTransportAppletPrivate( PublicTransportApple
         popupIcon(0), titleToggleAnimation(0), runningUpdateRequests(0), updateTimer(0),
         modelJourneys(0), originalStopIndex(-1), filtersGroup(0), colorFiltersGroup(0),
         departureProcessor(0), departurePainter(0), stateMachine(0), journeySearchTransition1(0),
-        journeySearchTransition2(0), journeySearchTransition3(0), marble(0),
-        longitude(0), latitude(0), q_ptr( q )
+        journeySearchTransition2(0), journeySearchTransition3(0), marble(0), q_ptr( q )
 {
 }
 

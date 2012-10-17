@@ -44,6 +44,7 @@ kde4_add_plugin(krunner_publictransport ${krunner_publictransport_SRCS})
 target_link_libraries(krunner_publictransport
 	${KDE4_PLASMA_LIBS}
 	${KDE4_KDEUI_LIBS}
+    publictransporthelper # in ../publictransporthelper
 )
 
 add_dependencies( krunner_publictransport kcm_krunner_publictransport )
