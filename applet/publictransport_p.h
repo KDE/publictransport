@@ -360,7 +360,7 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         QState *departureDataWaitingState = new QState( departureDataStateGroup );
         QState *departureDataValidState = new QState( departureDataStateGroup );
         QState *departureDataInvalidState = new QState( departureDataStateGroup );
-        departureDataStateGroup->setInitialState( departureDataWaitingState );
+        departureDataStateGroup->setInitialState( departureDataValidState );
         states.insert( "departureDataWaiting", departureDataWaitingState );
         states.insert( "departureDataValid", departureDataValidState );
         states.insert( "departureDataInvalid", departureDataInvalidState );
