@@ -204,11 +204,6 @@ CompletionItem JavaScriptCompletionModel::completionItemFromId( const QString id
         return item;
     }
 
-//     item = m_completionsCalls.value( id );
-//     if ( item.isValid() ) {
-//         return item;
-//     }
-
     QString simpleID = id;
     QRegExp rxBraces( "\\([^\\)]*\\)" );
     rxBraces.setMinimal( true );
@@ -226,8 +221,6 @@ CompletionItem JavaScriptCompletionModel::completionItemFromId( const QString id
     if ( rxCall.indexIn(simpleID) != -1 ) {
         const QString obj = rxCall.cap(1);
         const QString func = QString("call:%1()").arg(rxCall.cap(2));
-//         kDebug() << "FOUND" << obj << m_completionObjects.contains(obj) << func << m_completionObjects[obj].contains(func);
-//         kDebug() << m_completionObjects[obj].keys();
         if ( m_completionObjects.contains(obj) && m_completionObjects[obj].contains(func) ) {
             return m_completionObjects[obj][func];
         }
@@ -350,41 +343,6 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
             "}\n",
             true, "Implement void", "                   " )); // The spaces make the completion
     // box wider, so that the code snipped can be read
-
-    // Deprecated functions: parseTimetable(html), parseJourneys(html), parsePossibleStops(html)
-    // getUrlForLaterJourneyResults(html), getUrlForDetailedJourneyResults(html)
-//     m_completionsGlobalFunctions.insert( "func:getUrlForLaterJourneyResults()",
-// 	    CompletionItem( Function | GlobalScope,
-//             "getUrlForLaterJourneyResults( html )",
-//             i18nc("@info The description for the 'getUrlForLaterJourneyResults' function",
-//                   "Parses a journey document for a link to a journey "
-//                   "document containing later journeys.<nl/>"
-//                   "This function is called by the data engine. The parameter "
-//                   "contains the contents of the document body. The found link "
-//                   "can be simply returned. If no link could be found, return null."),
-//             "\n// This function parses a given HTML document for a link to later journeys.\n"
-// 	    "function getUrlForLaterJourneyResults( html ) {\n"
-// 	    "\treturn ${cursor};\n"
-// 	    "}\n",
-//             true, "Implement string", "                   " )); // The spaces make the completion
-//     // box wider, so that the code snipped can be read
-//
-//     m_completionsGlobalFunctions.insert( "func:getUrlForDetailedJourneyResults()",
-// 	    CompletionItem( Function | GlobalScope,
-//             "getUrlForDetailedJourneyResults( html )",
-//             i18nc("@info The description for the 'getUrlForDetailedJourneyResults' function",
-//                   "Parses a journey document for a link to another journey "
-//                   "document containing more details about journeys.<nl/>"
-//                   "This function is called by the data engine. The parameter "
-//                   "contains the contents of the document body. "
-//                   "The found link can be simply returned. If no link could be found, return null."),
-//             "\n// This function parses a given HTML document\n"
-//             "// for a link to a more detailed journey document.\n"
-// 	    "function getUrlForLaterJourneyResults( html ) {\n"
-// 	    "\treturn ${cursor};\n"
-// 	    "}\n",
-//             true, "Implement string", "                   " )); // The spaces make the completion
-//     // box wider, so that the code snipped can be read
 }
 
 void JavaScriptCompletionModel::initTimetableInfoCompletion() {

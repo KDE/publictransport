@@ -591,7 +591,6 @@ void PublicTransportApplet::departuresProcessed( const QString& sourceName,
             op.writeEntry( "itemnumberbegin", itemBegin );
             op.writeEntry( "itemnumberend", itemEnd );
             Plasma::ServiceJob *additionDataJob = service->startOperationCall( op );
-            connect( additionDataJob, SIGNAL(result(KJob*)), this, SLOT(additionalDataResult(KJob*)) );
             connect( additionDataJob, SIGNAL(finished(KJob*)), service, SLOT(deleteLater()) );
         }
     }
@@ -771,13 +770,6 @@ void PublicTransportApplet::updateTooltip()
     d->createTooltip();
 }
 
-// TODO
-// void PublicTransportApplet::resized()
-// {
-//     Q_D( PublicTransportApplet );
-//     d->onResized();
-// }
-
 void PublicTransportApplet::resizeEvent( QGraphicsSceneResizeEvent *event )
 {
     Plasma::Applet::resizeEvent( event );
@@ -785,15 +777,6 @@ void PublicTransportApplet::resizeEvent( QGraphicsSceneResizeEvent *event )
     // Update popup icon to new size
     updatePopupIcon();
 }
-
-// void PublicTransportApplet::configChanged()
-// {
-//     Q_D( PublicTransportApplet );
-//
-//     disconnect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
-//     d->onUnknownSettingsChanged();
-//     connect( this, SIGNAL(settingsChanged()), this, SLOT(configChanged()) );
-// }
 
 void PublicTransportApplet::destroyOverlay()
 {
@@ -1195,7 +1178,6 @@ bool PublicTransportApplet::eventFilter( QObject *watched, QEvent *event )
                 if ( !curIndex.isValid() ) {
                     curIndex = d->listStopSuggestions->model()->index( 0, 0 );
                     d->listStopSuggestions->setCurrentIndex( curIndex );
-//                     possibleStopItemActivated( curIndex );
                     d->listStopSuggestions->useStopSuggestion( curIndex );
                     return true;
                 } else {
@@ -1316,18 +1298,8 @@ void PublicTransportApplet::expandedStateChanged( PublicTransportGraphicsItem *i
             KConfigGroup op = service->operationDescription("requestAdditionalData");
             op.writeEntry( "itemnumber", departureItem->departureItem()->dataSourceIndex() );
             Plasma::ServiceJob *additionDataJob = service->startOperationCall( op );
-            connect( additionDataJob, SIGNAL(result(KJob*)), this, SLOT(additionalDataResult(KJob*)) );
             connect( additionDataJob, SIGNAL(finished(KJob*)), service, SLOT(deleteLater()) );
         }
-    }
-}
-
-// TODO Remove again?
-void PublicTransportApplet::additionalDataResult( KJob *job )
-{
-    Q_D( PublicTransportApplet );
-    if ( !job->error() ) {
-//         d->reconnectSource();
     }
 }
 

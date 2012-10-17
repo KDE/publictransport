@@ -124,18 +124,6 @@ void ServiceProviderTestData::write( const QString &providerId,
     group.sync();
 }
 
-// void ServiceProviderTestData::runPendingTests( const QString &providerId,
-//         const ServiceProviderTestData &testData, const QSharedPointer< KConfig > &cache )
-// {
-//     if ( testData.isSubTypeTestPending() ) {
-//         // Create the provider to run sub-type tests, results get written to the cache
-//         const QScopedPointer<ServiceProvider> provider( ServiceProvider::createProvider(providerId) );
-// //         return read( providerId, cache );
-// //     } else {
-// //         return testData;
-//     }
-// }
-
 void ServiceProviderTestData::setXmlStructureTestStatus( Status status, const QString &errorMessage )
 {
     switch ( status ) {

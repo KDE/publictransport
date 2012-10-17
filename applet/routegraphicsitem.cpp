@@ -128,9 +128,6 @@ void RouteGraphicsItem::arrangeStopItems()
 
         // Compute maximal text width for the computed angle,
         // so that the stop name won't go outside of routeRect
-//         m_maxTextWidth = (routeRect.height() - startStopPos.y() /*- 10*/ - 6.0 * m_zoomFactor
-//                 - qCos(m_textAngle * 3.14159 / 180.0) * fm.height())
-//                 / qSin(m_textAngle * 3.14159 / 180.0);
         const qreal height = routeRect.height() - startStopPos.y();
         const qreal angle = m_textAngle * 3.14159 / 180.0;
         m_maxTextWidth = height / qSin(angle) - fm.height() / qTan(angle);
@@ -622,7 +619,7 @@ RouteStopFlags JourneyRouteStopGraphicsItem::routeStopFlags() const
 {
     RouteStopFlags stopFlags = m_stopFlags;
     RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
-    JourneyModel *model = !routeItem || !routeItem->item() ? NULL :
+    JourneyModel *model = !routeItem || !routeItem->item() ? 0 :
             qobject_cast<JourneyModel*>( routeItem->item()->model() );
     RouteItemFlags itemFlags = model ? model->routeItemFlags(m_stopName) : RouteItemDefault;
     if ( itemFlags.testFlag(RouteItemHighlighted) ) {
@@ -718,7 +715,7 @@ void RouteStopTextGraphicsItem::contextMenuEvent(QGraphicsSceneContextMenuEvent*
         if ( action->type() == StopAction::HighlightStop ) {
             // Update text of the highlight stop action
             RouteGraphicsItem *routeItem = qgraphicsitem_cast<RouteGraphicsItem*>( parentItem() );
-            DepartureModel *model = !routeItem || !routeItem->item() ? NULL :
+            DepartureModel *model = !routeItem || !routeItem->item() ? 0 :
                     qobject_cast<DepartureModel*>( routeItem->item()->model() );
             QString highlightStopActionText =
                     (!model || !model->routeItemFlags(m_stopName).testFlag(RouteItemHighlighted))
@@ -835,7 +832,7 @@ JourneyRouteStopGraphicsItem::~JourneyRouteStopGraphicsItem()
 void JourneyRouteStopGraphicsItem::setText( const QString& text )
 {
     delete m_infoTextDocument;
-    m_infoTextDocument = NULL;
+    m_infoTextDocument = 0;
 
     QTextOption textOption( Qt::AlignVCenter | Qt::AlignLeft );
     m_infoTextDocument = TextDocumentHelper::createTextDocument( text, infoTextRect().size(),
@@ -923,15 +920,20 @@ void JourneyRouteStopGraphicsItem::paint( QPainter* painter, const QStyleOptionG
     QColor textColor = journeyItem ? journeyItem->textColor()
             : Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewTextColor );
 #endif
-    const bool drawShadowsOrHalos = journeyItem->publicTransportWidget()->isOptionEnabled(
-            PublicTransportWidget::DrawShadowsOrHalos );
-    const bool drawHalos = drawShadowsOrHalos && qGray(textColor.rgb()) < 192;
+    TextDocumentHelper::Option textOption;
+    if ( !journeyItem->publicTransportWidget()->isOptionEnabled(
+            PublicTransportWidget::DrawShadowsOrHalos) )
+    {
+        textOption = TextDocumentHelper::DoNotDrawShadowOrHalos;
+    } else if ( qGray(textColor.rgb()) < 192 ) {
+        textOption = TextDocumentHelper::DrawHalos;
+    } else {
+        textOption = TextDocumentHelper::DrawShadows;
+    }
     QRectF textRect = infoTextRect();
     painter->setPen( textColor );
-    TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument, textRect.toRect(),
-            drawShadowsOrHalos
-            ? (drawHalos ? TextDocumentHelper::DrawHalos : TextDocumentHelper::DrawShadows)
-            : TextDocumentHelper::DoNotDrawShadowOrHalos);
+    TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
+                                          textRect.toRect(), textOption );
 }
 
 JourneyRouteGraphicsItem::JourneyRouteGraphicsItem( QGraphicsItem* parent, JourneyItem* item,

@@ -104,10 +104,6 @@ public:
     static void write( const QString &providerId, const ServiceProviderTestData &testData,
                        const QSharedPointer<KConfig> &cache );
 
-//     static void runPendingTests( const QString &providerId,
-//                                  const ServiceProviderTestData &testData,
-//                                  const QSharedPointer<KConfig> &cache );
-
     /** @brief Create a new ServiceProviderTestData object. */
     ServiceProviderTestData( Results results, const QString &errorMessage = QString() );
 

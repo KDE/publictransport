@@ -303,22 +303,17 @@ void NetworkRequest::setPostData( const QString& postData, const QString& charse
     }
 
     QByteArray baCharset = getCharset( charset );
-//     if ( charset.compare(QLatin1String("utf8"), Qt::CaseInsensitive) == 0 ) {
-//         m_request->setHeader( QNetworkRequest::ContentTypeHeader, "utf8" );
-//         m_postData = postData.toUtf8();
-//     } else {
-        QTextCodec *codec = QTextCodec::codecForName( baCharset );
-        QMutexLocker locker( m_mutex );
-        if ( codec ) {
-            m_request->setHeader( QNetworkRequest::ContentTypeHeader, baCharset );
-            m_postData = codec->fromUnicode( postData );
-        } else {
-            kDebug() << "Codec" << baCharset << "couldn't be found to encode the data "
-                    "to post, now using UTF-8";
-            m_request->setHeader( QNetworkRequest::ContentTypeHeader, "utf8" );
-            m_postData = postData.toUtf8();
-        }
-//     }
+    QTextCodec *codec = QTextCodec::codecForName( baCharset );
+    QMutexLocker locker( m_mutex );
+    if ( codec ) {
+        m_request->setHeader( QNetworkRequest::ContentTypeHeader, baCharset );
+        m_postData = codec->fromUnicode( postData );
+    } else {
+        kDebug() << "Codec" << baCharset << "couldn't be found to encode the data "
+                "to post, now using UTF-8";
+        m_request->setHeader( QNetworkRequest::ContentTypeHeader, "utf8" );
+        m_postData = postData.toUtf8();
+    }
 }
 
 QString NetworkRequest::header( const QString &header, const QString& charset ) const
@@ -525,7 +520,6 @@ void Network::get( NetworkRequest* request, int timeout )
     m_mutex->unlockInline();
 
     request->started( reply, timeout );
-//     kDebug() << "GET DOCUMENT, now" << m_runningRequests.count() << "running requests" << request->url();
 }
 
 void Network::head( NetworkRequest* request, int timeout )
@@ -1631,7 +1625,6 @@ public:
         }
 
         config = new KConfig( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
-//         lastPersistentGroup = config->group( serviceProvider ).group( QLatin1String("storage") );
     };
 
     KConfigGroup persistentGroup() {
@@ -2089,7 +2082,6 @@ QScriptValue constructStream( QScriptContext *context, QScriptEngine *engine )
     } else if ( argument.isVariant() ) {
         const QVariant variant = argument.toVariant();
         object = new DataStreamPrototype( variant.toByteArray() );
-//         : new DataStreamPrototype(qscriptvalue_cast<QByteArray>(argument));
     }
     return engine->newQObject( object, QScriptEngine::ScriptOwnership );
 }

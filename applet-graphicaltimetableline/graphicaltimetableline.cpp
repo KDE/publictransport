@@ -821,7 +821,7 @@ QPointF GraphicalTimetableLine::positionFromTime( const QDateTime& time, qreal *
 void GraphicalTimetableLine::updateItemPositions( bool animate )
 {
     QPointF lastPos;
-    Departure *lastDeparture = NULL;
+    Departure *lastDeparture = 0;
     for ( int i = 0; i < m_departures.count(); ++i ) {
         Departure *departure = m_departures[i];
         QPointF newPos = departure->updatePosition( animate );

@@ -151,7 +151,7 @@ void Flights::configAccepted()
     config().writeEntry( QLatin1String("airport"), m_airport );
     emit configNeedsSaving();
     configChanged();
-    m_stopLineEdit = NULL;
+    m_stopLineEdit = 0;
 
     m_header->setText( m_airport );
 }

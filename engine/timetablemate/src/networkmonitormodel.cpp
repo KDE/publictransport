@@ -679,7 +679,6 @@ void NetworkMemoryCache::insert( QIODevice *device )
 
 void NetworkMemoryCache::removeOldestCacheData()
 {
-//     return; // TODO
     if ( m_orderedData.isEmpty() ) {
         return;
     }

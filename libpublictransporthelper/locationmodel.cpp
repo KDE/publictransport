@@ -72,7 +72,6 @@ public:
             QString flag( KStandardDirs::locate("locale", QString::fromLatin1("l10n/%1/flag.png")
                     .arg(countryCode)) );
             icon.addFile( flag );
-//             icon = Global::putIconIntoBiggerSizeIcon( icon, QSize(32, 23) );
             itemType = LocationItem::Country;
         }
 

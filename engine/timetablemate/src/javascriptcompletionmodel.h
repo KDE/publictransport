@@ -83,7 +83,6 @@ private:
     QHash< QString, CompletionItem > m_completionsGlobalFunctions;
     QHash< QString, CompletionItem > m_completionsTimetableInfo;
     QHash< QString, QHash<QString, CompletionItem> > m_completionObjects; // Stored by object class name
-//  QHash< QString, CompletionItem > m_completionsCalls;
 };
 
 #endif // Multiple inclusion guard

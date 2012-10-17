@@ -146,8 +146,6 @@ StopSettings::~StopSettings()
 
 QStringList StopSettings::stops(StopSettings::StopIdUsage stopIdUsage) const
 {
-//     Q_D( const StopSettings );
-//     return d->stops;
     StopList stops = stopList();
     QStringList ret;
     if ( stopIdUsage == StopSettings::UseStopIdIfAvailable ) {
@@ -169,15 +167,11 @@ const StopList StopSettings::stopList() const
 
 const Stop StopSettings::stop(int index) const
 {
-//     Q_D( const StopSettings );
-//     return d->stops[index];
     return stopList().at( index );
 }
 
 QStringList StopSettings::stopIDs() const
 {
-//     Q_D( const StopSettings );
-//     return d->stopIDs;
     StopList stops = stopList();
     QStringList ret;
     foreach ( const Stop &stop, stops ) {
@@ -356,7 +350,7 @@ QString StopSettingsWidgetFactory::textForSetting( int setting ) const
             } else {
                 kDebug() << "Intern error: No text defined for setting" << static_cast<StopSetting>(setting);
             }
-            return NULL;
+            return 0;
     }
 }
 

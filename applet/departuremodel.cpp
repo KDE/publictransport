@@ -1108,7 +1108,7 @@ QVariant DepartureItem::data( int role, int column ) const
     } else if ( role == AlarmColorIntensityRole ) {
         return m_alarm.testFlag( AlarmPending ) ? 1.0 : m_alarmColorIntensity;
     } else if ( !m_parent ) {
-        // Top level item (m_parent should always be NULL for DepartureItems)
+        // Top level item (m_parent should always be 0 for DepartureItems)
         switch ( role ) {
         case LinesPerRowRole:
             return m_info->linesPerRow;
@@ -1162,7 +1162,7 @@ void DepartureItem::setAlarmStates( AlarmStates alarmStates )
     if ( alarmStates.testFlag(AlarmPending) ) {
         if ( alarmStates.testFlag(AlarmIsRecurring) ) {
             // Add alarm icon with a recurring-icon as overlay
-            setIcon( ColumnDeparture, KIcon("task-reminder", NULL,
+            setIcon( ColumnDeparture, KIcon("task-reminder", 0,
                                             QStringList() << "task-recurring") );
         } else {
             // Add alarm icon
@@ -1175,7 +1175,7 @@ void DepartureItem::setAlarmStates( AlarmStates alarmStates )
         // Add disabled alarm icon
         KIconEffect iconEffect;
         KIcon icon = alarmStates.testFlag( AlarmIsRecurring )
-                    ? KIcon( "task-reminder", NULL, QStringList() << "task-recurring" )
+                    ? KIcon( "task-reminder", 0, QStringList() << "task-recurring" )
                     : KIcon( "task-reminder" );
         QPixmap pixmap = iconEffect.apply( icon.pixmap( 16 * m_info->sizeFactor ),
                                            KIconLoader::Small, KIconLoader::DisabledState );
@@ -1195,7 +1195,7 @@ void JourneyItem::setAlarmStates(AlarmStates alarmStates)
     if ( alarmStates.testFlag(AlarmPending) ) {
         if ( alarmStates.testFlag(AlarmIsRecurring) ) {
             // Add alarm icon with a recurring-icon as overlay
-            setIcon( ColumnDeparture, KIcon("task-reminder", NULL,
+            setIcon( ColumnDeparture, KIcon("task-reminder", 0,
                                             QStringList() << "task-recurring") );
         } else {
             // Add alarm icon
@@ -1208,7 +1208,7 @@ void JourneyItem::setAlarmStates(AlarmStates alarmStates)
         // Add disabled alarm icon
         KIconEffect iconEffect;
         KIcon icon = alarmStates.testFlag( AlarmIsRecurring )
-                    ? KIcon( "task-reminder", NULL, QStringList() << "task-recurring" )
+                    ? KIcon( "task-reminder", 0, QStringList() << "task-recurring" )
                     : KIcon( "task-reminder" );
         QPixmap pixmap = iconEffect.apply( icon.pixmap( 16 * m_info->sizeFactor ),
                                            KIconLoader::Small, KIconLoader::DisabledState );
@@ -1397,7 +1397,7 @@ void PublicTransportModel::clear()
     m_infoToItem.clear();
     qDeleteAll( m_items );
     m_items.clear();
-    m_nextItem = NULL;
+    m_nextItem = 0;
     endRemoveRows();
 }
 
@@ -1601,7 +1601,7 @@ void JourneyModel::sort( int column, Qt::SortOrder order )
 JourneyItem* JourneyModel::addItem( const JourneyInfo& journeyInfo,
                                     Columns sortColumn, Qt::SortOrder sortOrder )
 {
-    ItemBase *existingItem = m_infoToItem.value( journeyInfo.hash(), NULL );
+    ItemBase *existingItem = m_infoToItem.value( journeyInfo.hash(), 0 );
     if ( existingItem ) {
         kDebug() << "Journey already added to the model" << journeyInfo;
         return static_cast<JourneyItem*>( existingItem );
@@ -1670,7 +1670,7 @@ JourneyItem* JourneyModel::addItem( const JourneyInfo& journeyInfo,
 JourneyItem* JourneyModel::findNextItem( bool sortedByDepartureAscending ) const
 {
     if ( m_items.isEmpty() ) {
-        return NULL;
+        return 0;
     }
 
     if ( sortedByDepartureAscending ) {
@@ -1707,17 +1707,17 @@ void DepartureModel::update()
 
     // Sort out departures in the past
     int row = 0;
-    m_nextItem = m_items.isEmpty() ? NULL : static_cast<DepartureItem*>( m_items[row] );
+    m_nextItem = m_items.isEmpty() ? 0 : static_cast<DepartureItem*>( m_items[row] );
     QDateTime nextDeparture = m_nextItem
             ? static_cast<DepartureItem*>(m_nextItem)->departureInfo()->predictedDeparture()
             : QDateTime();
     nextDeparture.setTime( QTime(nextDeparture.time().hour(), nextDeparture.time().minute()) ); // Set second to 0
     while ( m_nextItem && nextDeparture < QDateTime::currentDateTime() ) {
+        // The next departure is in the past
         DepartureItem *leavingItem = static_cast<DepartureItem*>( m_nextItem );
         leavingItem->setLeavingSoon( true );
 
-//         removeRows( m_nextItem->row(), 1 );
-//         m_nextItem = findNextItem();
+        // Go to the next item, if any
         ++row;
         if ( row >= m_items.count() ) {
             break;
@@ -1922,7 +1922,7 @@ void DepartureModel::sort( int column, Qt::SortOrder order )
 DepartureItem* DepartureModel::findNextItem( bool sortedByDepartureAscending ) const
 {
     if ( m_items.isEmpty() ) {
-        return NULL;
+        return 0;
     }
 
     if ( sortedByDepartureAscending ) {
@@ -1945,7 +1945,7 @@ DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
                                         Columns sortColumn, Qt::SortOrder sortOrder )
 {
     // Check if the item has already been added to this model (using DepartureInfo::hash())
-    ItemBase *existingItem = m_infoToItem.value( departureInfo.hash(), NULL );
+    ItemBase *existingItem = m_infoToItem.value( departureInfo.hash(), 0 );
     if ( existingItem ) {
         kDebug() << "Departure already added to the model at index" << departureInfo;
         return static_cast<DepartureItem*>( existingItem );

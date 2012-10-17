@@ -66,7 +66,7 @@ public:
      * @brief Finds the child node at the given @p lineNumber and @p column.
      *
      * @returns the found child node. If no child node was found, this node is returned if the
-     *   given @p lineNumber and @p column are in it's range. Otherwise NULL is returned.
+     *   given @p lineNumber and @p column are in it's range. Otherwise 0 is returned.
      *
      * @see isInRange
      **/
@@ -77,7 +77,7 @@ public:
      **/
     bool isInRange( int lineNumber, int column = -1 ) const;
 
-    /** @returns the parent node of this node, if any. Otherwise NULL is returned. */
+    /** @returns the parent node of this node, if any. Otherwise 0 is returned. */
     virtual CodeNode *parent() const { return m_parent; };
 
     /**

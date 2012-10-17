@@ -198,8 +198,8 @@ void DepartureProcessor::run()
         m_currentJob = job->type;
         m_mutex->unlock();
 
-        QTime time;
-        time.start();
+//         QTime time;
+//         time.start();
         if ( job->type == ProcessDepartures ) {
             doDepartureJob( static_cast<DepartureJobInfo*>( job ) );
         } else if ( job->type == FilterDepartures ) {
@@ -252,7 +252,7 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
 
     emit beginDepartureProcessing( sourceName );
 
-    QList< DepartureInfo > departureInfos/*, alarmDepartures*/;
+    QList< DepartureInfo > departureInfos;
     const QUrl url = data["requestUrl"].toUrl();
     const QDateTime updated = data["updated"].toDateTime();
     const QDateTime nextAutomaticUpdate = data["nextAutomaticUpdate"].toDateTime();
@@ -297,8 +297,6 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
             AlarmSettings alarm = alarms.at( a );
             if ( alarm.enabled && alarm.filter.match( departureInfo ) ) {
                 departureInfo.matchedAlarms() << a;
-//             if ( !alarmDepartures.contains(departureInfo) )
-//                 alarmDepartures << departureInfo;
             }
         }
 
@@ -310,9 +308,6 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
              || colorGroups.filterOut(departureInfo) )
         {
             departureInfo.setFlag( PublicTransport::DepartureInfo::IsFilteredOut );
-//          kDebug() << "Filter out" << filters.filterOut(departureInfo)
-//              << Global::vehicleTypeToString(departureInfo.vehicleType()) << departureInfo.lineString()
-//              << departureInfo.target();
         }
         departureInfos << departureInfo;
 
@@ -325,7 +320,6 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
                                           nextAutomaticUpdate, minManualUpdateTime,
                                           departuresData.count() - i - 1 );
                 departureInfos.clear();
-//                 alarmDepartures.clear();
             }
 
             if ( m_requeueCurrentJob ) {
@@ -473,23 +467,6 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
                                  routeTimesDeparture, routeTimesArrival,
                                  routeTimesDepartureDelay, routeTimesArrivalDelay,
                                  routeSubJourneys );
-
-        // TODO Use a dummy DepartureInfo that "mimics" the first journey part of the current journey
-//         QString lineString = journeyInfo.routeTransportLines().isEmpty()
-//                 ? QString() : journeyInfo.routeTransportLines().first();
-//         VehicleType vehicleType = journeyInfo.routeVehicleTypes().isEmpty()
-//                 ? Unknown : journeyInfo.routeVehicleTypes().first();
-//         DepartureInfo departureInfo( QString(), lineString, QString(), journeyInfo.departure(),
-//                                      vehicleType );
-//         journeyInfo.matchedAlarms().clear();
-//         for ( int a = 0; a < alarms.count(); ++a ) {
-//             AlarmSettings alarm = alarms.at( a );
-//             if ( alarm.enabled && alarm.filter.match(departureInfo) ) {
-//                 journeyInfo.matchedAlarms() << a;
-// //          if ( !alarmDepartures.contains(departureInfo) )
-// //              alarmDepartures << departureInfo;
-//             }
-//         }
 
         journeyInfos << journeyInfo;
         if ( journeyInfos.count() == JOURNEY_BATCH_SIZE ) {

@@ -118,7 +118,7 @@ Plasma::Animation* GlobalApplet::fadeAnimation( QGraphicsWidget* w, qreal target
     if ( w->geometry().width() * w->geometry().height() > 250000 ) {
         // Don't fade big widgets for performance reasons
         w->setOpacity( targetOpacity );
-        return NULL;
+        return 0;
     }
 
     Plasma::Animation *anim = Plasma::Animator::create( Plasma::Animator::FadeAnimation );

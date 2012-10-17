@@ -224,21 +224,6 @@ protected slots:
     void scriptPreviousFunction();
     void scriptNextFunction();
 
-    /** @brief Script execution started in the currently active project. */
-    void debugStarted();
-
-    /** @brief Script execution stopped in the currently active project. */
-    void debugStopped();
-
-    /** @brief Script execution was aborted in the currently active project. */
-    void debugAborted();
-
-    /** @brief Script execution was interrupted in the currently active project. */
-    void debugInterrupted( int lineNumber, const QString &fileName, const QDateTime &timestamp );
-
-    /** @brief Script execution was continued after an interrupt in the currently active project. */
-    void debugContinued();
-
     /** @brief There was an uncaught execution in the script of the currently active project. */
     void uncaughtException( int lineNumber, const QString &errorMessage,
                             const QString &fileName = QString() );
@@ -250,6 +235,7 @@ protected slots:
     void toggleBreakpoint();
 #endif
 
+    void updateWindowTitle();
     void removeTopMessageWidget();
     void tabNextActionTriggered();
     void tabPreviousActionTriggered();
@@ -298,7 +284,6 @@ private:
 
     void setupActions();
     void setupDockWidgets();
-    void updateWindowTitle();
     void updateShownDocksAction();
 
     bool fixMenus();

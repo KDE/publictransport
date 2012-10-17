@@ -402,7 +402,6 @@ void JavaScriptModel::clear()
             kDebug() << "Toplevel node had a parent set!" << node << node->parent();
         }
     }
-//     qDeleteAll( m_nodes );
     m_nodes.clear();
     endRemoveRows();
 }

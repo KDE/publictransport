@@ -86,7 +86,6 @@ public slots:
     void popFrame();
 
 protected slots:
-//     void backtraceChanged( const FrameStack &frameStack );
     void frameChanged( Frame *frame );
 
 private:

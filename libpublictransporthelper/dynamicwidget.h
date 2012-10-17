@@ -84,8 +84,8 @@ public:
     /**
      * @brief Adds a button of type @p buttonType.
      *
-     * @return A pointer to the added button or NULL if no button was added.
-     *   For example @ref ButtonSpacer adds a spacer but returns NULL.
+     * @return A pointer to the added button or 0 if no button was added.
+     *   For example @ref ButtonSpacer adds a spacer but returns 0.
      **/
     QToolButton *addButton( AbstractDynamicWidgetContainer *container, ButtonType buttonType );
 
@@ -102,7 +102,7 @@ public:
      * It can then be put into another widget, without disconnecting it's clicked signal.
      * @ref removeButton will still return a pointer to the remove button, you can also still
      * use @ref setRemoveButtonIcon. It can also be deleted.
-     * @return The remove button or NULL, if there is no remove button for
+     * @return The remove button or 0, if there is no remove button for
      * this DynamicWidget or the remove button has already been taken.
      **/
     QToolButton *takeRemoveButton();
@@ -114,7 +114,7 @@ public:
      * It can then be put into another widget, without disconnecting it's clicked signal.
      * @ref addButton will still return a pointer to the remove button, you can also still
      * use @ref setAddButtonIcon. It can also be deleted.
-     * @return The add button or NULL, if there is no add button for this
+     * @return The add button or 0, if there is no add button for this
      * DynamicWidget or the add button has already been taken.
      **/
     QToolButton *takeAddButton();
@@ -304,7 +304,7 @@ public:
     void setCustomAddButton( QToolButton *addButton );
 
     /**
-     * @brief Gets the add button or NULL if none is set.
+     * @brief Gets the add button or 0 if none is set.
      *
      * If created with @ref AddButtonBesideFirstWidget, the button can be deleted, when the
      * first widget gets removed.
@@ -315,7 +315,7 @@ public:
     QToolButton *addButton() const;
 
     /** @brief Gets the remove button if only one is set (using @ref RemoveButtonAfterLastWidget).
-     *   Otherwise this returns NULL.
+     *   Otherwise this returns 0.
      *
      * If @ref RemoveButtonsBesideWidgets is used you can get the remove buttons from the
      * dynamic widgets. You can access the dynamic widgets using @ref dynamicWidget.
@@ -451,7 +451,7 @@ protected:
      *
      * A separator widget is automatically added if needed (see ShowSeparators).
      *
-     * @return The new DynamicWidget or NULL, if the maximum widget count is already reached.
+     * @return The new DynamicWidget or 0, if the maximum widget count is already reached.
      **/
     virtual DynamicWidget *addWidget( QWidget *widget );
 
@@ -536,7 +536,7 @@ protected:
         return widgetList;
     }
 
-    /** @brief Gets the content widget that currently has focus, or NULL if none has focus. */
+    /** @brief Gets the content widget that currently has focus, or 0 if none has focus. */
     template< class WidgetType >
     WidgetType focusedWidget() const {
         foreach ( DynamicWidget *dynamicWidget, dynamicWidgets() ) {
@@ -544,7 +544,7 @@ protected:
                 return dynamicWidget->contentWidget< WidgetType >();
             }
         }
-        return NULL; // No content widget currently has focus
+        return 0; // No content widget currently has focus
     }
 
 private:
@@ -655,7 +655,7 @@ protected:
      * This also creates and adds a default label widget using @ref createNewLabelWidget. The new
      * widget is also focused.
      *
-     * @return The new DynamicWidget or NULL, if the maximum widget count is already reached.
+     * @return The new DynamicWidget or 0, if the maximum widget count is already reached.
      **/
     virtual DynamicWidget *addWidget( QWidget *widget );
 
@@ -665,7 +665,7 @@ protected:
      *
      * The new widget is also focused.
      *
-     * @return The new DynamicWidget or NULL, if the maximum widget count is already reached.
+     * @return The new DynamicWidget or 0, if the maximum widget count is already reached.
      **/
     virtual DynamicWidget *addWidget( QWidget *labelWidget, QWidget *widget );
 
@@ -781,7 +781,7 @@ public:
     /** @brief Gets the label used for @p lineEdit. */
     QLabel *labelFor( KLineEdit *lineEdit ) const;
 
-    /** @brief Gets the currently focused line edit or NULL, if none has focus. */
+    /** @brief Gets the currently focused line edit or 0, if none has focus. */
     KLineEdit *focusedLineEdit() const;
 
 Q_SIGNALS:

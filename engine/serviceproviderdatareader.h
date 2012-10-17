@@ -100,7 +100,7 @@ public:
      * @param fileName The filename of the xml file.
      * @param country The country the service provider operates in.
      *
-     * @return A ServiceProviderData object or NULL on error.
+     * @return A pointer to a ServiceProviderData object or 0 on error.
      **/
     ServiceProviderData* read( QIODevice *device, const QString &serviceProvider,
                                const QString &fileName, const QString &country,

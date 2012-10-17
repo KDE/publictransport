@@ -70,11 +70,9 @@ void JourneySearchSuggestionItem::updateTextLayout()
 void JourneySearchSuggestionItem::updateData(const QModelIndex& modelIndex)
 {
     if ( modelIndex.isValid() ) {
-//         m_row = modelIndex.row();
-//         m_model = modelIndex.model();
         setHtml( modelIndex.data().toString() );
     } else {
-        kDebug() << "Invalid index given!"/* << m_model << m_row*/;
+        kDebug() << "Invalid index given!";
     }
 }
 
@@ -116,17 +114,14 @@ void JourneySearchSuggestionItem::paint( QPainter* painter, const QStyleOptionGr
         return;
     }
 
-    if ( option->state.testFlag(QStyle::State_HasFocus)
-        || option->state.testFlag(QStyle::State_Selected)
-        /*|| option->state.testFlag(QStyle::State_MouseOver)*/ )
+    if ( option->state.testFlag(QStyle::State_HasFocus) ||
+         option->state.testFlag(QStyle::State_Selected) )
     {
         #if KDE_VERSION < KDE_MAKE_VERSION(4,6,0)
             QColor focusColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::HighlightColor );
         #else
             QColor focusColor = Plasma::Theme::defaultTheme()->color( Plasma::Theme::ViewFocusColor );
         #endif
-//                 KColorScheme( QPalette::Active, KColorScheme::Selection )
-//                             .background( KColorScheme::NormalBackground ).color();
         if ( option->state.testFlag(QStyle::State_Selected) ) {
             if ( option->state.testFlag(QStyle::State_MouseOver) ) {
                 focusColor.setAlpha( focusColor.alpha() * 0.65f );
@@ -147,7 +142,6 @@ void JourneySearchSuggestionItem::paint( QPainter* painter, const QStyleOptionGr
         painter->fillRect( option->rect, QBrush(bgGradient) );
     }
 
-//     bool drawHalos = true; // TODO
     QRectF iconRect( option->rect.left(), option->rect.top() + (option->rect.height() - 16) / 2.0,
                     16, 16 );
     QRectF textRect( iconRect.right() + 5.0, option->rect.top(),
@@ -159,8 +153,16 @@ void JourneySearchSuggestionItem::paint( QPainter* painter, const QStyleOptionGr
         painter->drawPixmap( iconRect.toRect(), pixmap );
     }
 
+    TextDocumentHelper::Option textOption;
+    if ( !m_parent->m_settings->drawShadows() ) {
+        textOption = TextDocumentHelper::DoNotDrawShadowOrHalos;
+    } else if ( qGray(painter->pen().color().rgb()) < 192 ) {
+        textOption = TextDocumentHelper::DrawHalos;
+    } else {
+        textOption = TextDocumentHelper::DrawShadows;
+    }
     TextDocumentHelper::drawTextDocument( painter, option, m_textDocument,
-            textRect.toRect(), TextDocumentHelper::DrawHalos /*TODO*/ );
+                                          textRect.toRect(), textOption );
 }
 
 QModelIndex JourneySearchSuggestionWidget::indexFromItem( JourneySearchSuggestionItem *item )
@@ -305,14 +307,6 @@ void JourneySearchSuggestionWidget::rowsInserted(const QModelIndex& parent, int 
         connect( item, SIGNAL(suggestionDoubleClicked(QModelIndex)),
                 this, SLOT(suggestionDoubleClicked(QModelIndex)) );
 
-//         // Fade new items in
-//         Plasma::Animation *fadeAnimation = Plasma::Animator::create(
-//                 Plasma::Animator::FadeAnimation, item );
-//         fadeAnimation->setTargetWidget( item );
-//         fadeAnimation->setProperty( "startOpacity", 0.0 );
-//         fadeAnimation->setProperty( "targetOpacity", 1.0 );
-//         fadeAnimation->start( QAbstractAnimation::DeleteWhenStopped );
-
         l->insertItem( row, item );
     }
 }
@@ -359,7 +353,7 @@ void JourneySearchSuggestionWidget::attachLineEdit(Plasma::LineEdit* lineEdit)
 void JourneySearchSuggestionWidget::detachLineEdit()
 {
     disconnect( m_lineEdit, SIGNAL(textEdited(QString)), this, SLOT(journeySearchLineEdited(QString)) );
-    m_lineEdit = NULL;
+    m_lineEdit = 0;
 }
 
 void JourneySearchSuggestionWidget::clear()
@@ -649,7 +643,7 @@ void JourneySearchSuggestionWidget::maybeAddKeywordAddRemoveItems(const QStringL
             extraRegExp = extraRegExps.at( i );
         }
 
-        QStandardItem *item = NULL;
+        QStandardItem *item = 0;
         QColor keywordColor = KColorScheme( QPalette::Active )
                 .foreground( KColorScheme::PositiveText ).color();
 
@@ -709,9 +703,6 @@ void JourneySearchSuggestionWidget::journeySearchItemCompleted(const QString& ne
         kDebug() << "Index isn't valid, can't remove row from model" << newJourneySearch;
     }
     m_lineEdit->setText( newJourneySearch );
-
-    // For autocompletion and to update suggestions
-//     journeySearchInputEdited( journeySearch->text() ); TEST should be called automatically
 
     if ( newCursorPos != -1 ) {
         m_lineEdit->nativeWidget()->setCursorPosition( newCursorPos );

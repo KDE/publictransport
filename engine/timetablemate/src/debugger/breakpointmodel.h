@@ -165,7 +165,6 @@ private:
 
 class CheckboxDelegate : public KWidgetItemDelegate {
     Q_OBJECT
-//     friend class BreakpoointModel;
 
 public:
     explicit CheckboxDelegate( QAbstractItemView *itemView, QObject *parent = 0 );

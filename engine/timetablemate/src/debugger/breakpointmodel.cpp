@@ -358,7 +358,6 @@ QModelIndex BreakpointModel::indexFromBreakpoint( Breakpoint *breakpoint ) const
         }
     }
 
-//     const int row = m_breakpoints.indexOf( breakpoint );
     return row == -1 ? QModelIndex() : createIndex( row, 0, breakpoint );
 }
 

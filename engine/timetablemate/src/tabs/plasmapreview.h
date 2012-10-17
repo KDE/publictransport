@@ -51,7 +51,6 @@ protected:
 private:
     bool loadPlasmaPreview();
     void closePlasmaPreview();
-//     void loadNoPlasmaScene();
 
     Plasma::Corona m_corona;
     Plasma::Containment *m_containment;

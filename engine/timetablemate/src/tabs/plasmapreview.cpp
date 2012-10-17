@@ -35,7 +35,6 @@ PlasmaPreview::PlasmaPreview( QWidget *parent )
     setVerticalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
     setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
     loadPlasmaPreview();
-//     loadNoPlasmaScene();
 }
 
 PlasmaPreview::~PlasmaPreview()
@@ -44,42 +43,11 @@ PlasmaPreview::~PlasmaPreview()
         // Remove applet
         m_containment->clearApplets();
         delete m_applet;
-//         m_applet = 0;
 
         // Remove containment
         delete m_containment;
-//         m_containment = 0;
     }
 }
-
-// void PlasmaPreview::loadNoPlasmaScene()
-// {
-//     QGraphicsScene *newScene = new QGraphicsScene( this );
-//
-//     QGraphicsWidget *item = new QGraphicsWidget;
-//     QGraphicsLinearLayout *l = new QGraphicsLinearLayout( item );
-//     item->setLayout( l );
-//
-//     // Create a KPushButton in a proxy widget
-//     KPushButton *btnShowPlasmaPreview =
-//         new KPushButton( i18nc( "@action:button", "Show &Plasma Preview" ) );
-//     connect( btnShowPlasmaPreview, SIGNAL( clicked( bool ) ), this, SLOT( loadPlasmaPreview() ) );
-//
-//     l->addItem( newScene->addWidget( btnShowPlasmaPreview ) );
-// //     l->addItem( scene->addText(i18nc("@info", "<para><note>You need to install your "
-// //                   "service provider plugin to show a preview of it.</note></para>")) );
-//     newScene->addItem( item );
-//     newScene->setSceneRect( item->boundingRect() );
-//
-//     setAlignment( Qt::AlignCenter );
-//     setScene( newScene );
-//     setSceneRect( item->boundingRect() );
-//
-//     if( m_containment ) {
-//         delete m_containment;
-//         m_containment = NULL;
-//     }
-// }
 
 bool PlasmaPreview::loadPlasmaPreview()
 {
@@ -103,7 +71,7 @@ bool PlasmaPreview::loadPlasmaPreview()
     m_applet = m_containment->addApplet( "publictransport" );
     if( !m_applet ) {
         delete m_containment;
-        m_containment = NULL;
+        m_containment = 0;
         KMessageBox::information( this, i18nc("@info", "The PublicTransport applet could not be "
                                               "added. Ensure that you have it installed.") );
         return false;

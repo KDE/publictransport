@@ -220,7 +220,7 @@ public:
         // Create details widget only if there are detailed settings in d->settings
         if ( !settings.isEmpty() ) {
             // Add widgets for settings
-            QFormLayout *detailsLayout = NULL; // Gets created for the first detailed setting
+            QFormLayout *detailsLayout = 0; // Gets created for the first detailed setting
             foreach ( int setting, settings ) {
                 if ( setting <= StopNameSetting ) {
                     // Default settings are created in uiStop.setupUi()
@@ -473,12 +473,9 @@ public:
         if ( options.testFlag(option) ) {
             // Ensure associated setting widgets are in the settings list
             if ( (rule == RequiredBy || rule == IfAndOnlyIf) && !settings.contains(setting) ) {
-//                 kDebug() << setting << "isn't in the list of settings for option" << option;
                 settings.append( setting );
             }
         } else if ( settings.contains(setting) && rule == IfAndOnlyIf ) {
-//             kDebug() << setting << "is in the list of settings, but option" << option << "isn't set";
-
             // Ensure associated setting widgets are NOT in the settings list
             settings.removeOne( setting );
         }
@@ -520,7 +517,7 @@ public:
         if ( !detailsWidget ) {
             kDebug() << "Details widget not created yet, no custom settings. Requested"
                      << static_cast<StopSetting>(setting);
-            return NULL;
+            return 0;
         }
 
         // Normal widgets created by StopSettingsWidgetFactory
@@ -992,7 +989,7 @@ void StopSettingsDialog::stopFinderError( StopFinder::Error /*error*/, const QSt
     Q_D( StopSettingsDialog );
     if ( d->nearStopsDialog ) {
         d->nearStopsDialog->close();
-        d->nearStopsDialog = NULL;
+        d->nearStopsDialog = 0;
 
         KMessageBox::information( this, errorMessage );
     }
@@ -1001,12 +998,12 @@ void StopSettingsDialog::stopFinderError( StopFinder::Error /*error*/, const QSt
 void StopSettingsDialog::stopFinderFinished()
 {
     Q_D( StopSettingsDialog );
-    d->stopFinder = NULL; // Deletes itself when finished
+    d->stopFinder = 0; // Deletes itself when finished
 
     // Close dialog and show info if no stops could be found
     if ( d->nearStopsDialog && !d->nearStopsDialog->hasItems() ) {
         d->nearStopsDialog->close();
-        d->nearStopsDialog = NULL;
+        d->nearStopsDialog = 0;
 
         // Get data from the geolocation data engine
         Plasma::DataEngine::Data dataGeo = d->geolocationEngine->query( "location" );
@@ -1060,7 +1057,7 @@ void StopSettingsDialog::nearStopsDialogFinished( int result )
     if ( result == KDialog::Accepted ) {
         QString stop = d->nearStopsDialog->selectedStop();
         d->stopFinder->deleteLater();
-        d->stopFinder = NULL;
+        d->stopFinder = 0;
 
         if ( stop.isNull() ) {
             kDebug() << "No stop selected";
@@ -1075,18 +1072,12 @@ void StopSettingsDialog::nearStopsDialogFinished( int result )
             } else {
                 settings.setStop( stop );
             }
-//             settings.setStop( stop );
-//             if ( d->stopToStopID.contains(stop) ) {
-//                 settings.setStopID( d->stopToStopID[stop].toString() );
-//             } else {
-//                 settings.setStopIDs( QStringList() );
-//             }
             setStopSettings( settings );
         }
     }
 
 //     delete m_nearStopsDialog; // causes a crash (already deleted..?)
-    d->nearStopsDialog = NULL;
+    d->nearStopsDialog = 0;
 }
 
 void StopSettingsDialog::accept()

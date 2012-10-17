@@ -447,7 +447,6 @@ protected:
     virtual void debuggerRun();
 
     virtual bool runInForeignAgent( DebuggerAgent *agent ) = 0;
-//     virtual void updateResult() = 0;
     virtual void handleUncaughtException( DebuggerAgent *agent ) { Q_UNUSED(agent); };
     virtual bool waitForFinish( DebuggerAgent *agent, const ScriptObjects &objects );
 

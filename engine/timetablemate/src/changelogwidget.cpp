@@ -74,11 +74,7 @@ ChangelogEntryWidget::ChangelogEntryWidget( QWidget *parent, const ChangelogEntr
 
     layout->addRow( i18nc("@info Label for the author of a changelog entry (short author name)",
                           "Author, Version:"), authorVersionWidget );
-//  layout->addRow( i18nc("@info Label for the version of a changelog entry",
-//                        "Version:"), m_version );
     m_releasedWith->hide(); // Not used, but read and save it
-//  layout->addRow( i18nc("@info Label for the publictransport version the changelog entry was released with",
-//                        "Released With:"), m_releasedWith );
     layout->addRow( i18nc("@info Label for the description of a changelog entry",
                           "Description:"), m_description );
 }

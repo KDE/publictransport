@@ -100,7 +100,7 @@ KIcon Global::internationalIcon()
     return resultIcon;
 }
 
-KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType/*, const QString &overlayIcon*/ )
+KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType )
 {
     KIcon icon;
     switch ( vehicleType ) {
@@ -152,10 +152,6 @@ KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType/*, const QString
     default:
         icon = KIcon( "status_unknown" );
     }
-
-//     if ( !overlayIcon.isEmpty() ) {
-//         icon = makeOverlayIcon( icon, overlayIcon );
-//     }
 
     return icon;
 }

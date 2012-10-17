@@ -215,7 +215,7 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
 
     default:
         kDebug() << "Unknown filter type" << type;
-        return NULL;
+        return 0;
     }
 }
 
@@ -245,7 +245,7 @@ ConstraintWidget* FilterWidget::createConstraint( FilterType type )
 
     default:
         kDebug() << "Unknown filter type" << type;
-        return NULL;
+        return 0;
     }
 }
 

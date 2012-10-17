@@ -146,7 +146,6 @@ QSize DockToolButton::sizeHint() const
     } else {
         return QSize( width, height );
     }
-//     return QToolButton::sizeHint();
 }
 
 void DockToolButton::paintEvent( QPaintEvent *event )

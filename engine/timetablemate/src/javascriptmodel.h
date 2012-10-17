@@ -77,7 +77,7 @@ public:
     CodeNode::Ptr nodeFromRow( int row ) const;
 
     /**
-     * @returns the node at the given @p lineNumber or NULL if there is no node at that line.
+     * @returns the node at the given @p lineNumber or a null pointer if there is no node at that line.
      * @param lineNumber The line number at which the node is.
      * @param matchOnlyFirstRowOfSpanned If false, nodes that span multiple lines are matched
      *   if @p lineNumber is between the first line and the last line of that node, including

@@ -935,16 +935,16 @@ public slots:
     /** @brief Run the getJourneys() script function. */
     void runGetJourneys();
 
-    /** @brief Run the getTimetable() script function and interrupt at the first executed line. */
+    /** @brief Run the getTimetable() script function and interrupt at breakpoints and executions. */
     void debugGetTimetable();
 
-    /** @brief Run the getStopSuggestions() script function and interrupt at the first executed line. */
+    /** @brief Run the getStopSuggestions() script function and interrupt at breakpoints and executions. */
     void debugGetStopSuggestions();
 
-    /** @brief Run the getStopSuggestions() script function and interrupt at the first executed line. */
+    /** @brief Run the getStopSuggestions() script function and interrupt at breakpoints and executions. */
     void debugGetStopsByGeoPosition();
 
-    /** @brief Run the getJourneys() script function and interrupt at the first executed line. */
+    /** @brief Run the getJourneys() script function and interrupt at breakpoints and executions. */
     void debugGetJourneys();
 
     /** @brief Show the main script tab. */

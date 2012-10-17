@@ -394,7 +394,6 @@ bool PublicTransportEngine::updateServiceProviderSource()
     const QString name = sourceTypeKeyword( ServiceProvidersSource );
     QVariantHash data;
     if ( m_dataSources.contains(name) ) {
-        // kDebug() << "Data source" << name << "is up to date";
         data = m_dataSources[ name ]->data;
     } else {
         if ( !m_fileSystemWatcher ) {

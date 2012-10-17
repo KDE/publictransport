@@ -96,7 +96,6 @@ QVariant BacktraceModel::data( const QModelIndex &index, int role ) const
 
 Qt::ItemFlags BacktraceModel::flags( const QModelIndex &index ) const
 {
-//     const Column column = static_cast< Column >( index.column() );
     return !index.isValid() ? Qt::NoItemFlags : Qt::ItemIsEnabled | Qt::ItemIsSelectable;
 }
 

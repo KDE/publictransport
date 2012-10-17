@@ -384,8 +384,6 @@ void TimetableMate::saveProperties( KConfigGroup &config )
             openedProjects << projectString;
         }
     }
-//     Settings::setLastOpenedProjects( openedProjects );
-//     Settings::self()->writeConfig();
     config.writeEntry( "lastOpenedProjects", openedProjects );
 }
 
@@ -745,12 +743,12 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Debugger::Debugger *debugger = previousProject->debugger();
-        disconnect( debugger, SIGNAL(aborted()), this, SLOT(debugAborted()) );
+        disconnect( debugger, SIGNAL(aborted()), this, SLOT(updateWindowTitle()) );
         disconnect( debugger, SIGNAL(interrupted(int,QString,QDateTime)),
-                    this, SLOT(debugInterrupted(int,QString,QDateTime)) );
-        disconnect( debugger, SIGNAL(continued(QDateTime,bool)), this, SLOT(debugContinued()) );
-        disconnect( debugger, SIGNAL(started()), this, SLOT(debugStarted()) );
-        disconnect( debugger, SIGNAL(stopped()), this, SLOT(debugStopped()) );
+                    this, SLOT(updateWindowTitle()) );
+        disconnect( debugger, SIGNAL(continued(QDateTime,bool)), this, SLOT(updateWindowTitle()) );
+        disconnect( debugger, SIGNAL(started()), this, SLOT(updateWindowTitle()) );
+        disconnect( debugger, SIGNAL(stopped()), this, SLOT(updateWindowTitle()) );
         disconnect( debugger, SIGNAL(exception(int,QString,QString)),
                     this, SLOT(uncaughtException(int,QString,QString)) );
         disconnect( debugger, SIGNAL(breakpointReached(Breakpoint)),
@@ -781,12 +779,12 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Debugger::Debugger *debugger = project->debugger();
-        connect( debugger, SIGNAL(aborted()), this, SLOT(debugAborted()) );
+        connect( debugger, SIGNAL(aborted()), this, SLOT(updateWindowTitle()) );
         connect( debugger, SIGNAL(interrupted(int,QString,QDateTime)),
-                 this, SLOT(debugInterrupted(int,QString,QDateTime)) );
-        connect( debugger, SIGNAL(continued(QDateTime,bool)), this, SLOT(debugContinued()) );
-        connect( debugger, SIGNAL(started()), this, SLOT(debugStarted()) );
-        connect( debugger, SIGNAL(stopped()), this, SLOT(debugStopped()) );
+                 this, SLOT(updateWindowTitle()) );
+        connect( debugger, SIGNAL(continued(QDateTime,bool)), this, SLOT(updateWindowTitle()) );
+        connect( debugger, SIGNAL(started()), this, SLOT(updateWindowTitle()) );
+        connect( debugger, SIGNAL(stopped()), this, SLOT(updateWindowTitle()) );
         connect( debugger, SIGNAL(exception(int,QString,QString)),
                  this, SLOT(uncaughtException(int,QString,QString)) );
         connect( debugger, SIGNAL(breakpointReached(Breakpoint)),
@@ -1077,7 +1075,6 @@ void TimetableMate::closeTab( AbstractTab *tab )
 
     // Close the tab
     m_tabWidget->removeTab( m_tabWidget->indexOf(tab) );
-//     currentTabChanged( m_tabWidget->currentIndex() );
     tab->deleteLater();
 }
 
@@ -1339,7 +1336,6 @@ void TimetableMate::setupActions() {
     KStandardAction::preferences( this, SLOT(optionsPreferences()), actionCollection() );
     m_recentFilesAction = KStandardAction::openRecent( this, SLOT(open(KUrl)), actionCollection() );
     actionCollection()->addAction( QLatin1String("project_open_recent"), m_recentFilesAction );
-//     m_recentFilesAction->loadEntries( Settings::self()->config()->group(0) );
 
     KAction *openInstalled = new KAction( KIcon("document-open"), i18nc("@action",
                                           "Open I&nstalled..."), this );
@@ -1448,39 +1444,6 @@ void TimetableMate::breakpointReached( const Breakpoint &breakpoint )
 {
     infoMessage( i18nc("@info/plain", "Reached breakpoint at %1", breakpoint.lineNumber()),
                  KMessageWidget::Information );
-}
-
-void TimetableMate::debugInterrupted( int lineNumber, const QString &fileName,
-                                      const QDateTime &timestamp )
-{
-    Q_UNUSED( lineNumber );
-    Q_UNUSED( fileName );
-    Q_UNUSED( timestamp );
-    updateWindowTitle();
-}
-
-void TimetableMate::debugContinued()
-{
-//     Project *project = m_projectModel->activeProject();
-//     Q_ASSERT( project ); // debugContinued is connected to the currently active project
-//     setWindowTitle( i18nc("@window:title", "TimetableMate - %1 [*]",
-//                           project->provider()->serviceProvider()) );
-    updateWindowTitle();
-}
-
-void TimetableMate::debugAborted()
-{
-    updateWindowTitle();
-}
-
-void TimetableMate::debugStarted()
-{
-    updateWindowTitle();
-}
-
-void TimetableMate::debugStopped()
-{
-    updateWindowTitle();
 }
 
 void TimetableMate::uncaughtException( int lineNumber, const QString &errorMessage,
@@ -1731,14 +1694,6 @@ AbstractTab *TimetableMate::showProjectTab( bool addTab, AbstractTab *tab )
 }
 
 void TimetableMate::open( const KUrl &url ) {
-//     foreach ( ProjectModelItem *projectItem, m_projectModel->projectItems() ) {
-//         if ( url.equals(projectItem->project()->xmlFilePath(), KUrl::CompareWithoutTrailingSlash) ) {
-//             KMessageBox::information( this, i18nc("@info", "The project %1 is already opened.",
-//                                                   projectItem->project()->projectName()) );
-//             return;
-//         }
-//     }
-
     Project *project = openProject( url.path() );
     if ( project ) {
         project->showDashboardTab( this );

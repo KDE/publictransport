@@ -98,14 +98,6 @@ TestModel::TestState TestModel::setTestState( TestModel::Test test, TestState st
 {
     const QModelIndex testIndex = indexFromTest( test );
     removeTestChildren( test );
-//     if ( m_testData.contains(test) ) {
-//         TestData &testData = m_testData[ test ];
-//         if ( !testData.childrenExplanations.isEmpty() ) {
-//             beginRemoveRows( testIndex, 0, testData.childrenExplanations.count() - 1 );
-//             testData.childrenExplanations.clear();
-//             endRemoveRows();
-//         }
-//     }
 
     // Check for warnings/errors in children explanations
     if ( state == TestFinishedSuccessfully ) {

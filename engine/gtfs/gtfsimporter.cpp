@@ -190,7 +190,6 @@ void GeneralTransitFeedImporter::run()
         int minimalRecordCount = 0;
         if ( fileInfo.fileName() == "agency.txt" ) {
             requiredFields << "agency_name" << "agency_url" << "agency_timezone";
-//             minimalRecordCount = 1;
         } else if ( fileInfo.fileName() == "stops.txt" ) {
             requiredFields << "stop_id" << "stop_name" << "stop_lat" << "stop_lon";
             minimalRecordCount = 1;
@@ -612,13 +611,12 @@ bool GeneralTransitFeedImporter::readFields( const QString& line, QVariantList *
     if ( fieldValues->isEmpty() ) {
         return false;
     } else if ( fieldValues->count() < expectedFieldCount ) {
-        kDebug() << "Header contains" << expectedFieldCount << "fields, but a line was read with only"
-                 << fieldValues->count() << "field values. Using empty/default values:";
-        kDebug() << "Values: " << *fieldValues;
+        kWarning() << "Header contains" << expectedFieldCount << "fields, but a line was read "
+                "with only" << fieldValues->count() << "field values. Using empty/default values:";
+        kWarning() << "Values: " << *fieldValues;
         while ( fieldValues->count() < expectedFieldCount ) {
             fieldValues->append( QVariant() );
         }
-//         return false; Error is non-fatal
     }
 
     return true;

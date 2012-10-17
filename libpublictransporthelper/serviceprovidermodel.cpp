@@ -239,7 +239,8 @@ void ServiceProviderModel::syncWithDataEngine( Plasma::DataEngine* publicTranspo
     qSort( d->items.begin(), d->items.end(), serviceProviderGreaterThan );
 }
 
-void ServiceProviderModel::dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data )
+void ServiceProviderModel::dataUpdated( const QString &sourceName,
+                                        const Plasma::DataEngine::Data &data )
 {
     Q_D( const ServiceProviderModel );
 
@@ -247,7 +248,7 @@ void ServiceProviderModel::dataUpdated( const QString& sourceName, const Plasma:
         // Favicon of a service provider arrived
         QPixmap favicon( QPixmap::fromImage( data["Icon"].value<QImage>() ) );
         if ( favicon.isNull() ) {
-//             kDebug() << "No favicon found for" << sourceName;
+            // No favicon found for sourceName;
             favicon = QPixmap( 16, 16 );
             favicon.fill( Qt::transparent );
         }

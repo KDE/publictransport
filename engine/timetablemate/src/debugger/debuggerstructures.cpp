@@ -86,10 +86,6 @@ bool Breakpoint::testCondition( DebuggerAgent *agent, bool *error )
     const QString condition =
             m_condition.replace( QLatin1String("%HITS"), QString::number(m_hitCount) );
 
-//     const QString conditionProgram =
-//             QString("try{%1}catch(err){print('Error in breakpoint condition: ' + err);}")
-//             .arg(condition);
-
     bool uncaughtException;
     int errorLineNumber;
     QString errorMessage;

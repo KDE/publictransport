@@ -1988,7 +1988,6 @@ public:
     #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Q_Q( Project );
         finishedTests << test;
-//         Q_ASSERT( !startedTests.isEmpty() );
         q->emit testProgress( finishedTests, startedTests );
 
         if ( !debugger->isRunning() && finishedTests.count() >= startedTests.count() &&

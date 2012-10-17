@@ -424,34 +424,6 @@ bool ProjectSettingsDialog::eventFilter( QObject *object, QEvent *event )
     if ( widget && event->type() == QEvent::FocusOut ) {
         testWidget( widget );
     }
-//     KLineEdit *lineEdit = qobject_cast< KLineEdit* >( object );
-//     if ( lineEdit && lineEdit->validator() ) {
-//         if ( event->type() == QEvent::FocusOut ) {
-// //             QString errorMessage;
-// //             if ( lineEdit == ui_provider->email ) {
-// //                 errorMessage = i18nc("@info", "Invalid e-mail address");
-// //             } else if ( lineEdit == ui_provider->version || lineEdit == ui_provider->fileVersion ) {
-// //                 errorMessage = i18nc("@info", "Invalid version");
-// //             }
-// //
-// //             const bool validated = errorMessage.isEmpty() ||
-// //                     testLineEditValidator( lineEdit, errorMessage );
-// //             kDebug() << "Validated?" << validated << lineEdit << lineEdit->text();
-// //             if ( validated && lineEdit == ui_provider->fileVersion &&
-// //                  lineEdit->text() != QLatin1String("1.0") )
-// //             {
-// //                 // TODO Global error message class for ServiceProviderData?
-// //                 appendMessageWidgetAfter( lineEdit, i18nc("@info",
-// //                         "<title>The PublicTransport data engine currently only supports version '1.0'</title>"
-// //                         "<para>Specify version '1.0' as <interface>File Type Version</interface> "
-// //                         "in the project settings.</para>") );
-// //             }
-//         }
-//     } else if ( lineEdit && lineEdit->text().isEmpty() ) {
-//         if ( event->type() == QEvent::FocusOut ) {
-//             appendMessageWidgetAfter( lineEdit, i18nc("@info", "Cannot be empty") );
-//         }
-//     }
 
     KMessageWidget *messageWidget = qobject_cast< KMessageWidget*> ( object );
     if ( messageWidget && event->type() == QEvent::Hide ) {
@@ -559,11 +531,6 @@ void ProjectSettingsDialog::appendMessageWidgetAfter( QWidget *after, const QStr
 
 void ProjectSettingsDialog::fillValuesFromWidgets()
 {
-//     if ( !m_providerData ) {
-//         kDebug() << "No provider loaded to fill with values";
-//         return;
-//     }
-
     // Fill struct with current values of the widgets
     QString lang = ui_provider->currentLanguage->current();
     if( lang == QLatin1String("en_US") ) {
@@ -896,7 +863,6 @@ void ProjectSettingsDialog::setScriptFile( const QString &scriptFile )
 
 const ServiceProviderData *ProjectSettingsDialog::providerData( QObject *parent ) const
 {
-//     m_providerData->setParent( parent );
     return m_providerData->clone(parent);
 }
 

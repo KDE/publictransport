@@ -34,7 +34,6 @@ Settings SettingsIO::readSettings( KConfigGroup cg, KConfigGroup cgGlobal,
     {
         // DEPRECATED This reads settings stored in old format (version < 0.11)
         kDebug() << "Reading settings in old format, will be converted to new format";
-//         settings.m_departureTimeFlags = Settings::DoNotShowDepartureTime;
         settings.setShowRemainingTime( cg.readEntry("showRemainingMinutes", true) );
         cg.deleteEntry( "showRemainingMinutes" );
 

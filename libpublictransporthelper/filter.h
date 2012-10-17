@@ -237,7 +237,6 @@ bool PUBLICTRANSPORTHELPER_EXPORT operator ==( const FilterSettingsList &l, cons
 inline QDebug& operator<<(QDebug debug, const Constraint& constraint)
 {
     return debug << "Constraint, type " << constraint.type << ", variant " << constraint.variant;
-//                  << ", value " << constraint.value;
 }
 
 inline QDebug& operator<<(QDebug debug, const Filter& filter)

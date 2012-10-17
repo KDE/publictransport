@@ -352,8 +352,6 @@ void ScriptTab::slotSetStatusBarText( const QString &message )
 
 void ScriptTab::toggleBreakpoint( int lineNumber )
 {
-//     project()->loadScriptSynchronous();
-
     lineNumber = lineNumber == -1
             ? document()->views().first()->cursorPosition().line() + 1 : lineNumber;
     Debugger::Debugger *debugger = project()->debugger();
@@ -405,8 +403,6 @@ void ScriptTab::markChanged( KTextEditor::Document *document, const KTextEditor:
                              KTextEditor::MarkInterface::MarkChangeAction action )
 {
     if ( mark.type == KTextEditor::MarkInterface::BreakpointActive ) {
-//         project()->loadScriptSynchronous();
-
         Debugger::BreakpointModel *breakpointModel = project()->debugger()->breakpointModel();
         if ( action == KTextEditor::MarkInterface::MarkAdded ) {
             Debugger::Debugger *debugger = project()->debugger();
@@ -437,7 +433,6 @@ void ScriptTab::currentFunctionChanged( int index )
     QModelIndex functionIndex = m_functionsModel->index( index, 0 );
     CodeNode::Ptr node = m_scriptModel->nodeFromIndex(
             m_functionsModel->mapToSource(functionIndex) );
-//     FunctionNode *function = dynamic_cast< FunctionNode* >( node );
     FunctionNode::Ptr function = node.dynamicCast<FunctionNode>();
     if ( function ) {
         goToLine( function->line() );

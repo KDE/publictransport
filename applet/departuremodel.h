@@ -101,12 +101,12 @@ public:
     ItemBase( const Info *info );
     virtual ~ItemBase();
 
-    /** @returns the parent item of this item, or NULL if this item is a
+    /** @returns the parent item of this item, or 0 if this item is a
      * toplevel item. */
     ItemBase *parent() const { return m_parent; };
 
     /** @returns the toplevel parent item of this item, or a pointer to this
-     * item if it is a toplevel item itself. Never returns NULL. */
+     * item if it is a toplevel item itself. Never returns 0. */
     ItemBase *topLevelParent() const;
 
     const Info *info() const { return m_info; };
@@ -378,11 +378,11 @@ protected:
     /**
      * @param itemType The child item type to get the display text for.
      *
-     * @param linesPerRow The number of lines for the new item is put here, if it's not NULL.
+     * @param linesPerRow The number of lines for the new item is put here, if it's not 0.
      *
      * @returns the text to be displayed for the given @p itemType.
      **/
-    QString childItemText( ItemType itemType, int *linesPerRow = NULL );
+    QString childItemText( ItemType itemType, int *linesPerRow = 0 );
 
     /** @brief Creates a route item with one child item for each route stop. */
     ChildItem *createRouteItem();
@@ -489,11 +489,11 @@ protected:
     /**
      * @param itemType The child item type to get the display text for.
      *
-     * @param linesPerRow The number of lines for the new item is put here, if it's not NULL.
+     * @param linesPerRow The number of lines for the new item is put here, if it's not 0.
      *
      * @returns the text to be displayed for the given @p itemType.
      **/
-    QString childItemText( ItemType itemType, int *linesPerRow = NULL );
+    QString childItemText( ItemType itemType, int *linesPerRow = 0 );
 
     /** @brief Creates a route item with one child item for each route stop. */
     ChildItem *createRouteItem();
@@ -745,7 +745,7 @@ public:
     virtual void sort( int column, Qt::SortOrder order = Qt::AscendingOrder );
 
     ItemBase *itemFromInfo( const DepartureInfo &info ) const {
-        return m_infoToItem.contains(info.hash()) ? m_infoToItem[info.hash()] : NULL; };
+        return m_infoToItem.contains(info.hash()) ? m_infoToItem[info.hash()] : 0; };
     QModelIndex indexFromInfo( const DepartureInfo &info ) const {
         return m_infoToItem.contains(info.hash()) ? m_infoToItem[info.hash()]->index() : QModelIndex(); };
 
@@ -800,9 +800,9 @@ public:
     QDateTime nextAlarmTime() const {
         return m_alarms.isEmpty() ? QDateTime() : m_alarms.keys().first(); };
 
-    /** @brief The departure with the next alarm or NULL if there's no pending alarm. */
+    /** @brief The departure with the next alarm or 0 if there's no pending alarm. */
     DepartureItem *nextAlarmDeparture() const {
-        return m_alarms.isEmpty() ? NULL : m_alarms.values().first(); };
+        return m_alarms.isEmpty() ? 0 : m_alarms.values().first(); };
 
     /** @brief A map with all pending alarms. There can be multiple departures for each alarm time. */
     const QMultiMap< QDateTime, DepartureItem* > *alarms() const {
@@ -870,7 +870,7 @@ public:
     virtual void sort( int column, Qt::SortOrder order = Qt::AscendingOrder );
 
     ItemBase *itemFromInfo( const JourneyInfo &info ) const {
-        return m_infoToItem.contains(info.hash()) ? m_infoToItem[info.hash()] : NULL; };
+        return m_infoToItem.contains(info.hash()) ? m_infoToItem[info.hash()] : 0; };
     QModelIndex indexFromInfo( const JourneyInfo &info ) const {
         return m_infoToItem.contains(info.hash()) ? m_infoToItem[info.hash()]->index() : QModelIndex(); };
 

@@ -195,9 +195,6 @@ protected slots:
     /** @brief The geometry of the applet has changed. */
     void appletResized();
 
-//     /** @brief Settings have changed. */
-//     void configChanged();
-
     /** @brief Overriden to update the popup icon to new sizes using updatePopupIcon(). */
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
 
@@ -559,8 +556,6 @@ protected slots:
 
     /** @brief Opens a configuration dialog for recent/favorite journey searches. */
     void configureJourneySearches();
-
-    void additionalDataResult( KJob *job );
 
     void updateRequestFinished( KJob *job );
     void enableUpdateAction();

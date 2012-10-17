@@ -133,6 +133,6 @@ void OverlayWidget::overlayAnimationComplete()
 
     m_under->setEnabled( true );
 #if QT_VERSION >= 0x040600
-    m_under->setGraphicsEffect( NULL );
+    m_under->setGraphicsEffect( 0 );
 #endif
 }

@@ -30,7 +30,6 @@ public:
     virtual inline TabType type() const { return Tabs::PlasmaPreview; };
 
     PlasmaPreview *plasmaPreviewWidget() const;
-//     void closePlasmaPreview() const;
 
 protected slots:
     void plasmaPreviewLoaded();
