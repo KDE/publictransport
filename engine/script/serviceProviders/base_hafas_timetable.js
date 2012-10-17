@@ -33,7 +33,8 @@ var __hafas_timetable = function(hafas) {
             var options = HafasPrivate.prepareOptions( options,
 		    processor.options, hafas.options );
             var url = processor.url( values, options );
-            var request = network.createRequest( url );
+            var userUrl = processor.userUrl( values, options );
+            var request = network.createRequest( url, userUrl );
             request.finished.connect( processor.parser.parserByFormat(options.format) );
             HafasPrivate.startRequest( request, processor.addPostData, values, options );
         },
@@ -77,7 +78,7 @@ var __hafas_timetable = function(hafas) {
                 (options.layout == undefined ? "" : ("&L=" + options.layout)) + // Specify the output layout
                 "&start=yes" + // Start the request instead of showing a form
                 "&productsFilter=" + HafasPrivate.createProductBitString(options.productBits) + // Extend filter to include all products
-            options.additionalUrlQueryItems;
+                options.additionalUrlQueryItems;
             if ( options.format == Hafas.XmlResCFormat ) {
                 query += "&output=xml";
             }

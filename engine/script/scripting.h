@@ -338,7 +338,8 @@ public:
     NetworkRequest( QObject* parent = 0 );
 
     /** @brief Create a new request object for @p url, managed by @p network. */
-    explicit NetworkRequest( const QString &url, Network *network, QObject* parent = 0 );
+    explicit NetworkRequest( const QString &url, const QString &userUrl,
+                             Network *network, QObject* parent = 0 );
 
     /** @brief Destructor. */
     virtual ~NetworkRequest();
@@ -352,6 +353,14 @@ public:
      * @ingroup scripting
      **/
     QString url() const;
+
+    /**
+     * @brief An URL for this request that should be shown to users.
+     * This can be eg. an URL to an HTML document showing the data that is also available
+     * at the requested URL, but eg. in XML format.
+     * @see url()
+     **/
+    QString userUrl() const;
 
     /**
      * @brief Whether or not the request is currently running.
@@ -472,6 +481,7 @@ protected:
 private:
     QMutex *m_mutex;
     const QString m_url;
+    const QString m_userUrl;
     QUrl m_redirectUrl;
     Network *m_network;
     bool m_isFinished;
@@ -555,6 +565,11 @@ public:
     Q_INVOKABLE QString lastUrl() const;
 
     /**
+     * @brief Get an URL for the last requested URL that should be shown to users.
+     **/
+    Q_INVOKABLE QString lastUserUrl() const;
+
+    /**
      * @brief Clears the last requested URL.
      **/
     Q_INVOKABLE void clear();
@@ -574,18 +589,26 @@ public:
      * If the @p timeout expires or the abort() slot gets called, the download gets stopped.
      *
      * @param url The URL to download.
+     * @param userUrl An URL for this request that should be shown to users.
+     *   This can be eg. an URL to an HTML document showing the data that is also available
+     *   at the requested URL, but eg. in XML format.
      * @param timeout Maximum time in milliseconds to wait for the reply to finish.
      *   If smaller than 0, no timeout gets used.
      * @ingroup scripting
      **/
-    Q_INVOKABLE QByteArray getSynchronous( const QString &url, int timeout = DEFAULT_TIMEOUT );
+    Q_INVOKABLE QByteArray getSynchronous( const QString &url, const QString &userUrl = QString(),
+                                           int timeout = DEFAULT_TIMEOUT );
 
     /**
      * @brief This is an alias for getSynchronous().
      * @ingroup scripting
      **/
-    Q_INVOKABLE inline QByteArray downloadSynchronous( const QString &url, int timeout = DEFAULT_TIMEOUT ) {
-        return getSynchronous(url, timeout); };
+    Q_INVOKABLE inline QByteArray downloadSynchronous( const QString &url,
+                                                       const QString &userUrl = QString(),
+                                                       int timeout = DEFAULT_TIMEOUT )
+    {
+        return getSynchronous(url, userUrl, timeout);
+    };
 
     /**
      * @brief Creates a new NetworkRequest for asynchronous network access.
@@ -595,7 +618,8 @@ public:
      * @see get, download, post, head
      * @ingroup scripting
      **/
-    Q_INVOKABLE NetworkRequest *createRequest( const QString &url );
+    Q_INVOKABLE NetworkRequest *createRequest( const QString &url,
+                                               const QString &userUrl = QString() );
 
     /**
      * @brief Perform the network @p request asynchronously.
@@ -770,6 +794,7 @@ private:
     QNetworkAccessManager *m_manager;
     bool m_quit;
     QString m_lastUrl;
+    QString m_lastUserUrl;
     bool m_lastDownloadAborted;
     QList< NetworkRequest::Ptr > m_requests;
     QList< NetworkRequest::Ptr > m_finishedRequests;

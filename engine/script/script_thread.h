@@ -148,6 +148,9 @@ public:
     /** @brief Return the URL of the last finished request. */
     QString lastDownloadUrl() const;
 
+    /** @brief Return an URL for the last finished request that should be shown to users. */
+    QString lastUserUrl() const;
+
 signals:
     /** @brief Signals ready TimetableData items. */
     void departuresReady( const QList<TimetableData> &departures,
@@ -208,6 +211,7 @@ protected:
     bool m_success;
     QString m_errorString;
     QString m_lastUrl;
+    QString m_lastUserUrl;
 };
 
 class DepartureJobPrivate;

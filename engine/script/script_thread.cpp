@@ -190,6 +190,7 @@ void ScriptJob::run()
     // Update last download URL
     QMutexLocker locker( m_mutex );
     m_lastUrl = objects.network->lastUrl(); // TODO Store all URLs
+    m_lastUserUrl = objects.network->lastUserUrl();
 
     // Inform about script run time
     DEBUG_ENGINE_JOBS( "Script finished in" << (timer.elapsed() / 1000.0)
@@ -203,14 +204,14 @@ void ScriptJob::run()
         case ParseForDepartures:
             emit departuresReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
-                    m_objects.network->lastUrl(), globalInfo,
+                    m_objects.network->lastUserUrl(), globalInfo,
                     *dynamic_cast<const DepartureRequest*>(request()),
                     couldNeedForcedUpdate );
             break;
         case ParseForArrivals: {
             emit arrivalsReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
-                    m_objects.network->lastUrl(), globalInfo,
+                    m_objects.network->lastUserUrl(), globalInfo,
                     *dynamic_cast< const ArrivalRequest* >(request()),
                     couldNeedForcedUpdate );
             break;
@@ -219,14 +220,14 @@ void ScriptJob::run()
         case ParseForJourneysByArrivalTime:
             emit journeysReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
-                    m_objects.network->lastUrl(), globalInfo,
+                    m_objects.network->lastUserUrl(), globalInfo,
                     *dynamic_cast<const JourneyRequest*>(request()),
                     couldNeedForcedUpdate );
             break;
         case ParseForStopSuggestions:
             emit stopSuggestionsReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
-                    m_objects.network->lastUrl(), globalInfo,
+                    m_objects.network->lastUserUrl(), globalInfo,
                     *dynamic_cast<const StopSuggestionRequest*>(request()),
                     couldNeedForcedUpdate );
             break;
@@ -240,7 +241,7 @@ void ScriptJob::run()
                 kWarning() << "The script added more than one result set, only the first gets used";
             }
             emit additionalDataReady( data.first(), m_objects.result->features(),
-                    m_objects.result->hints(), m_objects.network->lastUrl(), globalInfo,
+                    m_objects.result->hints(), m_objects.network->lastUserUrl(), globalInfo,
                     *dynamic_cast<const AdditionalDataRequest*>(request()),
                     couldNeedForcedUpdate );
             break;
@@ -566,27 +567,27 @@ void ScriptJob::publish()
         case ParseForDepartures:
             emit departuresReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
-                    m_objects.network->lastUrl(), globalInfo,
+                    m_objects.network->lastUserUrl(), globalInfo,
                     *dynamic_cast<const DepartureRequest*>(request()), couldNeedForcedUpdate );
             break;
         case ParseForArrivals:
             emit arrivalsReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
-                    m_objects.network->lastUrl(), globalInfo,
+                    m_objects.network->lastUserUrl(), globalInfo,
                     *dynamic_cast<const ArrivalRequest*>(request()), couldNeedForcedUpdate );
             break;
         case ParseForJourneysByDepartureTime:
         case ParseForJourneysByArrivalTime:
             emit journeysReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
-                    m_objects.network->lastUrl(), globalInfo,
+                    m_objects.network->lastUserUrl(), globalInfo,
                     *dynamic_cast<const JourneyRequest*>(request()),
                     couldNeedForcedUpdate );
             break;
         case ParseForStopSuggestions:
             emit stopSuggestionsReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
-                    m_objects.network->lastUrl(), globalInfo,
+                    m_objects.network->lastUserUrl(), globalInfo,
                     *dynamic_cast<const StopSuggestionRequest*>(request()),
                     couldNeedForcedUpdate );
             break;
@@ -765,4 +766,10 @@ QString ScriptJob::lastDownloadUrl() const
 {
     QMutexLocker locker( m_mutex );
     return m_lastUrl;
+}
+
+QString ScriptJob::lastUserUrl() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_lastUserUrl;
 }

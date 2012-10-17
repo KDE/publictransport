@@ -78,10 +78,7 @@ var HafasPrivate = {
         if ( values == undefined ) {
             return defaultValues;
         }
-        var _values = {};// values;
-        for ( var index in values ) {
-            _values[index] = values[index];
-        }
+        var _values = HafasPrivate.cloneObject( values );
         for ( var index in defaultValues ) {
             _values[index] = HafasPrivate.defaultArgument( values[index], defaultValues[index] );
         }
@@ -278,6 +275,14 @@ var HafasPrivate = {
             network.post( request, options.timeout );
         }
     },
+    /** Clone the given object, because QtScript only uses references to objects. */
+    cloneObject: function( object ) {
+        var cloned = {};
+        for ( property in object ) {
+            cloned[ property ] = object[ property ];
+        }
+        return cloned;
+    },
 
     /** A subclass of Hafas which provides parser functions. */
     Parser: function( publicInterface ) {
@@ -341,6 +346,15 @@ var HafasPrivate = {
 
             get: HafasPrivate.notImplemented( "get" ),
             url: HafasPrivate.notImplemented( "url" ),
+            userUrl: function( values, options, clonedOptionsCallback ) {
+                var userUrlOptions = HafasPrivate.cloneObject( options );
+                userUrlOptions.layout = undefined;
+                userUrlOptions.format = Hafas.HtmlFormat;
+                if ( typeof(clonedOptionsCallback) == 'function' ) {
+                    clonedOptionsCallback( userUrlOptions );
+                }
+                return publicInterface.url( values, userUrlOptions );
+            },
             addPostData: HafasPrivate.notImplemented( "postData" ),
             parser: undefined,
 

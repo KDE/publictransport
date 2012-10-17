@@ -15,7 +15,8 @@ var __hafas_journeys = function(hafas) {
         get: function( values, options ) {
             var options = HafasPrivate.prepareOptions( options, processor.options, hafas.options );
             var url = processor.url( values, options );
-            var request = network.createRequest( url );
+            var userUrl = processor.userUrl( values, options );
+            var request = network.createRequest( url, userUrl );
 
             request.finished.connect( processor.parser.parserByFormat(options.format) );
             HafasPrivate.startRequest( request, processor.addPostData, values, options );

@@ -53,14 +53,16 @@
 
 namespace Scripting {
 
-NetworkRequest::NetworkRequest( QObject* parent )
+NetworkRequest::NetworkRequest( QObject *parent )
         : QObject(parent), m_mutex(new QMutex()), m_network(0), m_isFinished(false),
           m_request(0), m_reply(0)
 {
 }
 
-NetworkRequest::NetworkRequest( const QString& url, Network *network, QObject* parent )
-        : QObject(parent), m_mutex(new QMutex()), m_url(url), m_network(network),
+NetworkRequest::NetworkRequest( const QString &url, const QString &userUrl,
+                                Network *network, QObject* parent )
+        : QObject(parent), m_mutex(new QMutex()), m_url(url),
+          m_userUrl(userUrl.isEmpty() ? url : userUrl), m_network(network),
           m_isFinished(false), m_request(new QNetworkRequest(url)), m_reply(0)
 {
 }
@@ -386,9 +388,9 @@ Network::~Network()
     delete m_mutex;
 }
 
-NetworkRequest* Network::createRequest( const QString& url )
+NetworkRequest* Network::createRequest( const QString& url, const QString &userUrl )
 {
-    NetworkRequest *request = new NetworkRequest( url, this, parent() );
+    NetworkRequest *request = new NetworkRequest( url, userUrl, this, parent() );
     NetworkRequest::Ptr requestPtr( request );
     m_requests << requestPtr;
     connect( request, SIGNAL(started()), this, SLOT(slotRequestStarted()) );
@@ -517,6 +519,7 @@ void Network::get( NetworkRequest* request, int timeout )
     m_mutex->lockInline();
     QNetworkReply *reply = m_manager->get( *request->request() );
     m_lastUrl = request->url();
+    m_lastUserUrl = request->userUrl();
     m_mutex->unlockInline();
 
     request->started( reply, timeout );
@@ -532,6 +535,7 @@ void Network::head( NetworkRequest* request, int timeout )
     m_mutex->lockInline();
     QNetworkReply *reply = m_manager->head( *request->request() );
     m_lastUrl = request->url();
+    m_lastUserUrl = request->userUrl();
     m_mutex->unlockInline();
 
     request->started( reply, timeout );
@@ -547,6 +551,7 @@ void Network::post( NetworkRequest* request, int timeout )
     m_mutex->lockInline();
     QNetworkReply *reply = m_manager->post( *request->request(), request->postDataByteArray() );
     m_lastUrl = request->url();
+    m_lastUserUrl = request->userUrl();
     m_mutex->unlockInline();
 
     request->started( reply, timeout );
@@ -562,7 +567,7 @@ void Network::abortAllRequests()
     }
 }
 
-QByteArray Network::getSynchronous( const QString &url, int timeout )
+QByteArray Network::getSynchronous( const QString &url, const QString &userUrl, int timeout )
 {
     // Create a get request
     QNetworkRequest request( url );
@@ -571,6 +576,7 @@ QByteArray Network::getSynchronous( const QString &url, int timeout )
     m_mutex->lockInline();
     QNetworkReply *reply = m_manager->get( request );
     m_lastUrl = url;
+    m_lastUserUrl = userUrl.isEmpty() ? url : userUrl;
     m_lastDownloadAborted = false;
     m_mutex->unlockInline();
 
@@ -1977,10 +1983,17 @@ QString Network::lastUrl() const
     return m_lastUrl;
 }
 
+QString Network::lastUserUrl() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_lastUserUrl;
+}
+
 void Network::clear()
 {
     QMutexLocker locker( m_mutex );
     m_lastUrl.clear();
+    m_lastUserUrl.clear();
 }
 
 bool Network::lastDownloadAborted() const
@@ -2207,6 +2220,12 @@ QString NetworkRequest::url() const
 {
     QMutexLocker locker( m_mutex );
     return m_url;
+}
+
+QString NetworkRequest::userUrl() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_userUrl;
 }
 
 bool NetworkRequest::isRunning() const
