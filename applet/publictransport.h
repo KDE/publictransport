@@ -700,12 +700,11 @@ the data returned by the data engine:
 was an error while running the query in the data engine (eg. server not reachable or an error in
 the service provider while trying to parse the document from the server),
 @par
-@ref PublicTransport::processStopSuggestions, if the "receivedPossibleStopList" key of the data
-structure is true, which can also happen if eg. "Departures" were queried for, but the stop name
-is ambigous,
+@ref PublicTransport::processStopSuggestions, if the "stops" key of the data structure contains data,
+which can also happen if eg. "Departures" were queried for, but the stop name is ambigous,
 @par
 @ref DepartureProcessor::processJourneys, @ref DepartureProcessor::processDepartures if there's
-no error and no stoplist, but "parseMode" is "journeys" or "departures" (also for arrivals). A new
+a "journeys", "departures" or "arrivals" key respectively. A new
 job is added to the background thread. The thread then reads the data and creates data structures
 of type @ref DepartureInfo for departures/arrivals or @ref JourneyInfo for journeys. It also checks
 for alarms and applies filters. That way complex filters and or many alarms applied to many

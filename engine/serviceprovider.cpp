@@ -52,6 +52,11 @@ ServiceProvider::ServiceProvider( const ServiceProviderData *data, QObject *pare
     Q_UNUSED( cache );
     const_cast<ServiceProviderData*>(m_data)->setParent( this );
     m_idAlreadyRequested = false;
+
+    qRegisterMetaType< StopInfoList >( "StopInfoList" );
+    qRegisterMetaType< ArrivalInfoList >( "ArrivalInfoList" );
+    qRegisterMetaType< DepartureInfoList >( "DepartureInfoList" );
+    qRegisterMetaType< JourneyInfoList >( "JourneyInfoList" );
 }
 
 ServiceProvider::~ServiceProvider()

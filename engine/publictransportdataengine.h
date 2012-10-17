@@ -798,15 +798,16 @@ The data received from the data engine always contains these keys:<br />
     Error code 2 means, that parsing a source file failed.
     Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
     Use the @ref PublicTransportService to start and monitor the import.</td></tr>
-<tr><td><i>receivedPossibleStopList</i></td> <td>bool</td> <td>True, if the given stop name is ambiguous and
-a list of possible stops was received, see @ref usage_stopList_sec .</td></tr>
 <tr><td><i>count</i></td> <td>int</td> <td>The number of received departures / arrivals / stops or 0 if there was
 an error.</td></tr>
 <tr><td><i>receivedData</i></td> <td>QString</td> <td>"departures", "journeys", "stopList" or "nothing" if
 there was an error.</td></tr>
 <tr><td><i>updated</i></td> <td>QDateTime</td> <td>The date and time when the data source was last updated.</td></tr>
-<tr><td><i>[NUMBER]</i></td> <td>QVariantHash</td> <td>The key names are numbers from 0 to count - 1
-as strings (eg. "3"), each contains information about one departure/arrival.</td></tr>
+<tr><td><i>nextAutomaticUpdate</i></td> <td>QDateTime</td> <td>The date and time of the next automatic
+update of the data source.</td></tr>
+<tr><td><i>minManualUpdateTime</i></td> <td>QDateTime</td> <td>The minimal date and time to request
+an update using the "requestUpdate" operation of the timetable service.</td></tr>
+<tr><td><i>departures</i> or <i>arrivals</i></td> <td>QVariantList</td> <td>A list of all found departures/arrivals.</td></tr>
 </table>
 <br />
 
@@ -921,8 +922,7 @@ The data received from the data engine always contains these keys:<br />
 <tr><td><i>count</i></td> <td>int</td> <td>The number of received journeys / stops or 0 if there was
 an error.</td></tr>
 <tr><td><i>updated</i></td> <td>QDateTime</td> <td>The date and time when the data source was last updated.</td></tr>
-<tr><td><i>journeys</i></td> <td>QVariantHash</td> <td>The key names are numbers from 0 to count - 1,
-each contains information about one journey.</td></tr>
+<tr><td><i>journeys</i></td> <td>QVariantList</td> <td>A list of all found journeys.</td></tr>
 </table>
 <br />
 Each journey in the data received from the data engine (journeyData in the code
@@ -968,22 +968,22 @@ in with the stop is).
 
 @code
 void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data ) {
-    if ( data.value("receivedPossibleStopList").toBool() ) {
-    QStringList possibleStops;
-    QVariantList stops = data["stops"].toList();
-    foreach ( const QVariant &stopData, stops ) {
-        QVariantHash stop = stopData.toHash();
+    if ( data.contains("stops").toBool() ) {
+        QStringList possibleStops;
+        QVariantList stops = data["stops"].toList();
+        foreach ( const QVariant &stopData, stops ) {
+            QVariantHash stop = stopData.toHash();
 
-        // Get the name
-        QString stopName = stop["StopName"].toString();
+            // Get the name
+            QString stopName = stop["StopName"].toString();
 
-        // Get other values
-        if ( stopData.contains("StopID") ) {
-            QString stopID = stop["StopID"].toString();
+            // Get other values
+            if ( stopData.contains("StopID") ) {
+                QString stopID = stop["StopID"].toString();
+            }
+            QString stopCity = stop["StopCity"].toString();
+            QString stopCityCode = stop["StopCountryCode"].toString();
         }
-        QString stopCity = stop["StopCity"].toString();
-        QString stopCityCode = stop["StopCountryCode"].toString();
-    }
     }
 }
 @endcode

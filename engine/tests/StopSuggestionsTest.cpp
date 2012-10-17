@@ -112,7 +112,6 @@ void StopSuggestionsTest::stopSuggestionTest()
     // Test main keys
     QVERIFY( !testVisualization.data["error"].toBool() );
     QVERIFY( !testVisualization.data.contains("stops") );
-    QVERIFY( testVisualization.data["receivedPossibleStopList"].toBool() );
     QVERIFY( testVisualization.data["updated"].canConvert(QVariant::DateTime) );
 //     QVERIFY( !testVisualization.data["serviceProvider"].toString().isEmpty() ); TODO
 //     QVERIFY( !testVisualization.data["requestUrl"].toString().isEmpty() ); TODO

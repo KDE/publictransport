@@ -100,10 +100,11 @@ class PublicTransportRunnerHelper : public QObject {
     Q_OBJECT
 
 public:
-    explicit PublicTransportRunnerHelper(PublicTransportRunner* runner);
+    explicit PublicTransportRunnerHelper( PublicTransportRunner *runner );
 
 public slots:
-    void match(PublicTransportRunner *runner, Plasma::DataEngine *engine, Plasma::RunnerContext *context);
+    void match( PublicTransportRunner *runner, Plasma::DataEngine *engine,
+                Plasma::RunnerContext *context );
 };
 
 
@@ -168,7 +169,7 @@ public:
 signals:
     /**
      * @brief Emitted when a search has been completed.
-     * 
+     *
      * @param success true if the search was completed successfully.
      **/
     void finished( bool success );

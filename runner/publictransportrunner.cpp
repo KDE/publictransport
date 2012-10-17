@@ -233,14 +233,12 @@ void PublicTransportRunnerHelper::match( PublicTransportRunner *runner,
         stop2 = rx.cap(2);
     }
 
-
     // Wait a little bit, we don't want to query on every keypress
     QMutex mutex;
     QWaitCondition waiter;
     mutex.lock();
     if ( keywords.testFlag( PublicTransportRunner::StopSuggestions ) ) {
-        // Stop suggestion documents are normally smaller (no HTML)
-        // so no need to wait so much
+        // Stop suggestion documents are usually smaller, no need to wait so much
         waiter.wait( &mutex, 50 );
     } else {
         waiter.wait( &mutex, 500 );
@@ -393,25 +391,18 @@ void AsyncDataEngineUpdater::dataUpdated( const QString& sourceName, const Plasm
     }
     m_runner->mutex().unlock();
 
-    if ( data.value( "error" ).toBool() ) {
+    if ( data.value("error").toBool() ) {
         // Error while parsing the data or no connection to server
         kDebug() << "Error parsing or no connection to server";
 //     handleDataError( sourceName, data );
         emit finished( false );
         return;
-    } else if ( data.value( "receivedPossibleStopList" ).toBool() ) {
-        // Possible stop list received
-        kDebug() << "Got stop suggestions";
+    } else if ( data.contains("stops") ) {
         processStopSuggestions( sourceName, data );
-    } else { // List of departures / arrivals / journeys received
-        if ( data["parseMode"].toString() == QLatin1String("journeys") ) {
-//         // ReceivedValidJourneyData
-            processJourneys( sourceName, data );
-        } else if ( data["parseMode"].toString() == QLatin1String("departures") ) {
-//         m_stopNameValid = true;
-//         // ReceivedValidDepartureData
-            processDepartures( sourceName, data );
-        }
+    } else if ( data.contains("journeys") ) {
+        processJourneys( sourceName, data );
+    } else if ( data.contains("departures") || data.contains("arrivals") ) {
+        processDepartures( sourceName, data );
     }
 
     emit finished( true );

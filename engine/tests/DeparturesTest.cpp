@@ -49,7 +49,6 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
 {
     // Test main keys
     QVERIFY( !testVisualization.data["error"].toBool() );
-    QVERIFY( !testVisualization.data["receivedPossibleStopList"].toBool() );
     QVERIFY( testVisualization.data.contains("departures") );
     QVERIFY( testVisualization.data["updated"].canConvert(QVariant::DateTime) );
     QCOMPARE( testVisualization.data["serviceProvider"].toString(), serviceProvider );
