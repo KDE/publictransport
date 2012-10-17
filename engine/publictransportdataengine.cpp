@@ -1020,10 +1020,7 @@ bool PublicTransportEngine::SourceRequestData::isValid() const
     }
 
     if ( isDataRequestingSourceType(type) ) {
-        if ( defaultParameter.isEmpty() ) {
-            kWarning() << "No provider ID given in source name" << name;
-            return false;
-        } else if ( parseMode == ParseForDepartures || parseMode == ParseForArrivals ) {
+        if ( parseMode == ParseForDepartures || parseMode == ParseForArrivals ) {
             // Check if the stop name is missing
             if ( !request || request->stop.isEmpty() ) {
                 kWarning() << "Stop name is missing in data source name" << name;
