@@ -259,13 +259,13 @@ QString ServiceProviderGlobal::featureName( Enums::ProviderFeature feature )
                      "Stop suggestions");
     case Enums::ProvidesStopsByGeoPosition:
         return i18nc("@info/plain A short string indicating support for querying stops by geo position",
-                     "Stops by geolocial position");
+                     "Stops by geolocation");
     case Enums::ProvidesStopID:
         return i18nc("@info/plain A short string indicating that stop IDs can be provided",
                      "Stop ID");
     case Enums::ProvidesStopGeoPosition:
-        return i18nc("@info/plain A short string indicating that stop geological positions can be provided",
-                     "Geological stop position");
+        return i18nc("@info/plain A short string indicating that stop geographical positions can be provided",
+                     "Stop geolocation");
     case Enums::ProvidesPricing:
         return i18nc("@info/plain A short string indicating that pricing information can be provided",
                      "Pricing");
