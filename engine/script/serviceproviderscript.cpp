@@ -590,11 +590,11 @@ void ServiceProviderScript::requestStopSuggestions( const StopSuggestionRequest 
     }
 }
 
-void ServiceProviderScript::requestStopSuggestionsFromGeoPosition(
-        const StopSuggestionFromGeoPositionRequest &request )
+void ServiceProviderScript::requestStopsByGeoPosition(
+        const StopsByGeoPositionRequest &request )
 {
     if ( lazyLoadScript() ) {
-        StopSuggestionsFromGeoPositionJob *job = new StopSuggestionsFromGeoPositionJob(
+        StopsByGeoPositionJob *job = new StopsByGeoPositionJob(
                 m_scriptData, m_scriptStorage, request, this );
         connect( job, SIGNAL(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)),
                  this, SLOT(stopSuggestionsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,StopSuggestionRequest,bool)) );

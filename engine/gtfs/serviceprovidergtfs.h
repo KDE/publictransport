@@ -165,8 +165,7 @@ protected:
      **/
     virtual void requestStopSuggestions( const StopSuggestionRequest &request );
 
-    virtual void requestStopSuggestionsFromGeoPosition(
-            const StopSuggestionFromGeoPositionRequest &request );
+    virtual void requestStopsByGeoPosition( const StopsByGeoPositionRequest &request );
 
     /** @brief Run script provider specific tests. */
     virtual bool runTests( QString *errorMessage = 0 ) const;

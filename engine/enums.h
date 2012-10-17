@@ -286,9 +286,9 @@ public:
                 * enumerable in the features() script function, it is assumed by implementing the
                 * getStopSuggestions() script function. */
         ProvidesStopID, /**< Stop IDs are provided by the getStopSuggestions() script function. */
-        ProvidesStopPosition, /**< Stop positions are provided by the getStopSuggestions() script
+        ProvidesStopGeoPosition, /**< Stop positions are provided by the getStopSuggestions() script
                 * function, stored as StopLongitude and StopLatitude. */
-        ProvidesStopSuggestionsByPosition, /**< Stop suggestions can also be requested by
+        ProvidesStopsByGeoPosition, /**< Stop suggestions can also be requested by
                 * longitude and latitude. */
         ProvidesPricing, /**< Pricing data is provided for departures/arrivals and/or journeys. */
         ProvidesRouteInformation, /**< Route information is provided for departures/arrivals

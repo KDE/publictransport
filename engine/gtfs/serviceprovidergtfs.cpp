@@ -877,8 +877,7 @@ void ServiceProviderGtfs::requestStopSuggestions( const StopSuggestionRequest &r
     emit stopListReceived( this, QUrl(), stopsFromQuery(&query, &request), request );
 }
 
-void ServiceProviderGtfs::requestStopSuggestionsFromGeoPosition(
-        const StopSuggestionFromGeoPositionRequest &request )
+void ServiceProviderGtfs::requestStopsByGeoPosition( const StopsByGeoPositionRequest &request )
 {
     if ( !checkState(&request) ) {
         return;
@@ -919,7 +918,7 @@ StopInfoList ServiceProviderGtfs::stopsFromQuery( QSqlQuery *query,
         const qreal latitude = query->value(stopLatitudeColumn).toReal();
         int weight = -1;
 
-        if ( !dynamic_cast<const StopSuggestionFromGeoPositionRequest*>(request) ) {
+        if ( !dynamic_cast<const StopsByGeoPositionRequest*>(request) ) {
             // Compute a weight value for the found stop name.
             // The less different the found stop name is compared to the search string, the higher
             // it's weight gets. If the found name equals the search string, the weight becomes 100.

@@ -292,11 +292,11 @@ public:
 
         // Store view box and start a timer to request the stops
         viewBox = latLonAltBox;
-        startStopsFromGeoPositionRequestLater();
+        startStopsByGeoPositionRequestLater();
     };
 
     /** @brief Request stops for the currently visible map region later. */
-    void startStopsFromGeoPositionRequestLater()
+    void startStopsByGeoPositionRequestLater()
     {
         Q_Q( PublicTransportLayer );
 
@@ -313,7 +313,7 @@ public:
             // No running timer, create one
             loadTimer = new QTimer( q );
             loadTimer->setSingleShot( true );
-            q->connect( loadTimer, SIGNAL(timeout()), q, SLOT(startStopsFromGeoPositionRequest()) );
+            q->connect( loadTimer, SIGNAL(timeout()), q, SLOT(startStopsByGeoPositionRequest()) );
 
             // Start quickly with an interval of 50ms, if this function is called again within this
             // time span, the interval gets doubled until maximally 1 second
@@ -327,7 +327,7 @@ public:
     };
 
     /** @brief Request stops for the currently visible map region now. */
-    void startStopsFromGeoPositionRequest()
+    void startStopsByGeoPositionRequest()
     {
         Q_Q( PublicTransportLayer );
 
@@ -602,7 +602,7 @@ void PublicTransportLayer::setServiceProvider( const QString &serviceProvider )
 
     if ( d->flags.testFlag(AutoLoadStopsForMapRegion) ) {
         // Update stops for the current map region, when the auto load feature is enbaled
-        startStopsFromGeoPositionRequest();
+        startStopsByGeoPositionRequest();
     }
 }
 
@@ -730,10 +730,10 @@ void PublicTransportLayer::visibleLatLonAltBoxChanged( const GeoDataLatLonAltBox
     d->updateAnnotationData();
 }
 
-void PublicTransportLayer::startStopsFromGeoPositionRequest()
+void PublicTransportLayer::startStopsByGeoPositionRequest()
 {
     Q_D( PublicTransportLayer );
-    d->startStopsFromGeoPositionRequest();
+    d->startStopsByGeoPositionRequest();
 }
 
 void PublicTransportLayer::dataUpdated( const QString &sourceName,

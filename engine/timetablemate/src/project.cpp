@@ -908,12 +908,12 @@ public:
         case Project::RunMenuAction:
         case Project::RunGetTimetable:
         case Project::RunGetStopSuggestions:
-        case Project::RunGetStopSuggestionsByGeoPosition:
+        case Project::RunGetStopsByGeoPosition:
         case Project::RunGetJourneys:
         case Project::DebugMenuAction:
         case Project::DebugGetTimetable:
         case Project::DebugGetStopSuggestions:
-        case Project::DebugGetStopSuggestionsByGeoPosition:
+        case Project::DebugGetStopsByGeoPosition:
         case Project::DebugGetJourneys:
             // Only enabled if the debugger and the test are both currently not running
             return !isTestRunning() && !isDebuggerRunning() &&
@@ -1077,14 +1077,14 @@ public:
         }
     };
 
-    // Call script function getStopSuggestions() in the given @p debugMode
-    void callGetStopSuggestionsByGeoPosition(
+    // Call script function getStopSuggestions() in the given @p debugMode with a geo position
+    void callGetStopsByGeoPosition(
             Debugger::DebugFlags debugFlags = Debugger::InterruptOnExceptions )
     {
         Q_Q( Project );
         bool cancelled = false;
-        StopSuggestionFromGeoPositionRequest request =
-                q->getStopSuggestionFromGeoPositionRequest( parentWidget(), &cancelled );
+        StopsByGeoPositionRequest request =
+                q->getStopsByGeoPositionRequest( parentWidget(), &cancelled );
         if ( !cancelled ) {
             callScriptFunction( &request, debugFlags );
         }
@@ -1249,15 +1249,15 @@ public:
         Q_Q( Project );
         const ServiceProviderData *data = provider->data();
         if ( !data->hasSampleCoordinates() ) {
-            testModel->setTestState( TestModel::StopSuggestionFromGeoPositionTest,
+            testModel->setTestState( TestModel::StopsByGeoPositionTest,
                     TestModel::TestCouldNotBeStarted,
                     i18nc("@info/plain", "Missing sample coordinates"),
                     i18nc("@info", "<title>Missing sample stop coordinates</title> "
-                        "<para>Cannot run script execution tests for stop suggestions by geo "
+                        "<para>Cannot run script execution tests for stops by geo "
                         "position. Open the project settings and add one or more "
                         "<interface>Sample Stop Coordinates</interface></para>"),
                     q->projectAction(Project::ShowProjectSettings) );
-            testFinished( TestModel::StopSuggestionFromGeoPositionTest );
+            testFinished( TestModel::StopsByGeoPositionTest );
             return false;
         }
 #endif
@@ -1370,7 +1370,7 @@ public:
                             "or arrivals.</para>", function);
             break;
         case TestModel::StopSuggestionTest:
-        case TestModel::StopSuggestionFromGeoPositionTest:
+        case TestModel::StopsByGeoPositionTest:
             if ( test == TestModel::StopSuggestionTest ? !testForSampleData()
                                                        : !testForCoordinatesSampleData() )
             {
@@ -1505,17 +1505,17 @@ public:
                             data()->sampleStopNames().first().left(4), testItemCount,
                             data()->sampleCity() );
                     break;
-                case TestModel::StopSuggestionFromGeoPositionTest:
+                case TestModel::StopsByGeoPositionTest:
                     if ( !isTestFinishedOrPending(TestModel::FeaturesTest) ) {
                         kWarning() << "First start the features test";
                         return false;
                     }
-                    if ( !hasFeature(test, Enums::ProvidesStopSuggestionsByPosition) ) {
+                    if ( !hasFeature(test, Enums::ProvidesStopsByGeoPosition) ) {
                         return false;
                     }
 
-                    request = new StopSuggestionFromGeoPositionRequest(
-                            "TEST_STOP_SUGGESTIONS_FROMGEOPOSITION",
+                    request = new StopsByGeoPositionRequest(
+                            "TEST_STOP_SUGGESTIONS_BYGEOPOSITION",
                             data()->sampleLongitude(), data()->sampleLatitude(), testItemCount );
                     break;
                 case TestModel::JourneyTest:
@@ -2427,7 +2427,7 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
         return "run_departures";
     case RunGetStopSuggestions:
         return "run_stop_suggestions";
-    case RunGetStopSuggestionsByGeoPosition:
+    case RunGetStopsByGeoPosition:
         return "run_stop_suggestions_geo_position";
     case RunGetJourneys:
         return "run_journeys";
@@ -2438,8 +2438,8 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
         return "debug_departures";
     case DebugGetStopSuggestions:
         return "debug_stop_suggestions";
-    case DebugGetStopSuggestionsByGeoPosition:
-        return "debug_stop_suggestions_geo_position";
+    case DebugGetStopsByGeoPosition:
+        return "debug_stops_by_geo_position";
     case DebugGetJourneys:
         return "debug_journeys";
 #endif
@@ -2794,8 +2794,8 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(runGetStopSuggestions()),
                                  flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
-    case RunGetStopSuggestionsByGeoPosition:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(runGetStopSuggestionsByGeoPosition()),
+    case RunGetStopsByGeoPosition:
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(runGetStopsByGeoPosition()),
                                  flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case RunGetJourneys:
@@ -2811,8 +2811,8 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(debugGetStopSuggestions()),
                                  flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
-    case DebugGetStopSuggestionsByGeoPosition:
-        d->connectProjectAction( actionType, action, doConnect, this, SLOT(debugGetStopSuggestionsByGeoPosition()),
+    case DebugGetStopsByGeoPosition:
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(debugGetStopsByGeoPosition()),
                                  flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case DebugGetJourneys:
@@ -2920,7 +2920,7 @@ QString Project::projectActionText( Project::ProjectAction actionType, const QVa
         return i18nc("@action", "Run get&Timetable()");
     case RunGetStopSuggestions:
         return i18nc("@action", "Run get&StopSuggestions()");
-    case RunGetStopSuggestionsByGeoPosition:
+    case RunGetStopsByGeoPosition:
         return i18nc("@action", "Run get&StopSuggestions(), Geo Position");
     case RunGetJourneys:
         return i18nc("@action", "Run get&Journeys()");
@@ -2931,7 +2931,7 @@ QString Project::projectActionText( Project::ProjectAction actionType, const QVa
         return i18nc("@action", "Debug get&Timetable()");
     case DebugGetStopSuggestions:
         return i18nc("@action", "Debug get&StopSuggestions()");
-    case DebugGetStopSuggestionsByGeoPosition:
+    case DebugGetStopsByGeoPosition:
         return i18nc("@action", "Debug get&StopSuggestions(), Geo Position");
     case DebugGetJourneys:
         return i18nc("@action", "Debug get&Journeys()");
@@ -3145,7 +3145,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         debugScript->setDelayed( false );
         debugScript->addAction( createProjectAction(Project::RunGetTimetable, parent) );
         debugScript->addAction( createProjectAction(Project::RunGetStopSuggestions, parent) );
-        debugScript->addAction( createProjectAction(Project::RunGetStopSuggestionsByGeoPosition, parent) );
+        debugScript->addAction( createProjectAction(Project::RunGetStopsByGeoPosition, parent) );
         debugScript->addAction( createProjectAction(Project::RunGetJourneys, parent) );
         action = debugScript;
     } break;
@@ -3159,7 +3159,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getStopSuggestions()'") );
         action->setEnabled( false );
         break;
-    case RunGetStopSuggestionsByGeoPosition:
+    case RunGetStopsByGeoPosition:
         action = new KAction( KIcon("system-run"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getStopSuggestions()' "
                                                    "with a geo position as argument") );
@@ -3177,7 +3177,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         debugScript->setDelayed( false );
         debugScript->addAction( createProjectAction(Project::DebugGetTimetable, parent) );
         debugScript->addAction( createProjectAction(Project::DebugGetStopSuggestions, parent) );
-        debugScript->addAction( createProjectAction(Project::DebugGetStopSuggestionsByGeoPosition, parent) );
+        debugScript->addAction( createProjectAction(Project::DebugGetStopsByGeoPosition, parent) );
         debugScript->addAction( createProjectAction(Project::DebugGetJourneys, parent) );
         action = debugScript;
     } break;
@@ -3193,7 +3193,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
                                                    "in a debugger") );
         action->setEnabled( false );
         break;
-    case DebugGetStopSuggestionsByGeoPosition:
+    case DebugGetStopsByGeoPosition:
         action = new KAction( KIcon("debug-run"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Runs the script function 'getStopSuggestions()' "
                                                    "in a debugger with a geo position as argument") );
@@ -3391,12 +3391,12 @@ Project::ProjectActionGroup Project::actionGroupFromType( Project::ProjectAction
     case RunMenuAction:
     case RunGetTimetable:
     case RunGetStopSuggestions:
-    case RunGetStopSuggestionsByGeoPosition:
+    case RunGetStopsByGeoPosition:
     case RunGetJourneys:
     case DebugMenuAction:
     case DebugGetTimetable:
     case DebugGetStopSuggestions:
-    case DebugGetStopSuggestionsByGeoPosition:
+    case DebugGetStopsByGeoPosition:
     case DebugGetJourneys:
         return RunActionGroup;
 #endif
@@ -3442,9 +3442,9 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
         break;
     case RunActionGroup:
         actionTypes << RunMenuAction << RunGetTimetable << RunGetStopSuggestions
-                    << RunGetStopSuggestionsByGeoPosition << RunGetJourneys
+                    << RunGetStopsByGeoPosition << RunGetJourneys
                     << DebugMenuAction << DebugGetTimetable << DebugGetStopSuggestions
-                    << DebugGetStopSuggestionsByGeoPosition << DebugGetJourneys;
+                    << DebugGetStopsByGeoPosition << DebugGetJourneys;
         break;
 #endif
 
@@ -3604,8 +3604,8 @@ TestModel::Test Project::testFromObjectName( const QString &objectName )
         return TestModel::AdditionalDataTest;
     } else if ( objectName == QLatin1String("TEST_STOP_SUGGESTIONS") ) {
         return TestModel::StopSuggestionTest;
-    } else if ( objectName == QLatin1String("TEST_STOP_SUGGESTIONS_FROMGEOPOSITION") ) {
-        return TestModel::StopSuggestionFromGeoPositionTest;
+    } else if ( objectName == QLatin1String("TEST_STOP_SUGGESTIONS_BYGEOPOSITION") ) {
+        return TestModel::StopsByGeoPositionTest;
     } else if ( objectName == QLatin1String("TEST_JOURNEYS") ) {
         return TestModel::JourneyTest;
     } else if ( objectName == QLatin1String("TEST_FEATURES") ) {
@@ -3833,10 +3833,10 @@ void Project::runGetStopSuggestions()
     d->callGetStopSuggestions( Debugger::InterruptOnExceptions );
 }
 
-void Project::runGetStopSuggestionsByGeoPosition()
+void Project::runGetStopsByGeoPosition()
 {
     Q_D( Project );
-    d->callGetStopSuggestionsByGeoPosition( Debugger::InterruptOnExceptions );
+    d->callGetStopsByGeoPosition( Debugger::InterruptOnExceptions );
 }
 
 void Project::debugGetStopSuggestions()
@@ -3845,10 +3845,10 @@ void Project::debugGetStopSuggestions()
     d->callGetStopSuggestions( InterruptOnExceptionsAndBreakpoints );
 }
 
-void Project::debugGetStopSuggestionsByGeoPosition()
+void Project::debugGetStopsByGeoPosition()
 {
     Q_D( Project );
-    d->callGetStopSuggestionsByGeoPosition( InterruptOnExceptionsAndBreakpoints );
+    d->callGetStopsByGeoPosition( InterruptOnExceptionsAndBreakpoints );
 }
 
 void Project::runGetJourneys()
@@ -3947,7 +3947,7 @@ StopSuggestionRequest Project::getStopSuggestionRequest( QWidget *parent,
     return request;
 }
 
-StopSuggestionFromGeoPositionRequest Project::getStopSuggestionFromGeoPositionRequest(
+StopsByGeoPositionRequest Project::getStopsByGeoPositionRequest(
         QWidget *parent, bool *cancelled ) const
 {
     Q_D( const Project );
@@ -3969,7 +3969,7 @@ StopSuggestionFromGeoPositionRequest Project::getStopSuggestionFromGeoPositionRe
     dialog->setMainWidget( w );
     longitude->setFocus();
 
-    StopSuggestionFromGeoPositionRequest request;
+    StopsByGeoPositionRequest request;
     int result = dialog->exec();
     if ( result == KDialog::Accepted ) {
         request.longitude = longitude->value();
@@ -3986,7 +3986,7 @@ StopSuggestionFromGeoPositionRequest Project::getStopSuggestionFromGeoPositionRe
     // Marble was not found
     KMessageBox::information( parent, i18nc("@info", "Cannot use Marble widgets for "
                                                      "latitude/longitude input.") );
-    return StopSuggestionFromGeoPositionRequest();
+    return StopsByGeoPositionRequest();
 #endif
 }
 

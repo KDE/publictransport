@@ -61,7 +61,7 @@ class ServiceProviderData;
 struct AbstractRequest;
 struct DepartureRequest;
 struct StopSuggestionRequest;
-struct StopSuggestionFromGeoPositionRequest;
+struct StopsByGeoPositionRequest;
 struct JourneyRequest;
 
 namespace Debugger {
@@ -239,7 +239,7 @@ public:
         RunMenuAction, /**< A KMenuAction which contains the other RunXXX actions. */
         RunGetTimetable, /**< Run the getTimetable() script function, interrupt on exceptions. */
         RunGetStopSuggestions, /**< Run the getStopSuggestions() script function, interrupt on exceptions. */
-        RunGetStopSuggestionsByGeoPosition, /**< Run the getStopSuggestions() script function
+        RunGetStopsByGeoPosition, /**< Run the getStopSuggestions() script function
                 * with a geo position as argument, interrupt on exceptions. */
         RunGetJourneys, /**< Run the getJourneys() script function, interrupt on exceptions. */
 
@@ -247,7 +247,7 @@ public:
         DebugGetTimetable, /**< Run the getTimetable() script function, interrupt at start. */
         DebugGetStopSuggestions, /**< Run the getStopSuggestions() script function with a stop name
                 * part as argument, interrupt at start. */
-        DebugGetStopSuggestionsByGeoPosition, /**< Run the getStopSuggestions() script function
+        DebugGetStopsByGeoPosition, /**< Run the getStopSuggestions() script function
                 * with a geo position as argument, interrupt at start. */
         DebugGetJourneys, /**< Run the getJourneys() script function, interrupt at start. */
 #endif
@@ -754,7 +754,7 @@ public:
 
     DepartureRequest getDepartureRequest( QWidget *parent = 0, bool* cancelled = 0 ) const;
     StopSuggestionRequest getStopSuggestionRequest( QWidget *parent = 0, bool* cancelled = 0 ) const;
-    StopSuggestionFromGeoPositionRequest getStopSuggestionFromGeoPositionRequest(
+    StopsByGeoPositionRequest getStopsByGeoPositionRequest(
             QWidget *parent = 0, bool* cancelled = 0 ) const;
     JourneyRequest getJourneyRequest( QWidget *parent = 0, bool* cancelled = 0 ) const;
 
@@ -930,7 +930,7 @@ public slots:
     void runGetStopSuggestions();
 
     /** @brief Run the getStopSuggestions() script function with a geo position as argument. */
-    void runGetStopSuggestionsByGeoPosition();
+    void runGetStopsByGeoPosition();
 
     /** @brief Run the getJourneys() script function. */
     void runGetJourneys();
@@ -942,7 +942,7 @@ public slots:
     void debugGetStopSuggestions();
 
     /** @brief Run the getStopSuggestions() script function and interrupt at the first executed line. */
-    void debugGetStopSuggestionsByGeoPosition();
+    void debugGetStopsByGeoPosition();
 
     /** @brief Run the getJourneys() script function and interrupt at the first executed line. */
     void debugGetJourneys();

@@ -12,7 +12,7 @@ var hafas = Hafas({
 // Arrivals are not working in XML format (wrong "no trains in result", with other formats it's ok),
 // stop suggestions cannot be requested by position, disable these features
 hafas.timetable.removeFeature( PublicTransport.ProvidesArrivals );
-hafas.stopSuggestions.removeFeature( PublicTransport.ProvidesStopSuggestionsByPosition );
+hafas.stopSuggestions.removeFeature( PublicTransport.ProvidesStopsByGeoPosition );
 
 function features() {
     return hafas.stopSuggestions.features.concat(

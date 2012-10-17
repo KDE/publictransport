@@ -896,7 +896,7 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                 }
             }
             if ( hasLongitude && hasLatitude ) {
-                request = new StopSuggestionFromGeoPositionRequest( name, parseMode );
+                request = new StopsByGeoPositionRequest( name, parseMode );
             } else {
                 request = new StopSuggestionRequest( name, parseMode );
             }
@@ -959,9 +959,9 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                         kWarning() << "Bad value for 'maxCount' in source name:" << parameterValue;
                         request->maxCount = 20;
                     }
-                } else if ( dynamic_cast<StopSuggestionFromGeoPositionRequest*>(request) ) {
-                    StopSuggestionFromGeoPositionRequest *stopRequest =
-                            dynamic_cast< StopSuggestionFromGeoPositionRequest* >( request );
+                } else if ( dynamic_cast<StopsByGeoPositionRequest*>(request) ) {
+                    StopsByGeoPositionRequest *stopRequest =
+                            dynamic_cast< StopsByGeoPositionRequest* >( request );
                     bool ok;
                     if ( parameterName == QLatin1String("longitude") ) {
                         stopRequest->longitude = parameterValue.toFloat( &ok );
@@ -1032,7 +1032,7 @@ bool PublicTransportEngine::SourceRequestData::isValid() const
             }
         } else if ( parseMode == ParseForStopSuggestions ) {
             // Check if the stop name or geo coordinates are missing
-            if ( !request || (!dynamic_cast<StopSuggestionFromGeoPositionRequest*>(request) &&
+            if ( !request || (!dynamic_cast<StopsByGeoPositionRequest*>(request) &&
                               request->stop.isEmpty()) )
             {
                 kWarning() << "Stop name is missing in data source name" << name;
@@ -1526,7 +1526,7 @@ bool PublicTransportEngine::request( const SourceRequestData &data ) {
         // Service provider couldn't be created
         return false;
     } else if ( provider->useSeparateCityValue() && data.request->city.isEmpty() &&
-                !dynamic_cast<StopSuggestionFromGeoPositionRequest*>(data.request) )
+                !dynamic_cast<StopsByGeoPositionRequest*>(data.request) )
     {
         kDebug() << QString("Service provider %1 needs a separate city value. Add to source name "
                             "'|city=X', where X stands for the city name.")

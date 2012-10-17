@@ -138,8 +138,8 @@ public:
                 * arrival results. */
         StopSuggestionTest, /**< Tests for an implemented getStopSuggestions() function and
                 * for valid stop suggestion results for a request by string. */
-        StopSuggestionFromGeoPositionTest, /**< Tests for an implemented getStopSuggestions()
-                * function and for valid stop suggestion results for a request by geo position. */
+        StopsByGeoPositionTest, /**< Tests for an implemented getStopSuggestions()
+                * function and for valid stop results for a request by geo position. */
         JourneyTest, /**< Tests for an implemented getJourneys() function and for valid
                 * journey results. */
         AdditionalDataTest, /**< Tests for an implemented getAdditionalData() function and for

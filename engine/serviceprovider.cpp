@@ -102,10 +102,10 @@ bool ServiceProvider::isSourceFileModified( const QSharedPointer<KConfig> &cache
 
 void ServiceProvider::request( AbstractRequest *request )
 {
-    StopSuggestionFromGeoPositionRequest *stopSuggestionFromGeoPositionRequest =
-            dynamic_cast< StopSuggestionFromGeoPositionRequest* >( request );
-    if ( stopSuggestionFromGeoPositionRequest ) {
-        requestStopSuggestionsFromGeoPosition( *stopSuggestionFromGeoPositionRequest );
+    StopsByGeoPositionRequest *stopsByGeoPositionRequest =
+            dynamic_cast< StopsByGeoPositionRequest* >( request );
+    if ( stopsByGeoPositionRequest ) {
+        requestStopsByGeoPosition( *stopsByGeoPositionRequest );
         return;
     }
 
@@ -156,8 +156,8 @@ void ServiceProvider::requestStopSuggestions( const StopSuggestionRequest &reque
     return;
 }
 
-void ServiceProvider::requestStopSuggestionsFromGeoPosition(
-        const StopSuggestionFromGeoPositionRequest &request )
+void ServiceProvider::requestStopsByGeoPosition(
+        const StopsByGeoPositionRequest &request )
 {
     Q_UNUSED( request );
     kDebug() << "Not implemented";

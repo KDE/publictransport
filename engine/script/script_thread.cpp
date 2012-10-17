@@ -59,6 +59,7 @@ ScriptJob::ScriptJob( const ScriptData &data, const QSharedPointer< Storage > &s
     qRegisterMetaType<ArrivalRequest>( "ArrivalRequest" );
     qRegisterMetaType<JourneyRequest>( "JourneyRequest" );
     qRegisterMetaType<StopSuggestionRequest>( "StopSuggestionRequest" );
+    qRegisterMetaType<StopsByGeoPositionRequest>( "StopsByGeoPositionRequest" );
     qRegisterMetaType<AdditionalDataRequest>( "AdditionalDataRequest" );
 }
 
@@ -172,8 +173,7 @@ void ScriptJob::run()
 
     GlobalTimetableInfo globalInfo;
     globalInfo.requestDate = QDate::currentDate();
-    globalInfo.delayInfoAvailable =
-            !objects.result->isHintGiven( ResultObject::NoDelaysForStop );
+    globalInfo.delayInfoAvailable = !objects.result->isHintGiven( ResultObject::NoDelaysForStop );
 
     // The called function returned, but asynchronous network requests may have been started.
     // Wait for all network requests to finish, because slots in the script may get called
@@ -695,26 +695,26 @@ const AbstractRequest *StopSuggestionsJob::request() const
     return &d->request;
 }
 
-class StopSuggestionsFromGeoPositionJobPrivate {
+class StopsByGeoPositionJobPrivate {
 public:
-    StopSuggestionsFromGeoPositionJobPrivate( const StopSuggestionFromGeoPositionRequest &request )
+    StopsByGeoPositionJobPrivate( const StopsByGeoPositionRequest &request )
             : request(request) {};
-    StopSuggestionFromGeoPositionRequest request;
+    StopsByGeoPositionRequest request;
 };
 
-StopSuggestionsFromGeoPositionJob::StopSuggestionsFromGeoPositionJob(
+StopsByGeoPositionJob::StopsByGeoPositionJob(
         const ScriptData &data, const QSharedPointer< Storage > &scriptStorage,
-        const StopSuggestionFromGeoPositionRequest& request, QObject* parent )
-        : ScriptJob(data, scriptStorage, parent), d(new StopSuggestionsFromGeoPositionJobPrivate(request))
+        const StopsByGeoPositionRequest& request, QObject* parent )
+        : ScriptJob(data, scriptStorage, parent), d(new StopsByGeoPositionJobPrivate(request))
 {
 }
 
-StopSuggestionsFromGeoPositionJob::~StopSuggestionsFromGeoPositionJob()
+StopsByGeoPositionJob::~StopsByGeoPositionJob()
 {
     delete d;
 }
 
-const AbstractRequest *StopSuggestionsFromGeoPositionJob::request() const
+const AbstractRequest *StopsByGeoPositionJob::request() const
 {
     QMutexLocker locker( m_mutex );
     return &d->request;

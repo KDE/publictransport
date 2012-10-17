@@ -58,7 +58,7 @@ class PublicTransportLayerPrivate;
  *
  * If the AutoLoadStopsForMapRegion flag is set in the constructor, the ID of the provider to be
  * used for stop suggestion requests needs to be given. The provider needs to support the features
- * ProvidesStopPosition and ProvidesStopSuggestionsByPosition.
+ * ProvidesStopPosition and ProvidesStopsByGeoPosition.
  **/
 class PUBLICTRANSPORTHELPER_EXPORT PublicTransportLayer : public QObject, public LayerInterface
 {
@@ -72,7 +72,7 @@ public:
         AutoLoadStopsForMapRegion   = 0x01, /**< Automatically load stops when the visible
                 * map region changes. This feature requires a service provider ID as argument in
                 * the PublicTransportLayer constructor. The provider needs to support the features
-                * ProvidesStopPosition and ProvidesStopSuggestionsByPosition. When these stops are
+                * ProvidesStopPosition and ProvidesStopsByGeoPosition. When these stops are
                 * loaded the stopsForVisibleMapRegionLoaded() signal gets emitted. */
         DefaultFlags                = AutoLoadStopsForMapRegion /**< Default flags. */
     };
@@ -193,8 +193,8 @@ protected Q_SLOTS:
     /** @brief The current map viewport changed. */
     void visibleLatLonAltBoxChanged( const GeoDataLatLonAltBox &latLonAltBox );
 
-    /** @brief Start requesting stops from the maps current geo position. */
-    void startStopsFromGeoPositionRequest();
+    /** @brief Start requesting stops by the maps current geo position. */
+    void startStopsByGeoPositionRequest();
 
 private:
     PublicTransportLayerPrivate* const d_ptr;

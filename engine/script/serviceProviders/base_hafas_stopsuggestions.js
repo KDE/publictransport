@@ -10,12 +10,12 @@ var __hafas_stopsuggestions = function(hafas) {
     var processor = new HafasPrivate.DataTypeProcessor({
         /**
         * Features supported when using Hafas.stopSuggestions.get(), Hafas.stopSuggestions.parse().
-        * PublicTransport.ProvidesStopSuggestionsByPosition can be removed by the provider
+        * PublicTransport.ProvidesStopsByGeoPosition can be removed by the provider
         * using the Hafas object if not supported.
         **/
         features: [PublicTransport.ProvidesStopID,
                 PublicTransport.ProvidesStopPosition,
-                PublicTransport.ProvidesStopSuggestionsByPosition],
+                PublicTransport.ProvidesStopsByGeoPosition],
 
         /** Options for functions in Hafas.timetable, overwrite global Hafas.options. */
         options: {
@@ -37,35 +37,35 @@ var __hafas_stopsuggestions = function(hafas) {
         * }
         * }
         *
-        * This functions automatically requests stop suggestions by name or by position,
+        * This functions automatically requests stop suggestions by name or by geo position,
         * depending on the values in the "values" argument. If the provider does not support
-        * requesting stops by position, remove the PublicTransport.ProvidesStopSuggestionsByPosition
+        * requesting stops by position, remove the PublicTransport.ProvidesStopsByGeoPosition
         * feature from Hafas.stopSuggestions.features.
         *
         * @param {Object} values The "values" object given to the getStopSuggestions()
         *   function from the data engine.
         * @param {Object} [options] Options to be passed to Hafas.stopSuggestions.url()
-        *   or Hafas.getStopSuggestionsFromGeoPositionUrl().
+        *   or Hafas.getStopSuggestionsByGeoPositionUrl().
         **/
         get: function( values, options ) {
             var options = HafasPrivate.prepareOptions( HafasPrivate.extend(options, processor.options),
                                         {type: "ny"}, hafas.options );
-            var fromGeoPosition = values.stop == undefined &&
+            var byGeoPosition = values.stop == undefined &&
                     values.longitude != undefined && values.latitude != undefined;
-            if ( fromGeoPosition &&
-                 !processor.features.contains(PublicTransport.ProvidesStopSuggestionsByPosition) )
+            if ( byGeoPosition &&
+                 !processor.features.contains(PublicTransport.ProvidesStopsByGeoPosition) )
             {
                 // Stop suggestions were requested by position, but the features were modified
                 // to not allow this, ie. it's not supported by the provider using the Hafas object
                 return false;
             }
 
-            var url = fromGeoPosition
+            var url = byGeoPosition
                 ? processor.urlGeoPosition(values, options)
                 : processor.url(values, options);
             var document = network.getSynchronous( url, options.timeout );
             if ( !network.lastDownloadAborted ) {
-                var parserObject = fromGeoPosition ? processor.parserGeoPosition
+                var parserObject = byGeoPosition ? processor.parserGeoPosition
                                                     : processor.parser;
                 var parser = parserObject.parserByFormat( options.format );
                 return parser( document );
@@ -159,7 +159,7 @@ var __hafas_stopsuggestions = function(hafas) {
         }),
 
         /**
-        * Get an URL to stop suggestions from a given geological position.
+        * Get an URL to a document containing stops around a given geological position.
         *
         * @param {Object} values The "values" object given to the getStopSuggestions() function from
         *   the data engine. Should contain "longitude" and "latitude" properties.

@@ -60,7 +60,7 @@ public:
         AutoLoadStopsForMapRegion   = 0x01, /**< Automatically load stops when the visible
                 * map region changes. This feature requires a service provider ID as argument in
                 * the PublicTransportMapWidget constructor. The provider needs to support the
-                * features ProvidesStopPosition and ProvidesStopSuggestionsByPosition. This flag
+                * features ProvidesStopPosition and ProvidesStopsByGeoPosition. This flag
                 * enables the corresponding flag PublicTransportLayer::AutoLoadStopsForMapRegion
                 * flag in the created layer. */
         DefaultFlags = AutoLoadStopsForMapRegion

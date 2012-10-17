@@ -122,7 +122,7 @@ struct StopSuggestionRequest : public AbstractRequest {
 #endif
 };
 
-struct StopSuggestionFromGeoPositionRequest : public StopSuggestionRequest {
+struct StopsByGeoPositionRequest : public StopSuggestionRequest {
     /** @brief The longitude of the stop. */
     qreal longitude;
 
@@ -132,24 +132,23 @@ struct StopSuggestionFromGeoPositionRequest : public StopSuggestionRequest {
     /** @brief Maximal distance in meters from the position at longitude/latitude. */
     int distance;
 
-    StopSuggestionFromGeoPositionRequest( const QString &sourceName = QString(),
-                                          ParseDocumentMode parseMode = ParseForStopSuggestions )
-        : StopSuggestionRequest(sourceName, parseMode),
-          longitude(0.0), latitude(0.0), distance(5000) {};
-    StopSuggestionFromGeoPositionRequest( const QString &sourceName,
-                                          qreal longitude, qreal latitude, int maxCount = 200,
-                                          int distance = 5000,
-                                          ParseDocumentMode parseMode = ParseForStopSuggestions )
-        : StopSuggestionRequest(sourceName, QString(), maxCount, QString(), parseMode),
-          longitude(longitude), latitude(latitude), distance(distance) {};
-    StopSuggestionFromGeoPositionRequest( const StopSuggestionFromGeoPositionRequest &request )
+    StopsByGeoPositionRequest( const QString &sourceName = QString(),
+                                 ParseDocumentMode parseMode = ParseForStopSuggestions )
+            : StopSuggestionRequest(sourceName, parseMode),
+              longitude(0.0), latitude(0.0), distance(5000) {};
+    StopsByGeoPositionRequest( const QString &sourceName, qreal longitude, qreal latitude,
+                                 int maxCount = 200, int distance = 5000,
+                                 ParseDocumentMode parseMode = ParseForStopSuggestions )
+            : StopSuggestionRequest(sourceName, QString(), maxCount, QString(), parseMode),
+              longitude(longitude), latitude(latitude), distance(distance) {};
+    StopsByGeoPositionRequest( const StopsByGeoPositionRequest &request )
             : StopSuggestionRequest(request),
               longitude(request.longitude), latitude(request.latitude), distance(request.distance) {};
 
     virtual AbstractRequest *clone() const
     {
-        return new StopSuggestionFromGeoPositionRequest( sourceName, longitude, latitude,
-                                                         maxCount, distance, parseMode );
+        return new StopsByGeoPositionRequest( sourceName, longitude, latitude,
+                                                maxCount, distance, parseMode );
     };
     virtual QString argumentsString() const;
 

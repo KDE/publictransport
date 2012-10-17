@@ -544,10 +544,10 @@ bool TimetableDataRequestJob::testResults()
         return testStopSuggestionData( stopSuggestionRequest );
     }
 
-    const StopSuggestionFromGeoPositionRequest *stopSuggestionFromGeoPositionRequest =
-            dynamic_cast< const StopSuggestionFromGeoPositionRequest* >( request );
-    if ( stopSuggestionFromGeoPositionRequest ) {
-        return testStopSuggestionData( stopSuggestionFromGeoPositionRequest );
+    const StopsByGeoPositionRequest *stopsByGeoPositionRequest =
+            dynamic_cast< const StopsByGeoPositionRequest* >( request );
+    if ( stopsByGeoPositionRequest ) {
+        return testStopSuggestionData( stopsByGeoPositionRequest );
     }
 
     const JourneyRequest *journeyRequest =

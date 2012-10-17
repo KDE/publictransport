@@ -838,8 +838,7 @@ QList< TestModel::Test > TestModel::testsOfTestCase( TestModel::TestCase testCas
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptExecutionTestCase:
         tests << LoadScriptTest << DepartureTest << ArrivalTest << AdditionalDataTest
-              << StopSuggestionTest << StopSuggestionFromGeoPositionTest
-              << JourneyTest << FeaturesTest;
+              << StopSuggestionTest << StopsByGeoPositionTest << JourneyTest << FeaturesTest;
         break;
 #endif
     default:
@@ -871,7 +870,7 @@ TestModel::TestCase TestModel::testCaseOfTest( TestModel::Test test )
     case ArrivalTest:
     case AdditionalDataTest:
     case StopSuggestionTest:
-    case StopSuggestionFromGeoPositionTest:
+    case StopsByGeoPositionTest:
     case JourneyTest:
     case FeaturesTest:
         return ScriptExecutionTestCase;
@@ -891,7 +890,7 @@ QList< TestModel::Test > TestModel::testIsDependedOf( TestModel::Test test )
         return QList< TestModel::Test >() << LoadScriptTest << FeaturesTest << DepartureTest;
 
     case ArrivalTest:
-    case StopSuggestionFromGeoPositionTest:
+    case StopsByGeoPositionTest:
         return QList< TestModel::Test >() << LoadScriptTest << FeaturesTest;
 
     case DepartureTest:
@@ -968,8 +967,8 @@ QString TestModel::nameForTest( TestModel::Test test )
         return i18nc("@info/plain", "Additional Data Test" );
     case StopSuggestionTest:
         return i18nc("@info/plain", "Stop Suggestion Test" );
-    case StopSuggestionFromGeoPositionTest:
-        return i18nc("@info/plain", "Stop Suggestion From Geo Position Test" );
+    case StopsByGeoPositionTest:
+        return i18nc("@info/plain", "Stops by Geo Position Test" );
     case JourneyTest:
         return i18nc("@info/plain", "Journey Test" );
     case FeaturesTest:
@@ -1036,7 +1035,7 @@ QString TestModel::descriptionForTest( TestModel::Test test )
         return i18nc("@info/plain", "Runs the %1() script function with a stop name part as argument "
                                     "and tests collected stop suggestions",
                      ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS );
-    case StopSuggestionFromGeoPositionTest:
+    case StopsByGeoPositionTest:
         return i18nc("@info/plain", "Runs the %1() script function with a geo position as argument "
                                     "and tests collected stop suggestions",
                      ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS );

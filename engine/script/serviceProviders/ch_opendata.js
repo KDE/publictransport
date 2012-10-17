@@ -6,7 +6,7 @@ var baseUrl = "http://transport.opendata.ch/v1/";
 function features() {
     return [ PublicTransport.ProvidesStopID,
              PublicTransport.ProvidesStopPosition,
-             PublicTransport.ProvidesStopSuggestionsByPosition];
+             PublicTransport.ProvidesStopsByGeoPosition];
 }
 
 function getTimetable( values ) {
@@ -59,9 +59,9 @@ function getStopSuggestions( values  ) {
     var url = baseUrl + "locations";
 
     // Check if stops are requested from a geo position
-    var fromGeoPosition = values.stop == undefined &&
+    var byGeoPosition = values.stop == undefined &&
             values.longitude != undefined && values.latitude != undefined;
-    url += fromGeoPosition
+    url += byGeoPosition
             ? ("?x=" + values.latitude + "&y=" + values.longitude)
             : ("?query=" + values.stop);
 

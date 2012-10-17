@@ -69,7 +69,7 @@ QString StopSuggestionRequest::argumentsString() const
     return QString("{stop: \"%1\", city: \"%2\", maxCount: %3}").arg(stop, city).arg(maxCount);
 }
 
-QString StopSuggestionFromGeoPositionRequest::argumentsString() const
+QString StopsByGeoPositionRequest::argumentsString() const
 {
     return QString("{longitude: %1, longitude: %2, distance: %3, maxCount: %4}")
             .arg(longitude).arg(latitude).arg(distance).arg(maxCount);
@@ -121,7 +121,7 @@ QScriptValue StopSuggestionRequest::toScriptValue( QScriptEngine *engine ) const
     return value;
 }
 
-QScriptValue StopSuggestionFromGeoPositionRequest::toScriptValue( QScriptEngine *engine ) const
+QScriptValue StopsByGeoPositionRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();
     value.setProperty( QLatin1String("longitude"), longitude );
