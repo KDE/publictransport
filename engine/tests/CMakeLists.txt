@@ -43,12 +43,13 @@ set( ScriptApiTest_SRCS
    ../global.cpp
    ../serviceproviderglobal.cpp
    ../departureinfo.cpp
-   ../script/scripting.cpp )
+   ../script/scripting.cpp
+    ${publictransport_engine_MOC_SRCS} )
 qt4_automoc( ${ScriptApiTest_SRCS} )
 add_executable( ScriptApiTest ${ScriptApiTest_SRCS} )
 add_test( ScriptApiTest ScriptApiTest )
 target_link_libraries( ScriptApiTest ${QT_QTTEST_LIBRARY} ${KDE4_PLASMA_LIBS}
-        ${QT_QTNETWORK_LIBRARY} ${QT_QTSCRIPT_LIBRARY} )
+        ${QT_QTNETWORK_LIBRARY} ${QT_QTSCRIPT_LIBRARY} z )
 
 set( GeneralTransitTest_SRCS GeneralTransitTest.cpp
     ../gtfs/gtfsimporter.cpp

@@ -833,7 +833,7 @@ void ScriptApiTest::networkSynchronousTest()
 
     // Test synchronous download (max 10 seconds)
     const QString url = "http://www.google.de";
-    const QString downloaded = network.downloadSynchronous( url, 10000 );
+    const QString downloaded = network.downloadSynchronous( url, url, 10000 );
     QVERIFY( !downloaded.isEmpty() );
     QVERIFY( downloaded.indexOf("<html") != -1 );
     QCOMPARE( network.lastUrl(), url );

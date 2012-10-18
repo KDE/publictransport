@@ -69,9 +69,9 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
         QVERIFY( departure.contains("Target") );
         QVERIFY( departure.contains("TransportLine") );
         QVERIFY( departure.contains("TypeOfVehicle") );
-        QVERIFY( departure.contains("vehicleName") );
-        QVERIFY( departure.contains("vehicleNamePlural") );
-        QVERIFY( departure.contains("vehicleIconName") );
+        QVERIFY( departure.contains("VehicleName") );
+        QVERIFY( departure.contains("VehicleNamePlural") );
+        QVERIFY( departure.contains("VehicleIconName") );
     // 		QVERIFY( departureData.contains("journeyNews") ); // NOTE These values are only given if they are not empty
     // 		QVERIFY( departureData.contains("platform") );
     // 		QVERIFY( departureData.contains("operator") );
@@ -79,7 +79,7 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
     // 		QVERIFY( departureData.contains("delayReason") );
     // 		QVERIFY( departureData.contains("routeStops") );
     // 		QVERIFY( departureData.contains("routeTimes") );
-        QVERIFY( departure.contains("RouteExactStops") );
+//         QVERIFY( departure.contains("RouteExactStops") );
 
         // Test data types
         QVERIFY( departure["DepartureDateTime"].canConvert(QVariant::DateTime) );
@@ -90,7 +90,7 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
         QVERIFY( departure["VehicleNamePlural"].canConvert(QVariant::String) );
         QVERIFY( departure["VehicleIconName"].canConvert(QVariant::String) );
         QVERIFY( departure["Delay"].canConvert(QVariant::Int) );
-        QVERIFY( departure["RouteExactStops"].canConvert(QVariant::Int) );
+//         QVERIFY( departure["RouteExactStops"].canConvert(QVariant::Int) );
         if ( departure.contains("JourneyNews") ) {
             QVERIFY( departure["JourneyNews"].canConvert(QVariant::String) );
         }
