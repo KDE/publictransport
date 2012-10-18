@@ -44,7 +44,7 @@ public:
     QTreeView *testWidget() const { return m_testWidget; };
 
 signals:
-    void clickedTestErrorItem( int lineNumber, const QString &errorMessage );
+    void clickedTestErrorItem( const QString &fileName, int lineNumber, const QString &errorMessage );
 
 protected slots:
     void activeProjectAboutToChange( Project *project, Project *previousProject );

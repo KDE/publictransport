@@ -759,8 +759,8 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
                         debugger->variableModel(), SLOT(switchToVariableStack(int)) );
         }
         if ( m_testDock ) {
-            disconnect( m_testDock, SIGNAL(clickedTestErrorItem(int,QString)),
-                        previousProject, SLOT(showScriptLineNumber(int)) );
+            disconnect( m_testDock, SIGNAL(clickedTestErrorItem(QString,int,QString)),
+                        previousProject, SLOT(showScriptLineNumber(QString,int)) );
         }
 #endif
     }
@@ -794,8 +794,8 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
                      debugger->variableModel(), SLOT(switchToVariableStack(int)) );
         }
         if ( m_testDock ) {
-            connect( m_testDock, SIGNAL(clickedTestErrorItem(int,QString)),
-                     project, SLOT(showScriptLineNumber(int)) );
+            connect( m_testDock, SIGNAL(clickedTestErrorItem(QString,int,QString)),
+                     project, SLOT(showScriptLineNumber(QString,int)) );
         }
 #endif
         stateChanged( "project_opened" );
@@ -1568,6 +1568,11 @@ void TimetableMate::removeAllMessageWidgets()
 void TimetableMate::infoMessage( const QString &message, KMessageWidget::MessageType type,
                                  int timeout, QList<QAction*> actions )
 {
+    Project *project = qobject_cast< Project* >( sender() );
+    if ( project && !project->isActiveProject() ) {
+        return;
+    }
+
     if ( statusBar()->isVisible() ) {
         statusBar()->showMessage( message, timeout );
     } else {

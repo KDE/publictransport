@@ -910,8 +910,13 @@ public slots:
     void showSettingsDialog( QWidget *parent = 0 );
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    /** @brief Open the script tab if not done already and sets the cursor position to @p lineNumber. */
-    void showScriptLineNumber( int lineNumber );
+    /** @brief Open the script tab and sets the cursor position to @p lineNumber. */
+    inline void showScriptLineNumber( int lineNumber ) {
+        showScriptLineNumber( QString(), lineNumber );
+    };
+
+    /** @brief Open the script tab for @p fileName and sets the cursor position to @p lineNumber. */
+    void showScriptLineNumber( const QString &fileName, int lineNumber );
 
     /**
      * @brief Toggle breakpoint at @p lineNumber.

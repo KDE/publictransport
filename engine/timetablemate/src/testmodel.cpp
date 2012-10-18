@@ -570,6 +570,12 @@ QVariant TestModel::data( const QModelIndex &index, int role ) const
                     return index.row() >= testData.childrenExplanations.count()
                             ? QVariant() : testData.childrenExplanations[index.row()].lineNumber;
                 }
+                case FileNameRole: {
+                    // Return the associated file name, if any
+                    const TestData &testData = m_testData[ test ];
+                    return index.row() >= testData.childrenExplanations.count()
+                            ? QVariant() : testData.childrenExplanations[index.row()].fileName;
+                }
                 case FeatureRole: {
                     // Return the associated features, if any
                     const TestData &testData = m_testData[ test ];

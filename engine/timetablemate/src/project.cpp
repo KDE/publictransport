@@ -1969,7 +1969,6 @@ public:
                     "<para>The <icode>features()</icode> function did not return "
                     "<icode>PublicTransport.%1</icode>.</para>", Enums::toString(feature)),
                     q->projectAction(Project::ShowScript) );
-            testFinished( test );
             return false;
         }
 
@@ -2026,6 +2025,11 @@ public:
     {
     #ifdef BUILD_PROVIDER_TYPE_SCRIPT // TODO Remove #ifdef?
         Q_Q( Project );
+        if ( finishedTests.contains(test) ) {
+            // Test already marked as finished
+            return;
+        }
+
         finishedTests << test;
         q->emit testProgress( finishedTests, startedTests );
 
@@ -3258,16 +3262,18 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
 }
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-void Project::showScriptLineNumber( int lineNumber )
+void Project::showScriptLineNumber( const QString &fileName, int lineNumber )
 {
     Q_D( Project );
     if ( lineNumber < 0 ) {
         return;
     }
 
-    showScriptTab();
-    d->scriptTab->document()->views().first()->setCursorPosition(
-            KTextEditor::Cursor(lineNumber - 1, 0) );
+    ScriptTab *tab = fileName.isEmpty() ? showScriptTab() : showExternalScriptTab(fileName);
+    if ( tab ) {
+        tab->document()->views().first()->setCursorPosition(
+                KTextEditor::Cursor(lineNumber - 1, 0) );
+    }
 }
 #endif
 

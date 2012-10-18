@@ -148,10 +148,11 @@ void TestDockWidget::rowsInserted( const QModelIndex &parent, int first, int las
 void TestDockWidget::itemClicked( const QModelIndex &index )
 {
     if ( index.parent().isValid() && index.parent().parent().isValid() &&
-         index.data(Qt::UserRole).isValid() )
+         index.data(TestModel::LineNumberRole).isValid() )
     {
-        const int lineNumber = index.data( Qt::UserRole ).toInt();
-        emit clickedTestErrorItem( lineNumber, index.data().toString() );
+        const int lineNumber = index.data( TestModel::LineNumberRole ).toInt();
+        const QString fileName = index.data( TestModel::FileNameRole ).toString();
+        emit clickedTestErrorItem( fileName, lineNumber, index.data().toString() );
     }
 }
 

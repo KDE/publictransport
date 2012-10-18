@@ -91,12 +91,14 @@ public:
     /** @brief Additional roles for this model. */
     enum Role {
         LineNumberRole = Qt::UserRole, /**< Stores an associated line number, if any. */
-        SolutionActionRole = Qt::UserRole + 1, /**< Stores a pointer to a QAction, which can be
+        FileNameRole = Qt::UserRole + 1, /**< Stores the name of the file to which
+                * LineNumberRole refers. */
+        SolutionActionRole = Qt::UserRole + 2, /**< Stores a pointer to a QAction, which can be
                 * used to solve a problem with a test. */
-        FeatureRole = Qt::UserRole + 2, /**< Additional features of an index, eg. open an url
+        FeatureRole = Qt::UserRole + 3, /**< Additional features of an index, eg. open an url
                 * (stored in UrlRole). Can be used to determine which context menu entries to show.
                 * Stored as TimetableDataRequestMessage::Features flags. */
-        UrlRole = Qt::UserRole + 3 /**< An URL associated with an index as QString. */
+        UrlRole = Qt::UserRole + 4 /**< An URL associated with an index as QString. */
     };
 
     /**
