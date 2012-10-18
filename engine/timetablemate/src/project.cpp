@@ -915,13 +915,9 @@ public:
         case Project::DebugGetStopSuggestions:
         case Project::DebugGetStopsByGeoPosition:
         case Project::DebugGetJourneys:
-            // Only enabled if the debugger and the test are both currently not running
-            return !isTestRunning() && !isDebuggerRunning() &&
-                    debugger->scriptState() == Debugger::Debugger::ScriptLoaded;
-#else
+#endif
             // Only enabled if the debugger and the test are both currently not running
             return !isTestRunning() && !isDebuggerRunning();
-#endif
 
         default:
             kDebug() << "Unknown project action" << projectAction;
@@ -1112,16 +1108,7 @@ public:
             return true;
         }
 
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        if ( !checkSyntax(q->scriptText()) ) {
-            // Do not start the test if the syntax is invalid
-            // TODO extra test for the syntax check? enough to test in LoadScriptJob?
-            return false;
-        }
-
         DEBUGGER_JOB_SYNCHRONIZATION("Testing begins" << data()->id());
-#endif
-
         pendingTests.clear();
         testState = TestsRunning;
         finishedTests.clear();
@@ -1270,21 +1257,28 @@ public:
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Q_Q( Project );
         const ServiceProviderData *data = provider->data();
+        QList< TestModel::Test > tests = QList< TestModel::Test >() << TestModel::DepartureTest
+                << TestModel::ArrivalTest << TestModel::StopSuggestionTest;
         if ( data->sampleStopNames().isEmpty() ) {
-            testModel->markTestCaseAsUnstartable( TestModel::ScriptExecutionTestCase,
-                    i18nc("@info/plain", "Missing sample stop name"),
-                    i18nc("@info", "<title>Missing sample stop name</title> "
-                        "<para>Cannot run script execution tests. Open the project settings and add "
-                        "one or more <interface>Sample Stop Names</interface></para>"),
-                    q->projectAction(Project::ShowProjectSettings) );
+            foreach ( TestModel::Test test, tests ) {
+                testModel->setTestState( test, TestModel::TestCouldNotBeStarted,
+                        i18nc("@info/plain", "Missing sample stop name"),
+                        i18nc("@info", "<title>Missing sample stop name</title> "
+                              "<para>Cannot run the test without sample data. Open the project "
+                              "settings and add one or more <interface>Sample Stop Names</interface>"
+                              "</para>"),
+                        q->projectAction(Project::ShowProjectSettings) );
+            }
             return false;
         } else if ( data->useSeparateCityValue() && data->sampleCity().isEmpty() ) {
-            testModel->markTestCaseAsUnstartable( TestModel::ScriptExecutionTestCase,
+            foreach ( TestModel::Test test, tests ) {
+                testModel->setTestState( test, TestModel::TestCouldNotBeStarted,
                     i18nc("@info/plain", "Missing sample city"),
                     i18nc("@info", "<title>Missing sample city</title> "
-                        "<para>Cannot run script execution tests. Open the project settings and add "
-                        "a <interface>Sample City</interface></para>"),
+                          "<para>Cannot run the test without sample data. Open the project "
+                          "settings and add a <interface>Sample City</interface></para>"),
                     q->projectAction(Project::ShowProjectSettings) );
+            }
             return false;
         }
 #endif
@@ -1318,7 +1312,8 @@ public:
         Q_Q( Project );
 
         const QList< TestModel::Test > requiredTests = TestModel::testIsDependedOf( test );
-        foreach ( TestModel::Test requiredTest, requiredTests ) {
+        for ( int i = 0; i < requiredTests.count(); ++i ) {
+            TestModel::Test requiredTest = requiredTests[ i ];
             if ( !testModel->isTestFinished(requiredTest) ) {
                 // A required test is not finished, add it to the dependend test list
                 // and start it when all required tests are done
@@ -1329,8 +1324,21 @@ public:
                         i18nc("@info/plain", "Waiting for required test \"%1\"",
                               TestModel::nameForTest(requiredTest)),
                         QString(), q->projectAction(Project::ShowScript) );
+
+                // Start all unfinished required tests, if not planned already
+                QList< TestModel::Test > unfinishedRequiredTests;
+                for ( int n = i; n < requiredTests.count(); ++n ) {
+                    TestModel::Test unfinishedRequiredTest = requiredTests[ n ];
+                    if ( !testModel->isTestFinished(requiredTest) &&
+                         !startedTests.contains(requiredTest) )
+                    {
+                        unfinishedRequiredTests << unfinishedRequiredTest;
+                    }
+                }
+                startTests( unfinishedRequiredTests );
                 return true;
             } else if ( testModel->testState(requiredTest) == TestModel::TestFinishedWithErrors ) {
+                // Required test is finished, but was unsuccessful
                 testModel->setTestState( test, TestModel::TestCouldNotBeStarted,
                         i18nc("@info/plain", "Required test \"%1\" was not successful",
                               TestModel::nameForTest(requiredTest)),
@@ -1346,12 +1354,22 @@ public:
         // Test if enough sample data is available
         // and get the name of the script function to run
         QString function, message, shortMessage;
+        quint8 testSampleData = 0; // 1 => testForSampleData(), 2 => testForJourneySampleData(),
+                                   // 3 => testForCoordinatesSampleData()
         switch ( test ) {
         case TestModel::DepartureTest:
         case TestModel::ArrivalTest:
-            if ( !testForSampleData() ) {
-                return false;
+            if ( test == TestModel::ArrivalTest ) {
+                if ( !isTestFinishedOrPending(TestModel::FeaturesTest) ) {
+                    kWarning() << "First start the features test";
+                    return false;
+                }
+                if ( !hasFeature(test, Enums::ProvidesArrivals) ) {
+                    testFinished( test );
+                    return false;
+                }
             }
+            testSampleData = 1;
             function = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
             shortMessage = i18nc("@info/plain", "You need to implement a '%1' script function", function);
             message = i18nc("@info", "<title>You need to implement a '%1' script function</title> "
@@ -1359,23 +1377,42 @@ public:
                             "currently not accepted by the data engine, but that may change."
                             "</para>", function);
             break;
-        case TestModel::AdditionalDataTest:
-            if ( !testForSampleData() ) {
+        case TestModel::AdditionalDataTest: {
+            if ( !isTestFinishedOrPending(TestModel::DepartureTest) ) {
+                kWarning() << "First start the departure test";
                 return false;
             }
+
+            const QList< TimetableData > results =
+                    testModel->testResults( TestModel::DepartureTest );
+            if ( results.isEmpty() ) {
+                testModel->setTestState( test, TestModel::TestCouldNotBeStarted,
+                        i18nc("@info/plain", "No results in departure test") );
+                testFinished( test );
+                return false;
+            }
+
+            testSampleData = 1;
             function = ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA;
             shortMessage = i18nc("@info/plain", "'%1' script function not implemented", function);
             message = i18nc("@info", "<title>You can implement a '%1' script function</title> "
                             "<para>This can be used to load additional data for single departures "
                             "or arrivals.</para>", function);
             break;
+        }
         case TestModel::StopSuggestionTest:
         case TestModel::StopsByGeoPositionTest:
-            if ( test == TestModel::StopSuggestionTest ? !testForSampleData()
-                                                       : !testForCoordinatesSampleData() )
-            {
-                return false;
+            if ( test == TestModel::StopsByGeoPositionTest ) {
+                if ( !isTestFinishedOrPending(TestModel::FeaturesTest) ) {
+                    kWarning() << "First start the features test";
+                    return false;
+                }
+                if ( !hasFeature(test, Enums::ProvidesStopsByGeoPosition) ) {
+                    testFinished( test );
+                    return false;
+                }
             }
+            testSampleData = test == TestModel::StopSuggestionTest ? 1 : 3;
             function = ServiceProviderScript::SCRIPT_FUNCTION_GETSTOPSUGGESTIONS;
             shortMessage = i18nc("@info/plain", "You need to implement a '%1' script function", function);
             message = i18nc("@info", "<title>You need to implement a '%1' script function</title> "
@@ -1383,9 +1420,7 @@ public:
                             "valid stop name. Therefore this function is needed.</para>", function);
             break;
         case TestModel::JourneyTest:
-            if ( !testForJourneySampleData() ) {
-                return false;
-            }
+            testSampleData = 2;
             function = ServiceProviderScript::SCRIPT_FUNCTION_GETJOURNEYS;
             shortMessage = i18nc("@info/plain", "For journeys, you need to implement a '%1' script function", function);
             message = i18nc("@info", "<title>For journeys, you need to implement a '%1' script function</title> "
@@ -1409,6 +1444,7 @@ public:
             break;
         default:
             kWarning() << "Invalid test" << test;
+            testFinished( test );
             return false;
         }
 
@@ -1424,17 +1460,46 @@ public:
             testFinished( test );
             return false;
         } else {
+            switch ( testSampleData ) {
+            case 1:
+                if ( !testForSampleData() ) {
+                    testFinished( test );
+                    return false;
+                }
+                break;
+            case 2:
+                if ( !testForJourneySampleData() ) {
+                    testFinished( test );
+                    return false;
+                }
+                break;
+            case 3:
+                if ( !testForCoordinatesSampleData() ) {
+                    testFinished( test );
+                    return false;
+                }
+                break;
+            case 0:
+            default:
+                break;
+            }
+
             // Create job
             DebuggerJob *job;
             if ( test == TestModel::LoadScriptTest ) {
                 job = debugger->getLoadScriptJob( q->scriptText(), data() );
                 if ( !job ) {
                     // Script already loaded and not changed
-                    testModel->setTestState( test, TestModel::TestFinishedSuccessfully,
-                                             i18nc("@info/plain", "Script successfully loaded") );
                     testFinished( test );
-                    startTests( takeStartableDependentTests(test) );
-                    return true;
+                    if ( lastScriptError == Debugger::NoScriptError ) {
+                        testModel->setTestState( test, TestModel::TestFinishedSuccessfully,
+                                                 i18nc("@info/plain", "Script successfully loaded") );
+                        return true;
+                    } else {
+                        testModel->setTestState( test, TestModel::TestFinishedWithErrors,
+                                                 lastScriptErrorString );
+                        return false;
+                    }
                 } else if ( debugger->isLoadScriptJobRunning() && !job->isFinished() ) {
                     job->setObjectName( "TEST_LOAD" );
 
@@ -1463,33 +1528,14 @@ public:
                             testItemCount, data()->sampleCity() );
                     break;
                 case TestModel::ArrivalTest: {
-                    if ( !isTestFinishedOrPending(TestModel::FeaturesTest) ) {
-                        kWarning() << "First start the features test";
-                        return false;
-                    }
-                    if ( !hasFeature(test, Enums::ProvidesArrivals) ) {
-                        return false;
-                    }
-
                     request = new ArrivalRequest( "TEST_ARRIVALS",
                             data()->sampleStopNames().first(), QDateTime::currentDateTime(),
                             testItemCount, data()->sampleCity() );
                     break;
                 }
                 case TestModel::AdditionalDataTest: {
-                    if ( !isTestFinishedOrPending(TestModel::DepartureTest) )
-                    {
-                        kWarning() << "First start the departure test";
-                        return false;
-                    }
-
                     const QList< TimetableData > results =
                             testModel->testResults( TestModel::DepartureTest );
-                    if ( results.isEmpty() ) {
-                        kWarning() << "No results in departure test";
-                        return false;
-                    }
-
                     QSharedPointer< AbstractRequest > departureRequest =
                             testModel->testRequest( TestModel::DepartureTest );
                     const TimetableData result = results.first();
@@ -1506,14 +1552,6 @@ public:
                             data()->sampleCity() );
                     break;
                 case TestModel::StopsByGeoPositionTest:
-                    if ( !isTestFinishedOrPending(TestModel::FeaturesTest) ) {
-                        kWarning() << "First start the features test";
-                        return false;
-                    }
-                    if ( !hasFeature(test, Enums::ProvidesStopsByGeoPosition) ) {
-                        return false;
-                    }
-
                     request = new StopsByGeoPositionRequest(
                             "TEST_STOP_SUGGESTIONS_BYGEOPOSITION",
                             data()->sampleLongitude(), data()->sampleLatitude(), testItemCount );
@@ -1526,6 +1564,7 @@ public:
                     break;
                 default:
                     kWarning() << "Invalid test" << test;
+                    testFinished( test );
                     return false;
                 }
 
@@ -1985,7 +2024,7 @@ public:
 
     void testFinished( TestModel::Test test )
     {
-    #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    #ifdef BUILD_PROVIDER_TYPE_SCRIPT // TODO Remove #ifdef?
         Q_Q( Project );
         finishedTests << test;
         q->emit testProgress( finishedTests, startedTests );
@@ -2046,6 +2085,8 @@ public:
     QString consoleText;
 
     QString lastError;
+    QString lastScriptErrorString;
+    ScriptErrorType lastScriptError;
     QStringList globalFunctions;
     QStringList includedFiles;
     bool suppressMessages;
@@ -3799,6 +3840,8 @@ void Project::loadScriptResult( ScriptErrorType lastScriptError,
         // Emit an information message about the error (eg. a syntax error)
         d->globalFunctions.clear();
         d->includedFiles.clear();
+        d->lastScriptError = lastScriptError;
+        d->lastScriptErrorString = lastScriptErrorString;
         d->scriptState = ProjectPrivate::ScriptNotLoaded;
         if ( !d->suppressMessages ) {
             emit informationMessage( lastScriptErrorString, KMessageWidget::Error, 10000 );
@@ -3806,6 +3849,8 @@ void Project::loadScriptResult( ScriptErrorType lastScriptError,
     } else {
         d->globalFunctions = globalFunctions;
         d->includedFiles = includedFiles;
+        d->lastScriptError = Debugger::NoScriptError;
+        d->lastScriptErrorString.clear();
         d->scriptState = ProjectPrivate::ScriptLoaded;
     }
     d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
