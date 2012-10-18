@@ -220,7 +220,7 @@ bool TestFeaturesJob::testResults()
     const QVariantList items = m_returnValue.toList();
     if ( items.isEmpty() ) {
         m_additionalMessages << TimetableDataRequestMessage(
-                i18nc("@info/plain", "No TimetableInformation string returned"),
+                i18nc("@info/plain", "No provider features returned"),
                 TimetableDataRequestMessage::Warning );
     } else {
         int i = 1;
