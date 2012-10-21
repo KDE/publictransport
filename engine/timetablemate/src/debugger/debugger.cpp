@@ -39,6 +39,8 @@
 #include <ThreadWeaver/DependencyPolicy>
 #include <ThreadWeaver/ResourceRestrictionPolicy>
 #include <ThreadWeaver/Thread>
+#include <KGlobal>
+#include <KLocale>
 #include <threadweaver/DebuggingAids.h>
 
 // Qt includes
@@ -244,7 +246,11 @@ void Debugger::slotJobDone( ThreadWeaver::Job *job )
 {
     DebuggerJob *debuggerJob = qobject_cast< DebuggerJob* >( job );
     Q_ASSERT( debuggerJob );
-    Q_ASSERT( hasRunningJobs() );
+    if ( !hasRunningJobs() ) {
+        kWarning() << "Job done signal received, but no running jobs, exiting?";
+        job->deleteLater();
+        return;
+    }
     if ( debuggerJob != m_runningJobs.top() ) {
         kWarning() << "Unknown job done" << debuggerJob;
         kDebug() << "Current job is" << m_runningJobs.top();
@@ -361,11 +367,15 @@ void Debugger::timeout()
 {
     if ( m_timeout ) {
         kDebug() << "Timeout, execution took longer than" << m_timeout->interval() << "ms";
+        emit errorMessage( i18nc("@info/plain", "Execution timed out after %1",
+                                 KGlobal::locale()->prettyFormatDuration(m_timeout->interval())) );
         m_timeout->deleteLater();
         m_timeout = 0;
     } else {
         kDebug() << "Timeout, execution took too long";
+        emit errorMessage( i18nc("@info/plain", "Execution timed out") );
     }
+
     abortDebugger();
 }
 

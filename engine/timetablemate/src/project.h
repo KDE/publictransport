@@ -1041,9 +1041,8 @@ protected slots:
         emit informationMessage( message );
     };
 
-    void emitErrorMessage( const QString &message ) {
-        emit informationMessage( message, KMessageWidget::Error, -1 );
-    };
+    void slotDebugInformationMessage( const QString &message );
+    void slotDebugErrorMessage( const QString &message );
 
     /** @brief Simply emit the given @p message with the informationMessage() signal. */
     void emitInformationMessage( const QString &message,

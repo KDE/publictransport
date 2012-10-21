@@ -113,7 +113,8 @@ public:
     };
 
     enum ScriptState {
-        ScriptNotLoaded = 0,
+        InitializingScript = 0,
+        ScriptNotLoaded,
         ScriptLoaded
     };
 
@@ -122,7 +123,7 @@ public:
           projectSourceBufferModified(false),
           dashboardTab(0), projectSourceTab(0), plasmaPreviewTab(0), webTab(0),
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-          scriptState(ScriptNotLoaded), scriptTab(0),
+          scriptState(InitializingScript), scriptTab(0),
           debugger(new Debugger::Debugger(weaver, project)),
 #endif
           provider(ServiceProvider::createInvalidProvider(project)),
@@ -251,19 +252,6 @@ public:
     };
 #endif // BUILD_PROVIDER_TYPE_SCRIPT
 
-    void enableDebuggerInformationMessages( bool enable = true ) {
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        Q_Q( Project );
-        if ( enable ) {
-            q->connect( debugger, SIGNAL(informationMessage(QString)), q, SIGNAL(informationMessage(QString)) );
-            q->connect( debugger, SIGNAL(errorMessage(QString)), q, SLOT(emitErrorMessage(QString)) );
-        } else {
-            q->disconnect( debugger, SIGNAL(informationMessage(QString)), q, SIGNAL(informationMessage(QString)) );
-            q->disconnect( debugger, SIGNAL(errorMessage(QString)), q, SLOT(emitErrorMessage(QString)) );
-        }
-#endif // BUILD_PROVIDER_TYPE_SCRIPT
-    };
-
     // Initialize member variables, connect slots
     bool initialize()
     {
@@ -278,7 +266,6 @@ public:
         q->connect( debugger, SIGNAL(started()), q, SLOT(debugStarted()) );
         q->connect( debugger, SIGNAL(stopped(ScriptRunData)), q, SLOT(debugStopped(ScriptRunData)) );
         q->connect( debugger, SIGNAL(aborted()), q, SLOT(debugAborted()) );
-        enableDebuggerInformationMessages();
 
         q->connect( debugger, SIGNAL(jobStarted(JobType,QString,QString)),
                     q, SLOT(jobStarted(JobType,QString,QString)) );
@@ -289,6 +276,10 @@ public:
         q->connect( debugger, SIGNAL(requestTimetableDataResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QVariant)),
                     q, SLOT(functionCallResult(QSharedPointer<AbstractRequest>,bool,QString,QList<TimetableData>,QVariant)) );
 
+        q->connect( debugger, SIGNAL(informationMessage(QString)),
+                    q, SLOT(slotDebugInformationMessage(QString)) );
+        q->connect( debugger, SIGNAL(errorMessage(QString)),
+                    q, SLOT(slotDebugErrorMessage(QString)) );
         q->connect( debugger, SIGNAL(output(QString,QScriptContextInfo)),
                     q, SLOT(scriptOutput(QString,QScriptContextInfo)) );
         q->connect( debugger, SIGNAL(scriptMessageReceived(QString,QScriptContextInfo,QString,Helper::ErrorSeverity)),
@@ -369,7 +360,7 @@ public:
         state = Project::ProjectSuccessfullyLoaded;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        scriptState = ScriptNotLoaded;
+        scriptState = InitializingScript;
 
         // Load script file referenced by the XML
         loadScript();
@@ -920,9 +911,11 @@ public:
         case Project::DebugGetStopSuggestions:
         case Project::DebugGetStopsByGeoPosition:
         case Project::DebugGetJourneys:
-#endif
+            return !isTestRunning() && !isDebuggerRunning() && scriptState != InitializingScript;
+#else
             // Only enabled if the debugger and the test are both currently not running
             return !isTestRunning() && !isDebuggerRunning();
+#endif
 
         default:
             kDebug() << "Unknown project action" << projectAction;
@@ -1126,7 +1119,7 @@ public:
                             );
 
         // Disable inforamtion messages while testing, results are shown in the test tab
-        enableDebuggerInformationMessages( false );
+        suppressMessages = true;
 
         q->emit testStarted();
         q->emit testRunningChanged( true );
@@ -1154,7 +1147,7 @@ public:
                             );
 
         // Re-enable information messages from the debugger
-        enableDebuggerInformationMessages();
+        suppressMessages = false;
 
         switch ( state ) {
         case TestModel::TestFinishedSuccessfully:
@@ -5179,4 +5172,18 @@ QString Project::savePathInfoStringFromFilePath( const QString &filePath )
             return i18nc("@info:tooltip", "Project saved at <filename>%1</filename>", filePath);
         }
     }
+}
+
+void Project::slotDebugInformationMessage( const QString &message )
+{
+    QColor color = KColorScheme( QPalette::Active ).foreground( KColorScheme::InactiveText ).color();
+    appendOutput( message, color );
+    emit informationMessage( message, KMessageWidget::Information, -1 );
+}
+
+void Project::slotDebugErrorMessage( const QString &message )
+{
+    QColor color = KColorScheme( QPalette::Active ).foreground( KColorScheme::NegativeText ).color();
+    appendOutput( message, color );
+    emit informationMessage( message, KMessageWidget::Error, -1 );
 }
