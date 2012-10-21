@@ -316,6 +316,19 @@ var __hafas_journeys = function(hafas) {
                 var readUInt32 = function() {
                     return HafasPrivate.swap32( stream.readUInt32() );
                 };
+                var seek = function( pos, hint ) {
+                    if ( pos >= buffer.size() ) {
+                        if ( hint == undefined ) {
+                            throw Error("Invalid position " + pos +
+                                    ", buffer size is " + buffer.size());
+                        } else {
+                            throw Error("Invalid position " + pos +
+                                    " for '" + hint + "'" +
+                                    ", buffer size is " + buffer.size());
+                        }
+                    }
+                    buffer.seek( pos );
+                };
 
                 // Start reading, first check the file format version
                 var version = readUInt16();
@@ -336,7 +349,7 @@ var __hafas_journeys = function(hafas) {
                 var extensionHeaderPos = readUInt32();
 
                 // Read extension header
-                buffer.seek( extensionHeaderPos );
+                seek( extensionHeaderPos, "Extension Header" );
                 var extensionHeaderLength = readUInt32();
                 if ( extensionHeaderLength < 0x2c ) {
                     throw Error("hafas.journeys.parser.parseBinary(): " +
@@ -386,12 +399,13 @@ var __hafas_journeys = function(hafas) {
                         throw Error("hafas.journeys.parser.parseBinary(): " +
                                 "Extension header is too short (" + extensionHeaderLength + ")");
                     }
-                    buffer.seek( extensionHeaderPos + 0x2c );
+                    seek( extensionHeaderPos + 0x2c,
+                          "Extension Header (Attribute Position)" );
                     attributesPos = readUInt32();
                 }
 
                 // Read journey details
-                buffer.seek( journeyDetailsPos );
+                seek( journeyDetailsPos, "Journey Details" );
                 var journeyDetailsVersion = readUInt16();
                 if ( journeyDetailsVersion != 1 ) {
                     throw Error("Unknown journey details version: " + journeyDetailsVersion);
@@ -436,7 +450,7 @@ var __hafas_journeys = function(hafas) {
                     };
 
                     // Read journey header
-                    stream.seek( 0x4a + j * 12 );
+                    seek( 0x4a + j * 12, "Journey Header " + j );
                     var serviceDaysOffset = readUInt16();
                     var partsOffset = readUInt32();
                     var partCount = readUInt16();
@@ -445,7 +459,8 @@ var __hafas_journeys = function(hafas) {
                     journey.Changes = readUInt16();
 
                     // Read service days text
-                    stream.seek( serviceDaysPos + serviceDaysOffset );
+                    seek( serviceDaysPos + serviceDaysOffset,
+                          "Service Days for Journey " + j );
                     journey.JourneyNews = readNextString();
 
                     // Get journey offset in days
@@ -466,11 +481,13 @@ var __hafas_journeys = function(hafas) {
                     }
 
                     // Get offset of details for this journey
-                    stream.seek( journeyDetailsPos + journeyDetailsIndexOffset + j * 2 );
+                    seek( journeyDetailsPos + journeyDetailsIndexOffset + j * 2,
+                          "Journey Details Offset for Journey " + j );
                     var journeyDetailsOffset = readUInt16();
 
                     // Go to the details and read status
-                    stream.seek( journeyDetailsPos + journeyDetailsOffset );
+                    seek( journeyDetailsPos + journeyDetailsOffset,
+                          "Journey Details for Journey " + j );
                     var realtimeStatus = readUInt16();
                     if ( realtimeStatus == 2 ) {
                         HafasPrivate.appendJourneyNews( journey, "Train is canceled" ); // TODO i18n
@@ -484,9 +501,11 @@ var __hafas_journeys = function(hafas) {
                     // TODO journey.JourneyID, add TimetableInformation enumerable
                     var journeyId;
                     if ( attributesPos != 0 && attributesPos + j * 2 < data.length() ) {
-                        stream.seek( attributesPos + j * 2 );
+                        seek( attributesPos + j * 2,
+                              "Attributes Index for Journey " + j );
                         var attributesIndex = readUInt16();
-                        stream.seek( attributesOffset + attributesIndex * 4 );
+                        seek( attributesOffset + attributesIndex * 4,
+                              "Attributes for Journey " + j );
                         while ( true ) {
                             var key = readNextString();
                             if ( key.length == 0 ) {
@@ -494,7 +513,7 @@ var __hafas_journeys = function(hafas) {
                             } else if ( key == "ConnectionId" ) {
                                 journeyId = readNextString();
                             } else {
-                                stream.seek( stream.pos + 2 );
+                                stream.skip( 2 );
                             }
                         }
                     }
@@ -503,7 +522,8 @@ var __hafas_journeys = function(hafas) {
                     for ( p = 0; p < partCount; ++p ) {
                         // Move to the beginning of the data block
                         // for the current part (p) of the current journey (j)
-                        stream.seek( 0x4a + partsOffset + p * 20 );
+                        seek( 0x4a + partsOffset + p * 20,
+                              "Part " + p + " of Journey " + j );
 
                         // Read departure information
                         var plannedDepartureTime = readTime( date, journeyDayOffset );
@@ -526,7 +546,8 @@ var __hafas_journeys = function(hafas) {
 
                         // Read type, 1: Footway, 2: Train, Bus, Tram, ...
                         var type = readUInt16();
-
+                        var vehicleType = type == 1 ? PublicTransport.Footway
+                                                    : PublicTransport.UnknownVehicleType;
                         var vehicleTypeAndTransportLine = readNextString();
                         var pos = vehicleTypeAndTransportLine.indexOf( "#" );
                         var transportLine, vehicleTypeString;
@@ -547,7 +568,8 @@ var __hafas_journeys = function(hafas) {
 
                         // Read comments
                         var commentsOffset = readUInt16();
-                        stream.seek( commentsPos + commentsOffset );
+                        seek( commentsPos + commentsOffset,
+                              "Comments for Part " + p + " of Journey " + j );
                         var commentCount = readUInt16();
                         var routeNews = "";
                         for ( c = 0; c < commentCount; ++c ) {
@@ -556,54 +578,56 @@ var __hafas_journeys = function(hafas) {
                             routeNews += routeNews.length > 0 ? ", \n" + comment : comment;
                         }
 
-                        stream.seek( attributesOffset + partAttributeIndex * 4 );
-                        var direction = "";
-                        var lineClass = 0, category = "";
-                        var vehicleType = PublicTransport.UnknownVehicleType;
-                        if ( type == 1 ) {
-                            vehicleType = PublicTransport.Footway;
-                        }
-                        while ( true ) {
-                            var key = readNextString(); // Operator, AdminCode, Class, HafasName,
-                                // Category, InternalCat, ParallelTrain.0, Direction, Class, approxDelay
-                            if ( key.length == 0 ) {
-                                break;
-                            } else if ( key == "Operator" ) {
-                                if ( journey.Operator == undefined ) {
-                                    journey.Operator = "";
+                        var attributesForPartPos = attributesOffset + partAttributeIndex * 4;
+                        if ( attributesForPartPos < buffer.size() ) {
+                            // Attributes are available for the current part
+                            seek( attributesForPartPos, "Attributes for Part " + p + " of Journey " + j );
+                            var direction = "";
+                            var lineClass = 0, category = "";
+                            while ( true ) {
+                                var key = readNextString(); // Operator, AdminCode, Class, HafasName,
+                                    // Category, InternalCat, ParallelTrain.0, Direction, Class, approxDelay
+                                if ( key.length == 0 ) {
+                                    break;
+                                } else if ( key == "Operator" ) {
+                                    if ( journey.Operator == undefined ) {
+                                        journey.Operator = "";
+                                    } else {
+                                        journey.Operator += ", ";
+                                    }
+                                    journey.Operator += readNextString();
+                                } else if ( key == "Category" ) {
+                                    category = readNextString();
+                                    if ( vehicleType == PublicTransport.UnknownVehicleType ) {
+                                        vehicleType = hafas.vehicleFromString( category,
+                                                {unknownVehicleWarning: false} );
+                                    }
+                                //     } else if ( key == "Direction" ) { // TODO Rename to Direction or use both Direction and Target?
+                                    //         journey.Target = readNextString();
+                                } else if ( key == "Class" ) {
+                                    lineClass = parseInt( readNextString() );
+                                    if ( vehicleType == PublicTransport.UnknownVehicleType ) {
+                                        vehicleType = hafas.vehicleFromClass( lineClass,
+                                                {unknownVehicleWarning: false} );
+                                    }
                                 } else {
-                                    journey.Operator += ", ";
+                                    stream.skip( 2 );
                                 }
-                                journey.Operator += readNextString();
-                            } else if ( key == "Category" ) {
-                                category = readNextString();
-                                if ( vehicleType == PublicTransport.UnknownVehicleType ) {
-                                    vehicleType = hafas.vehicleFromString( category,
-                                            {unknownVehicleWarning: false} );
-                                }
-                            //     } else if ( key == "Direction" ) { // TODO Rename to Direction or use both Direction and Target?
-                                //         journey.Target = readNextString();
-                            } else if ( key == "Class" ) {
-                                lineClass = parseInt( readNextString() );
-                                if ( vehicleType == PublicTransport.UnknownVehicleType ) {
-                                    vehicleType = hafas.vehicleFromClass( lineClass,
-                                            {unknownVehicleWarning: false} );
-                                }
-                            } else {
-                                stream.seek( stream.pos + 2 );
                             }
                         }
 
                         if ( vehicleType == PublicTransport.UnknownVehicleType ) {
                             var vehicleTypeRegExp = /^\s*([a-z]+)/i;
-                            var vehicleString = vehicleTypeRegExp.exec( vehicleTypeString );
-                            if ( vehicleString != null ) {
-                                vehicleType = hafas.vehicleFromString( vehicleString[1] );
+                            var vehicleResult = vehicleTypeRegExp.exec( vehicleTypeString );
+                            if ( vehicleResult != null ) {
+                                vehicleType = hafas.vehicleFromString( vehicleResult[1] );
+                            } else {
+                                vehicleType = provider.defaultVehicleType;
                             }
-
                             if ( vehicleType == PublicTransport.UnknownVehicleType ) {
                                 helper.warning( "Unknown vehicle type (category: " + category +
-                                                ", class: " + lineClass + ")" );
+                                                ", class: " + lineClass +
+                                                ", string: " + vehicleTypeString + ")" );
                             }
                         }
                         journey.RouteTypesOfVehicles.push( vehicleType );
@@ -621,9 +645,11 @@ var __hafas_journeys = function(hafas) {
                                     : (predictedTime - plannedTime) / (60 * 1000);
                         };
 
-                        // Read predicted times/platforms
-                        stream.seek( journeyDetailsPos + journeyDetailsOffset +
-                                journeyDetailsPartOffset + p * journeyDetailsPartSize );
+                        // Read predicted times/platforms,
+                        // seek behind the part data
+                        seek( journeyDetailsPos + journeyDetailsOffset +
+                              journeyDetailsPartOffset + p * journeyDetailsPartSize,
+                              "Data for Part " + p + " of Journey " + j );
                         var predictedDepartureTime = readTime( date, journeyDayOffset );
                         var predictedArrivalTime = readTime( date, journeyDayOffset );
                         var predictedDeparturePlatform = getPredictedPlatform(
@@ -667,7 +693,7 @@ var __hafas_journeys = function(hafas) {
                         journey.RouteNews.push( routeNews );
 
                         // Read intermediate stops of the current journey part
-                        stream.seek( stream.pos + 4 );
+                        stream.skip( 4 );
                         var firstStopIndex = readUInt16();
                         var stopCount = readUInt16();
                         var subJourney = {
@@ -681,8 +707,10 @@ var __hafas_journeys = function(hafas) {
                             RouteTimesArrivalDelay: new Array(stopCount),
                         };
                         if ( stopCount > 0 ) {
-                            stream.seek( journeyDetailsPos + stopsOffset +
-                                    firstStopIndex * stopsSize );
+                            seek( journeyDetailsPos + stopsOffset +
+                                  firstStopIndex * stopsSize,
+                                  "Intermediate Stops for Part " + p +
+                                  " of Journey " + j );
                             if ( stopsSize != 26 ) {
                                 throw Error("Unexpected stops size: " + stopsSize);
                             }
