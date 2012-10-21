@@ -59,6 +59,7 @@ namespace Scripting
 class QScriptProgram;
 class QScriptEngine;
 class QMutex;
+class QSemaphore;
 
 namespace Debugger {
 
@@ -102,7 +103,7 @@ public:
                           QObject* parent = 0 );
 
     /** @brief Constructor. */
-    DebuggerJob( DebuggerAgent *debugger, QMutex *engineMutex, const ScriptData &scriptData,
+    DebuggerJob( DebuggerAgent *debugger, QSemaphore *engineSemaphore, const ScriptData &scriptData,
                  const ScriptObjects &objects, const QString &useCase = QString(),
                  QObject* parent = 0 );
 
@@ -124,7 +125,7 @@ public:
     virtual void requestAbort();
 
     DebuggerAgent *debuggerAgent() const;
-    QMutex *engineMutex() const;
+    QSemaphore *engineSemaphore() const;
 
     bool wasAborted() const;
 
@@ -348,7 +349,7 @@ protected slots:
     void evaluationAborted( const QString &errorMessage );
 
 protected:
-    // Expects m_engineMutex and m_mutex to be unlocked
+    // Expects m_engineSemaphore and m_mutex to be unlocked
     void handleError( QScriptEngine *engine, const QString &message = QString(),
                       EvaluationResult *result = 0 );
     void handleError( int uncaughtExceptionLineNumber = -1,
@@ -379,7 +380,7 @@ protected:
     bool m_aborted;
     QString m_explanation;
     QMutex *const m_mutex;
-    QMutex *m_engineMutex;
+    QSemaphore *m_engineSemaphore;
     QString m_useCase;
     bool m_quit;
     QThread *m_scriptObjectTargetThread;
@@ -407,7 +408,7 @@ protected:
      *
      * @param debugger A pointer to the DebuggerAgent used for debugging.
      * @param data The ServiceProviderData object of the used service provider plugin.
-     * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
+     * @param engineSemaphore A pointer to the global mutex to protect the QScriptEngine.
      * @param script A QScriptProgram object containing the new script code.
      * @param parent The parent QObject. Default is 0.
      **/
@@ -482,7 +483,7 @@ protected:
      *
      * @param debugger A pointer to the DebuggerAgent used for debugging.
      * @param data The ServiceProviderData object of the used service provider plugin.
-     * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
+     * @param engineSemaphore A pointer to the global mutex to protect the QScriptEngine.
      * @param program The script code to be evaluated in this job.
      * @param context A name for the evaluation context, shown in backtraces.
      * @param parent The parent QObject. Default is 0.
@@ -535,7 +536,7 @@ protected:
      *
      * @param debugger A pointer to the DebuggerAgent used for debugging.
      * @param data The ServiceProviderData object of the used service provider plugin.
-     * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
+     * @param engineSemaphore A pointer to the global mutex to protect the QScriptEngine.
      * @param command The console command to execute in this job.
      * @param parent The parent QObject. Default is 0.
      **/

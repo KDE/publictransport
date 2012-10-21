@@ -127,7 +127,7 @@ protected:
      * @param debugger A pointer to the DebuggerAgent used for debugging.
      * @param data The ServiceProviderData object containing information about the current
      *   service provider.
-     * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
+     * @param engineSemaphore A pointer to the global mutex to protect the QScriptEngine.
      * @param functionName The name of the script function to call.
      * @param arguments A list of arguments for the script function to call.
      * @param debugFlags Flags for the debugger.
@@ -198,7 +198,7 @@ protected:
      * @param debugger A pointer to the DebuggerAgent used for debugging.
      * @param data The ServiceProviderData object containing information about the current
      *   service provider.
-     * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
+     * @param engineSemaphore A pointer to the global mutex to protect the QScriptEngine.
      * @param debugFlags Flags for the debugger.
      * @param parent The parent QObject. Default is 0.
      **/
@@ -246,7 +246,7 @@ protected:
      * @param debugger A pointer to the DebuggerAgent used for debugging.
      * @param data The ServiceProviderData object containing information about the current
      *   service provider.
-     * @param engineMutex A pointer to the global mutex to protect the QScriptEngine.
+     * @param engineSemaphore A pointer to the global mutex to protect the QScriptEngine.
      * @param request A request object containing information about the request. This object
      *   gets cloned and the original object can be deleted. Should be of type DepartureRequest,
      *   JourneyRequest or StopSuggestionRequest.

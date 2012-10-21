@@ -38,6 +38,7 @@
 #include <QScriptValueIterator>
 #include <QTimer>
 #include <QMutex>
+#include <QSemaphore>
 #include <QWaitCondition>
 #include <QEventLoop>
 #include <QFileInfo> // Only used for debugging
@@ -64,10 +65,10 @@ QScriptValue debugPrintFunction( QScriptContext *context, QScriptEngine *engine 
     return engine->undefinedValue();
 };
 
-DebuggerAgent::DebuggerAgent( QScriptEngine *engine, QMutex *engineMutex, bool mutexIsLocked )
+DebuggerAgent::DebuggerAgent( QScriptEngine *engine, QSemaphore *engineSemaphore, bool mutexIsLocked )
         : QObject(engine), QScriptEngineAgent(engine),
           m_mutex(new QMutex(QMutex::Recursive)), m_interruptWaiter(new QWaitCondition()),
-          m_interruptMutex(new QMutex()), m_engineMutex(engineMutex),
+          m_interruptMutex(new QMutex()), m_engineSemaphore(engineSemaphore),
           m_checkRunningTimer(new QTimer(this)), m_lastRunAborted(false), m_runUntilLineNumber(-1),
           m_debugFlags(DefaultDebugFlags), m_currentContext(0), m_interruptContext(0)
 {
@@ -93,14 +94,14 @@ DebuggerAgent::DebuggerAgent( QScriptEngine *engine, QMutex *engineMutex, bool m
 
     // Install custom print function (overwriting the builtin print function)
     if ( !mutexIsLocked ) {
-        m_engineMutex->lockInline();
+        m_engineSemaphore->acquire();
     }
     QScriptValue printFunction = engine->newFunction( debugPrintFunction );
     printFunction.setData( engine->newQObject(this) );
     QScriptValue::PropertyFlags flags = QScriptValue::ReadOnly | QScriptValue::Undeletable;
     engine->globalObject().setProperty( "print", printFunction, flags );
     if ( !mutexIsLocked ) {
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
     }
 }
 
@@ -1089,7 +1090,7 @@ ExecutionControl DebuggerAgent::applyExecutionControl( ExecutionControl executio
 }
 
 void DebuggerAgent::emitChanges() {
-    QMutexLocker engineLocker( m_engineMutex );
+    m_engineSemaphore->acquire();
     QMutexLocker locker( m_mutex );
 
     QScriptContext *context = engine()->currentContext();
@@ -1107,6 +1108,7 @@ void DebuggerAgent::emitChanges() {
         emit variablesChanged( variableChange );
         emit backtraceChanged( backtraceChange );
     }
+    m_engineSemaphore->release();
 }
 
 void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnNumber )
@@ -1116,10 +1118,9 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
     // Lock the engine if not already locked (should normally be locked before script execution,
     // but it may get unlocked before the script is really done, eg. waiting idle for network
     // requests to finish)
-    m_engineMutex->tryLockInline(); // Try to have the engine locked here
     QScriptContext *currentContext = engine()->currentContext();
     // Unlock now, maybe trying to lock above was successful or the engine was already locked
-    m_engineMutex->unlockInline();
+    m_engineSemaphore->release();
 
     // Lock member variables and initialize
     m_mutex->lockInline();
@@ -1217,7 +1218,7 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
         m_mutex->unlockInline();
 
         // TODO
-        const bool locked = m_engineMutex->tryLock( 250 );
+        const bool locked = m_engineSemaphore->tryAcquire( 1, 250 );
         engine()->abortEvaluation();
         if ( !locked ) {
             kWarning() << "Could not lock the engine";
@@ -1238,14 +1239,14 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
         doInterrupt( true );
     } else if ( state != NotRunning && state != Aborting ) {
         // Protect further script execution
-        m_engineMutex->lockInline();
+        m_engineSemaphore->acquire();
     }
 }
 
 QScriptContextInfo DebuggerAgent::contextInfo() {
-    if ( m_engineMutex->tryLock(200) ) {
+    if ( m_engineSemaphore->tryAcquire(1, 200) ) {
         const QScriptContextInfo info( engine()->currentContext() );
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
 
         return info;
     } else {
@@ -1354,7 +1355,7 @@ void DebuggerAgent::doInterrupt( bool injectedProgram ) {
         switch ( executionControl ) {
         case ExecuteAbort: {
             // Continued to be aborted
-            const bool locked = m_engineMutex->tryLock( 250 );
+            const bool locked = m_engineSemaphore->tryAcquire( 1, 250 );
             engine()->abortEvaluation();
             if ( !locked ) {
                 kWarning() << "Could not lock the engine";
@@ -1458,9 +1459,9 @@ bool DebuggerAgent::checkHasExited()
     }
 
     bool isEvaluating;
-    if ( m_engineMutex->tryLock(500) ) {
+    if ( m_engineSemaphore->tryAcquire(1, 500) ) {
         isEvaluating = engine()->isEvaluating();
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
     } else {
         kWarning() << "Cannot lock the engine";
         if ( m_state == Aborting ) {
@@ -1523,15 +1524,15 @@ void DebuggerAgent::shutdown()
         }
 
         DEBUGGER_EVENT("Was aborted");
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
         emit aborted();
-        m_engineMutex->lockInline();
+        m_engineSemaphore->acquire();
     }
 
     engine()->clearExceptions();
 
     setState( NotRunning );
-    m_engineMutex->unlockInline();
+    m_engineSemaphore->release();
 
     if ( isPositionChanged ) {
         const int oldLineNumber = m_lineNumber;
@@ -1554,7 +1555,7 @@ void DebuggerAgent::shutdown()
 
     // Restore locked state of the engine mutex after execution ends
     // (needs to be locked before execution starts with eg. QScriptEngine::evaluate())
-    m_engineMutex->lockInline();
+    m_engineSemaphore->acquire();
 }
 
 void DebuggerAgent::exceptionCatch( qint64 scriptId, const QScriptValue &exception )

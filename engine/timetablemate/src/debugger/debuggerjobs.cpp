@@ -38,6 +38,7 @@
 
 // Qt includes
 #include <QMutex>
+#include <QSemaphore>
 #include <QTimer>
 #include <QEventLoop>
 #include <QApplication>
@@ -47,7 +48,7 @@ namespace Debugger {
 DebuggerJob::DebuggerJob( const ScriptData &scriptData, const QString &useCase, QObject *parent )
         : ThreadWeaver::Job(parent), m_agent(0), m_data(scriptData), m_debugger(0),
           m_success(true), m_aborted(false), m_mutex(new QMutex(QMutex::Recursive)),
-          m_engineMutex(new QMutex()), m_useCase(useCase), m_quit(false),
+          m_engineSemaphore(new QSemaphore(1)), m_useCase(useCase), m_quit(false),
           m_scriptObjectTargetThread(0), m_currentLoop(0)
 {
     Q_ASSERT_X( scriptData.isValid(), "DebuggerJob constructor",
@@ -60,11 +61,11 @@ DebuggerJob::DebuggerJob( const ScriptData &scriptData, const QString &useCase, 
     }
 }
 
-DebuggerJob::DebuggerJob( DebuggerAgent *debugger, QMutex *engineMutex,
+DebuggerJob::DebuggerJob( DebuggerAgent *debugger, QSemaphore *engineSemaphore,
                           const ScriptData &scriptData, const ScriptObjects &objects,
                           const QString &useCase, QObject *parent )
         : ThreadWeaver::Job(parent), m_agent(debugger), m_data(scriptData), m_objects(objects),
-          m_success(true), m_aborted(false), m_mutex(new QMutex()), m_engineMutex(engineMutex),
+          m_success(true), m_aborted(false), m_mutex(new QMutex()), m_engineSemaphore(engineSemaphore),
           m_useCase(useCase), m_quit(false), m_scriptObjectTargetThread(0)
 {
     Q_ASSERT_X( scriptData.isValid(), "DebuggerJob constructor",
@@ -93,7 +94,7 @@ DebuggerJob::~DebuggerJob()
     m_mutex->unlockInline();
 
     delete m_mutex;
-    delete m_engineMutex;
+    delete m_engineSemaphore;
 }
 
 void DebuggerJob::connectScriptObjects( bool doConnect )
@@ -349,11 +350,11 @@ void DebuggerJob::slotStopped( const QDateTime &timestamp, bool aborted, bool ha
 }
 
 DebuggerAgent *DebuggerJob::createAgent() {
-    // m_engineMutex is expected to be locked here
+    // m_engineSemaphore is expected to be locked here
     // Create engine and agent and connect them
     QMutexLocker locker( m_mutex );
     QScriptEngine *engine = new QScriptEngine();
-    DebuggerAgent *agent = new DebuggerAgent( engine, m_engineMutex, true );
+    DebuggerAgent *agent = new DebuggerAgent( engine, m_engineSemaphore, true );
     engine->setAgent( agent );
     attachAgent( agent );
 
@@ -361,7 +362,10 @@ DebuggerAgent *DebuggerJob::createAgent() {
     const ScriptData data = m_data;
     m_objects.createObjects( data );
     if ( !m_objects.attachToEngine(engine, data) ) {
-        kDebug() << "Cannot attach script objects to engine";
+        kDebug() << "Cannot attach script objects to engine" << m_objects.lastError;
+        engine->setAgent( 0 );
+        delete agent;
+        delete engine;
         m_explanation = m_objects.lastError;
         m_success = false;
         return 0;
@@ -375,7 +379,7 @@ DebuggerAgent *DebuggerJob::createAgent() {
 
 void DebuggerJob::destroyAgent()
 {
-    // m_engineMutex is expected to be locked here
+    // m_engineSemaphore is expected to be locked here
     QMutexLocker locker( m_mutex );
     m_objects.clear();
     m_agent->engine()->setAgent( 0 );
@@ -471,14 +475,14 @@ void LoadScriptJob::debuggerRun()
     }
 
     // Create new engine and agent
-    m_engineMutex->lockInline();
+    m_engineSemaphore->acquire();
     DebuggerAgent *agent = createAgent();
     if ( !agent || m_quit ) {
         m_mutex->unlockInline();
         if ( agent ) {
             destroyAgent();
         }
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
         return;
     }
     const ScriptData data = m_data;
@@ -502,7 +506,7 @@ void LoadScriptJob::debuggerRun()
         m_explanation = i18nc("@info/plain", "Was aborted");
         m_success = false;
         m_aborted = true;
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
         return;
     }
 
@@ -531,17 +535,17 @@ void LoadScriptJob::debuggerRun()
     }
     const QStringList includedFiles =
             agent->engine()->globalObject().property( "includedFiles" ).toVariant().toStringList();
-    m_engineMutex->unlockInline();
+    m_engineSemaphore->release();
 
     QMutexLocker locker( m_mutex );
     if ( !m_success || m_quit ) {
         m_success = false;
     } else if ( agent->hasUncaughtException() ) {
-        m_engineMutex->lockInline();
+        m_engineSemaphore->acquire();
         const QString uncaughtException = agent->uncaughtException().toString();
         DEBUG_JOBS("Error in the script" << agent->uncaughtExceptionLineNumber()
                    << uncaughtException);
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
 
         m_includedFiles = includedFiles;
         m_globalFunctions = globalFunctions;
@@ -558,9 +562,9 @@ void LoadScriptJob::debuggerRun()
         m_success = true;
     }
 
-    m_engineMutex->lockInline();
+    m_engineSemaphore->acquire();
     destroyAgent();
-    m_engineMutex->unlockInline();
+    m_engineSemaphore->release();
 }
 
 bool ExecuteConsoleCommandJob::runInForeignAgent( DebuggerAgent *agent )
@@ -640,14 +644,14 @@ void ForeignAgentJob::debuggerRun()
         connectAgent( agent );
     } else {
         // Create new engine and agent
-        m_engineMutex->lockInline();
+        m_engineSemaphore->acquire();
         m_mutex->lockInline();
         agent = createAgent();
         objects = m_objects;
         m_mutex->unlockInline();
 
         if ( !agent ) {
-            m_engineMutex->unlockInline();
+            m_engineSemaphore->release();
             return;
         }
         engine = agent->engine();
@@ -656,10 +660,10 @@ void ForeignAgentJob::debuggerRun()
         engine->evaluate( data.program );
         Q_ASSERT_X( !engine->isEvaluating(), "CallScriptFunctionJob::debuggerRun()",
                     "Evaluating the script should not start any asynchronous requests, bad script" );
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
     }
 
-    m_engineMutex->lockInline();
+    m_engineSemaphore->acquire();
     connect( agent, SIGNAL(evaluationInContextAborted(QString)),
              this, SLOT(evaluationAborted(QString)) );
 
@@ -667,7 +671,7 @@ void ForeignAgentJob::debuggerRun()
     // and wait until it has finished (this includes waiting for running network requests)
     if ( !runInForeignAgent(agent) || !waitForFinish(agent, objects) ) {
         destroyAgent();
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
         return;
     }
 
@@ -678,30 +682,30 @@ void ForeignAgentJob::debuggerRun()
     if ( agent->hasUncaughtException() ) {
         handleUncaughtException( agent );
     }
-    m_engineMutex->unlockInline();
+    m_engineSemaphore->release();
 
     // Cleanup
     if ( useExistingEngine ) {
         QMutexLocker locker( m_mutex );
         // Move script objects back to the parent thread
         DEBUG_JOBS("Move script objects back to the parent thread");
-        m_engineMutex->lockInline();
+        m_engineSemaphore->acquire();
         objects.moveToThread( scriptObjectThread );
         connectAgent( agent, false );
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
 
         // Restore previous debug flags, interrupts were disabled for this job
         agent->setDebugFlags( previousDebugFlags );
         agent->setExecutionControlType( previousExecutionControl );
         m_agent = 0;
         m_objects.clear();
-        m_engineMutex = 0; // Do not delete, used by the other thread
+        m_engineSemaphore = 0; // Do not delete, used by the other thread
 
         parentJob->gotScriptObjectsBack();
     } else {
-        m_engineMutex->lockInline();
+        m_engineSemaphore->acquire();
         destroyAgent();
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
     }
 }
 
@@ -726,7 +730,7 @@ bool EvaluateInContextJob::runInForeignAgent( DebuggerAgent *agent )
     m_result.error = false;
     m_mutex->unlockInline();
 
-    // m_engineMutex is locked
+    // m_engineSemaphore is locked
     // Check syntax of the program to run
     DEBUG_JOBS("Evaluate in context" << context << program);
     QScriptSyntaxCheckResult syntax = QScriptEngine::checkSyntax( program );
@@ -776,7 +780,7 @@ void EvaluateInContextJob::_evaluationAborted( const QString &errorMessage )
 void DebuggerJob::handleError( QScriptEngine *engine, const QString &message,
                                EvaluationResult *result )
 {
-    // m_engineMutex is locked
+    // m_engineSemaphore is locked
     handleError( engine->uncaughtExceptionLineNumber(), engine->uncaughtException().toString(),
                  engine->uncaughtExceptionBacktrace(), message, result );
 }
@@ -907,10 +911,10 @@ DebuggerAgent *DebuggerJob::debuggerAgent() const
     return m_agent;
 }
 
-QMutex *DebuggerJob::engineMutex() const
+QSemaphore *DebuggerJob::engineSemaphore() const
 {
     QMutexLocker locker( m_mutex );
-    return m_engineMutex;
+    return m_engineSemaphore;
 }
 
 bool DebuggerJob::wasAborted() const
@@ -1095,15 +1099,19 @@ bool DebuggerJob::isEvaluating() const
         return false;
     }
 
-    QMutexLocker engineLocker( m_engineMutex );
-    return !m_agent || !m_agent->engine() ? false : m_agent->engine()->isEvaluating();
+    m_engineSemaphore->acquire();
+    const bool result = !m_agent || !m_agent->engine() ? false : m_agent->engine()->isEvaluating();
+    m_engineSemaphore->release();
+    return result;
 }
 
 bool DebuggerJob::canEvaluate( const QString &program ) const
 {
     QMutexLocker locker( m_mutex );
-    QMutexLocker engineLocker( m_engineMutex );
-    return m_agent->engine()->canEvaluate( program );
+    m_engineSemaphore->acquire();
+    const bool result = m_agent->engine()->canEvaluate( program );
+    m_engineSemaphore->release();
+    return result;
 }
 
 DebuggerState DebuggerJob::state() const
@@ -1154,10 +1162,10 @@ ForeignAgentJob::ForeignAgentJob( const ScriptData &scriptData, const QString &u
 {
     if ( parentJob ) {
         QMutexLocker locker( m_mutex );
-        if ( m_engineMutex ) {
-            delete m_engineMutex;
+        if ( m_engineSemaphore ) {
+            delete m_engineSemaphore;
         }
-        m_engineMutex = parentJob->engineMutex();
+        m_engineSemaphore = parentJob->engineSemaphore();
         m_agent = parentJob->debuggerAgent();
         m_objects = parentJob->objects();
     }
@@ -1199,14 +1207,14 @@ void DebuggerJob::doSomething()
     }
 
     // Move script objects to thread
-    m_engineMutex->lockInline();
+    m_engineSemaphore->acquire();
     connectScriptObjects( false );
     connectAgent( m_agent, false, false );
 
     Q_ASSERT( m_objects.isValid() );
     m_objects.moveToThread( targetThread );
     m_scriptObjectTargetThread = 0;
-    m_engineMutex->unlockInline();
+    m_engineSemaphore->release();
 
     emit movedScriptObjectsToThread( targetThread );
 }

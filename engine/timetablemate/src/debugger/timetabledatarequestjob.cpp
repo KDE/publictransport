@@ -42,6 +42,7 @@
 #include <QTimer>
 #include <QFileInfo>
 #include <QWaitCondition>
+#include <QSemaphore>
 #include <QApplication>
 
 namespace Debugger {
@@ -98,7 +99,7 @@ TimetableDataRequestJob::TimetableDataRequestJob( const ScriptData &scriptData,
 
 QScriptValueList CallScriptFunctionJob::createArgumentScriptValues( DebuggerAgent *debugger ) const
 {
-    // m_engineMutex is locked
+    // m_engineSemaphore is locked
     QMutexLocker locker( m_mutex );
     if ( !debugger ) {
         debugger = m_agent;
@@ -114,7 +115,7 @@ QScriptValueList CallScriptFunctionJob::createArgumentScriptValues( DebuggerAgen
 
 QScriptValueList TimetableDataRequestJob::createArgumentScriptValues( DebuggerAgent *debugger ) const
 {
-    // m_engineMutex is locked
+    // m_engineSemaphore is locked
     QMutexLocker locker( m_mutex );
     if ( !debugger ) {
         debugger = m_agent;
@@ -292,10 +293,10 @@ void CallScriptFunctionJob::debuggerRun()
     }
 
     // Create new engine and agent
-    m_engineMutex->lockInline();
+    m_engineSemaphore->acquire();
     DebuggerAgent *agent = createAgent();
     if ( !agent ) {
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
         m_mutex->unlockInline();
         return;
     }
@@ -315,7 +316,7 @@ void CallScriptFunctionJob::debuggerRun()
     if ( !function.isFunction() ) {
         QMutexLocker locker( m_mutex );
         destroyAgent();
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
 
         m_explanation = i18nc("@info/plain", "Did not find a '%1' function in the script.",
                                functionName);
@@ -338,13 +339,13 @@ void CallScriptFunctionJob::debuggerRun()
     // The called function returned, but asynchronous network requests may have been started.
     // Wait for all network requests to finish, because slots in the script may get called
     if ( !waitFor(objects.network.data(), SIGNAL(allRequestsFinished()), WaitForNetwork) ) {
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
         return;
     }
 
     // Wait for script execution to finish
     if ( !waitFor(agent, SIGNAL(stopped(QDateTime,bool,bool,int,QString,QStringList)), WaitForScriptFinish) ) {
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
         return;
     }
 
@@ -365,12 +366,12 @@ void CallScriptFunctionJob::debuggerRun()
         m_mutex->lockInline();
         destroyAgent();
         m_mutex->unlockInline();
-        m_engineMutex->unlockInline();
+        m_engineSemaphore->release();
         return;
     }
 
     // Unlock engine mutex after execution was finished
-    m_engineMutex->unlockInline();
+    m_engineSemaphore->release();
 
     m_mutex->lockInline();
     m_returnValue = returnValue;
@@ -397,9 +398,9 @@ void CallScriptFunctionJob::debuggerRun()
     qApp->processEvents();
 
     QMutexLocker locker( m_mutex );
-    m_engineMutex->lockInline();
+    m_engineSemaphore->acquire();
     destroyAgent();
-    m_engineMutex->unlockInline();
+    m_engineSemaphore->release();
 
     if ( !m_success || m_quit ) {
         m_success = false;

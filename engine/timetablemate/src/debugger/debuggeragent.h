@@ -37,6 +37,7 @@
 struct ScriptObjects;
 
 class QMutex;
+class QSemaphore;
 class QTimer;
 class QWaitCondition;
 class QScriptContext;
@@ -212,7 +213,7 @@ public:
      * different threads.
      * This always returns the same pointer for the livetime of this DebuggerAgent.
      **/
-    QMutex *engineMutex() const { return m_engineMutex; };
+    QSemaphore *engineSemaphore() const { return m_engineSemaphore; };
 
     /**
      * @brief Continue an interrupted script to emit doSomething() and directly interrupts again.
@@ -350,7 +351,7 @@ public: // QScriptAgent-Implementation
 
 protected:
     /** @brief Creates a new Debugger instance. */
-    DebuggerAgent( QScriptEngine *engine, QMutex *engineMutex, bool mutexIsLocked = false );
+    DebuggerAgent( QScriptEngine *engine, QSemaphore *engineSemaphore, bool mutexIsLocked = false );
 
 private:
     enum ConsoleCommandExecutionControl {
@@ -403,7 +404,7 @@ private:
     QMutex *const m_mutex; // Protect member variables, make Debugger class thread safe
     QWaitCondition *const m_interruptWaiter; // Waits on interrupts, wake up to continue script execution based on m_executionType
     QMutex *const m_interruptMutex;
-    QMutex *const m_engineMutex; // Is locked while the script engine is evaluating,
+    QSemaphore *const m_engineSemaphore; // Is locked while the script engine is evaluating,
             // gets unlocked after every line of code and while the debugger is interrupted
     QTimer *const m_checkRunningTimer;
 

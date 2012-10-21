@@ -33,6 +33,7 @@
 #include <QScriptContext>
 #include <QScriptEngine>
 #include <QMutex>
+#include <QSemaphore>
 
 namespace Debugger {
 
@@ -90,11 +91,11 @@ bool Breakpoint::testCondition( DebuggerAgent *agent, bool *error )
     int errorLineNumber;
     QString errorMessage;
     QStringList backtrace;
-    agent->engineMutex()->lockInline();
+    agent->engineSemaphore()->acquire();
     m_lastConditionResult = agent->evaluateInContext(
             condition, QString("Breakpoint Condition at %1").arg(m_lineNumber),
             &uncaughtException, &errorLineNumber, &errorMessage, &backtrace );
-    agent->engineMutex()->unlockInline();
+    agent->engineSemaphore()->release();
 
     // Check result value of condition evaluation
     kDebug() << "Breakpoint condition result" << m_lastConditionResult.toString() << condition;
