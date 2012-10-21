@@ -50,7 +50,7 @@
 
 ProjectModel::ProjectModel( QObject *parent )
         : QAbstractItemModel(parent), m_activeProject(0), m_updateProjectsTimer(0),
-          m_weaver(WeaverInterfacePointer(new ThreadWeaver::Weaver()))
+          m_weaver(WeaverInterfacePointer(new ThreadWeaver::Weaver())), m_idle(true)
 {
 }
 
@@ -441,6 +441,8 @@ void ProjectModel::appendProject( Project *project )
     connect( project, SIGNAL(setAsActiveProjectRequest()), this, SLOT(setAsActiveProjectRequest()) );
     connect( project, SIGNAL(testProgress(QList<TestModel::Test>,QList<TestModel::Test>)),
              this, SLOT(projectTestProgress(QList<TestModel::Test>,QList<TestModel::Test>)) );
+    connect( project, SIGNAL(debuggerRunningChanged(bool)), this, SLOT(updateIsIdle()) );
+    connect( project, SIGNAL(testRunningChanged(bool)), this, SLOT(updateIsIdle()) );
     project->setProjectModel( this );
     emit projectAdded( project );
 
@@ -450,11 +452,20 @@ void ProjectModel::appendProject( Project *project )
     }
 }
 
+void ProjectModel::updateIsIdle()
+{
+    bool newIdle = isIdle();
+    if ( m_idle != newIdle ) {
+        m_idle = newIdle;
+        emit idleChanged( newIdle );
+    }
+}
+
 bool ProjectModel::isIdle() const
 {
     foreach ( ProjectModelItem *projectItem, m_projects ) {
         Project *project = projectItem->project();
-        if ( project->isTestRunning() ) {
+        if ( project->isTestRunning() || project->isDebuggerRunning() ) {
             return false;
         }
     }

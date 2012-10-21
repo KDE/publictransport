@@ -230,6 +230,8 @@ signals:
     void testProgress( const QHash< Project*, QList< TestModel::Test > > &finishedTests,
                        const QHash< Project*, QList< TestModel::Test > > &allTests );
 
+    void idleChanged( bool isIdle );
+
 public slots:
     /** @brief Append @p project to the list of projects in this model. */
     void appendProject( Project *project );
@@ -250,6 +252,7 @@ public slots:
     void testAllProjects();
 
 protected slots:
+    void updateIsIdle();
     void slotProjectModified();
     void setAsActiveProjectRequest();
     void projectTestProgress( const QList< TestModel::Test > &finishedTests,
@@ -271,6 +274,7 @@ private:
     QHash< Project*, QList< TestModel::Test > > m_startedTests;
     QHash< Project*, QList< TestModel::Test > > m_finishedTests;
     WeaverInterfacePointer m_weaver;
+    bool m_idle;
 };
 
 #endif // Multiple inclusion guard

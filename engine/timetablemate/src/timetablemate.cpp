@@ -1395,6 +1395,7 @@ void TimetableMate::setupActions() {
 
     KAction *runAllTestsAction = new KAction( KIcon("task-complete"),
             i18nc("@action", "Test all &Projects"), this );
+    connect( m_projectModel, SIGNAL(idleChanged(bool)), runAllTestsAction, SLOT(setEnabled(bool)) );
     connect( runAllTestsAction, SIGNAL(triggered()), m_projectModel, SLOT(testAllProjects()) );
     actionCollection()->addAction( QLatin1String("test_all_projects"), runAllTestsAction );
 }
