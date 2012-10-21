@@ -75,7 +75,12 @@ DashboardTab::DashboardTab( Project *project, QWidget *parent )
     kdeclarative->setupBindings();
 
     m_qmlView->setResizeMode( QDeclarativeView::SizeRootObjectToView );
+
+    // Expose the project itself to QML,
+    // because the declarative engine runs in another thread, Project needs to be thread safe
     m_qmlView->rootContext()->setContextProperty( "project", project );
+
+    // Expose the name of the SVG to use
     m_qmlView->rootContext()->setContextProperty( "svgFileName", svgFileName );
 
     // Add Plasma QML import paths

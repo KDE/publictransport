@@ -90,6 +90,7 @@
 #include <QTextCodec>
 #include <QBuffer>
 #include <QFileInfo>
+#include <QMutex>
 
 class ProjectPrivate
 {
@@ -117,8 +118,8 @@ public:
     };
 
     ProjectPrivate( const WeaverInterfacePointer &weaver, Project *project )
-        : state(Project::Uninitialized),
-          projectModel(0), projectSourceBufferModified(false),
+        : state(Project::Uninitialized), projectModel(0), mutex(new QMutex(QMutex::Recursive)),
+          projectSourceBufferModified(false),
           dashboardTab(0), projectSourceTab(0), plasmaPreviewTab(0), webTab(0),
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
           scriptState(ScriptNotLoaded), scriptTab(0),
@@ -128,6 +129,10 @@ public:
           testModel(new TestModel(project)), testState(NoTestRunning),
           suppressMessages(false), enableQuestions(true), q_ptr(project)
     {
+    };
+
+    ~ProjectPrivate() {
+        delete mutex;
     };
 
     static inline QString serviceProviderIdFromProjectFileName( const QString &fileName ) {
@@ -2039,14 +2044,15 @@ public:
             // The last pending test has finished
             DEBUGGER_JOB_SYNCHRONIZATION("The last pending test has finished");
             endTesting();
+        } else {
+            startTests( takeStartableDependentTests(test) );
         }
-
-        startTests( takeStartableDependentTests(test) );
     #endif
     };
 
     Project::State state;
     ProjectModel *projectModel;
+    QMutex *mutex;
 
     // This is needed to know when the project source was updated with new settings using
     // setProviderData() but no ProjectSourceTab is opened
@@ -2104,8 +2110,10 @@ private:
 Project::Project( const WeaverInterfacePointer &weaver, QWidget *parent )
         : QObject( parent ), d_ptr(new ProjectPrivate(weaver, this))
 {
+    Q_D( Project );
+    QMutexLocker locker( d->mutex );
     qRegisterMetaType< ProjectActionData >( "ProjectActionData" );
-    d_ptr->initialize();
+    d->initialize();
 }
 
 Project::~Project()
@@ -2127,6 +2135,7 @@ Project::~Project()
 bool Project::loadProject( const QString &projectSoureFile )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( projectSoureFile.isEmpty() ) {
         d->insertProjectSourceTemplate();
         return true;
@@ -2138,12 +2147,14 @@ bool Project::loadProject( const QString &projectSoureFile )
 QString Project::output() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->output;
 }
 
 void Project::clearOutput()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->output.clear();
     emit outputCleared();
     emit outputChanged();
@@ -2152,6 +2163,7 @@ void Project::clearOutput()
 void Project::appendOutput( const QString &output, const QColor &color )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( output.isEmpty() ) {
         return;
     }
@@ -2176,6 +2188,8 @@ void Project::appendOutput( const QString &output, const QColor &color )
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
 void Project::scriptOutput( const QString &message, const QScriptContextInfo &context )
 {
+    Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( context.fileName() != scriptFileName() ) {
         appendOutput( i18nc("@info %2 is the script file name",
                             "<emphasis strong='1'>Line %1 (%2):</emphasis> <message>%3</message>",
@@ -2232,12 +2246,14 @@ void Project::scriptMessageReceived( const QString &errorMessage,
 QString Project::consoleText() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->consoleText;
 }
 
 void Project::clearConsoleText()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->consoleText.clear();
     emit consoleTextChanged( QString() );
 }
@@ -2245,6 +2261,7 @@ void Project::clearConsoleText()
 void Project::appendToConsole( const QString &text )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( text.isEmpty() ) {
         return;
     }
@@ -2258,30 +2275,35 @@ void Project::appendToConsole( const QString &text )
 Project::State Project::state() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->state;
 }
 
 QString Project::lastError() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->lastError;
 }
 
 ProjectModel *Project::projectModel() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->projectModel;
 }
 
 DashboardTab *Project::dashboardTab() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->dashboardTab;
 }
 
 ProjectSourceTab *Project::projectSourceTab() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->projectSourceTab;
 }
 
@@ -2289,12 +2311,14 @@ ProjectSourceTab *Project::projectSourceTab() const
 ScriptTab *Project::scriptTab() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->scriptTab;
 }
 
 ScriptTab *Project::scriptTab( const QString &filePath ) const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     foreach ( ScriptTab *externalScriptTab, d->externalScriptTabs ) {
         if ( externalScriptTab->fileName() == filePath ) {
             return externalScriptTab;
@@ -2308,12 +2332,14 @@ ScriptTab *Project::scriptTab( const QString &filePath ) const
 QList< ScriptTab * > Project::externalScriptTabs() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->externalScriptTabs;
 }
 
 ScriptTab *Project::externalScriptTab( const QString &filePath ) const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     foreach ( ScriptTab *tab, d->externalScriptTabs ) {
         if ( tab->fileName() == filePath ) {
             return tab;
@@ -2328,12 +2354,14 @@ ScriptTab *Project::externalScriptTab( const QString &filePath ) const
 PlasmaPreviewTab *Project::plasmaPreviewTab() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->plasmaPreviewTab;
 }
 
 WebTab *Project::webTab() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->webTab;
 }
 
@@ -2341,6 +2369,7 @@ WebTab *Project::webTab() const
 Debugger::Debugger *Project::debugger() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->debugger;
 }
 #endif
@@ -2348,48 +2377,56 @@ Debugger::Debugger *Project::debugger() const
 QString Project::path() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return QFileInfo( d->filePath ).path();
 }
 
 QString Project::filePath() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->filePath;
 }
 
 QString Project::serviceProviderId() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->serviceProviderID;
 }
 
 TestModel *Project::testModel() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->testModel;
 }
 
 Project::InstallType Project::saveType() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->saveType();
 }
 
 Project::InstallTypes Project::installationTypes() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->installationTypes();
 }
 
 QString Project::savePathInfoString() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->savePathInfoString();
 }
 
 void Project::setProjectModel( ProjectModel *projectModel )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->projectModel = projectModel;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -2628,6 +2665,7 @@ void Project::testCaseActionTriggered()
 bool Project::isActiveProject() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->isActiveProject();
 }
 
@@ -2651,6 +2689,7 @@ void Project::slotActiveProjectChanged( Project *project, Project *previousProje
 QAction *Project::projectAction( Project::ProjectAction actionType, const QVariant &data )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     QAction *action = 0;
     if ( d->projectActions.contains(actionType) ) {
         // Find action in d->projectActions
@@ -3269,6 +3308,7 @@ void Project::showScriptLineNumber( const QString &fileName, int lineNumber )
         return;
     }
 
+    QMutexLocker locker( d->mutex );
     ScriptTab *tab = fileName.isEmpty() ? showScriptTab() : showExternalScriptTab(fileName);
     if ( tab ) {
         tab->document()->views().first()->setCursorPosition(
@@ -3280,6 +3320,7 @@ void Project::showScriptLineNumber( const QString &fileName, int lineNumber )
 DashboardTab *Project::showDashboardTab( QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( d->dashboardTab ) {
         emit tabGoToRequest( d->dashboardTab );
     } else {
@@ -3295,6 +3336,7 @@ DashboardTab *Project::showDashboardTab( QWidget *parent )
 ScriptTab *Project::showScriptTab( QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( d->scriptTab ) {
         emit tabGoToRequest( d->scriptTab );
     } else {
@@ -3311,6 +3353,7 @@ ScriptTab *Project::showScriptTab( QWidget *parent )
 ScriptTab *Project::showExternalScriptTab( const QString &_filePath, QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     QString filePath = _filePath;
     if ( filePath.isEmpty() ) {
         // Get external script file name (from the same directory)
@@ -3343,6 +3386,7 @@ ScriptTab *Project::showExternalScriptTab( const QString &_filePath, QWidget *pa
 void Project::scriptSaved()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( d->data()->isValid() ) {
         d->debugger->loadScript( scriptText(), d->data() );
         d->testModel->markTestsAsOutdated(
@@ -3361,6 +3405,7 @@ ScriptTab *Project::showExternalScriptActionTriggered( QWidget *parent )
 ProjectSourceTab *Project::showProjectSourceTab( QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( d->projectSourceTab ) {
         emit tabGoToRequest( d->projectSourceTab );
     } else {
@@ -3375,6 +3420,7 @@ ProjectSourceTab *Project::showProjectSourceTab( QWidget *parent )
 PlasmaPreviewTab *Project::showPlasmaPreviewTab( QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( d->plasmaPreviewTab ) {
         emit tabGoToRequest( d->plasmaPreviewTab );
     } else {
@@ -3389,6 +3435,7 @@ PlasmaPreviewTab *Project::showPlasmaPreviewTab( QWidget *parent )
 WebTab *Project::showWebTab( QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( d->webTab ) {
         emit tabGoToRequest( d->webTab );
     } else {
@@ -3512,12 +3559,14 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
 bool Project::isTestRunning() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->isTestRunning();
 }
 
 bool Project::isDebuggerRunning() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->isDebuggerRunning();
 }
 
@@ -3525,6 +3574,7 @@ QStringList Project::scriptFunctions()
 {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     return d->globalFunctions;
 #else
     return QStringList();
@@ -3535,6 +3585,7 @@ QStringList Project::includedFiles()
 {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     return d->includedFiles;
 #else
     return QStringList();
@@ -3544,18 +3595,21 @@ QStringList Project::includedFiles()
 void Project::startTests( const QList< TestModel::Test > &tests )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     return d->startTests( tests );
 }
 
 bool Project::startTest( TestModel::Test test )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     return d->startTest( test );
 }
 
 bool Project::startTestCase( TestModel::TestCase testCase )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     bool finishedAfterThisTestCase = false;
     if ( !isTestRunning() ) {
         if ( !d->beginTesting(TestModel::testsOfTestCase(testCase)) ) {
@@ -3592,6 +3646,7 @@ bool Project::startTestCase( TestModel::TestCase testCase )
 void Project::testProject()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( !d->askForProjectActivation(ProjectPrivate::ActivateProjectForTests) ||
          !d->beginTesting(TestModel::allTests()) )
     {
@@ -3615,24 +3670,28 @@ void Project::testProject()
 QList< TestModel::Test > Project::startedTests() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->startedTests;
 }
 
 QList< TestModel::Test > Project::finishedTests() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->finishedTests;
 }
 
 void Project::abortTests()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->abortTests();
 }
 
 void Project::clearTestResults()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->testModel->clear();
     d->updateProjectActions( QList< ProjectAction >() << ClearTestResults );
 }
@@ -3669,6 +3728,7 @@ void Project::testJobStarted( TestModel::Test test, JobType type, const QString 
     Q_UNUSED(useCase);
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( test == TestModel::InvalidTest ) {
         kWarning() << "Unknown test job was started";
         return;
@@ -3687,6 +3747,7 @@ void Project::testJobDone( TestModel::Test test, JobType type, const QString &us
     Q_UNUSED(useCase);
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( test == TestModel::InvalidTest ) {
         kWarning() << "Unknown test" << test;
     } else {
@@ -3726,6 +3787,7 @@ void Project::jobStarted( JobType type, const QString &useCase,
                           const QString &objectName )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( type == Debugger::EvaluateInContext && d->debugger->runningJobs().count() > 1 ) {
         appendOutput( i18nc("@info",
                 "<para><emphasis>Begin child job:</emphasis> %1 (%2)</para>",
@@ -3746,6 +3808,7 @@ void Project::jobDone( JobType type, const QString &useCase, const QString &obje
                        const DebuggerJobResult &result )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     QString returnValue = Global::encodeHtmlEntities( result.returnValue.toString(),
                                                       Global::EncodeLessAndGreaterThan );
     if ( returnValue.isEmpty() ) {
@@ -3826,12 +3889,14 @@ void Project::functionCallResult( const QSharedPointer< AbstractRequest > &reque
 bool Project::suppressMessages() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->suppressMessages || d->isTestRunning();
 }
 
 void Project::setQuestionsEnabled( bool enable )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->enableQuestions = enable;
 }
 
@@ -3841,6 +3906,7 @@ void Project::loadScriptResult( ScriptErrorType lastScriptError,
                                 const QStringList &includedFiles )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->suppressMessages = false;
     if ( lastScriptError != NoScriptError ) {
         // Emit an information message about the error (eg. a syntax error)
@@ -3868,48 +3934,56 @@ void Project::loadScriptResult( ScriptErrorType lastScriptError,
 void Project::runGetTimetable()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->callGetTimetable( Debugger::InterruptOnExceptions );
 }
 
 void Project::debugGetTimetable()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->callGetTimetable( InterruptOnExceptionsAndBreakpoints );
 }
 
 void Project::runGetStopSuggestions()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->callGetStopSuggestions( Debugger::InterruptOnExceptions );
 }
 
 void Project::runGetStopsByGeoPosition()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->callGetStopsByGeoPosition( Debugger::InterruptOnExceptions );
 }
 
 void Project::debugGetStopSuggestions()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->callGetStopSuggestions( InterruptOnExceptionsAndBreakpoints );
 }
 
 void Project::debugGetStopsByGeoPosition()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->callGetStopsByGeoPosition( InterruptOnExceptionsAndBreakpoints );
 }
 
 void Project::runGetJourneys()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->callGetJourneys( Debugger::InterruptOnExceptions );
 }
 
 void Project::debugGetJourneys()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->callGetJourneys( InterruptOnExceptionsAndBreakpoints );
 }
 #endif
@@ -3917,6 +3991,7 @@ void Project::debugGetJourneys()
 DepartureRequest Project::getDepartureRequest( QWidget *parent, bool* cancelled ) const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     parent = d->parentWidget( parent );
 
     QPointer<KDialog> dialog = new KDialog( parent );
@@ -3968,6 +4043,7 @@ StopSuggestionRequest Project::getStopSuggestionRequest( QWidget *parent,
                                                          bool* cancelled ) const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     parent = d->parentWidget( parent );
 
     QPointer<KDialog> dialog = new KDialog( parent );
@@ -4001,6 +4077,7 @@ StopsByGeoPositionRequest Project::getStopsByGeoPositionRequest(
         QWidget *parent, bool *cancelled ) const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     parent = d->parentWidget( parent );
 
 #ifdef MARBLE_FOUND
@@ -4043,6 +4120,7 @@ StopsByGeoPositionRequest Project::getStopsByGeoPositionRequest(
 JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     parent = d->parentWidget( parent );
     QPointer<KDialog> dialog = new KDialog( parent );
     QWidget *w = new QWidget( dialog );
@@ -4099,6 +4177,7 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
 void Project::abortDebugger()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( !d->debugger->isRunning() && !d->debugger->isInterrupted() ) {
         // The abort action should have been disabled,
         // no stopped signal received? Update UI state to debugger state
@@ -4113,6 +4192,7 @@ void Project::abortDebugger()
 void Project::toggleBreakpoint( int lineNumber )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     ScriptTab *scriptTab = d->currentScriptTab();
     if ( !scriptTab ) {
         kDebug() << "No script tab opened";
@@ -4125,6 +4205,7 @@ void Project::toggleBreakpoint( int lineNumber )
 void Project::runToCursor()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     ScriptTab *scriptTab = d->currentScriptTab();
     if ( !scriptTab ) {
         kError() << "No script tab opened";
@@ -4140,6 +4221,7 @@ void Project::debugInterrupted( int lineNumber, const QString &fileName,
 {
     Q_UNUSED( timestamp );
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( !d->debugger->hasUncaughtException() ) {
         // Show script tab and ask to activate the project if it's not already active
         ScriptTab *tab = fileName == scriptFileName() || fileName.isEmpty()
@@ -4163,6 +4245,7 @@ void Project::debugInterrupted( int lineNumber, const QString &fileName,
 void Project::debugContinued()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
                                                       << DebuggerActionGroup );
 }
@@ -4170,6 +4253,7 @@ void Project::debugContinued()
 void Project::debugStarted()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
                                                       << DebuggerActionGroup );
     if ( d->scriptTab ) {
@@ -4181,6 +4265,7 @@ void Project::debugStarted()
 void Project::debugStopped( const ScriptRunData &scriptRunData )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->updateProjectActions( QList<ProjectActionGroup>() << RunActionGroup << TestActionGroup
                                                          << DebuggerActionGroup );
 
@@ -4273,6 +4358,7 @@ void Project::wokeUpFromSignal( int time )
 void Project::scriptException( int lineNumber, const QString &errorMessage, const QString &fileName )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     ScriptTab *tab;
     if ( fileName == d->provider->data()->scriptFileName() || fileName.isEmpty() ) {
         appendOutput( i18nc("@info For the script output dock",
@@ -4300,6 +4386,7 @@ QString Project::scriptFileName() const
 {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->provider->data()->scriptFileName();
 #else
     return QString();
@@ -4310,6 +4397,7 @@ QIcon Project::scriptIcon() const
 {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     if ( d->scriptTab ) {
         return KIcon( d->scriptTab->document()->mimeType().replace('/', '-') );
     } else
@@ -4347,6 +4435,7 @@ void Project::slotTabTitleChanged( const QString &title )
 void Project::slotModifiedStateChanged()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     const bool modified = isModified();
     d->updateProjectActions( QList<ProjectAction>() << Save );
     emit modifiedStateChanged( modified );
@@ -4411,6 +4500,7 @@ AbstractTab *Project::showTab( TabType type, QWidget *parent )
 bool Project::isTabOpened( TabType type ) const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     switch ( type ) {
     case Tabs::Dashboard:
         return d->dashboardTab;
@@ -4432,6 +4522,7 @@ bool Project::isTabOpened( TabType type ) const
 AbstractTab *Project::createTab( TabType type, QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     parent = d->parentWidget( parent );
     switch ( type ) {
     case Tabs::Dashboard:
@@ -4467,6 +4558,7 @@ void Project::closeTab( AbstractTab *tab )
 PlasmaPreviewTab *Project::createPlasmaPreviewTab( QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
 
     // Create plasma preview tab
     parent = d->parentWidget( parent );
@@ -4486,6 +4578,7 @@ PlasmaPreviewTab *Project::createPlasmaPreviewTab( QWidget *parent )
 WebTab *Project::createWebTab( QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
 
     // Create web widget
     parent = d->parentWidget( parent );
@@ -4508,6 +4601,7 @@ WebTab *Project::createWebTab( QWidget *parent )
 DashboardTab *Project::createDashboardTab( QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
 
     // Create dashboard widget
     parent = d->parentWidget( parent );
@@ -4528,6 +4622,7 @@ DashboardTab *Project::createDashboardTab( QWidget *parent )
 ProjectSourceTab *Project::createProjectSourceTab( QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
 
     if ( d->projectSourceTab ) {
         kWarning() << "Project source tab already created";
@@ -4574,6 +4669,7 @@ ProjectSourceTab *Project::createProjectSourceTab( QWidget *parent )
 ScriptTab *Project::createScriptTab( QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
 
     if ( d->scriptTab ) {
         kWarning() << "Script tab already created";
@@ -4616,6 +4712,7 @@ ScriptTab *Project::createScriptTab( QWidget *parent )
 ScriptTab *Project::createExternalScriptTab( const QString &filePath, QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     foreach ( ScriptTab *externalScriptTab, d->externalScriptTabs ) {
         if ( externalScriptTab->fileName() == filePath ) {
             kWarning() << "Script tab already created";
@@ -4661,6 +4758,7 @@ ScriptTab *Project::createExternalScriptTab( const QString &filePath, QWidget *p
 ServiceProvider *Project::provider() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     Q_ASSERT( d->provider );
     return d->provider;
 }
@@ -4668,6 +4766,7 @@ ServiceProvider *Project::provider() const
 void Project::setProviderData( const ServiceProviderData *providerData )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
 
     // Recreate service provider plugin with new info
     delete d->provider;
@@ -4706,6 +4805,7 @@ void Project::setProviderData( const ServiceProviderData *providerData )
 void Project::showSettingsDialog( QWidget *parent )
 {
     Q_D( Project );
+    d->mutex->lock();
 
     // Check if a modified project source tab is opened and ask to save it before
     // editing the file in the settings dialog
@@ -4714,6 +4814,8 @@ void Project::showSettingsDialog( QWidget *parent )
     // Create settings dialog
     QPointer< ProjectSettingsDialog > dialog( new ProjectSettingsDialog(parent) );
     dialog->setProviderData( d->provider->data(), d->filePath );
+    d->mutex->unlock();
+
     if ( dialog->exec() == KDialog::Accepted ) {
         setProviderData( dialog->providerData(this) );
 
@@ -4732,6 +4834,7 @@ void Project::projectSourceDocumentChanged( KTextEditor::Document *projectSource
 {
     Q_D( Project );
     Q_UNUSED( projectSourceDocument );
+    QMutexLocker locker( d->mutex );
 
     // Recreate service provider plugin with new XML content
     d->readProjectSourceDocumentFromTabOrFile( d->filePath );
@@ -4745,12 +4848,14 @@ void Project::projectSourceDocumentChanged( KTextEditor::Document *projectSource
 void Project::dashboardTabDestroyed()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->dashboardTab = 0;
 }
 
 void Project::projectSourceTabDestroyed()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->projectSourceTab = 0;
 }
 
@@ -4758,6 +4863,7 @@ void Project::projectSourceTabDestroyed()
 void Project::scriptTabDestroyed()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->scriptTab = 0;
     d->updateProjectActions( QList< ProjectAction >() << ToggleBreakpoint );
 }
@@ -4765,6 +4871,7 @@ void Project::scriptTabDestroyed()
 void Project::externalScriptTabDestroyed( QObject *tab )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     // qobject_cast does not work here, but only the address gets compared in removeOne(),
     // which needs to be casted to the list element type
     for ( int i = 0; i < d->externalScriptTabs.count(); ++i ) {
@@ -4780,18 +4887,21 @@ void Project::externalScriptTabDestroyed( QObject *tab )
 void Project::plasmaPreviewTabDestroyed()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->plasmaPreviewTab = 0;
 }
 
 void Project::webTabDestroyed()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->webTab = 0;
 }
 
 QString Project::projectSourceText( ProjectDocumentSource source) const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     if ( !d->provider ) {
         kDebug() << "No service provider plugin loaded";
         return QString();
@@ -4836,6 +4946,7 @@ QString Project::projectSourceText( ProjectDocumentSource source) const
 QString Project::scriptText( const QString &includedScriptFilePath ) const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     if ( includedScriptFilePath.isEmpty() ) {
         if ( d->scriptTab ) {
             // Script file opened in a tab
@@ -4868,6 +4979,7 @@ QString Project::scriptText( const QString &includedScriptFilePath ) const
 void Project::setScriptText( const QString &text )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     if ( d->scriptTab ) {
         d->unsavedScriptContents.clear();
         d->scriptTab->document()->setText( text );
@@ -4890,6 +5002,7 @@ void Project::setScriptText( const QString &text )
 Project::ScriptTemplateType Project::getScriptTemplateTypeInput( QWidget *parent ) const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     bool ok;
     QStringList templates;
     parent = d->parentWidget( parent );
@@ -4921,24 +5034,28 @@ Project::ScriptTemplateType Project::getScriptTemplateTypeInput( QWidget *parent
 bool Project::isProjectSourceModified() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->isProjectSourceModified();
 }
 
 bool Project::isScriptModified() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->isScriptModified();
 }
 
 bool Project::isModified() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->isModified();
 }
 
 void Project::showTextHint( const KTextEditor::Cursor &position, QString &text ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     KTextEditor::View *activeView = d->scriptTab->document()->activeView();
     const QPoint pointInView = activeView->cursorToCoordinate( position );
     const QPoint pointGlobal = activeView->mapToGlobal( pointInView );
@@ -4952,60 +5069,70 @@ void Project::showTextHint( const KTextEditor::Cursor &position, QString &text )
 bool Project::save( QWidget *parent, const QString &xmlFilePath )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     return d->save( parent, xmlFilePath );
 }
 
 bool Project::saveAs( QWidget *parent )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     return d->saveAs( parent );
 }
 
 bool Project::install( QWidget *parent, InstallType installType )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     return d->install( parent, true, installType );
 }
 
 bool Project::uninstall( QWidget *parent, Project::InstallType installType )
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     return d->install( parent, false, installType );
 }
 
 bool Project::isInstalledLocally() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->isInstalledLocally();
 }
 
 bool Project::isInstalledGlobally() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->isInstalledGlobally();
 }
 
 QString Project::iconName() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->iconName();
 }
 
 QIcon Project::projectIcon() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->projectIcon();
 }
 
 QString Project::projectName() const
 {
     Q_D( const Project );
+    QMutexLocker locker( d->mutex );
     return d->projectName();
 }
 
 ServiceProviderData *Project::data()
 {
     Q_D( Project );
+    QMutexLocker locker( d->mutex );
     // Return as non const, because QML cannot use it otherwise
     return const_cast< ServiceProviderData* >( d->data() );
 }
