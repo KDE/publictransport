@@ -60,13 +60,21 @@ var __hafas_routedata = function(hafas) {
                     var arrival = node.attributeNode("arrTime").nodeValue();
                     var departure = node.attributeNode("depTime").nodeValue();
                     var timeString = arrival.length < 5 ? departure : arrival;
-                    time = helper.matchTime( timeString, "hh:mm" );
-                    if ( time.error ) {
-                        helper.warning( "Hafas.routeData.parseXml(): Could not match route time: '" + timeString + "'", timeString );
-                        continue;
-                    }
-                    timeValue = new Date( firstTime.getFullYear(), firstTime.getMonth(),
-                            firstTime.getDate(), time.hour, time.minute, 0, 0 );
+		    var timeValue;
+		    if ( timeString.length < 5 ) {
+		        // No time given for the current intermediate stop,
+		        // the HTML versions simply do not show such stops,
+		        // create an invalid Date object for the stop here
+		        timeValue = new Date( "unknown" );
+		    } else {
+			time = helper.matchTime( timeString, "hh:mm" );
+			if ( time.error ) {
+			    helper.warning( "Hafas.routeData.parseXml(): Could not match route time: '" + timeString + "'", timeString );
+			    continue;
+			}
+			timeValue = new Date( firstTime.getFullYear(), firstTime.getMonth(),
+				firstTime.getDate(), time.hour, time.minute, 0, 0 );
+		    }
 
                     if ( inRange || routeStop == stop || firstTime.getTime() <= timeValue.getTime() ) {
                         inRange = true;
