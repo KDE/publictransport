@@ -94,6 +94,7 @@ void NetworkRequest::abort()
     m_mutex->unlockInline();
 
     emit aborted( timedOut );
+    emit finished();
 }
 
 void NetworkRequest::slotReadyRead()
