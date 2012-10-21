@@ -124,45 +124,49 @@ QByteArray gzipDecompress( QByteArray compressData )
     compressData.remove( 0, 10 );
     compressData.chop( 12 );
 
-    const int buffersize = 16384;
-    quint8 buffer[buffersize];
+    // FIXME Decompress in one chunk, because otherwise it fails with error -3 "distance too far back",
+    // estimate size of uncompressed data, expect that the data was compressed at best to 30% size,
+    // limit to 512KB
+    const int chunkSize = qMin( int(compressData.size() / 0.3), 512 * 1024 );
+    if ( chunkSize == 512 * 1024 ) {
+        kWarning() << "Maximum chunk size for decompression reached, may fail";
+    }
 
-    z_stream cmpr_stream;
-    cmpr_stream.next_in = (unsigned char *)compressData.data();
-    cmpr_stream.avail_in = compressData.size();
-    cmpr_stream.total_in = 0;
+    unsigned char buffer[ chunkSize ];
+    z_stream stream;
+    stream.next_in = (Bytef*)(compressData.data());
+    stream.avail_in = compressData.size();
+    stream.total_in = 0;
+    stream.total_out = 0;
+    stream.zalloc = Z_NULL;
+    stream.zfree = Z_NULL;
+    stream.opaque = Z_NULL;
 
-    cmpr_stream.next_out = buffer;
-    cmpr_stream.avail_out = buffersize;
-    cmpr_stream.total_out = 0;
-
-    cmpr_stream.zalloc = Z_NULL;
-    cmpr_stream.zalloc = Z_NULL;
-
-    if ( inflateInit2(&cmpr_stream, -8 ) != Z_OK ) {
+    if ( inflateInit2(&stream, -8) != Z_OK ) {
         kDebug() << "cmpr_stream error!";
+        return QByteArray();
     }
 
     QByteArray uncompressed;
     do {
-        int status = inflate( &cmpr_stream, Z_SYNC_FLUSH );
-
+        stream.next_out = buffer;
+        stream.avail_out = chunkSize;
+        int status = inflate( &stream, Z_SYNC_FLUSH );
         if ( status == Z_OK || status == Z_STREAM_END ) {
-            uncompressed.append( QByteArray::fromRawData((char*)buffer,
-                                                         buffersize - cmpr_stream.avail_out) );
-            cmpr_stream.next_out = buffer;
-            cmpr_stream.avail_out = buffersize;
+            uncompressed.append( QByteArray::fromRawData(
+                    (char*)buffer, chunkSize - stream.avail_out) );
+            if ( status == Z_STREAM_END ) {
+                break;
+            }
         } else {
-            inflateEnd( &cmpr_stream );
+            kWarning() << "Error while decompressing" << status << stream.msg;
+            if ( status == Z_NEED_DICT || status == Z_DATA_ERROR || status == Z_MEM_ERROR ) {
+                inflateEnd( &stream );
+            }
+            return QByteArray();
         }
-
-        if ( status == Z_STREAM_END ) {
-            inflateEnd( &cmpr_stream );
-            break;
-        }
-
-    } while( cmpr_stream.avail_out == 0 );
-
+    } while( stream.avail_out == 0 );
+    inflateEnd( &stream );
     return uncompressed;
 }
 
@@ -216,7 +220,7 @@ void NetworkRequest::slotFinished()
         // NOTE qUncompress() did not work here, "invalid zip"
         m_data = gzipDecompress( m_data );
         DEBUG_NETWORK("Uncompressed data from" << size << "Bytes to" << m_data.size()
-                      << "Bytes, ratio:" << 100 - qRound(100 * size / m_data.size()) << '%');
+                << "Bytes, ratio:" << (100 - (m_data.isEmpty() ? 100 : qRound(100 * size / m_data.size()))) << '%');
     }
 
     DEBUG_NETWORK("Request finished" << m_reply->url());
