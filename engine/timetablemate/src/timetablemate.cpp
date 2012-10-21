@@ -87,6 +87,7 @@
 #include <KParts/MainWindow>
 #include <KTextEditor/Document>
 #include <KTextEditor/View>
+#include <ThreadWeaver/WeaverInterface>
 
 // Qt includes
 #include <QtGui/QFormLayout>
@@ -452,6 +453,9 @@ void TimetableMate::readProperties( const KConfigGroup &config )
 
 void TimetableMate::initialize()
 {
+    const int threadCount = Settings::self()->maximumThreadCount();
+    m_projectModel->weaver()->setMaximumNumberOfThreads( threadCount < 1 ? 32 : threadCount );
+
     updateShownDocksAction();
 
     if ( Settings::self()->restoreProjects() &&
@@ -1816,6 +1820,9 @@ void TimetableMate::preferencesDialogFinished()
 {
     delete ui_preferences;
     ui_preferences = 0;
+
+    const int threadCount = Settings::self()->maximumThreadCount();
+    m_projectModel->weaver()->setMaximumNumberOfThreads( threadCount < 1 ? 32 : threadCount );
 }
 
 bool TimetableMate::hasHomePageURL( const ServiceProviderData *data ) {

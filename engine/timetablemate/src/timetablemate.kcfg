@@ -8,6 +8,11 @@
         <entry name="restoreProjects" type="Bool">
             <label>Whether or not opened projects should be restored when TimetableMate restarts.
             </label>
+            <default>true</default>
+        </entry>
+        <entry name="maximumThreadCount" type="Int">
+            <label>The maximum number of threads to run script jobs.</label>
+            <default>0</default>
         </entry>
     </group>
 </kcfg>
