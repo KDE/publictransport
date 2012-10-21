@@ -1,42 +1,43 @@
 /** Service provider travelplanner.cup2000.it (Regione Emilia-Romagna, Italia)
-* © 2010, Friedrich Pülz */
+* © 2012, Friedrich Pülz */
 
-function usedTimetableInformations() {
-    return [ /*'Delay', 'DelayReason', 'Platform', 'JourneyNews',*/ 'TypeOfVehicle',
-	     'StopID', /*'Pricing', 'Changes',*/ 'RouteStops'/*, 'RoutePlatformsDeparture',
-	     'RoutePlatformsArrival', 'RouteTimesDeparture', 'RoutePlatformsArrival',
-	     'RouteTransportLines'*/ ];
+include("base_hafas.js");
+
+// Create instance of Hafas
+var hafas = Hafas({
+    baseUrl: "http://travelplanner.cup2000.it/rer",
+    language: "e",
+    productBits: 9 });
+
+// No XML sources available, HTML parsers are implemented below
+hafas.timetable.options.format = Hafas.HtmlFormat;
+hafas.stopSuggestions.options.format = Hafas.HtmlFormat;
+hafas.stopSuggestions.removeFeature( PublicTransport.ProvidesStopsByGeoPosition );
+
+function features() {
+    return hafas.stopSuggestions.features.concat(
+            hafas.timetable.features );
 }
 
-function getTimetable( values ) {
-    var url = "http://212.131.171.232/rer/bin/stboard.exe/en" +
-	    "?input=" + values.stop + "!" +
-	    "&time=" + helper.formatDateTime(values.dateTime, "hh:mm") +
-	    "&boardType=" + (values.dataType == "arrivals" ? "arr" : "dep") +
-	    "&date=" + helper.formatDateTime(values.dateTime, "dd.MM.yy") +
-	    "&disableEquivs=no" +
-	    "&maxJourneys=" + values.maxCount +
-	    "&start=yes&productsFilter=111111111";
+var getStopSuggestions = hafas.stopSuggestions.get;
+var getTimetable = hafas.timetable.get;
 
-    var request = network.createRequest( url );
-//     request.readyRead.connect( parseTimetableIterative );
-    request.finished.connect( parseTimetable );
-    network.get( request );
-}
+hafas.timetable.parser.parseHtml = function( html ) {
+    // Decode document
+    html = helper.decode( html, "utf8" );
 
-function parseTimetable( html ) {
     // Find block of departures
     var departureBlock = helper.findFirstHtmlTag( html, "div",
             {attributes: {"id": "sq_results_content_table_stboard"}} );
     if ( !departureBlock.found ) {
-	helper.error("Result element not found", html);
-	return;
+        helper.error("Result element not found", html);
+        return;
     }
-    
+
     departureBlock = helper.findFirstHtmlTag( departureBlock.contents, "tbody" );
     if ( !departureBlock.found ) {
-	helper.error("Result table not found", html);
-	return;
+        helper.error("Result table not found", html);
+        return;
     }
 
     // Initialize regular expressions (compile them only once)
@@ -53,130 +54,132 @@ function parseTimetable( html ) {
 
     // Go through all departure blocks
     while ( (departureRowArr = departuresRegExp.exec(departureBlock.contents)) ) {
-		departureRow = departureRowArr[1];
+        departureRow = departureRowArr[1];
 
-		// Get column contents
-		var columns = new Array;
-		while ( (col = columnsRegExp.exec(departureRow)) )
-			columns.push( col[1] );
-		columnsRegExp.lastIndex = 0;
-		if ( columns.length < 4 ) {
-			helper.error("Too less columns found (" + columns.length + ") in a departure row", departureRow);
-			continue;
-		}
+        // Get column contents
+        var columns = new Array;
+        while ( (col = columnsRegExp.exec(departureRow)) ) {
+            columns.push( col[1] );
+        }
+        columnsRegExp.lastIndex = 0;
+        if ( columns.length < 4 ) {
+            helper.error("Too less columns found (" + columns.length + ") in a departure row", departureRow);
+            continue;
+        }
 
-		// Initialize result variables with defaults
-		var departure = { RouteStops: new Array, RouteTimes: new Array, RouteExactStops: 0 };
+        // Initialize result variables with defaults
+        var departure = { RouteStops: new Array, RouteTimes: new Array, RouteExactStops: 0 };
 
-		// Parse time column
-		time = helper.matchTime( helper.trim(columns[0]), "hh:mm" );
-		if ( time.error ) {
-			helper.error("Unexpected string in time column!", columns[0]);
-			continue;
-		}
+        // Parse time column
+        time = helper.matchTime( helper.trim(columns[0]), "hh:mm" );
+        if ( time.error ) {
+            helper.error("Unexpected string in time column!", columns[0]);
+            continue;
+        }
 
-		// Parse type of vehicle column
-		if ( (typeOfVehicleArr = typeOfVehicleRegExp.exec(columns[1])) != null ) {
-			var vehicle = typeOfVehicleArr[1].toLowerCase();
-			if ( vehicle == "au" ) { // AutoBus
-			      vehicle = "bus";
-			}
-			departure.TypeOfVehicle = vehicle;
-		} else {
-			helper.error("Unexcepted string in type of vehicle column", columns[1]);
-		}
+        // Parse type of vehicle column
+        if ( (typeOfVehicleArr = typeOfVehicleRegExp.exec(columns[1])) != null ) {
+            var vehicle = typeOfVehicleArr[1].toLowerCase();
+            if ( vehicle == "au" ) { // AutoBus
+                vehicle = "bus";
+            } // TODO Move to hafas.otherVehicleFromString()
+            departure.TypeOfVehicle = hafas.vehicleFromString( vehicle );
+        } else {
+            helper.error("Unexcepted string in type of vehicle column", columns[1]);
+        }
 
-		// Parse transport line column
-		departure.TransportLine = helper.trim( helper.stripTags(columns[2]) );
-		if ( departure.TransportLine.substring(0, 4) == "Lin " ) {
-			departure.TransportLine = helper.trim( departure.TransportLine.substring(4) );
-		}
-		if ( (dateString = dateRegExp.exec(columns[2])) == null ) {
-			helper.error("Unexcepted string in transport line column", columns[2]);
-			continue;
-		}
-		departure.DepartureDateTime = helper.matchDate( dateString, "dd.MM.yy" );
-		departure.DepartureDateTime.setHours( time.hour, time.minute, 0 );
+        // Parse transport line column
+        departure.TransportLine = helper.simplify( helper.stripTags(columns[2]) );
+        if ( departure.TransportLine.substring(0, 4) == "Lin " ) {
+            departure.TransportLine = helper.trim( departure.TransportLine.substring(4) );
+        }
+        if ( (dateString = dateRegExp.exec(columns[2])) == null ) {
+            helper.error("Unexcepted string in transport line column", columns[2]);
+            continue;
+        }
+        departure.DepartureDateTime = helper.matchDate( dateString, "dd.MM.yy" );
+        departure.DepartureDateTime.setHours( time.hour, time.minute, 0 );
 
-		// Parse route column ..
-		//  .. target
-		if ( (targetString = targetRegExp.exec(columns[3])) == null ) {
-			helper.error("Unexcepted string in target column", columns[3]);
-			continue; // Unexcepted string in target column
-		}
-		departure.Target = helper.camelCase( helper.trim(targetString[1]) );
+        // Parse route column ..
+        //  .. target
+        if ( (targetString = targetRegExp.exec(columns[3])) == null ) {
+            helper.error("Unexcepted string in target column", columns[3]);
+            continue; // Unexcepted string in target column
+        }
+        departure.Target = helper.camelCase( helper.trim(targetString[1]) );
 
-		// .. route
-		var routeColumn = columns[3].substring( targetRegExp.lastIndex );
-		targetRegExp.lastIndex = 0;
-		var routeArr = paragraphRegExp.exec( routeColumn );
-		if ( routeArr != null ) {
-			var route = helper.trim( routeArr[1] );
-			var routeBlocks = route.split( routeBlocksRegExp );
+        // .. route
+        var routeColumn = columns[3].substring( targetRegExp.lastIndex );
+        targetRegExp.lastIndex = 0;
+        var routeArr = paragraphRegExp.exec( routeColumn );
+        if ( routeArr != null ) {
+            var route = helper.trim( routeArr[1] );
+            var routeBlocks = route.split( routeBlocksRegExp );
 
-			if ( !routeBlockEndOfExactRouteMarkerRegExp.test(route) ) {
-				departure.RouteExactStops = routeBlocks.length;
-			} else {
-				while ( (splitter = routeBlocksRegExp.exec(route)) ) {
-					++departure.RouteExactStops;
-					if ( routeBlockEndOfExactRouteMarkerRegExp.test(splitter) )
-						break;
-				}
-			}
+            if ( !routeBlockEndOfExactRouteMarkerRegExp.test(route) ) {
+                departure.RouteExactStops = routeBlocks.length;
+            } else {
+                while ( (splitter = routeBlocksRegExp.exec(route)) ) {
+                    ++departure.RouteExactStops;
+                    if ( routeBlockEndOfExactRouteMarkerRegExp.test(splitter) )
+                        break;
+                }
+            }
 
-			for ( var n = 0; n < routeBlocks.length; ++n ) {
-				var lines = helper.splitSkipEmptyParts( routeBlocks[n], "\n" );
-				if ( lines.count < 4 )
-					continue;
+            for ( var n = 0; n < routeBlocks.length; ++n ) {
+                var lines = helper.splitSkipEmptyParts( routeBlocks[n], "\n" );
+                if ( lines.count < 4 )
+                    continue;
 
-				departure.RouteStops.push( helper.camelCase(lines[1]) );
-				departure.RouteTimes.push( lines[3] );
-			}
-		}
-	//
-	// 	// Parse platform column if any
-	// 	if ( platformCol != -1 )
-	// 	    platformString = helper.trim( helper.stripTags(columns[platformCol]) );
+                departure.RouteStops.push( helper.camelCase(lines[1]) );
+                departure.RouteTimes.push( lines[3] );
+            }
+        }
 
-		// Parse delay column if any
-	// 	if ( delayCol != -1 ) {
-	// 	    delayArr = delayRegExp.exec( columns[delayCol] );
-	// 	    if ( delayArr )
-	// 		delay = helper.duration( time[0] + ":" + time[1], delayArr[1] );
-	// 	}
+//         // Parse platform column if any
+//         if ( platformCol != -1 )
+//             platformString = helper.trim( helper.stripTags(columns[platformCol]) );
+//
+//         Parse delay column if any
+//         if ( delayCol != -1 ) {
+//             delayArr = delayRegExp.exec( columns[delayCol] );
+//             if ( delayArr )
+//             delay = helper.duration( time[0] + ":" + time[1], delayArr[1] );
+//         }
 
-		// Add departure
-		result.addData( departure );
+        // Add departure
+        result.addData( departure );
     }
 
     return true;
 }
 
-function getStopSuggestions( values ) {
-    var url = "http://212.131.171.232/rer/bin/stboard.exe/en?input={stop}?" +
-            "?input=" + values.stop + "?";
+// No ajax-getstops.exe, use timetable URL with a "?" to get HTML stop suggestions
+hafas.stopSuggestions.url = function( values, options ) {
+    options.stopPostfix = "?"; // Always show stop suggestions, no departures
+    return hafas.timetable.url( values, options );
+}
 
-    var html = network.getSynchronous( url );
-    if ( !network.lastDownloadAborted ) {
-        // Find all stop suggestions
-	var pos = html.search( /<select\s*name="input"\s*>/i );
-	if ( pos == -1 ) {
-	    helper.error("Stop suggestion element not found!", html);
-	    return;
-	}
-	var end = html.indexOf( '</select>', pos + 1 );
-	var str = html.substr( pos, end - pos );
+hafas.stopSuggestions.parser.parseHtml = function( html ) {
+    // Decode document
+    html = helper.decode( html, "utf8" );
 
-	// Initialize regular expressions (compile them only once)
-	var stopRegExp = /<option value="[^"]+?#([0-9]+)">([^<]*?)<\/option>/ig;
-
-	// Go through all stop options
-	while ( (stop = stopRegExp.exec(str)) ) {
-	    result.addData( {StopName: stop[2], StopID: stop[1]} );
-	}
-
-        return result.hasData();
-    } else {
-        return false;
+    // Find all stop suggestions
+    var pos = html.search( /<select\s*name="input"\s*>/i );
+    if ( pos == -1 ) {
+        helper.error("Stop suggestion element not found!", html);
+        return;
     }
+    var end = html.indexOf( '</select>', pos + 1 );
+    var str = html.substr( pos, end - pos );
+
+    // Initialize regular expressions (compile them only once)
+    var stopRegExp = /<option value="[^"]+?#([0-9]+)">([^<]*?)<\/option>/ig;
+
+    // Go through all stop options
+    while ( (stop = stopRegExp.exec(str)) ) {
+        result.addData( {StopName: stop[2], StopID: stop[1]} );
+    }
+
+    return result.hasData();
 }

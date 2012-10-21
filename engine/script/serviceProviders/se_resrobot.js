@@ -54,12 +54,11 @@ hafas.otherVehicleFromString = function( string ) {
          string == "kw" || string == "ks" ||
          string == "km" || string == "e" ||
          string == "db" ||
-         string == "jft" // Future Train
-       )
+         string == "jft" ) // Future Train
     {
         return PublicTransport.RegionalTrain;
-//     } else if ( string == "jft" ) {
-
+    } else if ( string == "tunnelbana" ) {
+	return PublicTransport.Subway;
     }
     print( "Unknown vehicle type abbreviation: " + string + "'" );
 };

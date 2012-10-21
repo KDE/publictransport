@@ -1,8 +1,9 @@
 /** Service provider www.dvb.de (Dresden, germany).
 * © 2010, Friedrich Pülz */
 
-function usedTimetableInformations() {
-    return [ 'TypeOfVehicle', 'StopID' ];
+
+function features() {
+    return [ PublicTransport.ProvidesArrivals ];
 }
 
 function getTimetable( values ) {

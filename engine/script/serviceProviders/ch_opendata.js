@@ -8,7 +8,7 @@ function features() {
              PublicTransport.ProvidesStopPosition,
              PublicTransport.ProvidesStopsByGeoPosition];
 }
-
+  
 function getTimetable( values ) {
     // Construct an URL from the given values
     // Cannot tell date or time nor can arrivals be requested

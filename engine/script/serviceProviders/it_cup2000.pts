@@ -10,7 +10,7 @@
     </author>
     <url>http://travelplanner.cup2000.it</url>
     <shortUrl>travelplanner.cup2000.it</shortUrl>
-    <script>it_cup2000.js</script>
+    <script extensions="qt.core,qt.xml">it_cup2000.js</script>
     <changelog>
         <entry version="1.0">Initial version</entry>
         <entry version="1.1">Update to new script API</entry>

@@ -23,6 +23,16 @@ var getTimetable = hafas.timetable.get;
 var getAdditionalData = hafas.timetable.additionalData.get;
 var getJourneys = hafas.journeys.get;
 
+hafas.otherVehicleFromString = function( string ) {
+    switch ( string.toLowerCase() ) {
+    case "ag":
+    case "as":
+        return PublicTransport.RegionalTrain;
+    default:
+        return PublicTransport.UnknownVehicleType;
+    }
+};
+
 // Needed to get route data URLs for additional data
 hafas.timetable.parser.parseHtmlMobile = function( html ) {
     if ( html.length == 0 ) {

@@ -36,7 +36,7 @@ hafas.otherVehicleFromString = function( string ) {
         return PublicTransport.IntercityTrain;
     } else if ( string == "wb" || string == "ire" ) {
         return PublicTransport.RegionalExpressTrain;
-    } else if ( string == "d" ) {
+    } else if ( string == "d" || string == "x" /*InterConnex*/ ) {
         return PublicTransport.InterregionalTrain;
     }
 };

@@ -560,6 +560,7 @@ var HafasPrivate = {
             return PublicTransport.RegionalTrain;
         case "ir":
         case "ire":
+        case "x": // InterConnex
             return PublicTransport.InterregionalTrain;
         case "ferry":
         case "faehre":

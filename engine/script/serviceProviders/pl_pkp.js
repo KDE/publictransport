@@ -32,5 +32,7 @@ hafas.otherVehicleFromString = function( string ) {
         return PublicTransport.RegionalTrain;
     } else if ( string == "tlk" ) {
         return PublicTransport.RegionalExpressTrain;
+    } else if ( string == "ex" ) {
+        return PublicTransport.IntercityTrain;
     }
 };

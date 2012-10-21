@@ -18,6 +18,15 @@ var getStopSuggestions = hafas.stopSuggestions.get;
 var getTimetable = hafas.timetable.get;
 var getJourneys = hafas.journeys.get;
 
+hafas.otherVehicleFromString = function( string ) {
+    switch ( string.toLowerCase() ) {
+    case "togbus":
+        return PublicTransport.Bus;
+    default:
+        return PublicTransport.UnknownVehicleType;
+    }
+}
+
 hafas.otherVehicleFromClass = function( classId ) {
     switch ( classId ) {
     case 1: // IC

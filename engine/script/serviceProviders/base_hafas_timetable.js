@@ -64,16 +64,21 @@ var __hafas_timetable = function(hafas) {
         url: function( values, options ) {
             var options = HafasPrivate.prepareOptions( HafasPrivate.extend(options, processor.options),
                     {program: "stboard", additionalUrlQueryItems: "",
-                     language: "d", type: "n", layout: "vs_java3"}, hafas.options );
-
-            if ( typeof options.baseUrl != "string" || options.baseUrl.length == 0 )
+                     language: "d", type: "n", layout: "vs_java3",
+                     stopPostfix: "!"}, // "!"/"?" to never/always show suggestions for ambiguous stop names
+                    hafas.options );
+            if ( typeof options.baseUrl != "string" || options.baseUrl.length == 0 ) {
                 throw TypeError("Hafas.timetable.url(): The option baseUrl must be a non-empty string");
+            }
+
             var query = "rt=1" + // Enable realtime data
-                "&input=" + values.stop + "!" + // "!" to never show suggestions for ambiguous stop names
-                "&boardType=" + (values.dataType == "arrivals" ? "arr" : "dep") +
-                "&date=" + helper.formatDateTime(values.dateTime, options.urlDateFormat) +
-                "&time=" + helper.formatDateTime(values.dateTime, options.urlTimeFormat) +
-                "&maxJourneys=" + Math.max(20, values.maxCount == undefined ? 0 : values.maxCount) + // Maximum number of results
+                "&input=" + values.stop + options.stopPostfix +
+                "&boardType=" + (values.dataType == "arrivals" ? "arr" : "dep");
+            if ( values.dateTime != undefined ) {
+                query += "&date=" + helper.formatDateTime(values.dateTime, options.urlDateFormat) +
+                         "&time=" + helper.formatDateTime(values.dateTime, options.urlTimeFormat);
+            }
+            query += "&maxJourneys=" + Math.max(20, values.maxCount == undefined ? 0 : values.maxCount) + // Maximum number of results
                 "&disableEquivs=yes" + // Do not use nearby stations
                 (options.layout == undefined ? "" : ("&L=" + options.layout)) + // Specify the output layout
                 "&start=yes" + // Start the request instead of showing a form
@@ -191,7 +196,7 @@ var __hafas_timetable = function(hafas) {
                         } else if ( delay[0] == "cancel" ) {
                             departure.Delay = -2; // TODO -2 => cancelled?
                         } else {
-                            helper.error( "Hafas.timetable.parse(): Unknown delay string: " + delay );
+                            helper.warning( "Hafas.timetable.parse(): Unknown delay string: " + delay );
                         }
                     }
                     departure.DelayReason = helper.trim( node.attributeNode("delayReason").nodeValue() );

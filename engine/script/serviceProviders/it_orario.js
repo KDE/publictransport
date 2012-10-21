@@ -1,11 +1,10 @@
 /** Service provider travelplanner.cup2000.it (Regione Emilia-Romagna, Italia)
 * © 2010, Friedrich Pülz */
 
-function usedTimetableInformations() {
-    return [ /*'Delay', 'DelayReason', 'Platform', 'JourneyNews',*/ 'TypeOfVehicle', 'Operator',
-	     'StopID', /*'Pricing', 'Changes',*/ 'RouteStops'/*, 'RoutePlatformsDeparture',
-	     'RoutePlatformsArrival', 'RouteTimesDeparture', 'RoutePlatformsArrival',
-	     'RouteTransportLines'*/ ];
+function features() {
+    return [ PublicTransport.ProvidesStopID,
+	     PublicTransport.ProvidesRouteInformation,
+	     PublicTransport.ProvidesArrivals ];
 }
 
 function getTimetable( values ) {
@@ -45,6 +44,9 @@ function parseTimetable( html ) {
     // Dates are set from today, not the requested date. They need to be adjusted by X days,
     // where X is the difference in days between today and the requested date.
     returnValue.push( 'dates need adjustment' );
+
+    // Decode document
+    html = helper.decode( html, "utf8" );
 
     // Find block of departures
     var str = helper.extractBlock( html,
@@ -166,6 +168,9 @@ function getStopSuggestions( values ) {
 
     var html = network.getSynchronous( url );
     if ( !network.lastDownloadAborted ) {
+        // Decode document
+	html = helper.decode( html, "utf8" );
+
         // Find all stop suggestions
 	var pos = html.search( /<select class="error".*?name="input"[^>]*?>/i );
 	if ( pos == -1 ) {

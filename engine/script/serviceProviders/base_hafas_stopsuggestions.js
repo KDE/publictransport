@@ -48,10 +48,10 @@ var __hafas_stopsuggestions = function(hafas) {
         *   or Hafas.getStopSuggestionsByGeoPositionUrl().
         **/
         get: function( values, options ) {
-            var options = HafasPrivate.prepareOptions( HafasPrivate.extend(options, processor.options),
-                                        {type: "ny"}, hafas.options );
             var byGeoPosition = values.stop == undefined &&
                     values.longitude != undefined && values.latitude != undefined;
+            var options = HafasPrivate.prepareOptions( HafasPrivate.extend(options, processor.options),
+                                        {type: byGeoPosition ? "ny" : "n"}, hafas.options );
             if ( byGeoPosition &&
                  !processor.features.contains(PublicTransport.ProvidesStopsByGeoPosition) )
             {

@@ -1,8 +1,8 @@
 /** Service provider idnes.cz.
 * © 2012, Friedrich Pülz */
 
-function usedTimetableInformations() {
-    return [ 'TypeOfVehicle', 'StopName' ];
+function features() {
+    return [ PublicTransport.ProvidesArrivals ];
 }
 
 function getTimetable( values ) {

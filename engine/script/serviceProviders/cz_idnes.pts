@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<serviceProvider fileVersion="1.0" version="1.4" type="Script">
+<serviceProvider fileVersion="1.0" version="1.4" type="script">
     <name lang="en">CHAPS spol. s r.o. (jizdnirady.idnes.cz)</name>
     <description lang="en">This service provider has static data. That means, that displayed departures may actually not be valid for today. Please view the journey news, to see if a departure is valid for today (e.g. 'Mo-Fr').</description>
     <author>
@@ -94,16 +94,18 @@
         <city replaceWith="zdarnadsazavou">Žďár nad Sázavou</city>
     </cities>
     <changelog>
-        <entry since="1.4" releasedWith="0.10">Update to new script API, construct URLs and retrieve/store session key in the script itself.</entry>
-        <entry since="1.3" releasedWith="0.10">Removed stop ID parsing, because requesting timetables with stop IDs doesn't work.</entry>
-        <entry since="1.2" releasedWith="0.10 Beta">Fixed, didn't show new departures after some time.</entry>
-        <entry since="1.2" releasedWith="0.10 Beta">Wrote a script, replacing the regular expressions in the XML. Can now also get stop suggestions by using an ASMX web service (with POST requests), which needs a session key. The session key is read from the service provider home page.</entry>
-        <entry since="1.1.1" releasedWith="0.7">Corrected the url for favicons.</entry>
-        <entry since="1.1" releasedWith="0.5.2">Added stop suggestions.</entry>
-        <entry since="1.1" releasedWith="0.5.2">Added list of possible cities (thanks to takanowaka).</entry>
+        <entry version="1.1" engineVersion="0.5.2">Added list of possible cities (thanks to takanowaka).</entry>
+        <entry version="1.1" engineVersion="0.5.2">Added stop suggestions.</entry>
+        <entry version="1.1.1" engineVersion="0.7">Corrected the url for favicons.</entry>
+        <entry version="1.2" engineVersion="0.10 Beta">Wrote a script, replacing the regular expressions in the XML. Can now also get stop suggestions by using an ASMX web service (with POST requests), which needs a session key. The session key is read from the service provider home page.</entry>
+        <entry version="1.2" engineVersion="0.10 Beta">Fixed, didn't show new departures after some time.</entry>
+        <entry version="1.3" engineVersion="0.10">Removed stop ID parsing, because requesting timetables with stop IDs doesn't work.</entry>
+        <entry version="1.4" engineVersion="0.10">Update to new script API, construct URLs and retrieve/store session key in the script itself.</entry>
     </changelog>
     <samples>
         <stop>Technologický park</stop>
         <city>Brno</city>
+        <longitude>16.6125</longitude>
+        <latitude>49.1917</latitude>
     </samples>
 </serviceProvider>

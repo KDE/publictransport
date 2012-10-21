@@ -15,7 +15,7 @@
         <entry version="1.0">Use base_hafas.js, shorter data sources, stops by geo position</entry>
     </changelog>
     <samples>
-        <stop>Dublin (Abbey Street)</stop>
+        <stop>Ballyphehane - City Centre - Farranree</stop>
         <stop>Dublin (The Four Courts)</stop>
         <longitude>-6.26667</longitude>
         <latitude>53.3417</latitude>

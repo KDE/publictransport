@@ -12,6 +12,9 @@ The Transport API allows interested developers to build their own applications u
     <url>http://transport.opendata.ch/</url>
     <shortUrl>transport.opendata.ch</shortUrl>
     <script extensions="qt,qt.core,qt.xml">ch_opendata.js</script>
+    <changelog>
+        <entry version="1.0">Initial version</entry>
+    </changelog>
     <samples>
         <stop>Bern</stop>
         <stop>Zürich</stop>
