@@ -19,7 +19,7 @@
 
 #include "timetablemate.h"
 
-#include <KApplication>
+#include <KUniqueApplication>
 #include <KAboutData>
 #include <KCmdLineArgs>
 #include <KDE/KLocale>
@@ -43,7 +43,7 @@ int main(int argc, char **argv)
     KCmdLineOptions options;
     options.add( "+[URL]", ki18n("Project to open") );
     KCmdLineArgs::addCmdLineOptions( options );
-    KApplication app;
+    KUniqueApplication app;
 
     // See if we are starting with session management
     if ( app.isSessionRestored() ) {

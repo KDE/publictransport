@@ -390,8 +390,6 @@ void TimetableMate::saveProperties( KConfigGroup &config )
 
 void TimetableMate::readProperties( const KConfigGroup &config )
 {
-    m_recentFilesAction->loadEntries( config );
-
     const QStringList lastOpenedProjects = config.readEntry( "lastOpenedProjects", QStringList() );
     QStringList failedToOpenProjects;
     foreach ( const QString &lastOpenedProject, lastOpenedProjects ) {
@@ -453,16 +451,54 @@ void TimetableMate::readProperties( const KConfigGroup &config )
 
 void TimetableMate::initialize()
 {
-    const int threadCount = Settings::self()->maximumThreadCount();
+    Settings *settings = Settings::self();
+    const int threadCount = settings->maximumThreadCount();
     m_projectModel->weaver()->setMaximumNumberOfThreads( threadCount < 1 ? 32 : threadCount );
+
+    bool restoreProjects = settings->restoreProjects();
+    if ( settings->lastSessionCrashed() ) {
+        // The last session has crashed
+        if ( restoreProjects ) {
+            // Restoring projects is enabled, check if there are any projects to restore
+            // before asking whether restoration should be disabled
+            if ( settings->config()->hasGroup("last_session") ) {
+                KConfigGroup config = settings->config()->group("last_session");
+                const QStringList lastOpenedProjects = config.readEntry( "lastOpenedProjects", QStringList() );
+                if ( !lastOpenedProjects.isEmpty() ) {
+                    // There are projects to restore, ask the user what to do
+                    int result = KMessageBox::warningContinueCancel( this,
+                            i18nc("@info", "<title>Last Session Crashed - Sorry</title>"
+                                "<para><warning>Restoring previously opened projects and tabs "
+                                "might result in another crash.</warning></para>"
+                                "<para>Do you want to nevertheless restore projects?</para>"),
+                            i18nc("@title:window", "Crash Protection"),
+                            KGuiItem(i18nc("@info/plain", "&Restore Projects"), KIcon("security-medium")),
+                            KGuiItem(i18nc("@info/plain", "Do &not Restore Projects"), KIcon("security-high")),
+                            "crash_protection" );
+                    if ( result != KMessageBox::Continue ) {
+                        restoreProjects = false;
+                    }
+                }
+            }
+        }
+    } else {
+        // No last session or the last session did finish successfully.
+        // Store true for the "lastSessionCrashed" setting while TimetableMate is running.
+        // When it exits successfully it sets it to false again. If TimetableMate crashes before
+        // a successful exit, true is still stored for "lastSessionCrashed".
+        // This requires the use of KUniqueApplication to work properly.
+        settings->setLastSessionCrashed( true );
+        settings->writeConfig();
+    }
 
     updateShownDocksAction();
 
-    if ( Settings::self()->restoreProjects() &&
-         Settings::self()->config()->hasGroup("last_session") )
-    {
-        KConfigGroup config = Settings::self()->config()->group("last_session");
-        readProperties( config );
+    if ( settings->config()->hasGroup("last_session") ) {
+        KConfigGroup config = settings->config()->group("last_session");
+        m_recentFilesAction->loadEntries( config );
+        if ( restoreProjects ) {
+            readProperties( config );
+        }
     }
 }
 
@@ -828,7 +864,15 @@ bool TimetableMate::queryClose()
     saveProperties( config );
 
     // Close projects and ask to save if modified
-    return closeAllProjects();
+    const bool close = closeAllProjects();
+    if ( close ) {
+        // TimetableMate will close, no crash so far,
+        // store that the last program exit was successful, ie. did not crash
+        Settings *settings = Settings::self();
+        settings->setLastSessionCrashed( false );
+        settings->writeConfig();
+    }
+    return close;
 }
 
 Project *TimetableMate::currentProject()
