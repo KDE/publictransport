@@ -922,6 +922,10 @@ void DebuggerAgent::scriptLoad( qint64 id, const QString &program, const QString
     Q_UNUSED( baseLineNumber );
     if ( id != -1 ) {
         QMutexLocker locker( m_mutex );
+        if ( m_state != Running ) {
+            // Call fireup() in case a script was evaluated
+            fireup();
+        }
         m_scriptIdToFileName.insert( id, fileName );
         m_currentScriptId = id;
         if ( m_injectedScriptState == InjectedScriptInitializing ) {
@@ -932,7 +936,8 @@ void DebuggerAgent::scriptLoad( qint64 id, const QString &program, const QString
         } else if ( m_executionControl != ExecuteRunInjectedProgram &&
                     m_executionControl != ExecuteStepIntoInjectedProgram )
         {
-            DEBUGGER_EVENT( "Load script" << QFileInfo(fileName).fileName() << "with id" << id );
+            DEBUGGER_EVENT( "Load script" << QFileInfo(fileName).fileName() << "with id" << id
+                            << "for provider" << QFileInfo(m_mainScriptFileName ).baseName());
             setScriptText( fileName, program );
         }
     }
@@ -950,6 +955,9 @@ void DebuggerAgent::scriptUnload( qint64 id )
     m_scriptIdToFileName.remove( id );
     if ( m_currentScriptId == id ) {
         m_currentScriptId = -1;
+        if ( m_lineNumber == -1 && m_state == Running ) {
+            shutdown();
+        }
     }
 }
 
@@ -1532,6 +1540,11 @@ void DebuggerAgent::shutdown()
     engine()->clearExceptions();
 
     setState( NotRunning );
+
+    Scripting::Network *scriptNetwork = qobject_cast< Scripting::Network* >(
+            engine()->globalObject().property("network").toQObject() );
+    Q_ASSERT( scriptNetwork );
+    const bool hasRunningRequests = scriptNetwork->hasRunningRequests();
     m_engineSemaphore->release();
 
     if ( isPositionChanged ) {
@@ -1543,9 +1556,6 @@ void DebuggerAgent::shutdown()
         emit positionChanged( -1, -1, oldLineNumber, oldColumnNumber );
     }
 
-    Scripting::Network *scriptNetwork = qobject_cast< Scripting::Network* >(
-            engine()->globalObject().property("network").toQObject() );
-    bool hasRunningRequests = scriptNetwork ? scriptNetwork->hasRunningRequests() : false;
     const int uncaughtExceptionLineNumber = m_uncaughtExceptionLineNumber;
     const QString uncaughtException = m_uncaughtException.toString();
     const QStringList backtrace = m_uncaughtExceptionBacktrace;

@@ -132,8 +132,6 @@ bool ScriptObjects::attachToEngine( QScriptEngine *engine, const ScriptData &dat
     }
 
     // Register classes for use in the script
-    qRegisterMetaType< QIODevice* >( "QIODevice*" );
-    qRegisterMetaType< DataStreamPrototype* >( "DataStreamPrototype*" );
     qScriptRegisterMetaType< DataStreamPrototypePtr >( engine,
             dataStreamToScript, dataStreamFromScript );
     qScriptRegisterMetaType< NetworkRequestPtr >( engine,

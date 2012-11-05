@@ -57,8 +57,6 @@ ServiceProviderData::ServiceProviderData( const Enums::ServiceProviderType& type
     m_defaultVehicleType = Enums::UnknownVehicleType;
     m_minFetchWait = 0;
     m_sampleLongitude = m_sampleLatitude = 0.0;
-
-    qRegisterMetaType< Enums::ServiceProviderType >( "Enums::ServiceProviderType" );
 }
 
 ServiceProviderData::ServiceProviderData( const Enums::ServiceProviderType &type,

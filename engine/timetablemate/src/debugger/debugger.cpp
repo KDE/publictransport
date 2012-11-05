@@ -53,7 +53,8 @@ namespace Debugger {
 
 Debugger::Debugger( const WeaverInterfacePointer &weaver, QObject *parent )
         : QObject(parent), m_state(Initializing), m_weaver(weaver),
-          m_loadScriptJob(0), m_lastScriptError(NoScriptError),
+          m_mutex(new QMutex(QMutex::Recursive)),
+          m_loadScriptJob(0), m_lastScriptError(InitializingScript),
           m_variableModel(new VariableModel(this)),
           m_backtraceModel(new BacktraceModel(this)),
           m_breakpointModel(new BreakpointModel(this)),
@@ -65,7 +66,8 @@ Debugger::Debugger( const WeaverInterfacePointer &weaver, QObject *parent )
 
 Debugger::Debugger( QObject *parent )
         : QObject(parent), m_state(Initializing), m_weaver(new ThreadWeaver::Weaver()),//ThreadWeaver::Weaver::instance()),
-          m_loadScriptJob(0), m_lastScriptError(NoScriptError),
+          m_mutex(new QMutex(QMutex::Recursive)),
+          m_loadScriptJob(0), m_lastScriptError(InitializingScript),
           m_variableModel(new VariableModel(this)),
           m_backtraceModel(new BacktraceModel(this)),
           m_breakpointModel(new BreakpointModel(this)),
@@ -77,13 +79,19 @@ Debugger::Debugger( QObject *parent )
 
 void Debugger::initialize()
 {
-    qRegisterMetaType<QScriptContextInfo>( "QScriptContextInfo" );
-    qRegisterMetaType<EvaluationResult>( "EvaluationResult" );
-    qRegisterMetaType<Frame>( "Frame" );
-    qRegisterMetaType<FrameStack>( "FrameStack" );
-    qRegisterMetaType<Breakpoint>( "Breakpoint" );
-    qRegisterMetaType<ConsoleCommand>( "ConsoleCommand" );
-    qRegisterMetaType<DebuggerState>( "DebuggerState" );
+    QMutexLocker locker( m_mutex );
+    qRegisterMetaType< QScriptContextInfo >( "QScriptContextInfo" );
+    qRegisterMetaType< EvaluationResult >( "EvaluationResult" );
+    qRegisterMetaType< Frame >( "Frame" );
+    qRegisterMetaType< FrameStack >( "FrameStack" );
+    qRegisterMetaType< Breakpoint >( "Breakpoint" );
+    qRegisterMetaType< ConsoleCommand >( "ConsoleCommand" );
+    qRegisterMetaType< DebuggerState >( "DebuggerState" );
+    qRegisterMetaType< ScriptStoppedFlags >( "ScriptStoppedFlags" );
+    qRegisterMetaType< NetworkRequest* >( "NetworkRequest*" );
+    qRegisterMetaType< NetworkRequest::Ptr >( "NetworkRequest::Ptr" );
+    qRegisterMetaType< QIODevice* >( "QIODevice*" );
+    qRegisterMetaType< DataStreamPrototype* >( "DataStreamPrototype*" );
 
     connect( m_breakpointModel, SIGNAL(breakpointAdded(Breakpoint)),
              this, SIGNAL(breakpointAdded(Breakpoint)) );
@@ -95,6 +103,7 @@ Debugger::~Debugger()
 {
     // Abort all running jobs, wait for them to finish and then delete them.
     // When there are undeleted jobs with queue policies assigned, deleting m_weaver would crash
+    m_mutex->lock();
     m_weaver->requestAbort();
     m_weaver->finish();
     foreach ( const QPointer<DebuggerJob> &job, m_runningJobs ) {
@@ -113,10 +122,15 @@ Debugger::~Debugger()
     delete m_debuggerRestrictionPolicy;
     delete m_evaluateInContextRestrictionPolicy;
     delete m_runData;
+    m_runData = 0;
+    m_mutex->unlock();
+
+    delete m_mutex;
 }
 
 void Debugger::finish()
 {
+    QMutexLocker locker( m_mutex );
     m_weaver->finish();
     while ( hasRunningJobs() ) {
         const QPointer< DebuggerJob > job = currentJob();
@@ -140,22 +154,24 @@ void Debugger::finish()
 void Debugger::slotStarted( const QDateTime &timestamp )
 {
     stopTimeout();
-
+    QMutexLocker locker( m_mutex );
     if ( !m_runData ) {
         kWarning() << "ScriptRunData already deleted / not yet created";
         return;
     }
     DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_runData->job(), "Debugger::slotStarted(): Execution started/continued" );
 
-    if ( !m_runData->isExecuting() ) {
-        // The current job started executing the script
-        DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_runData->job(), "Debugger::slotStarted(): Start execution timer" );
-        m_runData->executionStarted( timestamp );
-    } else if ( m_runData->isWaitingForSignal() ) {
+    if ( m_runData->isWaitingForSignal() ) {
         // Was waiting for a signal, script execution continues
         DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_runData->job(), "Debugger::slotStarted(): Woke up from signal" );
         const int waitingTime = m_runData->wokeUpFromSignal( timestamp );
         emit wokeUpFromSignal( waitingTime );
+    } else if ( m_runData->isScriptLoaded() || !m_runData->isExecuting() ) {
+        // The current job started executing the script
+        DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_runData->job(), "Debugger::slotStarted(): Start execution timer" );
+        m_runData->executionStarted( timestamp );
+    } else {
+        DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_runData->job(), "Debugger::slotStarted(): Is already executing and not waiting for a signal" );
     }
 }
 
@@ -164,6 +180,7 @@ void Debugger::slotStopped( const QDateTime &timestamp, ScriptStoppedFlags flags
 {
     Q_UNUSED( uncaughtExceptionLineNumber );
     Q_UNUSED( uncaughtException );
+    QMutexLocker locker( m_mutex );
     if ( !m_runData ) {
         kWarning() << "ScriptRunData already deleted";
         return;
@@ -181,15 +198,20 @@ void Debugger::slotStopped( const QDateTime &timestamp, ScriptStoppedFlags flags
         startTimeout();
         m_runData->waitingForSignal( timestamp );
         emit waitingForSignal();
+        return;
     } else {
         DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_runData->job(), "Debugger::slotStopped(): "
                                    "No running requests, job should get stopped now" );
         m_runData->executionStopped( timestamp );
     }
+
+    Q_ASSERT( m_runData->job() );
+    m_runData->job()->setJobDone();
 }
 
 void Debugger::slotAborted()
 {
+    QMutexLocker locker( m_mutex );
     foreach ( const QPointer<DebuggerJob> &job, m_runningJobs ) {
         job->requestAbort();
     }
@@ -201,6 +223,7 @@ void Debugger::slotAborted()
 void Debugger::slotInterrupted( int lineNumber, const QString &fileName,
                                 const QDateTime &timestamp )
 {
+    QMutexLocker locker( m_mutex );
     if ( !m_runData ) {
         kWarning() << "No ScriptRunData available";
         return;
@@ -212,6 +235,7 @@ void Debugger::slotInterrupted( int lineNumber, const QString &fileName,
 
 void Debugger::slotContinued( const QDateTime &timestamp, bool willInterruptAfterNextStatement )
 {
+    QMutexLocker locker( m_mutex );
     if ( !m_runData ) {
         kWarning() << "No ScriptRunData available";
         return;
@@ -224,10 +248,12 @@ void Debugger::slotContinued( const QDateTime &timestamp, bool willInterruptAfte
 void Debugger::slotJobStarted( ThreadWeaver::Job *job )
 {
     DebuggerJob *debuggerJob = qobject_cast< DebuggerJob* >( job );
-    m_runningJobs.push( QPointer<DebuggerJob>(debuggerJob) );
     Q_ASSERT( debuggerJob );
+    m_mutex->lock();
+    m_runningJobs.push( QPointer<DebuggerJob>(debuggerJob) );
     DEBUGGER_JOB_SYNCHRONIZATION_JOB( debuggerJob, QString("Debugger::slotJobStarted(): Job started, now %1 jobs running")
                                             .arg(m_runningJobs.count()) );
+    m_mutex->unlock();
     ExecuteConsoleCommandJob *consoleCommandJob = qobject_cast< ExecuteConsoleCommandJob* >( job );
     EvaluateInContextJob *evaluateInContextJob = qobject_cast< EvaluateInContextJob* >( job );
     emit jobStarted( debuggerJob->type(), debuggerJob->useCase(), debuggerJob->objectName() );
@@ -236,8 +262,12 @@ void Debugger::slotJobStarted( ThreadWeaver::Job *job )
     if ( !evaluateInContextJob && !consoleCommandJob ) {
         // Script execution gets started
         DEBUGGER_JOB_SYNCHRONIZATION_JOB( debuggerJob, "Debugger::slotJobStarted(): Start script execution, was not running" );
+
+        m_mutex->lock();
         m_running = true;
         m_runData = new ScriptRunData( debuggerJob );
+        m_mutex->unlock();
+
         emit started();
     }
 }
@@ -251,9 +281,12 @@ void Debugger::slotJobDone( ThreadWeaver::Job *job )
         job->deleteLater();
         return;
     }
+
+    m_mutex->lock();
     if ( debuggerJob != m_runningJobs.top() ) {
         kWarning() << "Unknown job done" << debuggerJob;
         kDebug() << "Current job is" << m_runningJobs.top();
+        m_mutex->unlock();
         return;
     }
     m_runningJobs.pop();
@@ -264,8 +297,10 @@ void Debugger::slotJobDone( ThreadWeaver::Job *job )
     EvaluateInContextJob *evaluateInContextJob = qobject_cast< EvaluateInContextJob* >( job );
 
     if ( job == m_loadScriptJob ) {
+        kDebug() << "LoadScriptJob is done";
         m_loadScriptJob = 0;
     }
+    m_mutex->unlock();
     stopTimeout();
 
     switch ( debuggerJob->type() ) {
@@ -325,10 +360,13 @@ void Debugger::slotJobDone( ThreadWeaver::Job *job )
     if ( !evaluateInContextJob && !consoleCommandJob ) {
         // Script execution has finished
         stopTimeout();
-        m_running = false;
 
+        m_mutex->lock();
+        m_running = false;
         if ( !m_runData ) {
             kWarning() << "ScriptRunData already deleted";
+            m_mutex->unlock();
+
             emit stopped( ScriptRunData() );
         } else {
             if ( m_runData->isExecuting() ) {
@@ -336,10 +374,12 @@ void Debugger::slotJobDone( ThreadWeaver::Job *job )
                                            "signal not correctly received for job" );
                 m_runData->executionStopped( QDateTime::currentDateTime() );
             }
-
-            emit stopped( *m_runData );
+            const ScriptRunData runData = *m_runData;
             delete m_runData;
             m_runData = 0;
+            m_mutex->unlock();
+
+            emit stopped( runData );
         }
     }
 
@@ -348,6 +388,7 @@ void Debugger::slotJobDone( ThreadWeaver::Job *job )
 
 void Debugger::startTimeout( int milliseconds )
 {
+    QMutexLocker locker( m_mutex );
     if ( !m_timeout ) {
         m_timeout = new QTimer( this );
         connect( m_timeout, SIGNAL(timeout()), this, SLOT(timeout()) );
@@ -357,6 +398,7 @@ void Debugger::startTimeout( int milliseconds )
 
 void Debugger::stopTimeout()
 {
+    QMutexLocker locker( m_mutex );
     if ( m_timeout ) {
         m_timeout->deleteLater();
         m_timeout = 0;
@@ -365,6 +407,7 @@ void Debugger::stopTimeout()
 
 void Debugger::timeout()
 {
+    QMutexLocker locker( m_mutex );
     if ( m_timeout ) {
         kDebug() << "Timeout, execution took longer than" << m_timeout->interval() << "ms";
         emit errorMessage( i18nc("@info/plain", "Execution timed out after %1",
@@ -381,6 +424,7 @@ void Debugger::timeout()
 
 void Debugger::removeAllBreakpoints()
 {
+    QMutexLocker locker( m_mutex );
     m_breakpointModel->clear();
 }
 
@@ -401,23 +445,27 @@ void Debugger::evaluateInContext( const QString &program, const QString &context
 
 LoadScriptJob *Debugger::createLoadScriptJob( DebugFlags debugFlags )
 {
+    QMutexLocker locker( m_mutex );
     return new LoadScriptJob( m_data, QString(), debugFlags, this );
 }
 
 bool Debugger::isLoadScriptJobRunning() const
 {
+    QMutexLocker locker( m_mutex );
     return m_loadScriptJob && !m_loadScriptJob->isFinished();
 }
 
 LoadScriptJob *Debugger::getLoadScriptJob( const QString &program, const ServiceProviderData *data,
                                            DebugFlags debugFlags )
 {
+    QMutexLocker locker( m_mutex );
     if ( isLoadScriptJobRunning() ) {
         // Script already gets loaded, return the running job
         return m_loadScriptJob;
     }
 
-    if ( !m_data.program.isNull() && m_data.program.sourceCode() == program &&
+    if ( m_lastScriptError == NoScriptError &&
+         !m_data.program.isNull() && m_data.program.sourceCode() == program &&
          (!m_data.provider.isValid() || m_data.provider == *data) )
     {
         // Script code and provider data unchanged
@@ -427,7 +475,7 @@ LoadScriptJob *Debugger::getLoadScriptJob( const QString &program, const Service
     // The script was modified or not loaded before
     m_state = ScriptModified;
     m_data = ScriptData( data, QScriptProgram(program, data->scriptFileName()) );
-    m_lastScriptError = NoScriptError;
+    m_lastScriptError = InitializingScript;
     return createLoadScriptJob( debugFlags );
 }
 
@@ -436,6 +484,7 @@ LoadScriptJob *Debugger::loadScript( const QString &program, const ServiceProvid
 {
     if ( isLoadScriptJobRunning() ) {
         // Script already gets loaded, return the running job
+        QMutexLocker locker( m_mutex );
         return m_loadScriptJob;
     }
 
@@ -451,12 +500,14 @@ LoadScriptJob *Debugger::loadScript( const QString &program, const ServiceProvid
 TimetableDataRequestJob *Debugger::createTimetableDataRequestJob(
         const AbstractRequest *request, const QString &useCase, DebugFlags debugFlags )
 {
+    QMutexLocker locker( m_mutex );
     return new TimetableDataRequestJob( m_data, request, useCase, debugFlags, this );
 }
 
 ExecuteConsoleCommandJob *Debugger::createExecuteConsoleCommandJob( const ConsoleCommand &command,
                                                                     const QString &useCase )
 {
+    QMutexLocker locker( m_mutex );
     return new ExecuteConsoleCommandJob( m_data, command, useCase,
                                          hasRunningJobs() ? currentJob() : 0, this );
 }
@@ -465,6 +516,7 @@ EvaluateInContextJob *Debugger::createEvaluateInContextJob( const QString &progr
                                                             const QString &context,
                                                             const QString &useCase )
 {
+    QMutexLocker locker( m_mutex );
     return new EvaluateInContextJob( m_data, program, context, useCase,
                                      hasRunningJobs() ? currentJob() : 0, this );
 }
@@ -472,11 +524,13 @@ EvaluateInContextJob *Debugger::createEvaluateInContextJob( const QString &progr
 CallScriptFunctionJob *Debugger::createCallScriptFunctionJob( const QString &functionName,
         const QVariantList &arguments, const QString &useCase, DebugFlags debugFlags )
 {
+    QMutexLocker locker( m_mutex );
     return new CallScriptFunctionJob( m_data, functionName, arguments, useCase, debugFlags, this );
 }
 
 TestFeaturesJob *Debugger::createTestFeaturesJob( const QString &useCase, DebugFlags debugFlags )
 {
+    QMutexLocker locker( m_mutex );
     return new TestFeaturesJob( m_data, useCase, debugFlags, this );
 }
 
@@ -493,7 +547,8 @@ bool Debugger::canEvaluate( const QString &program ) const
 bool Debugger::requestTimetableData( const AbstractRequest *request, const QString &useCase,
                                      DebugFlags debugFlags )
 {
-    if ( m_lastScriptError != NoScriptError ) {
+    QMutexLocker locker( m_mutex );
+    if ( m_lastScriptError != NoScriptError && m_lastScriptError != InitializingScript ) {
         kWarning() << "Script could not be loaded correctly";
         emit requestTimetableDataResult( QSharedPointer< AbstractRequest >(request->clone()),
                 false, i18nc("@info", "Script could not be loaded correctly") );
@@ -558,6 +613,7 @@ void Debugger::connectJob( DebuggerJob *debuggerJob )
 
 bool Debugger::enqueueJob( DebuggerJob *debuggerJob )
 {
+    QMutexLocker locker( m_mutex );
     if ( m_loadScriptJob == debuggerJob ) {
         kDebug() << "Gets loaded, wait...";
         return true;
@@ -565,15 +621,32 @@ bool Debugger::enqueueJob( DebuggerJob *debuggerJob )
 
     connectJob( debuggerJob );
 
+    // Mark job as not done, wait until the stopped() signal of the job was processed
+    // in slotStopped() before marking it as done, allowing it to destroy the agent/engine then
+    debuggerJob->setJobDone( false );
+
     // Check job type to decide how to enqueue the new job
     switch ( debuggerJob->type() ) {
     case LoadScript:
+        // Allow only one LoadScriptJob in all Debugger instances at a time
+        static ThreadWeaver::ResourceRestrictionPolicy *loadScriptRestrictionPolicy =
+                new ThreadWeaver::ResourceRestrictionPolicy(1);
+        debuggerJob->assignQueuePolicy( loadScriptRestrictionPolicy );
+
         // A new version of the script can only be loaded into the engine, when no other job
         // currently accesses the engine (with an old version of the script loaded).
         assignDebuggerQueuePolicy( debuggerJob );
 
-        Q_ASSERT( !m_loadScriptJob );
+        if ( m_loadScriptJob ) {
+            // A LoadScriptJob exists already, maybe still running, most probably another
+            // LoadScriptJob gets enqueued because the provider has changed.
+            // Add the running LoadScriptJob as dependency for the new one.
+            ThreadWeaver::DependencyPolicy::instance().addDependency( debuggerJob, m_loadScriptJob );
+            m_loadScriptJob->assignQueuePolicy( &ThreadWeaver::DependencyPolicy::instance() );
+            debuggerJob->assignQueuePolicy( &ThreadWeaver::DependencyPolicy::instance() );
+        }
         m_loadScriptJob = qobject_cast< LoadScriptJob* >( debuggerJob );
+        Q_ASSERT( m_loadScriptJob );
         m_weaver->enqueue( debuggerJob );
         break;
     case ExecuteConsoleCommand: {
@@ -619,6 +692,7 @@ void Debugger::assignDebuggerQueuePolicy( DebuggerJob *job )
 {
     // Assign a resource restriction policy,
     // that ensures that only one job at a time uses the debugger
+    QMutexLocker locker( m_mutex );
     if ( !m_debuggerRestrictionPolicy ) {
         m_debuggerRestrictionPolicy = new ThreadWeaver::ResourceRestrictionPolicy( 1 );
     }
@@ -627,6 +701,7 @@ void Debugger::assignDebuggerQueuePolicy( DebuggerJob *job )
 
 void Debugger::assignEvaluateInContextQueuePolicy( DebuggerJob *job )
 {
+    QMutexLocker locker( m_mutex );
     if ( !m_evaluateInContextRestrictionPolicy ) {
         m_evaluateInContextRestrictionPolicy = new ThreadWeaver::ResourceRestrictionPolicy( 1 );
     }
@@ -635,6 +710,7 @@ void Debugger::assignEvaluateInContextQueuePolicy( DebuggerJob *job )
 
 void Debugger::runAfterScriptIsLoaded( ThreadWeaver::Job *dependendJob )
 {
+    QMutexLocker locker( m_mutex );
     if ( m_state != ScriptLoaded ) {
         // If the script is not loaded (still in initializing mode, error or modified)
         // create a job to load it and make the run script job dependend
@@ -643,7 +719,7 @@ void Debugger::runAfterScriptIsLoaded( ThreadWeaver::Job *dependendJob )
             enqueueJob( createLoadScriptJob(job ? job->debugFlags() : NeverInterrupt) );
         }
 
-        // Do not enqueue the dependend job, only add the LoadScriptJob as dependency
+        // Add the LoadScriptJob as dependency
         ThreadWeaver::DependencyPolicy::instance().addDependency( dependendJob, m_loadScriptJob );
         m_loadScriptJob->assignQueuePolicy( &ThreadWeaver::DependencyPolicy::instance() );
         dependendJob->assignQueuePolicy( &ThreadWeaver::DependencyPolicy::instance() );
@@ -656,6 +732,7 @@ void Debugger::loadScriptJobDone( ThreadWeaver::Job *job )
 {
     LoadScriptJob *loadScriptJob = qobject_cast< LoadScriptJob* >( job );
     Q_ASSERT( loadScriptJob );
+    QMutexLocker locker( m_mutex );
     if ( loadScriptJob->success() ) {
 
         m_state = ScriptLoaded;
@@ -722,6 +799,7 @@ void Debugger::asynchronousRequestWaitFinished( const QDateTime &timestamp,
                                                 int statusCode, int size )
 {
     Q_UNUSED( statusCode )
+    QMutexLocker locker( m_mutex );
     if ( m_runData ) {
         m_runData->asynchronousDownloadFinished( timestamp, size );
     } else {
@@ -741,14 +819,19 @@ void Debugger::synchronousRequestWaitFinished( int statusCode, int waitingTime, 
 
 void ScriptRunData::executionStopped( const QDateTime &timestamp )
 {
-    if ( m_state == WaitingForSignal ) {
-        DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "Error: Was still waiting for a signal" );
-    } else if ( m_state != Running ) { // !m_executing ) {
+    if ( m_state != Running && m_state != LoadingScript ) {
         DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "ERROR: Is not executing!" );
         return;
+    } else if ( m_job->type() != LoadScript && !isScriptLoaded() ) {
+        m_state = ScriptLoaded;
+        DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "New state: Script Loaded" );
+    } else {
+        if ( m_state == WaitingForSignal ) {
+            DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "Error: Was still waiting for a signal" );
+        }
+        m_state = Finished;
+        DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "New state: Finished" );
     }
-    m_state = Finished;
-    DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "New state: Finished" );
     m_executionTime += m_executionStartTimestamp.msecsTo( timestamp );
     m_executionStartTimestamp = QDateTime();
 }
@@ -758,13 +841,18 @@ void ScriptRunData::executionStarted( const QDateTime &timestamp )
     /*if ( m_state == Finished ) { // m_executionTime != 0 ) {
         DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "ERROR: Execution was already stopped" );
         return;
-    } else*/ if ( m_state == Running ) {
+    } else*/ if ( m_state == Running || m_state == LoadingScript ) {
         DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "ERROR: Is already executing!" );
         kDebug() << "Error state:" << m_state;
         return;
     }
-    m_state = Running;
-    DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "New state: Running" );
+    if ( m_job->type() != LoadScript && !isScriptLoaded() ) {
+        m_state = LoadingScript;
+        DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "New state: LoadingScript" );
+    } else {
+        m_state = Running;
+        DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "New state: Running" );
+    }
     m_executionStartTimestamp = timestamp;
 }
 
@@ -812,7 +900,7 @@ int ScriptRunData::wokeUpFromSignal( const QDateTime &timestamp )
 
 void ScriptRunData::interrupted( const QDateTime &timestamp )
 {
-    Q_ASSERT( m_state == Running );
+    Q_ASSERT( m_state == Running || m_state == LoadingScript );
     m_state = Interrupted;
     m_interruptTimestamp = timestamp;
     DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "New state: Interrupted" );
@@ -825,6 +913,71 @@ void ScriptRunData::continued( const QDateTime &timestamp )
     m_interruptTime += m_interruptTimestamp.msecsTo( timestamp );
     m_interruptTimestamp = QDateTime();
     DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_job, "New state: Running" );
+}
+
+bool Debugger::hasRunningJobs() const
+{
+    QMutexLocker locker( m_mutex );
+    return !m_runningJobs.isEmpty();
+}
+
+QStack< QPointer< DebuggerJob > > Debugger::runningJobs() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_runningJobs;
+}
+
+Debugger::ScriptState Debugger::scriptState() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_state;
+}
+
+ScriptErrorType Debugger::lastScriptError() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_lastScriptError;
+}
+
+QString Debugger::lastScriptErrorString() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_lastScriptErrorString;
+}
+
+VariableModel *Debugger::variableModel() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_variableModel;
+}
+
+BacktraceModel *Debugger::backtraceModel() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_backtraceModel;
+}
+
+BreakpointModel *Debugger::breakpointModel() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_breakpointModel;
+}
+
+WeaverInterfacePointer Debugger::weaver() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_weaver;
+}
+
+const QPointer< DebuggerJob > Debugger::currentJob() const
+{
+    QMutexLocker locker( m_mutex );
+    QPointer<DebuggerJob> job = m_runningJobs.top();
+    if ( ( job->type() == EvaluateInContext || job->type() == ExecuteConsoleCommand ) &&
+            m_runningJobs.count() > 1 ) {
+        job = m_runningJobs[ m_runningJobs.count() - 2 ];
+    }
+    return job;
 }
 
 }; // namespace Debugger

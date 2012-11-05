@@ -98,6 +98,7 @@ enum JobType {
 
 /** @brief Types of script errors. */
 enum ScriptErrorType {
+    InitializingScript = -1,
     NoScriptError = 0,
     ScriptLoadFailed,
     ScriptParseError,

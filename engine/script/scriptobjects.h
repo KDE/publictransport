@@ -43,6 +43,7 @@ struct ScriptData {
     ServiceProviderData provider;
     QScriptProgram program;
 };
+Q_DECLARE_METATYPE( ScriptData );
 
 struct ScriptObjects {
     /** @brief Read script objects from the engine's global object. */
@@ -67,5 +68,6 @@ struct ScriptObjects {
     QSharedPointer< Helper > helper;
     QString lastError;
 };
+Q_DECLARE_METATYPE( ScriptObjects );
 
 #endif // Multiple inclusion guard

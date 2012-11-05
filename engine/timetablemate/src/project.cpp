@@ -34,6 +34,7 @@
 #include "tabs/plasmapreviewtab.h"
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     #include "tabs/scripttab.h"
+    #include "../../script/scripting.h" // For Q_DECLARE_METATYPE's (eg. Helper::ErrorSeverity used in connections)
 #endif
 #include "debugger/debugger.h"
 #include "debugger/backtracemodel.h"
@@ -91,6 +92,7 @@
 #include <QBuffer>
 #include <QFileInfo>
 #include <QMutex>
+#include <QTimer>
 
 class ProjectPrivate
 {
@@ -128,7 +130,8 @@ public:
 #endif
           provider(ServiceProvider::createInvalidProvider(project)),
           testModel(new TestModel(project)), testState(NoTestRunning),
-          suppressMessages(false), enableQuestions(true), q_ptr(project)
+          lastScriptError(NoScriptError), suppressMessages(false), enableQuestions(true),
+          q_ptr(project)
     {
     };
 
@@ -1308,6 +1311,10 @@ public:
     bool startScriptExecutionTest( TestModel::Test test )
     {
         Q_Q( Project );
+        if ( pendingTests.contains(test) ) {
+            // Test was already enqueued
+            return true;
+        }
 
         const QList< TestModel::Test > requiredTests = TestModel::testIsDependedOf( test );
         for ( int i = 0; i < requiredTests.count(); ++i ) {
@@ -1482,13 +1489,16 @@ public:
                 break;
             }
 
-            // Create job
-            DebuggerJob *job;
+            // Create job, QPointer for LoadScriptJob
+            QPointer<DebuggerJob> job;
             if ( test == TestModel::LoadScriptTest ) {
                 job = debugger->getLoadScriptJob( q->scriptText(), data() );
                 if ( !job ) {
-                    // Script already loaded and not changed
+                    // LoadScriptJob already finished and the script was not changed
+                    lastScriptError = debugger->lastScriptError();
+                    lastScriptErrorString = debugger->lastScriptErrorString();
                     testFinished( test );
+
                     if ( lastScriptError == Debugger::NoScriptError ) {
                         testModel->setTestState( test, TestModel::TestFinishedSuccessfully,
                                                  i18nc("@info/plain", "Script successfully loaded") );
@@ -1499,6 +1509,7 @@ public:
                         return false;
                     }
                 } else if ( debugger->isLoadScriptJobRunning() && !job->isFinished() ) {
+                    // A LoadScriptJob has already been started
                     job->setObjectName( "TEST_LOAD" );
 
                     // The started signal of the LoadScriptJob was already sent, update test model
@@ -1507,6 +1518,8 @@ public:
                     q->testJobStarted( test, job->type(), job->useCase() );
                     return true;
                 } else {
+                    // New LoadScriptJob was created, the script was changed since the last
+                    // LoadScriptJob or none has been started yet
                     job->setObjectName( "TEST_LOAD" );
                 }
             } else if ( test == TestModel::FeaturesTest ) {
@@ -1572,6 +1585,7 @@ public:
                 delete request;
             }
 
+            Q_ASSERT( job );
             job->setUseCase( TestModel::nameForTest(test) );
 
             // Try to enqueue the job
@@ -2014,7 +2028,7 @@ public:
         }
         if ( !tests.isEmpty() ) {
             DEBUGGER_JOB_SYNCHRONIZATION("All requirements for tests" << tests
-                                         << "are finished with test" << finishedTest);
+                                         << "are finished with test" << finishedTest << data()->id());
         }
         return tests;
     };
@@ -2035,7 +2049,7 @@ public:
              pendingTests.isEmpty() && dependendTests.isEmpty() )
         {
             // The last pending test has finished
-            DEBUGGER_JOB_SYNCHRONIZATION("The last pending test has finished");
+            DEBUGGER_JOB_SYNCHRONIZATION("The last pending test has finished" << data()->id());
             endTesting();
         } else {
             startTests( takeStartableDependentTests(test) );
@@ -2156,8 +2170,9 @@ void Project::clearOutput()
 void Project::appendOutput( const QString &output, const QColor &color )
 {
     Q_D( Project );
-    QMutexLocker locker( d->mutex );
+    d->mutex->lock();
     if ( output.isEmpty() ) {
+        d->mutex->unlock();
         return;
     }
     if ( !d->output.isEmpty() ) {
@@ -2170,9 +2185,13 @@ void Project::appendOutput( const QString &output, const QColor &color )
         QString colorizedOutput = output;
         colorizedOutput.prepend("<span style='color:" + colorString + ";'>").append("</span>");
         d->output.append( colorizedOutput );
+        d->mutex->unlock();
+
         emit outputAppended( colorizedOutput );
     } else {
         d->output.append( output );
+        d->mutex->unlock();
+
         emit outputAppended( output );
     }
     emit outputChanged();
@@ -2668,6 +2687,7 @@ void Project::slotActiveProjectChanged( Project *project, Project *previousProje
     if ( project == this ) {
         emit activeProjectStateChanged( true );
 
+        QMutexLocker locker( d->mutex );
         d->updateProjectActions( QList<ProjectActionGroup>()
                 << TestActionGroup << FileActionGroup << OtherActionGroup
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -3338,6 +3358,8 @@ ScriptTab *Project::showScriptTab( QWidget *parent )
             connect( d->scriptTab->document(), SIGNAL(documentSavedOrUploaded(KTextEditor::Document*,bool)),
                      this, SLOT(scriptSaved()) );
             emit tabOpenRequest( d->scriptTab );
+        } else {
+            kWarning() << "Could not create script tab";
         }
     }
     return d->scriptTab;
@@ -3639,23 +3661,29 @@ bool Project::startTestCase( TestModel::TestCase testCase )
 void Project::testProject()
 {
     Q_D( Project );
-    QMutexLocker locker( d->mutex );
+    d->mutex->lock();
     if ( !d->askForProjectActivation(ProjectPrivate::ActivateProjectForTests) ||
          !d->beginTesting(TestModel::allTests()) )
     {
+        d->mutex->unlock();
         return;
     }
-
     d->testModel->clear();
+    d->mutex->unlock();
+
     startTestCase( TestModel::ServiceProviderDataTestCase ); // This test case runs synchronously
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     // Run the script and check the results
-    if ( !startTestCase(TestModel::ScriptExecutionTestCase) ||
-         d->testState == ProjectPrivate::TestsGetAborted )
-    {
+    if ( !startTestCase(TestModel::ScriptExecutionTestCase) ) {
+        QMutexLocker locker( d->mutex );
         d->endTesting();
         return;
+    }
+
+    QMutexLocker locker( d->mutex );
+    if ( d->testState == ProjectPrivate::TestsGetAborted ) {
+        d->endTesting();
     }
 #endif
 }
@@ -3808,6 +3836,11 @@ void Project::jobDone( JobType type, const QString &useCase, const QString &obje
         returnValue = "undefined";
     }
     TestModel::Test test = testFromObjectName( objectName );
+    if ( test == TestModel::InvalidTest && type == Debugger::LoadScript && d->isTestRunning() ) {
+        kWarning() << "LoadScriptJob done while testing without objectName set to TEST_LOAD";
+        test = TestModel::LoadScriptTest;
+    }
+
     if ( test != TestModel::InvalidTest ) {
         testJobDone( test, type, useCase, result );
     }
@@ -4156,7 +4189,7 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
         request.dateTime = dateTime->dateTime();
         request.parseMode = dataType->itemData( dataType->currentIndex() ).toString()
                 == QLatin1String("arr") ? ParseForJourneysByArrivalTime
-                                        : ParseForJourneysByDepartureTime;
+                                        : ParseForJourneysByDepartureTime );
     }
     if ( cancelled ) {
         *cancelled = result != KDialog::Accepted;
@@ -4368,7 +4401,7 @@ void Project::scriptException( int lineNumber, const QString &errorMessage, cons
         tab = showExternalScriptTab( fileName );
     }
 
-    if ( !d->suppressMessages ) {
+    if ( !d->suppressMessages && tab ) {
         tab->document()->views().first()->setCursorPosition(
                 KTextEditor::Cursor(lineNumber - 1, 0) );
     }
@@ -4583,6 +4616,7 @@ WebTab *Project::createWebTab( QWidget *parent )
         d->connectTab( d->webTab );
 
         // Load the service providers home page
+        qApp->processEvents();
         d->webTab->webView()->setUrl( d->provider->data()->url() );
         return d->webTab;
     } else {
@@ -4663,7 +4697,6 @@ ScriptTab *Project::createScriptTab( QWidget *parent )
 {
     Q_D( Project );
     QMutexLocker locker( d->mutex );
-
     if ( d->scriptTab ) {
         kWarning() << "Script tab already created";
         return d->scriptTab;
@@ -4673,6 +4706,7 @@ ScriptTab *Project::createScriptTab( QWidget *parent )
     parent = d->parentWidget( parent );
     d->scriptTab = ScriptTab::create( this, parent );
     if ( !d->scriptTab ) {
+        kWarning() << "Service katepart.desktop not found";
         d->errorHappened( KatePartError, i18nc("@info", "Service katepart.desktop not found") );
         return 0;
     }
@@ -4966,7 +5000,7 @@ QString Project::scriptText( const QString &includedScriptFilePath ) const
     // Read and close script file
     const QByteArray ba = file.readAll();
     file.close();
-    return QString( ba );
+    return QString::fromUtf8( ba );
 }
 
 void Project::setScriptText( const QString &text )

@@ -41,6 +41,7 @@
 #include <QSemaphore>
 #include <QTimer>
 #include <QEventLoop>
+#include <QFile>
 #include <QApplication>
 
 namespace Debugger {
@@ -48,12 +49,12 @@ namespace Debugger {
 DebuggerJob::DebuggerJob( const ScriptData &scriptData, const QString &useCase, QObject *parent )
         : ThreadWeaver::Job(parent), m_agent(0), m_data(scriptData), m_debugger(0),
           m_success(true), m_aborted(false), m_mutex(new QMutex(QMutex::Recursive)),
-          m_engineSemaphore(new QSemaphore(1)), m_useCase(useCase), m_quit(false),
-          m_scriptObjectTargetThread(0), m_currentLoop(0)
+          m_waitLoop(0), m_engineSemaphore(new QSemaphore(1)),
+          m_useCase(useCase), m_quit(false), m_scriptObjectTargetThread(0), m_currentLoop(0),
+          m_stoppedSignalWasProcessed(true)
 {
     Q_ASSERT_X( scriptData.isValid(), "DebuggerJob constructor",
                 "ScriptData contains invalid data, no provider data and/or script code loaded" );
-    qRegisterMetaType< ScriptObjects >( "ScriptObjects" );
 
     QMutexLocker locker( m_mutex );
     if ( m_useCase.isEmpty() ) {
@@ -65,14 +66,15 @@ DebuggerJob::DebuggerJob( DebuggerAgent *debugger, QSemaphore *engineSemaphore,
                           const ScriptData &scriptData, const ScriptObjects &objects,
                           const QString &useCase, QObject *parent )
         : ThreadWeaver::Job(parent), m_agent(debugger), m_data(scriptData), m_objects(objects),
-          m_success(true), m_aborted(false), m_mutex(new QMutex()), m_engineSemaphore(engineSemaphore),
-          m_useCase(useCase), m_quit(false), m_scriptObjectTargetThread(0)
+          m_success(true), m_aborted(false), m_mutex(new QMutex(QMutex::Recursive)),
+          m_waitLoop(0), m_engineSemaphore(engineSemaphore),
+          m_useCase(useCase), m_quit(false), m_scriptObjectTargetThread(0),
+          m_stoppedSignalWasProcessed(true)
 {
     Q_ASSERT_X( scriptData.isValid(), "DebuggerJob constructor",
                 "ScriptData contains invalid data, no provider data and/or script code loaded" );
     Q_ASSERT_X( objects.isValid(), "DebuggerJob constructor",
                 "ScriptObjects contains invalid objects, use ScriptObjects::createObjects()" );
-    qRegisterMetaType< ScriptObjects >( "ScriptObjects" );
 
     QMutexLocker locker( m_mutex );
     if ( m_useCase.isEmpty() ) {
@@ -249,15 +251,18 @@ void DebuggerJob::attachAgent( DebuggerAgent *agent )
     // Initialize and connect the new agent.
     // The agent lives in the thread of this job, while the job itself lives in the GUI thread.
     // Therefore the connections below are queued connections.
-    QMutexLocker locker( m_mutex );
+    m_mutex->lock();
     m_agent = agent;
     agent->setMainScriptFileName( m_data.provider.scriptFileName() );
     agent->setDebugFlags( NeverInterrupt );
+    Debugger *debugger = m_debugger;
+    m_mutex->unlock();
+
     connectAgent( agent );
 
     // Add existing breakpoints
-    if ( m_debugger ) {
-        BreakpointModel *breakpointModel = m_debugger->breakpointModel();
+    if ( debugger ) {
+        BreakpointModel *breakpointModel = debugger->breakpointModel();
         for ( int i = 0; i < breakpointModel->rowCount(); ++i ) {
             agent->addBreakpoint( *breakpointModel->breakpointFromRow(i) );
         }
@@ -352,13 +357,16 @@ void DebuggerJob::slotStopped( const QDateTime &timestamp, bool aborted, bool ha
 DebuggerAgent *DebuggerJob::createAgent() {
     // m_engineSemaphore is expected to be locked here
     // Create engine and agent and connect them
-    QMutexLocker locker( m_mutex );
+    m_mutex->lock();
     QScriptEngine *engine = new QScriptEngine();
     DebuggerAgent *agent = new DebuggerAgent( engine, m_engineSemaphore, true );
+    m_mutex->unlock();
+
     engine->setAgent( agent );
     attachAgent( agent );
 
     // Initialize the script
+    QMutexLocker locker( m_mutex );
     const ScriptData data = m_data;
     m_objects.createObjects( data );
     if ( !m_objects.attachToEngine(engine, data) ) {
@@ -380,21 +388,44 @@ DebuggerAgent *DebuggerJob::createAgent() {
 void DebuggerJob::destroyAgent()
 {
     // m_engineSemaphore is expected to be locked here
-    QMutexLocker locker( m_mutex );
-    m_objects.clear();
-    m_agent->engine()->setAgent( 0 );
+    m_mutex->lock();
     DebuggerAgent *agent = m_agent;
     QScriptEngine *engine = agent->engine();
+    m_mutex->unlock();
+
+    m_mutex->lock();
+    if ( !m_stoppedSignalWasProcessed ) {
+        kWarning() << "No stopped() signal was processed, aborted?";
+        setJobDone( true );
+        m_agent->engine()->abortEvaluation();
+    }
+    DEBUG_JOBS( "Destroying agent" << m_data.provider.id() << agent << engine );
+    if ( engine->isEvaluating() ) {
+        kWarning() << "Still evaluating..." << engine;
+    }
     m_agent = 0;
+    engine->setAgent( 0 );
+    m_objects.clear();
     delete agent;
-    delete engine;
+    engine->deleteLater();
+    m_mutex->unlock();
+}
+
+void DebuggerJob::setJobDone( bool done )
+{
+    // The stopped() signal was processed in a connected Debugger instance
+    QMutexLocker locker( m_mutex );
+    m_stoppedSignalWasProcessed = done;
+    if ( done && m_waitLoop ) {
+        m_waitLoop->exit();
+    }
 }
 
 bool DebuggerJob::waitFor( QObject *sender, const char *signal, WaitForType type )
 {
     // The called function returned, but asynchronous network requests may have been started.
     // Wait for all network requests to finish, because slots in the script may get called
-    const int finishWaitTime = 100;
+    const int finishWaitTime = 1000;
     int finishWaitCounter = 0;
 
     m_mutex->lockInline();
@@ -407,11 +438,13 @@ bool DebuggerJob::waitFor( QObject *sender, const char *signal, WaitForType type
 
     DebuggerAgent *agent = m_agent;
     ScriptObjects objects = m_objects;
+    bool stoppedSignalWasProcessed = m_stoppedSignalWasProcessed;
     m_mutex->unlockInline();
 
     while ( !agent->wasLastRunAborted() && finishWaitCounter < 50 && sender ) {
         if ( (type == WaitForNetwork && !objects.network->hasRunningRequests()) ||
-             (type == WaitForScriptFinish && !agent->engine()->isEvaluating())  ||
+             (type == WaitForScriptFinish &&
+              !agent->engine()->isEvaluating() && stoppedSignalWasProcessed)  ||
              (type == WaitForInterrupt && agent->isInterrupted())  ||
              (type == WaitForNothing && finishWaitCounter > 0) )
         {
@@ -429,6 +462,7 @@ bool DebuggerJob::waitFor( QObject *sender, const char *signal, WaitForType type
 
         // Engine continues execution here / waits for a signal
         loop.exec();
+        qApp->processEvents();
 
         m_mutex->lockInline();
         if ( !m_currentLoop || m_quit ) {
@@ -438,6 +472,7 @@ bool DebuggerJob::waitFor( QObject *sender, const char *signal, WaitForType type
             return false;
         }
         m_currentLoop = 0;
+        stoppedSignalWasProcessed = m_stoppedSignalWasProcessed;
         m_mutex->unlockInline();
 
         ++finishWaitCounter;
@@ -475,8 +510,10 @@ void LoadScriptJob::debuggerRun()
     }
 
     // Create new engine and agent
+    m_mutex->unlockInline();
     m_engineSemaphore->acquire();
     DebuggerAgent *agent = createAgent();
+    m_mutex->lockInline();
     if ( !agent || m_quit ) {
         m_mutex->unlockInline();
         if ( agent ) {
@@ -486,21 +523,23 @@ void LoadScriptJob::debuggerRun()
         return;
     }
     const ScriptData data = m_data;
+    const ScriptObjects objects = m_objects;
     const DebugFlags debugFlags = m_debugFlags;
     m_mutex->unlockInline();
 
     agent->setDebugFlags( debugFlags );
     agent->setExecutionControlType( debugFlags.testFlag(InterruptAtStart)
                                     ? ExecuteInterrupt : ExecuteRun );
-
-    // Evaluate the script
     agent->engine()->evaluate( data.program );
-    Q_ASSERT_X( !agent->engine()->isEvaluating(), "LoadScriptJob::debuggerRun()",
+    Q_ASSERT_X( !objects.network->hasRunningRequests() || !agent->engine()->isEvaluating(),
+                "LoadScriptJob::debuggerRun()",
                 "Evaluating the script should not start any asynchronous requests, bad script" );
 
-    // Check that the getTimetable() function is implemented in the script
+    // Wait for the stopped signal
     const bool aborted = agent->wasLastRunAborted();
     if ( aborted ) {
+        kDebug() << "Aborted" << m_data.provider.id();
+        m_stoppedSignalWasProcessed = true; // Do not crash on assert in destroyAgent()
         destroyAgent();
         QMutexLocker locker( m_mutex );
         m_explanation = i18nc("@info/plain", "Was aborted");
@@ -510,6 +549,25 @@ void LoadScriptJob::debuggerRun()
         return;
     }
 
+    m_mutex->lock();
+    if ( !m_stoppedSignalWasProcessed ) {
+        // Wait for the stopped() signal to be processed by the connected Debugger instance
+        m_waitLoop = new QEventLoop();
+        m_mutex->unlock();
+        m_waitLoop->exec();
+
+        // The stopped() signal was processed
+        m_mutex->lock();
+        delete m_waitLoop;
+        m_waitLoop = 0;
+        Q_ASSERT( m_stoppedSignalWasProcessed );
+        m_mutex->unlock();
+    } else {
+        m_mutex->unlock();
+    }
+
+
+    // Check that the getTimetable() function is implemented in the script
     const QString functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
     const QScriptValue function = agent->engine()->globalObject().property( functionName );
     if ( !function.isFunction() ) {
@@ -537,7 +595,7 @@ void LoadScriptJob::debuggerRun()
             agent->engine()->globalObject().property( "includedFiles" ).toVariant().toStringList();
     m_engineSemaphore->release();
 
-    QMutexLocker locker( m_mutex );
+    m_mutex->lock();
     if ( !m_success || m_quit ) {
         m_success = false;
     } else if ( agent->hasUncaughtException() ) {
@@ -561,6 +619,7 @@ void LoadScriptJob::debuggerRun()
         m_globalFunctions = globalFunctions;
         m_success = true;
     }
+    m_mutex->unlock();
 
     m_engineSemaphore->acquire();
     destroyAgent();

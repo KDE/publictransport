@@ -457,6 +457,8 @@ public:
         return value == -1 ? NoLineService : static_cast< LineService >( value );
     };
 };
+Q_DECLARE_METATYPE( Enums::ServiceProviderType )
+Q_DECLARE_METATYPE( Enums::TimetableInformation )
 
 /** @brief Stores information about a departure/arrival/journey/stop suggestion. */
 typedef QHash<Enums::TimetableInformation, QVariant> TimetableData;
@@ -471,6 +473,7 @@ enum ParseDocumentMode {
     ParseForStopSuggestions, /**< Parsing for stop suggestions. */
     ParseForAdditionalData /**< Parsing for additional data. */
 };
+Q_DECLARE_METATYPE( ParseDocumentMode )
 
 /** @brief Enumerables describing for what to wait in ScriptJob/DebuggerJob::waitFor(). */
 enum WaitForType {
@@ -488,7 +491,7 @@ enum UpdateFlag {
     UpdateWasRequestedManually = 0x02, /**< The update was requested manually. */
     DefaultUpdateFlags = NoUpdateFlags /**< Default update flags. */
 };
-Q_DECLARE_FLAGS( UpdateFlags, UpdateFlag );
+Q_DECLARE_FLAGS( UpdateFlags, UpdateFlag )
 
 /* Functions for nicer debug output */
 inline QDebug &operator <<( QDebug debug, ParseDocumentMode parseDocumentMode )

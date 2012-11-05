@@ -84,6 +84,9 @@ class ScriptRunData {
 public:
     enum State {
         Initializing = 0,
+        LoadingScript,
+        ScriptLoaded, /**< The script has evaluated, ie. loaded, but no function has been called.
+                * LoadScriptJob does not use this and directly uses Finished instead. */
         Running,
         WaitingForSignal,
         Interrupted,
@@ -93,6 +96,7 @@ public:
     DebuggerJob *job() const { return m_job; };
 
     bool isExecuting() const { return m_state != Initializing && m_state != Finished; };
+    bool isScriptLoaded() const { return m_state >= ScriptLoaded; };
     bool isWaitingForSignal() const { return m_state == WaitingForSignal; };
 
     /** @brief The time in milliseconds spent for script execution. */
@@ -137,9 +141,8 @@ protected:
     void continued( const QDateTime &timestamp );
 
     void asynchronousDownloadFinished( const QDateTime &timestamp, int size ) {
+        Q_UNUSED( timestamp )
         m_asynchronousDownloadSize += size;
-        // TODO call wokeUpFromSignal() here?
-        wokeUpFromSignal( timestamp );
     };
 
     void synchronousDownloadFinished( int waitingTime, int size ) {
@@ -219,26 +222,32 @@ public:
     /** @brief Destructor. */
     virtual ~Debugger();
 
-    inline bool hasRunningJobs() const { return !m_runningJobs.isEmpty(); };
-    inline QStack< QPointer<DebuggerJob> > runningJobs() const { return m_runningJobs; };
+    bool hasRunningJobs() const;
+    QStack< QPointer<DebuggerJob> > runningJobs() const;
 
     /** @brief Get the current state of the debugger. */
-    inline DebuggerState state() const { return !hasRunningJobs() ? NotRunning : currentJob()->state(); };
+    inline DebuggerState state() const {
+        return !hasRunningJobs() ? NotRunning : currentJob()->state();
+    };
 
     /** @brief Whether or not the debugger is currently running. */
-    inline bool isRunning() const { return !hasRunningJobs() ? false : currentJob()->isRunning(); };
+    inline bool isRunning() const {
+        return !hasRunningJobs() ? false : currentJob()->isRunning();
+    };
 
     /** @brief Whether or not the debugger is currently interrupted. */
-    inline bool isInterrupted() const { return !hasRunningJobs() ? false : currentJob()->isInterrupted(); };
+    inline bool isInterrupted() const {
+        return !hasRunningJobs() ? false : currentJob()->isInterrupted();
+    };
 
     /** @brief Get the current state of the script. */
-    inline ScriptState scriptState() const { return m_state; };
+    ScriptState scriptState() const;
 
     /** @brief Get the type of the last script error, if scriptState() returns ScriptError. */
-    inline ScriptErrorType lastScriptError() const { return m_lastScriptError; };
+    ScriptErrorType lastScriptError() const;
 
     /** @brief Get a descriptive string for the last script error, if scriptState() returns ScriptError. */
-    inline QString lastScriptErrorString() const { return m_lastScriptErrorString; };
+    QString lastScriptErrorString() const;
 
     /** @brief The name of the currently executed source file. */
     inline QString currentSourceFile() const {
@@ -267,13 +276,13 @@ public:
     };
 
     /** @brief Get a pointer to the VariableModel used by this debugger. */
-    inline VariableModel *variableModel() const { return m_variableModel; };
+    VariableModel *variableModel() const;
 
     /** @brief Get a pointer to the BacktraceModel used by this debugger. */
-    inline BacktraceModel *backtraceModel() const { return m_backtraceModel; };
+    BacktraceModel *backtraceModel() const;
 
     /** @brief Get a pointer to the BreakpointModel used by this debugger. */
-    inline BreakpointModel *breakpointModel() const { return m_breakpointModel; };
+    BreakpointModel *breakpointModel() const;
 
     /**
      * @brief Load script code @p program.
@@ -383,7 +392,7 @@ public:
     TestFeaturesJob *createTestFeaturesJob( const QString &useCase = QString(),
                                             DebugFlags debugFlags = DefaultDebugFlags );
 
-    WeaverInterfacePointer weaver() const { return m_weaver; };
+    WeaverInterfacePointer weaver() const;
 
     /**
      * @brief Blocks until the debugger has been completely shut down.
@@ -609,24 +618,18 @@ private:
     LoadScriptJob *createLoadScriptJob( DebugFlags debugFlags = NeverInterrupt );
     void connectJob( DebuggerJob *debuggerJob );
 
-    void startTimeout( int milliseconds = 5000 );
+    // Timeout for network requests, leave some time, many tests may be running in parallel
+    void startTimeout( int milliseconds = 10000 );
     void stopTimeout();
 
-    inline const QPointer<DebuggerJob> currentJob() const {
-        QPointer<DebuggerJob> job = m_runningJobs.top();
-        if ( (job->type() == EvaluateInContext || job->type() == ExecuteConsoleCommand) &&
-             m_runningJobs.count() > 1 )
-        {
-            job = m_runningJobs[ m_runningJobs.count() - 2 ];
-        }
-        return job;
-    };
+    const QPointer<DebuggerJob> currentJob() const;
     inline bool isEvaluating() const {
         return hasRunningJobs() ? currentJob()->isEvaluating() : false;
     };
 
     ScriptState m_state;
     WeaverInterfacePointer m_weaver;
+    QMutex *m_mutex;
     LoadScriptJob *m_loadScriptJob;
     QStack< QPointer<DebuggerJob> > m_runningJobs;
 

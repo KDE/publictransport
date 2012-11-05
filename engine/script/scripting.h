@@ -33,7 +33,6 @@
 #include <QScriptEngine>
 #include <QScriptable> // Base class
 #include <QUrl>
-// #include <QMetaType> // For Q_DECLARE_METATYPE
 
 class PublicTransportInfo;
 class ServiceProviderData;
@@ -264,7 +263,7 @@ class Network;
  * <tr><td>@image html hi16-app-vehicle_type_subway.png
  * </td><td>PublicTransport.Subway</td>
  * <tr><td>@image html hi16-app-vehicle_type_train_interurban.png
- * </td><td>PublicTransport.TrainInterurban</td>
+ * </td><td>PublicTransport.InterurbanTrain</td>
  * <tr><td>@image html hi16-app-vehicle_type_metro.png
  * </td><td>PublicTransport.Metro</td>
  * <tr><td>@image html hi16-app-vehicle_type_trolleybus.png
@@ -843,11 +842,7 @@ public:
      * @param serviceProviderId The ID of the service provider this Helper object is created for.
      * @param parent The parent object.
      **/
-    explicit Helper( const QString &serviceProviderId, QObject* parent = 0 )
-            : QObject(parent), m_serviceProviderId(serviceProviderId), m_errorMessageRepetition(0)
-    {
-        qRegisterMetaType< Helper::ErrorSeverity >( "Helper::ErrorSeverity" );
-    };
+    explicit Helper( const QString &serviceProviderId, QObject* parent = 0 );
 
     virtual ~Helper();
 
@@ -1310,6 +1305,7 @@ private:
                           Helper::ErrorSeverity severity );
     void emitRepeatedMessageWarning();
 
+    QMutex *m_mutex;
     QString m_serviceProviderId;
     QString m_lastErrorMessage;
     int m_errorMessageRepetition;
@@ -1959,7 +1955,14 @@ void dataStreamFromScript( const QScriptValue &object, DataStreamPrototypePtr &s
 
 }; // namespace Scripting
 
+Q_DECLARE_METATYPE(Scripting::Helper::ErrorSeverity)
+Q_DECLARE_METATYPE(Scripting::ResultObject::Hint)
+Q_DECLARE_METATYPE(Scripting::ResultObject::Hints)
+Q_DECLARE_METATYPE(Scripting::ResultObject::Feature)
+Q_DECLARE_METATYPE(Scripting::ResultObject::Features)
+
 Q_DECLARE_METATYPE(Scripting::NetworkRequest*)
+Q_DECLARE_METATYPE(Scripting::NetworkRequest::Ptr)
 Q_SCRIPT_DECLARE_QMETAOBJECT(Scripting::NetworkRequest, QObject*)
 
 Q_DECLARE_METATYPE(QIODevice*)
@@ -1967,4 +1970,4 @@ Q_DECLARE_METATYPE(QDataStream*)
 Q_DECLARE_METATYPE(Scripting::DataStreamPrototype*)
 Q_SCRIPT_DECLARE_QMETAOBJECT(Scripting::DataStreamPrototype, QObject*)
 
-#endif // SCRIPTING_HEADER
+#endif // Multiple inclusion guard

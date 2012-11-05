@@ -54,14 +54,14 @@
 namespace Scripting {
 
 NetworkRequest::NetworkRequest( QObject *parent )
-        : QObject(parent), m_mutex(new QMutex()), m_network(0), m_isFinished(false),
-          m_request(0), m_reply(0)
+        : QObject(parent), m_mutex(new QMutex(QMutex::Recursive)), m_network(0),
+          m_isFinished(false), m_request(0), m_reply(0)
 {
 }
 
 NetworkRequest::NetworkRequest( const QString &url, const QString &userUrl,
                                 Network *network, QObject* parent )
-        : QObject(parent), m_mutex(new QMutex()), m_url(url),
+        : QObject(parent), m_mutex(new QMutex(QMutex::Recursive)), m_url(url),
           m_userUrl(userUrl.isEmpty() ? url : userUrl), m_network(network),
           m_isFinished(false), m_request(new QNetworkRequest(url)), m_reply(0)
 {
@@ -126,9 +126,10 @@ QByteArray gzipDecompress( QByteArray compressData )
     compressData.chop( 12 );
 
     // FIXME Decompress in one chunk, because otherwise it fails with error -3 "distance too far back",
-    // estimate size of uncompressed data, expect that the data was compressed at best to 30% size,
+    // estimate size of uncompressed data, expect that the data was compressed at best to 20% size,
     // limit to 512KB
-    const int chunkSize = qMin( int(compressData.size() / 0.3), 512 * 1024 );
+    const int chunkSize = qMin( int(compressData.size() / 0.2), 512 * 1024 );
+    kDebug() << "Chunk size:" << chunkSize;
     if ( chunkSize == 512 * 1024 ) {
         kWarning() << "Maximum chunk size for decompression reached, may fail";
     }
@@ -479,18 +480,16 @@ void Network::slotRequestAborted()
 
     NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
     NetworkRequest::Ptr sharedRequest = getSharedRequest( request );
-    Q_ASSERT( sharedRequest ); // This slot should only be connected to signals of NetworkRequest
+    if ( !sharedRequest ) {
+        kWarning() << "Network object already deleted?";
+    }
+//     Q_ASSERT( sharedRequest ); // This slot should only be connected to signals of NetworkRequest
 
     DEBUG_NETWORK("Aborted" << request->url());
     m_lastDownloadAborted = true;
     m_mutex->unlockInline();
 
     emit requestAborted( sharedRequest );
-
-    // TEST already gets emitted in slotRequestFinished()
-//     if ( m_runningRequests.isEmpty() ) {
-//         emit allRequestsFinished();
-//     }
 }
 
 bool Network::checkRequest( NetworkRequest* request )
@@ -664,7 +663,6 @@ QByteArray Network::getSynchronous( const QString &url, const QString &userUrl, 
 ResultObject::ResultObject( QObject* parent )
         : QObject(parent), m_mutex(new QMutex()), m_features(DefaultFeatures), m_hints(NoHint)
 {
-    qRegisterMetaType< Enums::TimetableInformation >( "Enums::TimetableInformation" );
 }
 
 ResultObject::~ResultObject()
@@ -957,33 +955,44 @@ QString Helper::decode( const QByteArray &document, const QByteArray &charset )
     return Global::decode( document, charset );
 }
 
+Helper::Helper( const QString &serviceProviderId, QObject *parent )
+        : QObject(parent), m_mutex(new QMutex()), m_serviceProviderId(serviceProviderId),
+          m_errorMessageRepetition(0)
+{
+}
+
 Helper::~Helper()
 {
     emitRepeatedMessageWarning();
+    delete m_mutex;
 }
 
 void Helper::emitRepeatedMessageWarning()
 {
+    QMutexLocker locker( m_mutex );
     if ( m_errorMessageRepetition > 0 ) {
         kDebug() << "(Last error message repeated" << m_errorMessageRepetition << "times)";
-        emit messageReceived( i18nc("@info/plain", "Last error message repeated %1 times",
-                                  m_errorMessageRepetition), QScriptContextInfo() );
         m_errorMessageRepetition = 0;
+        emit messageReceived( i18nc("@info/plain", "Last error message repeated %1 times",
+                                    m_errorMessageRepetition), QScriptContextInfo() );
     }
 }
 
 void Helper::messageReceived( const QString& message, const QString &failedParseText,
                               ErrorSeverity severity )
 {
+    m_mutex->lock();
     if ( message == m_lastErrorMessage ) {
         ++m_errorMessageRepetition;
+        m_mutex->unlock();
         return;
     }
+    m_lastErrorMessage = message;
+    QScriptContextInfo info( context()->parentContext() );
+    const QString serviceProviderId = m_serviceProviderId;
+    m_mutex->unlock();
 
     emitRepeatedMessageWarning();
-    m_lastErrorMessage = message;
-
-    QScriptContextInfo info( context()->parentContext() );
     emit messageReceived( message, info, failedParseText, severity );
 
     // Output debug message and a maximum count of 200 characters of the text where the parsing failed
@@ -1027,7 +1036,7 @@ void Helper::messageReceived( const QString& message, const QString &failedParse
         }
 
         logFile.write( QString("%1 (%2, in function %3(), file %4, line %5):\n   \"%6\"\n   Failed while reading this text: \"%7\"\n-------------------------------------\n\n")
-                .arg(m_serviceProviderId)
+                .arg(serviceProviderId)
                 .arg(QDateTime::currentDateTime().toString())
                 .arg(info.functionName().isEmpty() ? "[anonymous]" : info.functionName())
                 .arg(QFileInfo(info.fileName()).fileName())
@@ -1713,6 +1722,7 @@ void Storage::clear()
 
 int Storage::lifetime( const QString& name )
 {
+    QWriteLocker locker( d->readWriteLockPersistent );
     return lifetime( name, d->persistentGroup() );
 }
 
@@ -1725,6 +1735,7 @@ int Storage::lifetime( const QString& name, const KConfigGroup& group )
 
 void Storage::checkLifetime()
 {
+    QWriteLocker locker( d->readWriteLockPersistent );
     if ( QDateTime::currentDateTime().toTime_t() - d->lastLifetimeCheck <
          MIN_LIFETIME_CHECK_INTERVAL * 60 )
     {
@@ -1762,8 +1773,8 @@ bool Storage::hasData( const QString &name ) const
 
 bool Storage::hasPersistentData( const QString &name ) const
 {
-    KConfigGroup group = d->persistentGroup();
     QReadLocker locker( d->readWriteLockPersistent );
+    KConfigGroup group = d->persistentGroup();
     return group.hasKey( name );
 }
 
@@ -1943,9 +1954,8 @@ void Storage::writePersistent( const QString& name, const QVariant& data, uint l
     }
 
     // Try to load script features from a cache file
-    KConfigGroup group = d->persistentGroup();
-
     QWriteLocker locker( d->readWriteLockPersistent );
+    KConfigGroup group = d->persistentGroup();
     group.writeEntry( name + LIFETIME_ENTRYNAME_SUFFIX,
                       QDateTime::currentDateTime().addDays(lifetime).toTime_t() );
     group.writeEntry( name, encodeData(data) );
@@ -1954,7 +1964,7 @@ void Storage::writePersistent( const QString& name, const QVariant& data, uint l
 QVariant Storage::readPersistent( const QString& name, const QVariant& defaultData )
 {
     // Try to load script features from a cache file
-    QReadLocker locker( d->readWriteLockPersistent );
+    QWriteLocker locker( d->readWriteLockPersistent );
     if ( defaultData.isValid() ) {
         return d->persistentGroup().readEntry( name, defaultData );
     } else {
@@ -1972,6 +1982,7 @@ void Storage::removePersistent( const QString& name, KConfigGroup& group )
 void Storage::removePersistent( const QString& name )
 {
     // Try to load script features from a cache file
+    QWriteLocker locker( d->readWriteLockPersistent );
     KConfigGroup group = d->persistentGroup();
     removePersistent( name, group );
 }
@@ -1979,6 +1990,7 @@ void Storage::removePersistent( const QString& name )
 void Storage::clearPersistent()
 {
     // Try to load script features from a cache file
+    QWriteLocker locker( d->readWriteLockPersistent );
     d->persistentGroup().deleteGroup();
 }
 

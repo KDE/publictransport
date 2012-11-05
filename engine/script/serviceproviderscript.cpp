@@ -69,7 +69,11 @@ ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, Q
     qRegisterMetaType< QList<TimetableData> >( "QList<TimetableData>" );
     qRegisterMetaType< GlobalTimetableInfo >( "GlobalTimetableInfo" );
     qRegisterMetaType< ParseDocumentMode >( "ParseDocumentMode" );
-    qRegisterMetaType< ResultObject::Features >( "ResultObject::Features" );
+    qRegisterMetaType< NetworkRequest* >( "NetworkRequest*" );
+    qRegisterMetaType< NetworkRequest::Ptr >( "NetworkRequest::Ptr" );
+    qRegisterMetaType< QIODevice* >( "QIODevice*" );
+    qRegisterMetaType< DataStreamPrototype* >( "DataStreamPrototype*" );
+    qRegisterMetaType< ResultObject::Features >( "ResultObject::Features" ); // TEST, now done using Q_DECLARE_METATYPE?
     qRegisterMetaType< ResultObject::Hints >( "ResultObject::Hints" );
 }
 

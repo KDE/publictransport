@@ -335,6 +335,8 @@ public slots:
 
     virtual void checkExecution();
 
+    void setJobDone( bool done = true );
+
 protected slots:
     void setDefaultUseCase();
 
@@ -380,11 +382,13 @@ protected:
     bool m_aborted;
     QString m_explanation;
     QMutex *const m_mutex;
+    QEventLoop *m_waitLoop;
     QSemaphore *m_engineSemaphore;
     QString m_useCase;
     bool m_quit;
     QThread *m_scriptObjectTargetThread;
     QEventLoop *m_currentLoop;
+    bool m_stoppedSignalWasProcessed;
 };
 
 /**
