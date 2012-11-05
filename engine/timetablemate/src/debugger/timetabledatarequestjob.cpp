@@ -74,7 +74,7 @@ TimetableDataRequestJob::TimetableDataRequestJob( const ScriptData &scriptData,
         : CallScriptFunctionJob(scriptData, useCase, debugFlags, parent), m_request(request->clone())
 {
     QMutexLocker locker( m_mutex );
-    switch ( request->parseMode ) {
+    switch ( request->parseMode() ) {
     case ParseForDepartures:
     case ParseForArrivals:
         m_functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
@@ -285,31 +285,33 @@ void CallScriptFunctionJob::connectScriptObjects( bool doConnect )
 
 void CallScriptFunctionJob::debuggerRun()
 {
-    m_mutex->lockInline();
+    m_mutex->lock();
     if ( !m_success ) {
         // Job already marked as not successful, a derived class may have set it to false
-        m_mutex->unlockInline();
+        m_mutex->unlock();
         return;
     }
+    m_mutex->unlock();
 
     // Create new engine and agent
     m_engineSemaphore->acquire();
     DebuggerAgent *agent = createAgent();
     if ( !agent ) {
         m_engineSemaphore->release();
-        m_mutex->unlockInline();
         return;
     }
     QScriptEngine *engine = agent->engine();
+    m_mutex->lock();
     ScriptObjects objects = m_objects;
     const ScriptData data = m_data;
     const QString functionName = m_functionName;
     const DebugFlags debugFlags = m_debugFlags;
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     // Load script
     engine->evaluate( data.program );
-    Q_ASSERT_X( !engine->isEvaluating(), "CallScriptFunctionJob::debuggerRun()",
+    Q_ASSERT_X( !objects.network->hasRunningRequests() || !agent->engine()->isEvaluating(),
+                "LoadScriptJob::debuggerRun()",
                 "Evaluating the script should not start any asynchronous requests, bad script" );
 
     QScriptValue function = engine->globalObject().property( functionName );
@@ -344,10 +346,14 @@ void CallScriptFunctionJob::debuggerRun()
     }
 
     // Wait for script execution to finish
-    if ( !waitFor(agent, SIGNAL(stopped(QDateTime,bool,bool,int,QString,QStringList)), WaitForScriptFinish) ) {
+    if ( !waitFor(this, SIGNAL(stopped(QDateTime,ScriptStoppedFlags,int,QString,QStringList)),
+                  WaitForScriptFinish) )
+    {
+        kWarning() << "Stopped signal not received";
         m_engineSemaphore->release();
         return;
     }
+    qApp->processEvents();
 
     const bool allNetworkRequestsFinished = !objects.network->hasRunningRequests();
     const bool finishedSuccessfully = !agent->wasLastRunAborted();
@@ -633,7 +639,7 @@ bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request
 {
     QMutexLocker locker( m_mutex );
     if ( m_timetableData.isEmpty() ) {
-        if ( request->parseMode == ParseForArrivals ) {
+        if ( request->parseMode() == ParseForArrivals ) {
             m_explanation = i18nc("@info/plain", "No arrivals found");
         } else {
             m_explanation = i18nc("@info/plain", "No departures found");
@@ -798,7 +804,7 @@ bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request
     }
 
     // Show results
-    if ( request->parseMode == ParseForArrivals ) {
+    if ( request->parseMode() == ParseForArrivals ) {
         m_explanation = i18ncp("@info/plain", "Got %1 arrival",
                                               "Got %1 arrivals", m_timetableData.count());
     } else {
@@ -807,7 +813,7 @@ bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request
     }
 
     if ( countInvalid > 0 ) {
-        if ( request->parseMode == ParseForArrivals ) {
+        if ( request->parseMode() == ParseForArrivals ) {
             m_explanation += ", " +
                     i18ncp("@info/plain", "<warning>%1 arrival is invalid</warning>",
                            "<warning>%1 arrivals are invalid</warning>",

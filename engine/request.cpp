@@ -30,7 +30,7 @@
 
 QString AbstractRequest::parseModeName() const
 {
-    return parseModeName( parseMode );
+    return parseModeName( m_parseMode );
 }
 
 QString AbstractRequest::parseModeName( ParseDocumentMode parseMode )
@@ -55,8 +55,8 @@ QString AbstractRequest::parseModeName( ParseDocumentMode parseMode )
 QString DepartureRequest::argumentsString() const
 {
     return QString("{stop: \"%1\", city: \"%2\", maxCount: %3, dateTime: %4, dataType: %5}")
-            .arg(stop, city).arg(maxCount)
-            .arg(dateTime.toString(Qt::SystemLocaleShortDate), parseModeName());
+            .arg(m_stop, m_city).arg(m_maxCount)
+            .arg(m_dateTime.toString(Qt::SystemLocaleShortDate), parseModeName());
 }
 
 QString ArrivalRequest::argumentsString() const
@@ -66,29 +66,35 @@ QString ArrivalRequest::argumentsString() const
 
 QString StopSuggestionRequest::argumentsString() const
 {
-    return QString("{stop: \"%1\", city: \"%2\", maxCount: %3}").arg(stop, city).arg(maxCount);
+    return QString("{stop: \"%1\", city: \"%2\", maxCount: %3}").arg(m_stop, m_city).arg(m_maxCount);
 }
 
 QString StopsByGeoPositionRequest::argumentsString() const
 {
     return QString("{longitude: %1, longitude: %2, distance: %3, maxCount: %4}")
-            .arg(longitude).arg(latitude).arg(distance).arg(maxCount);
+            .arg(m_longitude).arg(m_latitude).arg(m_distance).arg(m_maxCount);
 }
 
 QString AdditionalDataRequest::argumentsString() const
 {
-    return QString("{stop: \"%1\", city: \"%2\", dataType: %3, transportLine: \"%4\", "
-                   "target: \"%5\", dateTime: %6, routeDataUrl: %7}")
-            .arg(stop, city, parseModeName(), transportLine, target,
-                 dateTime.toString(Qt::SystemLocaleShortDate), routeDataUrl);
+    return QString("{dataType: %1, transportLine: \"%2\", "
+                   "target: \"%3\", dateTime: %4, routeDataUrl: %5}")
+            .arg(parseModeName(), m_transportLine, m_target,
+                 m_dateTime.toString(Qt::SystemLocaleShortDate), m_routeDataUrl);
 }
 
 QString JourneyRequest::argumentsString() const
 {
     return QString("{stop: \"%1\", city: \"%2\", maxCount: %3, originStop: \"%4\", "
                    "targetStop: \"%5\", dateTime: %6}")
-            .arg(stop, city).arg(maxCount)
-            .arg(stop, targetStop, dateTime.toString(Qt::SystemLocaleShortDate));
+            .arg(m_stop, m_city).arg(m_maxCount)
+            .arg(m_stop, m_targetStop, m_dateTime.toString(Qt::SystemLocaleShortDate));
+}
+
+QString MoreItemsRequest::argumentsString() const
+{
+    Q_ASSERT( m_request );
+    return Enums::toString(m_direction) + ": " + m_request->argumentsString();
 }
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -115,30 +121,31 @@ QString AdditionalDataRequest::functionName() const
 QScriptValue StopSuggestionRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();
-    value.setProperty( QLatin1String("stop"), stop );
-    value.setProperty( QLatin1String("city"), city );
-    value.setProperty( QLatin1String("maxCount"), maxCount );
+    value.setProperty( QLatin1String("stop"), m_stop );
+    value.setProperty( QLatin1String("city"), m_city );
+    value.setProperty( QLatin1String("maxCount"), m_maxCount );
     return value;
 }
 
 QScriptValue StopsByGeoPositionRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();
-    value.setProperty( QLatin1String("longitude"), longitude );
-    value.setProperty( QLatin1String("latitude"), latitude );
-    value.setProperty( QLatin1String("distance"), distance );
-    value.setProperty( QLatin1String("maxCount"), maxCount );
+    value.setProperty( QLatin1String("longitude"), m_longitude );
+    value.setProperty( QLatin1String("latitude"), m_latitude );
+    value.setProperty( QLatin1String("distance"), m_distance );
+    value.setProperty( QLatin1String("maxCount"), m_maxCount );
     return value;
 }
 
 QScriptValue DepartureRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();
-    value.setProperty( QLatin1String("stop"), stop );
-    value.setProperty( QLatin1String("city"), city );
-    value.setProperty( QLatin1String("maxCount"), maxCount );
-    value.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
+    value.setProperty( QLatin1String("stop"), m_stop );
+    value.setProperty( QLatin1String("city"), m_city );
+    value.setProperty( QLatin1String("maxCount"), m_maxCount );
+    value.setProperty( QLatin1String("dateTime"), engine->newDate(m_dateTime) );
     value.setProperty( QLatin1String("dataType"), parseModeName() );
+    value.setProperty( QLatin1String("moreItemsDirection"), Enums::RequestedItems );
     return value;
 }
 
@@ -152,27 +159,44 @@ QScriptValue ArrivalRequest::toScriptValue( QScriptEngine *engine ) const
 QScriptValue JourneyRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();
-    value.setProperty( QLatin1String("stop"), stop );
-    value.setProperty( QLatin1String("city"), city );
-    value.setProperty( QLatin1String("maxCount"), maxCount );
-    value.setProperty( QLatin1String("originStop"), stop ); // Already in argument as "stop"
-    value.setProperty( QLatin1String("targetStop"), targetStop );
-    value.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
+    value.setProperty( QLatin1String("stop"), m_stop );
+    value.setProperty( QLatin1String("city"), m_city );
+    value.setProperty( QLatin1String("maxCount"), m_maxCount );
+    value.setProperty( QLatin1String("originStop"), m_stop ); // Already in argument as "stop"
+    value.setProperty( QLatin1String("targetStop"), m_targetStop );
+    value.setProperty( QLatin1String("dateTime"), engine->newDate(m_dateTime) );
+    value.setProperty( QLatin1String("moreItemsDirection"), Enums::RequestedItems );
     return value;
 }
 
 QScriptValue AdditionalDataRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();
-    value.setProperty( QLatin1String("stop"), stop );
-    value.setProperty( QLatin1String("city"), city );
+//     value.setProperty( QLatin1String("stop"), stop );
+//     value.setProperty( QLatin1String("city"), city );
     value.setProperty( QLatin1String("dataType"),
-            sourceName.startsWith(QLatin1String("Arrivals"), Qt::CaseInsensitive)
+            m_sourceName.startsWith(QLatin1String("Arrivals"), Qt::CaseInsensitive)
             ? parseModeName(ParseForArrivals) : parseModeName(ParseForDepartures));
-    value.setProperty( QLatin1String("transportLine"), transportLine );
-    value.setProperty( QLatin1String("target"), target );
-    value.setProperty( QLatin1String("dateTime"), engine->newDate(dateTime) );
-    value.setProperty( QLatin1String("routeDataUrl"), routeDataUrl );
+    value.setProperty( QLatin1String("transportLine"), m_transportLine );
+    value.setProperty( QLatin1String("target"), m_target );
+    value.setProperty( QLatin1String("dateTime"), engine->newDate(m_dateTime) );
+    value.setProperty( QLatin1String("routeDataUrl"), m_routeDataUrl );
     return value;
 }
+
+QScriptValue MoreItemsRequest::toScriptValue( QScriptEngine *engine ) const
+{
+    Q_ASSERT( m_request );
+    QScriptValue value = m_request->toScriptValue( engine );
+    QScriptValue data = engine->newObject();
+    for ( QVariantHash::ConstIterator it = m_requestData.constBegin();
+          it != m_requestData.constEnd(); ++it )
+    {
+        data.setProperty( it.key(), engine->toScriptValue(it.value()) );
+    }
+    value.setProperty( QLatin1String("requestData"), data ); //engine->toScriptValue(requestData) );
+    value.setProperty( QLatin1String("moreItemsDirection"), m_direction );
+    return value;
+}
+
 #endif // BUILD_PROVIDER_TYPE_SCRIPT

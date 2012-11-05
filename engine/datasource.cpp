@@ -42,10 +42,11 @@ TimetableDataSource::~TimetableDataSource()
     delete m_updateAdditionalDataDelayTimer;
 }
 
-void TimetableDataSource::addUsingDataSource( const QString &sourceName,
-                                              const QDateTime &dateTime, int maxCount )
+void TimetableDataSource::addUsingDataSource( const QSharedPointer< AbstractRequest > &request,
+                                              const QString &sourceName, const QDateTime &dateTime,
+                                              int maxCount )
 {
-    m_dataSources[ sourceName ] = SourceData( dateTime, maxCount );
+    m_dataSources[ sourceName ] = SourceData( request, dateTime, maxCount );
 }
 
 void TimetableDataSource::removeUsingDataSource( const QString &sourceName )
@@ -124,4 +125,9 @@ void TimetableDataSource::setUpdateAdditionalDataDelayTimer( QTimer *timer )
     // Delete old timer (if any) and replace with the new timer
     delete m_updateAdditionalDataDelayTimer;
     m_updateAdditionalDataDelayTimer = timer;
+}
+
+QSharedPointer< AbstractRequest > TimetableDataSource::request( const QString &sourceName ) const
+{
+    return m_dataSources[ sourceName ].request;
 }

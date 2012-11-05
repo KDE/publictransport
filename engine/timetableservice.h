@@ -24,6 +24,9 @@
 #ifndef TIMETABLESERVICE_HEADER
 #define TIMETABLESERVICE_HEADER
 
+// Own includes
+#include "enums.h"
+
 // Plasma includes
 #include <Plasma/Service>
 #include <Plasma/ServiceJob>
@@ -65,6 +68,28 @@ public:
 
     /** @brief Starts the update request. */
     virtual void start();
+};
+
+class RequestMoreItemsJob : public Plasma::ServiceJob {
+    Q_OBJECT
+
+public:
+    RequestMoreItemsJob( Enums::MoreItemsDirection direction, const QString &destination,
+                         const QString &operation, const QMap< QString, QVariant > &parameters,
+                         QObject *parent = 0 );
+    virtual ~RequestMoreItemsJob() {};
+
+    /** @brief Starts the more items request. */
+    virtual void start();
+
+    Enums::MoreItemsDirection direction() const { return m_direction; };
+
+// protected slots:
+//     void moreItemsRequestFinished( const QList< TimetableData > &newItems, bool success,
+//                                    const QString &errorMessage );
+
+private:
+    Enums::MoreItemsDirection m_direction;
 };
 
 /**

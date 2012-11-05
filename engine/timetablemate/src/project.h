@@ -58,11 +58,11 @@ class PlasmaPreviewTab;
 class ServiceProvider;
 class ServiceProviderData;
 
-struct AbstractRequest;
-struct DepartureRequest;
-struct StopSuggestionRequest;
-struct StopsByGeoPositionRequest;
-struct JourneyRequest;
+class AbstractRequest;
+class DepartureRequest;
+class StopSuggestionRequest;
+class StopsByGeoPositionRequest;
+class JourneyRequest;
 
 namespace Debugger {
     class Debugger;

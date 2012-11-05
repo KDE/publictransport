@@ -183,6 +183,13 @@ void ServiceProvider::requestAdditionalData( const AdditionalDataRequest &reques
     return;
 }
 
+void ServiceProvider::requestMoreItems( const MoreItemsRequest &moreItemsRequest )
+{
+    Q_UNUSED( moreItemsRequest );
+    kDebug() << "Not implemented";
+    return;
+}
+
 QString ServiceProvider::gethex( ushort decimal )
 {
     QString hexchars = "0123456789ABCDEFabcdef";

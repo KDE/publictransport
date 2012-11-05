@@ -39,13 +39,14 @@
 #include <QPointer>
 
 class QMutex;
-struct AbstractRequest;
-struct DepartureRequest;
-struct ArrivalRequest;
-struct JourneyRequest;
-struct StopSuggestionRequest;
-struct StopsByGeoPositionRequest;
-struct AdditionalDataRequest;
+class AbstractRequest;
+class DepartureRequest;
+class ArrivalRequest;
+class JourneyRequest;
+class StopSuggestionRequest;
+class StopsByGeoPositionRequest;
+class AdditionalDataRequest;
+class MoreItemsRequest;
 
 class ServiceProviderData;
 namespace Scripting {
@@ -312,6 +313,23 @@ public:
 
 private:
     const AdditionalDataJobPrivate *d;
+};
+
+class MoreItemsJobPrivate;
+class MoreItemsJob : public ScriptJob {
+    Q_OBJECT
+
+public:
+    explicit MoreItemsJob( const ScriptData &data,
+                           const QSharedPointer< Storage > &scriptStorage,
+                           const MoreItemsRequest& request,
+                           QObject* parent = 0);
+    virtual ~MoreItemsJob();
+
+    virtual const AbstractRequest* request() const;
+
+private:
+    const MoreItemsJobPrivate *d;
 };
 
 #endif // Multiple inclusion guard

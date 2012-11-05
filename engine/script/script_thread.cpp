@@ -42,6 +42,7 @@
 #include <QTimer>
 #include <QEventLoop>
 #include <QFileInfo>
+#include <QApplication>
 
 ScriptJob::ScriptJob( const ScriptData &data, const QSharedPointer< Storage > &scriptStorage,
                       QObject* parent )
@@ -126,7 +127,7 @@ void ScriptJob::run()
     // Add call to the appropriate function
     QString functionName;
     QScriptValueList arguments = QScriptValueList() << request()->toScriptValue( engine );
-    switch ( request()->parseMode ) {
+    switch ( request()->parseMode() ) {
     case ParseForDepartures:
     case ParseForArrivals:
         functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETTIMETABLE;
@@ -142,7 +143,7 @@ void ScriptJob::run()
         functionName = ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA;
         break;
     default:
-        kDebug() << "Parse mode unsupported:" << request()->parseMode;
+        kDebug() << "Parse mode unsupported:" << request()->parseMode();
         break;
     }
 
@@ -194,25 +195,29 @@ void ScriptJob::run()
 
     // Inform about script run time
     DEBUG_ENGINE_JOBS( "Script finished in" << (timer.elapsed() / 1000.0)
-            << "seconds: " << m_data.provider.scriptFileName() << request()->parseMode );
+            << "seconds: " << m_data.provider.scriptFileName() << request()->parseMode() );
 
     // If data for the current job has already been published, do not emit
     // xxxReady() with an empty resultset
     if ( m_published == 0 || m_objects.result->count() > m_published ) {
         const bool couldNeedForcedUpdate = m_published > 0;
-        switch ( request()->parseMode ) {
+        const MoreItemsRequest *moreItemsRequest =
+                dynamic_cast< const MoreItemsRequest* >( request() );
+        const AbstractRequest *_request =
+                moreItemsRequest ? moreItemsRequest->request().data() : request();
+        switch ( _request->parseMode() ) {
         case ParseForDepartures:
             emit departuresReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
                     m_objects.network->lastUserUrl(), globalInfo,
-                    *dynamic_cast<const DepartureRequest*>(request()),
+                    *dynamic_cast<const DepartureRequest*>(_request),
                     couldNeedForcedUpdate );
             break;
         case ParseForArrivals: {
             emit arrivalsReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
                     m_objects.network->lastUserUrl(), globalInfo,
-                    *dynamic_cast< const ArrivalRequest* >(request()),
+                    *dynamic_cast< const ArrivalRequest* >(_request),
                     couldNeedForcedUpdate );
             break;
         }
@@ -221,14 +226,14 @@ void ScriptJob::run()
             emit journeysReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
                     m_objects.network->lastUserUrl(), globalInfo,
-                    *dynamic_cast<const JourneyRequest*>(request()),
+                    *dynamic_cast<const JourneyRequest*>(_request),
                     couldNeedForcedUpdate );
             break;
         case ParseForStopSuggestions:
             emit stopSuggestionsReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
                     m_objects.network->lastUserUrl(), globalInfo,
-                    *dynamic_cast<const StopSuggestionRequest*>(request()),
+                    *dynamic_cast<const StopSuggestionRequest*>(_request),
                     couldNeedForcedUpdate );
             break;
 
@@ -242,13 +247,13 @@ void ScriptJob::run()
             }
             emit additionalDataReady( data.first(), m_objects.result->features(),
                     m_objects.result->hints(), m_objects.network->lastUserUrl(), globalInfo,
-                    *dynamic_cast<const AdditionalDataRequest*>(request()),
+                    *dynamic_cast<const AdditionalDataRequest*>(_request),
                     couldNeedForcedUpdate );
             break;
         }
 
         default:
-            kDebug() << "Parse mode unsupported:" << request()->parseMode;
+            kDebug() << "Parse mode unsupported:" << _request->parseMode();
             break;
         }
     }
@@ -563,37 +568,57 @@ void ScriptJob::publish()
         GlobalTimetableInfo globalInfo;
         QList< TimetableData > data = m_objects.result->data().mid( m_published );
         const bool couldNeedForcedUpdate = m_published > 0;
-        switch ( request()->parseMode ) {
+        const MoreItemsRequest *moreItemsRequest =
+                dynamic_cast< const MoreItemsRequest* >( request() );
+        const AbstractRequest *childRequest =
+                moreItemsRequest ? moreItemsRequest->request().data() : request();
+        switch ( request()->parseMode() ) {
         case ParseForDepartures:
             emit departuresReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
                     m_objects.network->lastUserUrl(), globalInfo,
-                    *dynamic_cast<const DepartureRequest*>(request()), couldNeedForcedUpdate );
+                    *dynamic_cast<const DepartureRequest*>(childRequest), couldNeedForcedUpdate );
             break;
         case ParseForArrivals:
             emit arrivalsReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
                     m_objects.network->lastUserUrl(), globalInfo,
-                    *dynamic_cast<const ArrivalRequest*>(request()), couldNeedForcedUpdate );
+                    *dynamic_cast<const ArrivalRequest*>(childRequest), couldNeedForcedUpdate );
             break;
         case ParseForJourneysByDepartureTime:
-        case ParseForJourneysByArrivalTime:
+        case ParseForJourneysByArrivalTime: {
             emit journeysReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
                     m_objects.network->lastUserUrl(), globalInfo,
-                    *dynamic_cast<const JourneyRequest*>(request()),
-                    couldNeedForcedUpdate );
-            break;
+                    *dynamic_cast<const JourneyRequest*>(childRequest), couldNeedForcedUpdate );
+        } break;
         case ParseForStopSuggestions:
             emit stopSuggestionsReady( m_objects.result->data().mid(m_published),
                     m_objects.result->features(), m_objects.result->hints(),
                     m_objects.network->lastUserUrl(), globalInfo,
-                    *dynamic_cast<const StopSuggestionRequest*>(request()),
+                    *dynamic_cast<const StopSuggestionRequest*>(childRequest),
                     couldNeedForcedUpdate );
             break;
+        case ParseForAdditionalData: {
+            // Additional data gets requested per timetable item, only one result expected
+            if ( m_objects.result->data().isEmpty() ) {
+                kWarning() << "Got no additional data";
+                return;
+            }
+            const TimetableData additionalData = m_objects.result->data().first();
+            if ( additionalData.isEmpty() ) {
+                kWarning() << "Did not find any additional data.";
+                return;
+            }
+            emit additionalDataReady( data.first(), m_objects.result->features(),
+                    m_objects.result->hints(), m_objects.network->lastUserUrl(), globalInfo,
+                    *dynamic_cast<const AdditionalDataRequest*>(childRequest),
+                    couldNeedForcedUpdate );
+            break;
+        }
 
         default:
-            kDebug() << "Parse mode unsupported:" << request()->parseMode;
+            kDebug() << "Parse mode unsupported:" << request()->parseMode();
             break;
         }
 
@@ -740,6 +765,29 @@ AdditionalDataJob::~AdditionalDataJob()
 }
 
 const AbstractRequest *AdditionalDataJob::request() const
+{
+    QMutexLocker locker( m_mutex );
+    return &d->request;
+}
+
+class MoreItemsJobPrivate {
+public:
+    MoreItemsJobPrivate( const MoreItemsRequest &request ) : request(request) {};
+    MoreItemsRequest request;
+};
+
+MoreItemsJob::MoreItemsJob( const ScriptData &data, const QSharedPointer< Storage > &scriptStorage,
+                            const MoreItemsRequest &request, QObject *parent )
+        : ScriptJob(data, scriptStorage, parent), d(new MoreItemsJobPrivate(request))
+{
+}
+
+MoreItemsJob::~MoreItemsJob()
+{
+    delete d;
+}
+
+const AbstractRequest *MoreItemsJob::request() const
 {
     QMutexLocker locker( m_mutex );
     return &d->request;

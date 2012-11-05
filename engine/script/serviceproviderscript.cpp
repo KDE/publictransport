@@ -400,15 +400,15 @@ void ServiceProviderScript::departuresReady( const QList<TimetableData> &data,
 {
 //     TODO use hints
     if ( data.isEmpty() ) {
-        kDebug() << "The script didn't find any departures" << request.sourceName;
+        kDebug() << "The script didn't find any departures" << request.sourceName();
         emit errorParsing( this, ErrorParsingFailed,
                            i18n("Error while parsing the departure document."), url, &request );
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
         PublicTransportInfoList newResults;
-        ResultObject::dataList( data, &newResults, request.parseMode,
+        ResultObject::dataList( data, &newResults, request.parseMode(),
                                 m_data->defaultVehicleType(), &globalInfo, features, hints );
-        PublicTransportInfoList results = (m_publishedData[request.sourceName] << newResults);
+        PublicTransportInfoList results = (m_publishedData[request.sourceName()] << newResults);
         DepartureInfoList departures;
         foreach( const PublicTransportInfoPtr &info, results ) {
             departures << info.dynamicCast<DepartureInfo>();
@@ -428,15 +428,15 @@ void ServiceProviderScript::arrivalsReady( const QList< TimetableData > &data,
 {
 //     TODO use hints
     if ( data.isEmpty() ) {
-        kDebug() << "The script didn't find any arrivals" << request.sourceName;
+        kDebug() << "The script didn't find any arrivals" << request.sourceName();
         emit errorParsing( this, ErrorParsingFailed,
                            i18n("Error while parsing the arrival document."), url, &request );
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
         PublicTransportInfoList newResults;
-        ResultObject::dataList( data, &newResults, request.parseMode,
+        ResultObject::dataList( data, &newResults, request.parseMode(),
                                 m_data->defaultVehicleType(), &globalInfo, features, hints );
-        PublicTransportInfoList results = (m_publishedData[request.sourceName] << newResults);
+        PublicTransportInfoList results = (m_publishedData[request.sourceName()] << newResults);
         ArrivalInfoList arrivals;
         foreach( const PublicTransportInfoPtr &info, results ) {
             arrivals << info.dynamicCast<ArrivalInfo>();
@@ -457,16 +457,16 @@ void ServiceProviderScript::journeysReady( const QList<TimetableData> &data,
     Q_UNUSED( couldNeedForcedUpdate );
 //     TODO use hints
     if ( data.isEmpty() ) {
-        kDebug() << "The script didn't find any journeys" << request.sourceName;
+        kDebug() << "The script didn't find any journeys" << request.sourceName();
         emit errorParsing( this, ErrorParsingFailed,
                            i18n("Error while parsing the journey document."), url, &request );
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
         PublicTransportInfoList newResults;
-        ResultObject::dataList( data, &newResults, request.parseMode,
+        ResultObject::dataList( data, &newResults, request.parseMode(),
                                 m_data->defaultVehicleType(), &globalInfo, features, hints );
         PublicTransportInfoList results =
-                (m_publishedData[request.sourceName] << newResults);
+                (m_publishedData[request.sourceName()] << newResults);
         JourneyInfoList journeys;
         foreach( const PublicTransportInfoPtr &info, results ) {
             journeys << info.dynamicCast<JourneyInfo>();
@@ -487,9 +487,9 @@ void ServiceProviderScript::stopSuggestionsReady( const QList<TimetableData> &da
 
     // Create PublicTransportInfo objects for new data and combine with already published data
     PublicTransportInfoList newResults;
-    ResultObject::dataList( data, &newResults, request.parseMode,
+    ResultObject::dataList( data, &newResults, request.parseMode(),
                             m_data->defaultVehicleType(), &globalInfo, features, hints );
-    PublicTransportInfoList results( m_publishedData[request.sourceName] << newResults );
+    PublicTransportInfoList results( m_publishedData[request.sourceName()] << newResults );
     kDebug() << "Results:" << results;
 
     StopInfoList stops;
@@ -507,7 +507,7 @@ void ServiceProviderScript::additionDataReady( const TimetableData &data,
 {
     Q_UNUSED( couldNeedForcedUpdate );
     if ( data.isEmpty() ) {
-        kDebug() << "The script didn't find any new data" << request.sourceName;
+        kDebug() << "The script didn't find any new data" << request.sourceName();
         emit errorParsing( this, ErrorParsingFailed,
                            i18nc("@info/plain", "No additional data found."),
                            url, &request );
@@ -526,11 +526,11 @@ void ServiceProviderScript::jobStarted( ThreadWeaver::Job* job )
     // There may be multiple AdditionalDataJob requests for the same data source but different
     // timetable items in the source.
     if ( !qobject_cast<AdditionalDataJob*>(scriptJob) &&
-         m_publishedData.contains(scriptJob->request()->sourceName) &&
-         !m_publishedData[scriptJob->request()->sourceName].isEmpty() )
+         m_publishedData.contains(scriptJob->request()->sourceName()) &&
+         !m_publishedData[scriptJob->request()->sourceName()].isEmpty() )
     {
         kWarning() << "Data source already exists for job"
-                   << scriptJob << scriptJob->request()->sourceName;
+                   << scriptJob << scriptJob->request()->sourceName();
     }
 }
 
@@ -539,7 +539,7 @@ void ServiceProviderScript::jobDone( ThreadWeaver::Job* job )
     ScriptJob *scriptJob = qobject_cast< ScriptJob* >( job );
     Q_ASSERT( scriptJob );
 
-    const QString sourceName = scriptJob->request()->sourceName;
+    const QString sourceName = scriptJob->request()->sourceName();
     PublicTransportInfoList results = m_publishedData.take( sourceName );
 
     scriptJob->deleteLater();
@@ -612,6 +612,21 @@ void ServiceProviderScript::requestAdditionalData( const AdditionalDataRequest &
         AdditionalDataJob *job = new AdditionalDataJob( m_scriptData, m_scriptStorage, request, this );
         connect( job, SIGNAL(additionalDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)),
                  this, SLOT(additionDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)) );
+        enqueue( job );
+    }
+}
+
+void ServiceProviderScript::requestMoreItems( const MoreItemsRequest &moreItemsRequest )
+{
+    if ( lazyLoadScript() ) {
+        // Create a MoreItemsJob and connect ready signals for more departures/arrivals/journeys
+        MoreItemsJob *job = new MoreItemsJob( m_scriptData, m_scriptStorage, moreItemsRequest, this );
+        connect( job, SIGNAL(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)),
+                this, SLOT(departuresReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,DepartureRequest,bool)) );
+        connect( job, SIGNAL(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,ArrivalRequest,bool)),
+                 this, SLOT(arrivalsReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,ArrivalRequest,bool)) );
+        connect( job, SIGNAL(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequest,bool)),
+                 this, SLOT(journeysReady(QList<TimetableData>,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,JourneyRequest,bool)) );
         enqueue( job );
     }
 }

@@ -22,6 +22,7 @@
 
 // Own includes
 #include "enums.h"
+#include "request.h"
 
 // Qt includes
 #include <QStringList>
@@ -47,7 +48,8 @@ public:
                          const QVariantHash &data = QVariantHash() );
     virtual ~TimetableDataSource();
 
-    void addUsingDataSource( const QString &sourceName, const QDateTime &dateTime, int maxCount );
+    void addUsingDataSource( const QSharedPointer<AbstractRequest> &request,
+                             const QString &sourceName, const QDateTime &dateTime, int maxCount );
     void removeUsingDataSource( const QString &sourceName );
     int usageCount() const { return m_dataSources.count(); };
     QStringList usingDataSources() const { return m_dataSources.keys(); };
@@ -99,11 +101,15 @@ public:
 
     bool enoughDataAvailable( const QDateTime &dateTime, int count );
 
+    QSharedPointer< AbstractRequest > request( const QString &sourceName ) const;
+
 private:
     struct SourceData {
-        SourceData( const QDateTime &dateTime = QDateTime(), int maxCount = 1 )
-                : dateTime(dateTime), maxCount(maxCount) {}
+        SourceData( const QSharedPointer<AbstractRequest> &request = QSharedPointer<AbstractRequest>(),
+                    const QDateTime &dateTime = QDateTime(), int maxCount = 1 )
+                : request(request), dateTime(dateTime), maxCount(maxCount) {}
 
+        QSharedPointer< AbstractRequest > request;
         QDateTime dateTime;
         int maxCount;
     };

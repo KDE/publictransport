@@ -96,6 +96,39 @@ void UpdateRequestJob::start()
     }
 }
 
+RequestMoreItemsJob::RequestMoreItemsJob( Enums::MoreItemsDirection direction,
+        const QString &destination, const QString &operation,
+        const QMap< QString, QVariant > &parameters, QObject *parent )
+        : ServiceJob(destination, operation, parameters, parent), m_direction(direction)
+{
+}
+
+void RequestMoreItemsJob::start()
+{
+    TimetableService *service = qobject_cast< TimetableService* >( parent() );
+    Plasma::DataEngine *engine = qobject_cast< Plasma::DataEngine* >( service->parent() );
+    Q_ASSERT( engine );
+
+    // Get the QMetaObject of the engine
+    const QMetaObject *meta = engine->metaObject();
+
+    // Find the slot of the engine to start the request
+    const int slotIndex = meta->indexOfMethod( "requestMoreItems(QString,Enums::MoreItemsDirection,QString*)" );
+    Q_ASSERT( slotIndex != -1 );
+    bool success;
+    QString errorMessage;
+    meta->method( slotIndex ).invoke( engine, Qt::DirectConnection,
+                                      Q_RETURN_ARG(bool, success),
+                                      Q_ARG(QString, destination()),
+                                      Q_ARG(Enums::MoreItemsDirection, m_direction),
+                                      Q_ARG(QString*, &errorMessage) );
+    setResult( success );
+    if ( !success ) {
+        setError( TimetableService::UnknownError );
+        setErrorText( errorMessage );
+    }
+}
+
 void RequestAdditionalDataJob::additionalDataRequestFinished( const QVariantHash &newData,
                                                               bool success,
                                                               const QString &errorMessage )
@@ -129,6 +162,10 @@ Plasma::ServiceJob* TimetableService::createJob(
         return new RequestAdditionalDataJob( m_name, operation, parameters, this );
     } else if ( operation == "requestUpdate" ) {
         return new UpdateRequestJob( m_name, operation, parameters, this );
+    } else if ( operation == "requestEarlierItems" ) {
+        return new RequestMoreItemsJob( Enums::EarlierItems, m_name, operation, parameters, this );
+    } else if ( operation == "requestLaterItems" ) {
+        return new RequestMoreItemsJob( Enums::LaterItems, m_name, operation, parameters, this );
     } else {
         kWarning() << "Operation" << operation << "not supported";
         return 0;

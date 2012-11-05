@@ -48,6 +48,7 @@ class StopSuggestionRequest;
 class StopsByGeoPositionRequest;
 class AdditionalDataRequest;
 class JourneyRequest;
+class MoreItemsRequest;
 
 class StopInfo;
 class DepartureInfo;
@@ -201,8 +202,7 @@ public:
      **/
     virtual void requestStopSuggestions( const StopSuggestionRequest &request );
 
-    virtual void requestStopsByGeoPosition(
-            const StopsByGeoPositionRequest &request );
+    virtual void requestStopsByGeoPosition( const StopsByGeoPositionRequest &request );
 
     /**
      * @brief Requests additional data for a valid timetable item in the engine.
@@ -212,6 +212,9 @@ public:
      * @param request Information about the additional data request.
      **/
     virtual void requestAdditionalData( const AdditionalDataRequest &request );
+
+    /** @brief Request more items for a data source. */
+    virtual void requestMoreItems( const MoreItemsRequest &moreItemsRequest );
 
     /** @brief Whether or not the city should be put into the "raw" url. */
     virtual bool useSeparateCityValue() const;

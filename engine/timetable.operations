@@ -19,4 +19,6 @@
                    The first item has the number 0.</label>
         </entry>
     </group>
+    <group name="requestEarlierItems"></group>
+    <group name="requestLaterItems"></group>
 </kcfg>

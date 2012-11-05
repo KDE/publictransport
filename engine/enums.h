@@ -65,7 +65,8 @@ enum ErrorCode {
 
 class Enums : public QObject {
     Q_OBJECT
-    Q_ENUMS( TimetableInformation ServiceProviderType ProviderFeature VehicleType LineService )
+    Q_ENUMS( TimetableInformation ServiceProviderType ProviderFeature VehicleType
+             LineService MoreItemsDirection )
 
 public:
     /**
@@ -260,7 +261,12 @@ public:
         StopCity = 203, /**< The city in which a stop is. */
         StopCountryCode = 204, /**< The country code of the country in which the stop is. */
         StopLongitude = 205, /**< The longitude of the stop. */
-        StopLatitude = 206 /**< The latitude of the stop. */
+        StopLatitude = 206, /**< The latitude of the stop. */
+
+        // Information about the request that was used to get the timetable data
+        RequestData = 300 /**< Can be used to store data identifying the request that was used to
+                * get the timetable item. This data gets passed back to the provider plugin eg.
+                * when requesting later/earlier timetable items. */
     };
 
     /** @brief Features of a provider. */
@@ -411,6 +417,13 @@ public:
     };
     // Q_DECLARE_FLAGS( LineServices, LineService ); // Gives a compiler error here.. but not in departureinfo.h TODO #include <QMetaType>
 
+    /** @brief Whether to request earlier or later items. */
+    enum MoreItemsDirection {
+        RequestedItems, /**< Do not request more items, ie. this is the first request. */
+        EarlierItems, /**< Request earlier items. */
+        LaterItems /**< Request later items. */
+    };
+
     static inline QString toString( TimetableInformation timetableInformation ) {
         const int index = staticMetaObject.indexOfEnumerator("TimetableInformation");
         return QLatin1String(staticMetaObject.enumerator(index).valueToKey(timetableInformation));
@@ -430,6 +443,10 @@ public:
     static inline QString toString( LineService lineService ) {
         const int index = staticMetaObject.indexOfEnumerator("LineService");
         return QLatin1String(staticMetaObject.enumerator(index).valueToKey(lineService));
+    };
+    static inline QString toString( MoreItemsDirection moreItemsDirection ) {
+        const int index = staticMetaObject.indexOfEnumerator("MoreItemsDirection");
+        return QLatin1String(staticMetaObject.enumerator(index).valueToKey(moreItemsDirection));
     };
     static TimetableInformation stringToTimetableInformation( const char *timetableInformation ) {
         const int index = staticMetaObject.indexOfEnumerator("TimetableInformation");
@@ -455,6 +472,11 @@ public:
         const int index = staticMetaObject.indexOfEnumerator("LineService");
         const int value = staticMetaObject.enumerator(index).keyToValue(lineService);
         return value == -1 ? NoLineService : static_cast< LineService >( value );
+    };
+    static MoreItemsDirection stringToMoreItemsDirection( const char *moreItemsDirection ) {
+        const int index = staticMetaObject.indexOfEnumerator("MoreItemsDirection");
+        const int value = staticMetaObject.enumerator(index).keyToValue(moreItemsDirection);
+        return value == -1 ? RequestedItems : static_cast< MoreItemsDirection >( value );
     };
 };
 Q_DECLARE_METATYPE( Enums::ServiceProviderType )

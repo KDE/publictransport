@@ -31,12 +31,13 @@
 // Plasma includes
 #include <Plasma/DataEngine>
 
-struct AbstractRequest;
-struct StopSuggestionRequest;
-struct DepartureRequest;
-struct ArrivalRequest;
-struct JourneyRequest;
-struct AdditionalDataRequest;
+class AbstractRequest;
+class AbstractTimetableItemRequest;
+class StopSuggestionRequest;
+class DepartureRequest;
+class ArrivalRequest;
+class JourneyRequest;
+class AdditionalDataRequest;
 
 struct DataSource;
 struct TimetableDataSource;
@@ -116,7 +117,7 @@ public:
                 * This can be a provider ID or a location code. */
         SourceType type; /**< The type of the data source. */
         ParseDocumentMode parseMode; /**< Parse mode for requesting data sources. */
-        AbstractRequest *request; /**< A request object created for requesting data sources. */
+        AbstractTimetableItemRequest *request; /**< A request object created for requesting data sources. */
     };
 
     /** @brief Get the keyword used in source names associated with the given @p sourceType. */
@@ -185,6 +186,11 @@ public:
      * @see secsUntilUpdate()
      **/
     Q_INVOKABLE bool requestUpdate( const QString &sourceName, QString *errorMessage = 0 );
+
+    /** @brief Request more items in @p direction for @p sourceName */
+    Q_INVOKABLE bool requestMoreItems( const QString &sourceName,
+                                       Enums::MoreItemsDirection direction = Enums::LaterItems,
+                                       QString *errorMessage = 0 );
 
     /**
      * @brief The default time offset from now for the first departure/arrival/journey in results.

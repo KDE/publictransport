@@ -1547,15 +1547,17 @@ public:
                 case TestModel::AdditionalDataTest: {
                     const QList< TimetableData > results =
                             testModel->testResults( TestModel::DepartureTest );
-                    QSharedPointer< AbstractRequest > departureRequest =
-                            testModel->testRequest( TestModel::DepartureTest );
+                    QSharedPointer< AbstractTimetableItemRequest > departureRequest =
+                                testModel->testRequest( TestModel::DepartureTest )
+                                .dynamicCast< AbstractTimetableItemRequest >();
+                    Q_ASSERT( departureRequest );
                     const TimetableData result = results.first();
                     request = new AdditionalDataRequest( "TEST_ADDITIONAL_DATA",
-                            0, departureRequest->stop,
+                            0, departureRequest->stop(),
                             result[Enums::DepartureDateTime].toDateTime(),
                             result[Enums::TransportLine].toString(),
                             result[Enums::Target].toString(),
-                            departureRequest->city, result[Enums::RouteDataUrl].toString() );
+                            departureRequest->city(), result[Enums::RouteDataUrl].toString() );
                 }   break;
                 case TestModel::StopSuggestionTest:
                     request = new StopSuggestionRequest( "TEST_STOP_SUGGESTIONS",
@@ -1581,7 +1583,7 @@ public:
 
                 // Create job
                 job = debugger->createTimetableDataRequestJob( request, QString(), NeverInterrupt );
-                job->setObjectName( request->sourceName );
+                job->setObjectName( request->sourceName() );
                 delete request;
             }
 
@@ -4051,11 +4053,11 @@ DepartureRequest Project::getDepartureRequest( QWidget *parent, bool* cancelled 
     int result = dialog->exec();
     DepartureRequest request;
     if ( result == KDialog::Accepted ) {
-        request.city = city ? city->text() : QString();
-        request.stop = stop->text();
-        request.dateTime = dateTime->dateTime();
-        request.parseMode = dataType->itemData( dataType->currentIndex() ).toString()
-                == QLatin1String("arrivals") ? ParseForArrivals : ParseForDepartures;
+        request.setCity( city ? city->text() : QString() );
+        request.setStop( stop->text() );
+        request.setDateTime( dateTime->dateTime() );
+        request.setParseMode( dataType->itemData( dataType->currentIndex() ).toString()
+                == QLatin1String("arrivals") ? ParseForArrivals : ParseForDepartures );
     }
     if ( cancelled ) {
         *cancelled = result != KDialog::Accepted;
@@ -4088,8 +4090,8 @@ StopSuggestionRequest Project::getStopSuggestionRequest( QWidget *parent,
     StopSuggestionRequest request;
     int result = dialog->exec();
     if ( result == KDialog::Accepted ) {
-        request.city = city ? city->text() : QString();
-        request.stop = stop->text();
+        request.setCity( city ? city->text() : QString() );
+        request.setStop( stop->text() );
     }
     if ( cancelled ) {
         *cancelled = result != KDialog::Accepted;
@@ -4125,9 +4127,9 @@ StopsByGeoPositionRequest Project::getStopsByGeoPositionRequest(
     StopsByGeoPositionRequest request;
     int result = dialog->exec();
     if ( result == KDialog::Accepted ) {
-        request.longitude = longitude->value();
-        request.latitude = latitude->value();
-        request.distance = distance->value();
+        request.setLongitude( longitude->value() );
+        request.setLatitude( latitude->value() );
+        request.setDistance( distance->value() );
     }
     if ( cancelled ) {
         *cancelled = result != KDialog::Accepted;
@@ -4183,11 +4185,11 @@ JourneyRequest Project::getJourneyRequest( QWidget *parent, bool* cancelled ) co
     JourneyRequest request;
     int result = dialog->exec();
     if ( result == KDialog::Accepted ) {
-        request.city = city ? city->text() : QString();
-        request.stop = originStop->text();
-        request.targetStop = targetStop->text();
-        request.dateTime = dateTime->dateTime();
-        request.parseMode = dataType->itemData( dataType->currentIndex() ).toString()
+        request.setCity( city ? city->text() : QString() );
+        request.setStop( originStop->text() );
+        request.setTargetStop( targetStop->text() );
+        request.setDateTime( dateTime->dateTime() );
+        request.setParseMode( dataType->itemData( dataType->currentIndex() ).toString()
                 == QLatin1String("arr") ? ParseForJourneysByArrivalTime
                                         : ParseForJourneysByDepartureTime );
     }

@@ -145,6 +145,9 @@ public:
 
     virtual void requestAdditionalData( const AdditionalDataRequest &request );
 
+    /** @brief Request more items for a data source. */
+    virtual void requestMoreItems( const MoreItemsRequest &moreItemsRequest );
+
     virtual int minFetchWait( UpdateFlags updateFlags = DefaultUpdateFlags ) const;
 
 protected slots:

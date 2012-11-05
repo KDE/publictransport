@@ -231,6 +231,8 @@ Enums::TimetableInformation Global::timetableInformationFromString(
         return Enums::StopLongitude;
     } else if ( sInfo == QLatin1String("stoplatitude") ) {
         return Enums::StopLatitude;
+    } else if ( sInfo == QLatin1String("requestdata") ) {
+        return Enums::RequestData;
     } else {
         kDebug() << sTimetableInformation
                  << "is an unknown timetable information value! Assuming value Nothing.";
@@ -317,6 +319,7 @@ bool Global::checkTimetableInformation( Enums::TimetableInformation info, const 
     case Enums::RouteNews:
         return !value.toStringList().isEmpty();
 
+    case Enums::RequestData:
     default:
         return true;
     }

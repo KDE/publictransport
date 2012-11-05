@@ -90,6 +90,7 @@ PublicTransportEngine::~PublicTransportEngine()
     delete m_fileSystemWatcher;
     delete m_providerUpdateDelayTimer;
     qDeleteAll( m_dataSources );
+    m_dataSources.clear();
 }
 
 QStringList PublicTransportEngine::sources() const
@@ -115,6 +116,7 @@ bool PublicTransportEngine::isProviderUsed( const QString &serviceProviderId )
     for ( QHash< QString, DataSource* >::ConstIterator it = m_dataSources.constBegin();
           it != m_dataSources.constEnd(); ++it )
     {
+        Q_ASSERT( *it );
         if ( (*it)->data.contains("serviceProvider") ) {
             const QString otherProviderId = (*it)->data["serviceProvider"].toString().toLower();
             if ( otherProviderId == serviceProviderId ) {
@@ -142,7 +144,7 @@ void PublicTransportEngine::slotSourceRemoved( const QString &sourceName )
 
         const DataSource *dataSource = m_dataSources.take( nonAmbiguousName );
         Q_ASSERT( dataSource );
-//      kDebug() << "Source" << name << "removed, still cached data sources" << m_dataSources.count();
+//      kDebug() << "Source" << sourceName << "removed, still cached data sources" << m_dataSources.count();
 
         // If a provider was used by the source, remove the provider if it is not used in another source
         if ( dataSource->data.contains("serviceProvider") ) {
@@ -609,9 +611,8 @@ bool PublicTransportEngine::enoughDataAvailable( DataSource *dataSource,
         return true;
     }
 
-    const QDateTime time = sourceData.request->dateTime;
-    int count = sourceData.request->maxCount;
-    return timetableDataSource->enoughDataAvailable( time, count );
+    AbstractTimetableItemRequest *request = sourceData.request;
+    return timetableDataSource->enoughDataAvailable( request->dateTime(), request->maxCount() );
 }
 
 bool PublicTransportEngine::updateTimetableDataSource( const SourceRequestData &data )
@@ -623,7 +624,8 @@ bool PublicTransportEngine::updateTimetableDataSource( const SourceRequestData &
     { // Data is stored in the map and up to date
         TimetableDataSource *dataSource =
                 dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
-        dataSource->addUsingDataSource( data.name, data.request->dateTime, data.request->maxCount );
+        dataSource->addUsingDataSource( QSharedPointer<AbstractRequest>(data.request->clone()),
+                                        data.name, data.request->dateTime(), data.request->maxCount() );
         setData( data.name, dataSource->data );
     } else if ( m_runningSources.contains(nonAmbiguousName) ) {
         // Source gets already processed
@@ -635,8 +637,9 @@ bool PublicTransportEngine::updateTimetableDataSource( const SourceRequestData &
         TimetableDataSource *dataSource = containsDataSource
                 ? dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] )
                 : new TimetableDataSource(nonAmbiguousName);
-        dataSource->data.clear(); // Clear old data TODO
-        dataSource->addUsingDataSource( data.name, data.request->dateTime, data.request->maxCount );
+        dataSource->data.clear();
+        dataSource->addUsingDataSource( QSharedPointer<AbstractRequest>(data.request->clone()),
+                                        data.name, data.request->dateTime(), data.request->maxCount() );
         m_dataSources[ nonAmbiguousName ] = dataSource;
 
         // Start the request
@@ -718,7 +721,7 @@ void PublicTransportEngine::requestAdditionalData( const QString &sourceName, in
     // Found data of the timetable item to update
     const SourceRequestData sourceData( sourceName );
     provider->requestAdditionalData( AdditionalDataRequest(sourceName, itemNumber,
-            sourceData.request->stop, dateTime, transportLine, target, sourceData.request->city,
+            sourceData.request->stop(), dateTime, transportLine, target, sourceData.request->city(),
             routeDataUrl) );
 }
 
@@ -928,52 +931,52 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                 if ( parameterValue.isEmpty() ) {
                     kWarning() << "Empty parameter value for parameter" << parameterName;
                 } else if ( parameterName == QLatin1String("city") ) {
-                    request->city = parameterValue;
+                    request->setCity( parameterValue );
                 } else if ( parameterName == QLatin1String("stop") ) {
-                    request->stop = parameterValue;
+                    request->setStop( parameterValue );
                 } else if ( parameterName == QLatin1String("targetstop") ) {
                     JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
                     if ( !journeyRequest ) {
                         kWarning() << "The \"targetStop\" parameter is only used for journey requests";
                     }
-                    journeyRequest->targetStop = parameterValue;
+                    journeyRequest->setTargetStop( parameterValue );
                 } else if ( parameterName == QLatin1String("originstop") ) {
                     JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
                     if ( !journeyRequest ) {
                         kWarning() << "The \"originStop\" parameter is only used for journey requests";
                     }
-                    journeyRequest->stop = parameterValue;
+                    journeyRequest->setStop( parameterValue );
                 } else if ( parameterName == QLatin1String("timeoffset") ) {
-                    request->dateTime =
-                            QDateTime::currentDateTime().addSecs( parameterValue.toInt() * 60 );
+                    request->setDateTime(
+                            QDateTime::currentDateTime().addSecs(parameterValue.toInt() * 60) );
                 } else if ( parameterName == QLatin1String("time") ) {
-                    request->dateTime = QDateTime( QDate::currentDate(),
-                                                     QTime::fromString(parameterValue, "hh:mm") );
+                    request->setDateTime( QDateTime(QDate::currentDate(),
+                                                    QTime::fromString(parameterValue, "hh:mm")) );
                 } else if ( parameterName == QLatin1String("datetime") ) {
-                    request->dateTime = QDateTime::fromString( parameterValue );
+                    request->setDateTime( QDateTime::fromString(parameterValue) );
                 } else if ( parameterName == QLatin1String("maxcount") ) {
                     bool ok;
-                    request->maxCount = parameterValue.toInt( &ok );
+                    request->setMaxCount( parameterValue.toInt(&ok) );
                     if ( !ok ) {
                         kWarning() << "Bad value for 'maxCount' in source name:" << parameterValue;
-                        request->maxCount = 20;
+                        request->setMaxCount( 20 );
                     }
                 } else if ( dynamic_cast<StopsByGeoPositionRequest*>(request) ) {
                     StopsByGeoPositionRequest *stopRequest =
                             dynamic_cast< StopsByGeoPositionRequest* >( request );
                     bool ok;
                     if ( parameterName == QLatin1String("longitude") ) {
-                        stopRequest->longitude = parameterValue.toFloat( &ok );
+                        stopRequest->setLongitude( parameterValue.toFloat(&ok) );
                         if ( !ok ) {
                             kWarning() << "Bad value for 'longitude' in source name:" << parameterValue;
                         }
                     } else if ( parameterName == QLatin1String("latitude") ) {
-                        stopRequest->latitude = parameterValue.toFloat( &ok );
+                        stopRequest->setLatitude( parameterValue.toFloat(&ok) );
                         if ( !ok ) {
                             kWarning() << "Bad value for 'latitude' in source name:" << parameterValue;
                         }
                     } else if ( parameterName == QLatin1String("distance") ) {
-                        stopRequest->distance = parameterValue.toInt( &ok );
+                        stopRequest->setDistance( parameterValue.toInt(&ok) );
                         if ( !ok ) {
                             kWarning() << "Bad value for 'distance' in source name:" << parameterValue;
                         }
@@ -986,9 +989,9 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
             }
         }
 
-        if ( !request->dateTime.isValid() ) {
+        if ( !request->dateTime().isValid() ) {
             // No date/time value given, use default offset from now
-            request->dateTime = QDateTime::currentDateTime().addSecs( DEFAULT_TIME_OFFSET * 60 );
+            request->setDateTime( QDateTime::currentDateTime().addSecs(DEFAULT_TIME_OFFSET * 60) );
         }
 
         if ( parseMode == ParseForJourneysByArrivalTime ||
@@ -996,10 +999,10 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
         {
             // Use "stop" parameter as "originStop"/"targetStop" if it is not set
             JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
-            if ( !journeyRequest->stop.isEmpty() ) {
-                journeyRequest->stop = journeyRequest->stop;
-            } else if ( !journeyRequest->targetStop.isEmpty() ) {
-                journeyRequest->targetStop = journeyRequest->stop;
+            if ( !journeyRequest->stop().isEmpty() ) {
+                journeyRequest->setStop( journeyRequest->stop() );
+            } else if ( !journeyRequest->targetStop().isEmpty() ) {
+                journeyRequest->setTargetStop( journeyRequest->stop() );
             }
         }
     } else if ( type == ServiceProviderSource ) {
@@ -1022,14 +1025,14 @@ bool PublicTransportEngine::SourceRequestData::isValid() const
     if ( isDataRequestingSourceType(type) ) {
         if ( parseMode == ParseForDepartures || parseMode == ParseForArrivals ) {
             // Check if the stop name is missing
-            if ( !request || request->stop.isEmpty() ) {
+            if ( !request || request->stop().isEmpty() ) {
                 kWarning() << "Stop name is missing in data source name" << name;
                 return false;
             }
         } else if ( parseMode == ParseForStopSuggestions ) {
             // Check if the stop name or geo coordinates are missing
             if ( !request || (!dynamic_cast<StopsByGeoPositionRequest*>(request) &&
-                              request->stop.isEmpty()) )
+                              request->stop().isEmpty()) )
             {
                 kWarning() << "Stop name is missing in data source name" << name;
                 return false;
@@ -1039,8 +1042,8 @@ bool PublicTransportEngine::SourceRequestData::isValid() const
         {
             // Make sure non empty originStop and targetStop parameters are filled
             JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
-            if ( !journeyRequest || journeyRequest->stop.isEmpty() ||
-                 journeyRequest->targetStop.isEmpty() )
+            if ( !journeyRequest || journeyRequest->stop().isEmpty() ||
+                 journeyRequest->targetStop().isEmpty() )
             {
                 kWarning() << "Origin and/or target stop names are missing in data source name" << name;
                 return false;
@@ -1102,11 +1105,15 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
         const GlobalTimetableInfo &globalInfo, const DepartureRequest &request,
         bool deleteDepartureInfos, bool isDepartureData )
 {
-    const QString sourceName = request.sourceName;
+    const QString sourceName = request.sourceName();
     DEBUG_ENGINE_JOBS( items.count() << (isDepartureData ? "departures" : "arrivals")
                        << "received" << sourceName );
 
     const QString nonAmbiguousName = disambiguateSourceName( sourceName );
+    if ( !m_dataSources.contains(nonAmbiguousName) ) {
+        kWarning() << "Data source already removed";
+        return;
+    }
     TimetableDataSource *dataSource =
             dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
     Q_ASSERT( dataSource );
@@ -1222,7 +1229,7 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
         const QUrl &requestUrl, const TimetableData &data, const AdditionalDataRequest &request )
 {
     // Check if the destination data source exists
-    const QString nonAmbiguousName = disambiguateSourceName( request.sourceName );
+    const QString nonAmbiguousName = disambiguateSourceName( request.sourceName() );
     if ( !m_dataSources.contains(nonAmbiguousName) ) {
         kWarning() << "Additional data received for a source that was already removed:"
                    << nonAmbiguousName;
@@ -1239,7 +1246,7 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
                         : (dataSource->data.contains("arrivals") ? "arrivals"
                            : (dataSource->data.contains("journeys") ? "journeys" : "stops"));
     QVariantList items = dataSource->data[ key ].toList();
-    if ( request.itemNumber >= items.count() ) {
+    if ( request.itemNumber() >= items.count() ) {
         emit additionalDataRequestFinished( QVariantHash(), false,
                                             "Item to update not found in the data source" );
         return;
@@ -1247,7 +1254,7 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
 
     // Get the timetable item for which additional data was received
     // and insert the new data into it
-    QVariantHash item = items[ request.itemNumber ].toHash();
+    QVariantHash item = items[ request.itemNumber() ].toHash();
     for ( TimetableData::ConstIterator it = data.constBegin(); it != data.constEnd(); ++it ) {
         item.insert( Global::timetableInformationToString(it.key()), it.value() );
     }
@@ -1255,7 +1262,7 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     item.remove( "WaitingForAdditionalData" );
 
     // Store the changed item back into the item list of the data source
-    items[ request.itemNumber ] = item;
+    items[ request.itemNumber() ] = item;
     dataSource->data[ key ] = items;
 
     // Also store received additional data separately
@@ -1273,7 +1280,7 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
         // Create timer with a shorter interval, but directly publish the new data of the
         // data source. The timer is used here to delay further publishing of new data,
         // ie. combine multiple updates and publish them at once.
-        setData( request.sourceName, dataSource->data );
+        setData( request.sourceName(), dataSource->data );
         updateDelayTimer = new QTimer( this );
         updateDelayTimer->setInterval( 150 );
         connect( updateDelayTimer, SIGNAL(timeout()),
@@ -1348,14 +1355,19 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
         bool deleteJourneyInfos )
 {
     Q_UNUSED( provider );
-    const QString sourceName = request.sourceName;
+    const QString sourceName = request.sourceName();
     DEBUG_ENGINE_JOBS( journeys.count() << "journeys received" << sourceName );
 
     const QString nonAmbiguousName = disambiguateSourceName( sourceName );
+    m_runningSources.removeOne( nonAmbiguousName );
+    if ( !m_dataSources.contains(nonAmbiguousName) ) {
+        kWarning() << "Data source already removed" << nonAmbiguousName;
+        return;
+    }
     TimetableDataSource *dataSource =
             dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
+    Q_ASSERT( dataSource );
     dataSource->data.clear();
-    m_runningSources.removeOne( nonAmbiguousName );
     QVariantList journeysData;
     foreach( const JourneyInfoPtr &journeyInfo, journeys ) {
         if ( !journeyInfo->isValid() ) {
@@ -1417,7 +1429,7 @@ void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
     Q_UNUSED( provider );
     Q_UNUSED( deleteStopInfos );
 
-    const QString sourceName = request.sourceName;
+    const QString sourceName = request.sourceName();
     m_runningSources.removeOne( disambiguateSourceName(sourceName) );
     DEBUG_ENGINE_JOBS( stops.count() << "stop suggestions received" << sourceName );
 
@@ -1452,13 +1464,13 @@ void PublicTransportEngine::errorParsing( ServiceProvider *provider,
 {
     Q_UNUSED( provider );
     kDebug() << "Error while parsing" << requestUrl //<< request->serviceProvider
-             << "\n  sourceName =" << request->sourceName << request->parseMode;
+             << "\n  sourceName =" << request->sourceName() << request->parseMode();
     kDebug() << errorCode << errorMessage;
 
     // Remove erroneous source from running sources list
-    m_runningSources.removeOne( disambiguateSourceName(request->sourceName) );
+    m_runningSources.removeOne( disambiguateSourceName(request->sourceName()) );
 
-    const QString sourceName = request->sourceName;
+    const QString sourceName = request->sourceName();
     setData( sourceName, "serviceProvider", provider->id() );
     setData( sourceName, "requestUrl", requestUrl );
     setData( sourceName, "parseMode", request->parseModeName() );
@@ -1472,7 +1484,7 @@ void PublicTransportEngine::errorParsing( ServiceProvider *provider,
 void PublicTransportEngine::progress( ServiceProvider *provider, qreal progress,
         const QString &jobDescription, const QUrl &requestUrl, const AbstractRequest *request )
 {
-    const QString sourceName = request->sourceName;
+    const QString sourceName = request->sourceName();
     setData( sourceName, "serviceProvider", provider->id() );
     setData( sourceName, "progress", progress );
     setData( sourceName, "jobDescription", jobDescription );
@@ -1486,14 +1498,18 @@ bool PublicTransportEngine::requestUpdate( const QString &sourceName, QString *e
 {
     // Find the TimetableDataSource object for sourceName
     const QString nonAmbiguousName = disambiguateSourceName( sourceName );
-    TimetableDataSource *dataSource =
-            dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
-    if ( !dataSource ) {
+    if ( !m_dataSources.contains(nonAmbiguousName) ) {
         kWarning() << "Not an existing timetable data source:" << sourceName;
         if ( errorMessage ) {
             *errorMessage = i18nc("@info", "Data source is not an existing timetable "
                                   "data source: %1", sourceName);
         }
+        return false;
+    }
+    TimetableDataSource *dataSource =
+            dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
+    if ( !dataSource ) {
+        kWarning() << "Internal error: Invalid pointer to the data source stored";
         return false;
     }
 
@@ -1515,13 +1531,78 @@ bool PublicTransportEngine::requestUpdate( const QString &sourceName, QString *e
     return request( sourceName );
 }
 
+bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
+                                              Enums::MoreItemsDirection direction,
+                                              QString *errorMessage )
+{
+    // Find the TimetableDataSource object for sourceName
+    const QString nonAmbiguousName = disambiguateSourceName( sourceName );
+    if ( !m_dataSources.contains(nonAmbiguousName) ) {
+        kWarning() << "Not an existing timetable data source:" << sourceName;
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info", "Data source is not an existing timetable "
+                                  "data source: %1", sourceName);
+        }
+        return false;
+    } else if ( m_runningSources.contains(nonAmbiguousName) ) {
+        // The data source currently gets processed or updated, including requests for more items
+        kDebug() << "Source currently gets processed, please wait" << sourceName;
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info", "Source currently gets processed, "
+                                  "please try again later");
+        }
+        return false;
+    }
+
+    TimetableDataSource *dataSource =
+            dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
+    if ( !dataSource ) {
+        kWarning() << "Internal error: Invalid pointer to the data source stored";
+        return false;
+    }
+
+    const SourceRequestData data( sourceName );
+    const ProviderPointer provider = providerFromId(  data.defaultParameter );
+    if ( provider.isNull() ) {
+        // Service provider couldn't be created, should only happen after provider updates,
+        // where the provider worked to get timetable items, but the new provider version
+        // does not work any longer and no more items can be requested
+        return false;
+    }
+
+    // Start the request
+    QSharedPointer< AbstractRequest > request = dataSource->request( sourceName );
+    const QVariantList items = dataSource->timetableItems();
+    if ( items.isEmpty() ) {
+        // TODO
+        kWarning() << "No timetable items in data source" << sourceName;
+//         emit moreItemsRequestFinished( QVariantHash(), false,
+//                                             "No items" );
+        return false;
+    }
+    const QVariantHash item =
+            (direction == Enums::EarlierItems ? items.first() : items.last()).toHash();
+    const QVariantMap _requestData = item[Enums::toString(Enums::RequestData)].toMap();
+
+    // TODO Convert to hash from map..
+    QVariantHash requestData;
+    for ( QVariantMap::ConstIterator it = _requestData.constBegin(); it != _requestData.constEnd(); ++it ) {
+        requestData.insert( it.key(), it.value() );
+    }
+
+    // Start the request
+    m_runningSources << nonAmbiguousName;
+    provider->requestMoreItems( MoreItemsRequest(sourceName, request, requestData, direction) );
+    return true;
+}
+
 bool PublicTransportEngine::request( const SourceRequestData &data ) {
     // Try to get the specific provider from m_providers (if it's not in there it is created)
     const ProviderPointer provider = providerFromId( data.defaultParameter );
     if ( provider.isNull() ) {
         // Service provider couldn't be created
         return false;
-    } else if ( provider->useSeparateCityValue() && data.request->city.isEmpty() &&
+    } else if ( provider->useSeparateCityValue() && data.request->city().isEmpty() &&
                 !dynamic_cast<StopsByGeoPositionRequest*>(data.request) )
     {
         kDebug() << QString("Service provider %1 needs a separate city value. Add to source name "
@@ -1559,14 +1640,19 @@ int PublicTransportEngine::minSecsUntilUpdate( const QString &sourceName, QStrin
 int PublicTransportEngine::getSecsUntilUpdate( const QString &sourceName, QString *errorMessage,
                                                UpdateFlags updateFlags )
 {
-    TimetableDataSource *dataSource = dynamic_cast< TimetableDataSource* >(
-            m_dataSources[disambiguateSourceName(sourceName)] );
-    if ( !dataSource ) {
+    const QString nonAmbiguousName = disambiguateSourceName( sourceName );
+    if ( !m_dataSources.contains(nonAmbiguousName) ) {
         // The data source is not a timetable data source or does not exist
         if ( errorMessage ) {
             *errorMessage = i18nc("@info", "Data source is not an existing timetable "
                                   "data source: %1", sourceName);
         }
+        return -1;
+    }
+    TimetableDataSource *dataSource = dynamic_cast< TimetableDataSource* >(
+            m_dataSources[nonAmbiguousName] );
+    if ( !dataSource ) {
+        kWarning() << "Internal error: Invalid pointer to the data source stored";
         return -1;
     }
 

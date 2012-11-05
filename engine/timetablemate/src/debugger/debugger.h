@@ -37,7 +37,7 @@
 // Qt includes
 #include <QPointer>
 
-struct AbstractRequest;
+class AbstractRequest;
 class ServiceProviderData;
 namespace Scripting {
     class Network;

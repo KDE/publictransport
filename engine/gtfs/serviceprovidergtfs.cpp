@@ -272,21 +272,26 @@ void ServiceProviderGtfs::importFinished( KJob *job )
         for ( QHash<QString,AbstractRequest*>::ConstIterator it = m_waitingRequests.constBegin();
               it != m_waitingRequests.constEnd(); ++it )
         {
-            if ( (*it)->parseMode == ParseForDepartures ) {
+            switch ( (*it)->parseMode() ) {
+            case ParseForDepartures: {
                 DepartureRequest *request = static_cast<DepartureRequest*>( *it );
                 Q_ASSERT( request );
                 requestDepartures( *request );
-            } else if ( (*it)->parseMode == ParseForArrivals ) {
+            } break;
+            case ParseForArrivals: {
                 ArrivalRequest *request = static_cast<ArrivalRequest*>( *it );
                 Q_ASSERT( request );
                 requestArrivals( *request );
-            } else if ( (*it)->parseMode == ParseForStopSuggestions ) {
+            } break;
+            case ParseForStopSuggestions: {
                 StopSuggestionRequest *request = static_cast<StopSuggestionRequest*>( *it );
                 Q_ASSERT( request );
                 requestStopSuggestions( *request );
-            } else {
+            } break;
+            default:
                 kDebug() << "Finished updating GTFS database, but unknown parse mode in a "
-                            "waiting source" << (*it)->parseMode;
+                            "waiting source" << (*it)->parseMode();
+                break;
             }
             delete *it;
         }
@@ -569,8 +574,8 @@ bool ServiceProviderGtfs::checkState( const AbstractRequest *request )
         }
 
         // Store information about the request to report import progress to
-        if ( !m_waitingRequests.contains(request->sourceName) ) {
-            m_waitingRequests[ request->sourceName ] = request->clone();
+        if ( !m_waitingRequests.contains(request->sourceName()) ) {
+            m_waitingRequests[ request->sourceName() ] = request->clone();
         }
         kDebug() << "Wait for GTFS feed download and import";
         return false;
@@ -602,7 +607,7 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
     // location_type 1 is for stations.
     // It's fast, because 'stop_name' is part of a compound index in the database.
     uint stopId;
-    QString stopValue = request->stop;
+    QString stopValue = request->stop();
     stopValue.replace( '\'', "\'\'" );
     if ( !query.exec("SELECT stops.stop_id FROM stops "
                      "WHERE stop_name='" + stopValue + "' "
@@ -621,13 +626,13 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
         stopId = query.value( query.record().indexOf("stop_id") ).toUInt();
     } else {
         bool ok;
-        stopId = request->stop.toUInt( &ok );
+        stopId = request->stop().toUInt( &ok );
         if ( !ok ) {
             kDebug() << "No stop with the given name or id found (needs the exact name):"
-                     << request->stop;
+                     << request->stop();
             emit errorParsing( this, ErrorParsingFailed /*TODO*/,
                     "No stop with the given name or id found (needs the exact name): "
-                    + request->stop,
+                    + request->stop(),
                     QUrl(), request );
             return;
         }
@@ -654,7 +659,7 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
     // TODO: Create a new (temporary) table for each connected departure/arrival source and use
     //       that (much smaller) table here for performance reasons
     const QString routeSeparator = "||";
-    const QTime time = request->dateTime.time();
+    const QTime time = request->dateTime().time();
     const QString queryString = QString(
             "SELECT times.departure_time, times.arrival_time, times.stop_headsign, "
                    "routes.route_type, routes.route_short_name, routes.route_long_name, "
@@ -690,8 +695,8 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
             "LIMIT %3" )
             .arg( stopId )
             .arg( time.hour() * 60 * 60 + time.minute() * 60 + time.second() )
-            .arg( request->maxCount )
-            .arg( request->parseMode == ParseForArrivals ? '<' : '>' ) // For arrivals route_stops/route_times need stops before the home stop
+            .arg( request->maxCount() )
+            .arg( request->parseMode() == ParseForArrivals ? '<' : '>' ) // For arrivals route_stops/route_times need stops before the home stop
             .arg( routeSeparator );
     if ( !query.prepare(queryString) || !query.exec() ) {
         kDebug() << "Error while querying for departures:" << query.lastError();
@@ -733,8 +738,8 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
     // Create a list of DepartureInfo objects from the query result
     DepartureInfoList departures;
     while ( query.next() ) {
-        QDate arrivalDate = request->dateTime.date();
-        QDate departureDate = request->dateTime.date();
+        QDate arrivalDate = request->dateTime().date();
+        QDate departureDate = request->dateTime().date();
 
         // Load agency information from cache
         const QVariant agencyIdValue = query.value( agencyIdColumn );
@@ -760,7 +765,7 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
         }
 
         TimetableData data;
-        data[ Enums::DepartureDateTime ] = request->parseMode == ParseForArrivals ? arrivalTime : departureTime;
+        data[ Enums::DepartureDateTime ] = request->parseMode() == ParseForArrivals ? arrivalTime : departureTime;
         data[ Enums::TypeOfVehicle ] = vehicleTypeFromGtfsRouteType( query.value(routeTypeColumn).toInt() );
         data[ Enums::Operator ] = agency ? agency->name : QString();
 
@@ -862,7 +867,7 @@ void ServiceProviderGtfs::requestStopSuggestions( const StopSuggestionRequest &r
 
     QSqlQuery query( QSqlDatabase::database(m_data->id()) );
     query.setForwardOnly( true );
-    QString stopValue = request.stop;
+    QString stopValue = request.stop();
     stopValue.replace( '\'', "\'\'" );
     if ( !query.prepare(QString("SELECT * FROM stops WHERE stop_name LIKE '%%2%' LIMIT %1")
                         .arg(STOP_SUGGESTION_LIMIT).arg(stopValue))
@@ -885,12 +890,12 @@ void ServiceProviderGtfs::requestStopsByGeoPosition( const StopsByGeoPositionReq
 
     QSqlQuery query( QSqlDatabase::database(m_data->id()) );
     query.setForwardOnly( true );
-    kDebug() << "Get stops near:" << request.distance << "meters ==" << (request.distance * 0.009 / 2);
+    kDebug() << "Get stops near:" << request.distance() << "meters ==" << (request.distance() * 0.009 / 2);
     if ( !query.prepare(QString("SELECT * FROM stops "
                                 "WHERE stop_lon between (%2-%4) and (%2+%4) "
                                 "AND stop_lat between (%3-%4) and (%3+%4) LIMIT %1")
-                        .arg(STOP_SUGGESTION_LIMIT).arg(request.longitude).arg(request.latitude)
-                        .arg(request.distance * 0.000009 / 2)) // Calculate degree from meters = 360/40,070,000
+                        .arg(STOP_SUGGESTION_LIMIT).arg(request.longitude()).arg(request.latitude())
+                        .arg(request.distance() * 0.000009 / 2)) // Calculate degree from meters = 360/40,070,000
          || !query.exec() )
     {
         // Check of the error is a "disk I/O error", ie. the database file may have been deleted
@@ -924,10 +929,10 @@ StopInfoList ServiceProviderGtfs::stopsFromQuery( QSqlQuery *query,
             // it's weight gets. If the found name equals the search string, the weight becomes 100.
             // Use 84 as maximal starting weight value (if stopName doesn't equal the search string),
             // because maximally 15 bonus points are added which makes 99, less than total equality 100.
-            weight = stopName == request->stop ? 100
-                    : 84 - qMin( 84, qAbs(stopName.length() - request->stop.length()) );
+            weight = stopName == request->stop() ? 100
+                    : 84 - qMin( 84, qAbs(stopName.length() - request->stop().length()) );
 
-            if ( weight < 100 && stopName.startsWith(request->stop) ) {
+            if ( weight < 100 && stopName.startsWith(request->stop()) ) {
                 // 15 weight points bonus if the found stop name starts with the search string
                 weight = qMin( 100, weight + 15 );
             }
@@ -935,7 +940,7 @@ StopInfoList ServiceProviderGtfs::stopsFromQuery( QSqlQuery *query,
                 // Test if the search string is the start of a new word in stopName
                 // Start at 2, because startsWith is already tested above and at least a space must
                 // follow to start a new word
-                int pos = stopName.indexOf( request->stop, 2, Qt::CaseInsensitive );
+                int pos = stopName.indexOf( request->stop(), 2, Qt::CaseInsensitive );
 
                 if ( pos != -1 && stopName[pos - 1].isSpace() ) {
                     // 10 weight points bonus if a word in the found stop name
@@ -946,7 +951,7 @@ StopInfoList ServiceProviderGtfs::stopsFromQuery( QSqlQuery *query,
         }
 
         stops << StopInfoPtr( new StopInfo(stopName, id, weight,
-                                           longitude, latitude, request->city) );
+                                           longitude, latitude, request->city()) );
     }
 
     if ( stops.isEmpty() ) {
