@@ -94,9 +94,9 @@ bool ServiceProviderScript::lazyLoadScript()
                  << m_data->scriptFileName() << scriptFile.errorString();
         return false;
     }
-    QTextStream stream( &scriptFile );
-    QString scriptContents = stream.readAll();
+    const QByteArray ba = scriptFile.readAll();
     scriptFile.close();
+    const QString scriptContents = QString::fromUtf8( ba );
 
     // Initialize the script
     m_scriptData = ScriptData( m_data, QScriptProgram(scriptContents, m_data->scriptFileName()) );
