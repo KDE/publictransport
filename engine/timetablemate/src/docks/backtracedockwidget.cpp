@@ -164,10 +164,7 @@ void BacktraceDockWidget::clickedBacktraceItem( const QModelIndex &index )
 
     // Set cursor position to the current execution position in frame
     if ( tab ) {
-        KTextEditor::View *view = tab->document()->activeView();
-        view->blockSignals( true );
-        view->setCursorPosition( KTextEditor::Cursor(frame->lineNumber() - 1, 0) );
-        view->blockSignals( false );
+        tab->goToLine( frame->lineNumber() );
     }
 
     const int depth = index.row();

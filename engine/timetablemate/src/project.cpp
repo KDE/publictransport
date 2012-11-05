@@ -674,8 +674,9 @@ public:
         if ( syntax.state() == QScriptSyntaxCheckResult::Error ) {
             // Open script tab and set the cursor position to the error position
             ScriptTab *tab = q->showScriptTab();
-            tab->document()->views().first()->setCursorPosition(
-                    KTextEditor::Cursor(syntax.errorLineNumber() - 1, syntax.errorColumnNumber()) );
+            if ( tab ) {
+                tab->goToLine( syntax.errorLineNumber() );
+            }
 
             // Emit an information message about the syntax error
             q->emit informationMessage(
@@ -3326,8 +3327,7 @@ void Project::showScriptLineNumber( const QString &fileName, int lineNumber )
     QMutexLocker locker( d->mutex );
     ScriptTab *tab = fileName.isEmpty() ? showScriptTab() : showExternalScriptTab(fileName);
     if ( tab ) {
-        tab->document()->views().first()->setCursorPosition(
-                KTextEditor::Cursor(lineNumber - 1, 0) );
+        tab->goToLine( lineNumber );
     }
 }
 #endif
@@ -4404,8 +4404,7 @@ void Project::scriptException( int lineNumber, const QString &errorMessage, cons
     }
 
     if ( !d->suppressMessages && tab ) {
-        tab->document()->views().first()->setCursorPosition(
-                KTextEditor::Cursor(lineNumber - 1, 0) );
+        tab->goToLine( lineNumber );
     }
 }
 #endif // BUILD_PROVIDER_TYPE_SCRIPT

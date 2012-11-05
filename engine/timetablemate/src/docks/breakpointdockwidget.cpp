@@ -182,10 +182,6 @@ void BreakpointDockWidget::clickedBreakpointItem( const QModelIndex &index )
     }
     ScriptTab *tab = project->scriptTab();
     if ( tab ) {
-        const int lineNumber = breakpoint->lineNumber();
-        KTextEditor::View *view = tab->document()->activeView();
-        view->blockSignals( true );
-        view->setCursorPosition( KTextEditor::Cursor(lineNumber - 1, 0) );
-        view->blockSignals( false );
+        tab->goToLine( breakpoint->lineNumber() );
     }
 }
