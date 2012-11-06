@@ -235,9 +235,10 @@ var __hafas_journeys = function(hafas) {
                         var oldPos = stream.pos;
                         stream.seek( stringsPos + stringOffset );
 
-                        var string = encoding == undefined || encoding == ""
-                            ? stream.readString()
-                            : helper.decode(stream.readBytesUntilZero(), encoding);
+                        if ( encoding == undefined || encoding == "" ) {
+                            encoding = "utf8";
+                        }
+                        var string = helper.decode(stream.readBytesUntilZero(), encoding);
                         stream.seek( oldPos );
                         return helper.trim( string );
                     }
@@ -423,8 +424,8 @@ var __hafas_journeys = function(hafas) {
 
                 // Read header
                 buffer.seek( 0x02 );
-                var originStop = readLocation();
-                var targetStop = readLocation();
+                var originStop = readLocation(encoding);
+                var targetStop = readLocation(encoding);
                 var journeyCount = readUInt16();
 
                 stream.skip( 8 );
@@ -461,7 +462,7 @@ var __hafas_journeys = function(hafas) {
                     // Read service days text
                     seek( serviceDaysPos + serviceDaysOffset,
                           "Service Days for Journey " + j );
-                    journey.JourneyNews = readNextString();
+                    journey.JourneyNews = readNextString( encoding );
 
                     // Get journey offset in days
                     var serviceBitBase = readUInt16();
@@ -507,11 +508,11 @@ var __hafas_journeys = function(hafas) {
                         seek( attributesOffset + attributesIndex * 4,
                               "Attributes for Journey " + j );
                         while ( true ) {
-                            var key = readNextString();
+                            var key = readNextString(encoding);
                             if ( key.length == 0 ) {
                                 break;
                             } else if ( key == "ConnectionId" ) {
-                                journeyId = readNextString();
+                                journeyId = readNextString(encoding);
                             } else {
                                 stream.skip( 2 );
                             }
@@ -527,7 +528,7 @@ var __hafas_journeys = function(hafas) {
 
                         // Read departure information
                         var plannedDepartureTime = readTime( date, journeyDayOffset );
-                        var departureStop = readStop();
+                        var departureStop = readStop(encoding);
                         if ( p == 0 ) {
                             // First stop, use it's departure time as global departure time
                             // for this journey
@@ -537,7 +538,7 @@ var __hafas_journeys = function(hafas) {
 
                         // Read arrival information
                         var plannedArrivalTime = readTime( date, journeyDayOffset );
-                        var arrivalStop = readStop();
+                        var arrivalStop = readStop(encoding);
                         if ( p == partCount - 1 ) {
                             // Last stop, use it's arrival time as global arrival time
                             // for this journey
@@ -548,7 +549,7 @@ var __hafas_journeys = function(hafas) {
                         var type = readUInt16();
                         var vehicleType = type == 1 ? PublicTransport.Footway
                                                     : PublicTransport.UnknownVehicleType;
-                        var vehicleTypeAndTransportLine = readNextString();
+                        var vehicleTypeAndTransportLine = readNextString(encoding);
                         var pos = vehicleTypeAndTransportLine.indexOf( "#" );
                         var transportLine, vehicleTypeString;
                         if ( pos < 0 ) {
@@ -557,13 +558,12 @@ var __hafas_journeys = function(hafas) {
                             transportLine = vehicleTypeAndTransportLine.substr( 0, pos );
                             vehicleTypeString = vehicleTypeAndTransportLine.substr( pos + 1 );
                         }
-                        transportLine = helper.simplify(
-                                transportLine.replace(/^((?:Bus|STR)\s+)/i, "") );
+                        transportLine = hafas.trimTransportLine( transportLine );
 
                         journey.RouteTransportLines.push( transportLine );
 
-                        var plannedDeparturePlatform = readNextString();
-                        var plannedArrivalPlatform = readNextString();
+                        var plannedDeparturePlatform = readNextString(encoding);
+                        var plannedArrivalPlatform = readNextString(encoding);
                         var partAttributeIndex = readUInt16();
 
                         // Read comments
@@ -574,7 +574,7 @@ var __hafas_journeys = function(hafas) {
                         var routeNews = "";
                         for ( c = 0; c < commentCount; ++c ) {
                             // Add comment to journey news
-                            var comment = readNextString();
+                            var comment = readNextString(encoding);
                             routeNews += routeNews.length > 0 ? ", \n" + comment : comment;
                         }
 
@@ -585,7 +585,7 @@ var __hafas_journeys = function(hafas) {
                             var direction = "";
                             var lineClass = 0, category = "";
                             while ( true ) {
-                                var key = readNextString(); // Operator, AdminCode, Class, HafasName,
+                                var key = readNextString(encoding); // Operator, AdminCode, Class, HafasName,
                                     // Category, InternalCat, ParallelTrain.0, Direction, Class, approxDelay
                                 if ( key.length == 0 ) {
                                     break;
@@ -595,17 +595,17 @@ var __hafas_journeys = function(hafas) {
                                     } else {
                                         journey.Operator += ", ";
                                     }
-                                    journey.Operator += readNextString();
+                                    journey.Operator += readNextString(encoding);
                                 } else if ( key == "Category" ) {
-                                    category = readNextString();
+                                    category = readNextString(encoding);
                                     if ( vehicleType == PublicTransport.UnknownVehicleType ) {
                                         vehicleType = hafas.vehicleFromString( category,
                                                 {unknownVehicleWarning: false} );
                                     }
                                 //     } else if ( key == "Direction" ) { // TODO Rename to Direction or use both Direction and Target?
-                                    //         journey.Target = readNextString();
+                                    //         journey.Target = readNextString(encoding);
                                 } else if ( key == "Class" ) {
-                                    lineClass = parseInt( readNextString() );
+                                    lineClass = parseInt( readNextString(encoding) );
                                     if ( vehicleType == PublicTransport.UnknownVehicleType ) {
                                         vehicleType = hafas.vehicleFromClass( lineClass,
                                                 {unknownVehicleWarning: false} );
@@ -653,9 +653,9 @@ var __hafas_journeys = function(hafas) {
                         var predictedDepartureTime = readTime( date, journeyDayOffset );
                         var predictedArrivalTime = readTime( date, journeyDayOffset );
                         var predictedDeparturePlatform = getPredictedPlatform(
-                                plannedDeparturePlatform, readNextString() );
+                                plannedDeparturePlatform, readNextString(encoding) );
                         var predictedArrivalPlatform = getPredictedPlatform(
-                                plannedArrivalPlatform, readNextString() );
+                                plannedArrivalPlatform, readNextString(encoding) );
 
                         var delayDeparture = getDelay( plannedDepartureTime, predictedDepartureTime );
                         var delayArrival = getDelay( plannedArrivalTime, predictedArrivalTime );
@@ -718,16 +718,16 @@ var __hafas_journeys = function(hafas) {
                             for ( m = 0; m < stopCount; ++m ) {
                                 var plannedStopDepartureTime = readTime(date, journeyDayOffset);
                                 var plannedStopArrivalTime = readTime(date, journeyDayOffset);
-                                var plannedStopDeparturePlatform = readNextString();
-                                var plannedStopArrivalPlatform = readNextString();
+                                var plannedStopDeparturePlatform = readNextString(encoding);
+                                var plannedStopArrivalPlatform = readNextString(encoding);
                                 stream.skip( 4 );
 
                                 var predictedStopDepartureTime = readTime(date, journeyDayOffset);
                                 var predictedStopArrivalTime = readTime(date, journeyDayOffset);
                                 var predictedStopDeparturePlatform = getPredictedPlatform(
-                                        plannedStopDeparturePlatform, readNextString() );
+                                        plannedStopDeparturePlatform, readNextString(encoding) );
                                 var predictedStopArrivalPlatform = getPredictedPlatform(
-                                        plannedStopArrivalPlatform, readNextString() );
+                                        plannedStopArrivalPlatform, readNextString(encoding) );
                                 stream.skip( 4 );
 
                                 var delayStopDeparture = getDelay(
@@ -739,7 +739,7 @@ var __hafas_journeys = function(hafas) {
                                 predictedStopArrivalTime = getPredictedTime(
                                         plannedStopArrivalTime, predictedStopArrivalTime );
 
-                                var stop = readStop();
+                                var stop = readStop(encoding);
                                 subJourney.RouteStops[m] = stop.StopName;
                                 subJourney.RouteNews[m] = ""; // TODO Check for changed departure/arrival time/platform, ...
                                 subJourney.RoutePlatformsDeparture[m] = predictedStopDeparturePlatform;
