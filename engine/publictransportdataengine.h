@@ -579,28 +579,35 @@ private:
 /** @mainpage Public Transport Data Engine
 @section intro_dataengine_sec Introduction
 The public transport data engine provides timetable data for public transport, trains, ships,
-ferries and planes. It can get departure/arrival lists or journey lists.
-There are different service providers used to download and parse documents from
-different service providers. Currently there are rwo classes of service providers to parse
-documents using scripts: One uses scripts to do the work, the other one uses GTFS. All are
-using information from ServiceProviderData, which reads information data from xml files to support
-different service providers.
+ferries and planes. It can get departures/arrivals, journeys and stop suggestions.
+There are different plugins (eg. scripts) used to get timetable data from the different
+service providers. Currently there are two classes of service providers: One uses scripts to
+do the work, the other one uses GTFS (GeneralTransitFeedSpecification). All are using information
+from ServiceProviderData, which reads information data from "*.pts" files (XML files with mime type
+"application-x-publictransport-serviceprovider").
 
 <br />
 @section install_sec Installation
 To install this data engine type the following commands:<br />
-\> cd /path-to-extracted-engine-sources/build<br />
-\> cmake -DCMAKE_INSTALL_PREFIX=`kde4-config --prefix` ..<br />
-\> make<br />
-\> make install<br />
-<br />
+@verbatim
+> cd /path-to-extracted-engine-sources/build
+> cmake -DCMAKE_INSTALL_PREFIX=`kde4-config --prefix` ..
+> make
+> make install
+@endverbatim
+@note Do not forget the ".." at the end of the second line!
+
 After installation do the following to use the data engine in your plasma desktop:
 Restart plasma to load the data engine:<br />
-\> kquitapp plasma-desktop<br />
-\> plasma-desktop<br />
+@verbatim
+> kquitapp plasma-desktop
+> plasma-desktop
+@endverbatim
 <br />
 or test it with:<br />
-\> plasmaengineexplorer --engine publictransport<br />
+@verbatim
+> plasmaengineexplorer --engine publictransport
+@endverbatim
 <br />
 You might need to run kbuildsycoca4 in order to get the .desktop file recognized.
 <br />
@@ -617,10 +624,19 @@ You might need to run kbuildsycoca4 in order to get the .desktop file recognized
 /** @page pageUsage Usage
 
 @par Sections
-    @li @ref usage_serviceproviders_sec
-    @li @ref usage_departures_sec
-    @li @ref usage_journeys_sec
-    @li @ref usage_stopList_sec
+<ul><li>@ref usage_serviceproviders_sec </li>
+    <li>@ref usage_departures_sec </li>
+    <ul><li>@ref usage_departures_datastructure_sec </li></ul>
+    <li>@ref usage_journeys_sec </li>
+    <ul><li>@ref usage_journeys_datastructure_sec </li></ul>
+    <li>@ref usage_stopList_sec </li>
+    <ul><li>@ref usage_stopList_datastructure_sec </li></ul>
+    <li>@ref usage_service_sec </li>
+    <ul><li>@ref usage_service_manual_update </li>
+        <li>@ref usage_service_additional_data </li>
+        <li>@ref usage_service_later_items </li>
+    </ul>
+</ul>
 
 <br />
 
@@ -630,6 +646,9 @@ transport data engine. There are data sources which provide information about th
 service providers (@ref usage_serviceproviders_sec) or supported countries. Other data sources
 contain departures/arrivals (@ref usage_departures_sec), journeys (@ref usage_journeys_sec) or
 stop suggestions (@ref usage_stopList_sec).<br />
+The engine provides services for all timetable data sources (departures, journeys, ...). It offers
+operations to manually request updates, request earlier/later timetable items or to request
+additional data for specific timetable items (@ref usage_service_sec).<br />
 <br />
 The following enumeration can be used in your applet if you don't want to use
 libpublictransporthelper which exports this enumaration as @ref PublicTransport::VehicleType.
@@ -795,17 +814,16 @@ public slots:
 };
 @endcode
 <br />
+@subsection usage_departures_datastructure_sec Departure Data Source Structure
 The data received from the data engine always contains these keys:<br />
 <table>
 <tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
-<tr><td><i>errorString</i></td> <td>QString</td> <td>(only if <em>error</em> is true), an error message string.</td></tr>
+<tr><td><i>errorMessage</i></td> <td>QString</td> <td>(only if <em>error</em> is true), an error message string.</td></tr>
 <tr><td><i>errorCode</i></td> <td>int</td> <td>(only if <em>error</em> is true), an error code.
     Error code 1 means, that there was a problem downloading a source file.
     Error code 2 means, that parsing a source file failed.
     Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
     Use the @ref PublicTransportService to start and monitor the import.</td></tr>
-<tr><td><i>count</i></td> <td>int</td> <td>The number of received departures / arrivals / stops or 0 if there was
-an error.</td></tr>
 <tr><td><i>receivedData</i></td> <td>QString</td> <td>"departures", "journeys", "stopList" or "nothing" if
 there was an error.</td></tr>
 <tr><td><i>updated</i></td> <td>QDateTime</td> <td>The date and time when the data source was last updated.</td></tr>
@@ -820,29 +838,32 @@ an update using the "requestUpdate" operation of the timetable service.</td></tr
 Each departure/arrival in the data received from the data engine (departureData in the code
 example) has the following keys:<br />
 <table>
-<tr><td><i>line</i></td> <td>QString</td> <td>The name of the public transport line, e.g. "S1", "6", "1E", "RB 24155".</td></tr>
-<tr><td><i>target</i></td> <td>QString</td> <td>The name of the target / origin of the public transport line.</td></tr>
-<tr><td><i>departure</i></td> <td>QDateTime</td> <td>The date and time of the departure / arrival.</td></tr>
-<tr><td><i>vehicleType</i></td> <td>int</td> <td>An int containing the ID of the vehicle type used for the
+<tr><td><i>TransportLine</i></td> <td>QString</td> <td>The name of the public transport line, e.g. "S1", "6", "1E", "RB 24155".</td></tr>
+<tr><td><i>Target</i></td> <td>QString</td> <td>The name of the target / origin of the public transport line.</td></tr>
+<tr><td><i>DepartureDateTime</i></td> <td>QDateTime</td> <td>The date and time of the departure / arrival.</td></tr>
+<tr><td><i>TypeOfVehicle</i></td> <td>int</td> <td>An int containing the ID of the vehicle type used for the
 departure/arrival. You can cast the ID to VehicleType using "static_cast<VehicleType>( iVehicleType )".</td></tr>
-<tr><td><i>vehicleName</i></td> <td>QString</td> <td>A translated name for the vehicle type used for the
+<tr><td><i>VehicleName</i></td> <td>QString</td> <td>A translated name for the vehicle type used for the
 departure/arrival.</td></tr>
-<tr><td><i>vehicleNamePlural</i></td> <td>QString</td> <td>A translated name for the vehicle type used for the
+<tr><td><i>VehicleNamePlural</i></td> <td>QString</td> <td>A translated name for the vehicle type used for the
 departure/arrival, plural version.</td></tr>
-<tr><td><i>vehicleIconName</i></td> <td>QString</td> <td>The name of the icon for the vehicle type used for the
+<tr><td><i>VehicleIconName</i></td> <td>QString</td> <td>The name of the icon for the vehicle type used for the
 departure/arrival. Can be used as argument to the KIcon constructor.</td></tr>
-<tr><td><i>nightline</i></td> <td>bool</td> <td>Wheather or not the public transport line is a night line.</td></tr>
-<tr><td><i>expressline</i></td> <td>bool</td> <td>Wheather or not the public transport line is an express line.</td></tr>
-<tr><td><i>platform</i></td> <td>QString</td> <td>The platform from/at which the vehicle departs/arrives.</td></tr>
-<tr><td><i>delay</i></td> <td>int</td> <td>The delay in minutes, 0 means 'on schedule', -1 means 'no delay information available'.</td></tr>
-<tr><td><i>delayReason</i></td> <td>QString</td> <td>The reason of a delay.</td></tr>
-<tr><td><i>status</i></td> <td>QString</td> <td>The status of the departure, if available.</td></tr>
-<tr><td><i>journeyNews</i></td> <td>QString</td> <td>News for the journey.</td></tr>
-<tr><td><i>operator</i></td> <td>QString</td> <td>The company that is responsible for the journey.</td></tr>
-<tr><td><i>routeStops</i></td> <td>QStringList</td> <td>A list of stops of the departure/arrival to it's destination stop or a list of stops of the journey from it's start to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
-<tr><td><i>routeTimes</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of times of the departure/arrival to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
-<tr><td><i>routeExactStops</i></td> <td>int</td> <td>The number of exact route stops. The route stop list isn't complete from the last exact route stop.</td></tr>
+<tr><td><i>Nightline</i></td> <td>bool</td> <td>Wheather or not the public transport line is a night line.</td></tr>
+<tr><td><i>Expressline</i></td> <td>bool</td> <td>Wheather or not the public transport line is an express line.</td></tr>
+<tr><td><i>Platform</i></td> <td>QString</td> <td>The platform from/at which the vehicle departs/arrives.</td></tr>
+<tr><td><i>Delay</i></td> <td>int</td> <td>The delay in minutes, 0 means 'on schedule', -1 means 'no delay information available'.</td></tr>
+<tr><td><i>DelayReason</i></td> <td>QString</td> <td>The reason of a delay.</td></tr>
+<tr><td><i>Status</i></td> <td>QString</td> <td>The status of the departure, if available.</td></tr>
+<tr><td><i>JourneyNews</i></td> <td>QString</td> <td>News for the journey.</td></tr>
+<tr><td><i>Operator</i></td> <td>QString</td> <td>The company that is responsible for the journey.</td></tr>
+<tr><td><i>RouteStops</i></td> <td>QStringList</td> <td>A list of stops of the departure/arrival to it's destination stop or a list of stops of the journey from it's start to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
+<tr><td><i>RouteTimes</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of times of the departure/arrival to it's destination stop. If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements. And elements with equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
+<tr><td><i>RouteExactStops</i></td> <td>int</td> <td>The number of exact route stops. The route stop list isn't complete from the last exact route stop.</td></tr>
 </table>
+
+@note The service provider may not load all data by default. To load missing data ("additional data"),
+  use the timetable service's operation "requestAdditionalData", @ref usage_service_sec.
 
 <br />
 @section usage_journeys_sec Receiving Journeys from A to B
@@ -916,17 +937,16 @@ public slots:
 };
 @endcode
 <br />
+@subsection usage_journeys_datastructure_sec Journey Data Source Structure
 The data received from the data engine always contains these keys:<br />
 <table>
 <tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
-<tr><td><i>errorString</i></td> <td>QString</td> <td>(only if <em>error</em> is true), an error message string.</td></tr>
+<tr><td><i>errorMessage</i></td> <td>QString</td> <td>(only if <em>error</em> is true), an error message string.</td></tr>
 <tr><td><i>errorCode</i></td> <td>int</td> <td>(only if <em>error</em> is true), an error code.
     Error code 1 means, that there was a problem downloading a source file.
     Error code 2 means, that parsing a source file failed.
     Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
     Use the @ref PublicTransportService to start and monitor the import.</td></tr>
-<tr><td><i>count</i></td> <td>int</td> <td>The number of received journeys / stops or 0 if there was
-an error.</td></tr>
 <tr><td><i>updated</i></td> <td>QDateTime</td> <td>The date and time when the data source was last updated.</td></tr>
 <tr><td><i>journeys</i></td> <td>QVariantList</td> <td>A list of all found journeys.</td></tr>
 </table>
@@ -960,17 +980,21 @@ example) has the following keys:<br />
 
 <br />
 @section usage_stopList_sec Receiving Stop Lists
-When you have requested departures, arrivals or journeys from the data engine, it may return a
-list of stops, if the given stop name is ambiguous. To force getting a list of stop suggestions
-use the data source <em>"Stops \<service-provider-id\>|stop=\<stop-name-part\>"</em>.
+To get a list of stop suggestions use the data source
+@verbatim "Stops <service-provider-id>|stop=<stop-name-part>" @endverbatim
+If the provider supports the @em ProvidesStopsByGeoPosition feature, the following parameters can
+be used to get stops at a specific geo position:
+@verbatim "Stops <service-provider-id>|latitude=<decimal-latitude>|longitude=<decimal-longitude>" @endverbatim
 
 In your dataUpdated-slot you should first check, if a stop list was received by checking if a
 key "stops" exists in the data object from the data engine. Then you get the stop data, which is
 stored in the key "stops" and contains a list of data sets, one for each stop. They have at least
-a <i>StopName</i> key (containing the stop name). It <b>may</b> additionally contain a
-<i>StopID</i> (a non-ambiguous ID for the stop, if available, otherwise it is empty), a
-<i>StopCity</i> (the city the stop is in) and a <i>StopCountryCode</i> (the code of the country
-in with the stop is).
+a <i>StopName</i> key (containing the stop name). They <b>may</b> additionally contain a
+<i>StopID</i> (a non-ambiguous ID for the stop, if available, otherwise it is empty),
+<i>StopWeight</i> (the weight of the suggestion), a <i>StopCity</i> (the city the stop is in)
+and a <i>StopCountryCode</i> (the code of the country in with the stop is). If the provider
+supports the ProvidesStopGeoPosition feature they also contain <i>StopLatitude</i> and
+<i>StopLongitude</i>.
 
 @code
 void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data ) {
@@ -992,6 +1016,96 @@ void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &dat
         }
     }
 }
+@endcode
+
+@subsection usage_stopList_datastructure_sec Stop Data Source Structure
+The data received from the data engine contains these keys:<br />
+<table>
+<tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
+<tr><td><i>errorMessage</i></td> <td>QString</td> <td>(only if <em>error</em> is true), an error message string.</td></tr>
+<tr><td><i>errorCode</i></td> <td>int</td> <td>(only if <em>error</em> is true), an error code.
+    Error code 1 means, that there was a problem downloading a source file.
+    Error code 2 means, that parsing a source file failed.
+    Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
+    Use the @ref PublicTransportService to start and monitor the import.</td></tr>
+<tr><td><i>updated</i></td> <td>QDateTime</td> <td>The date and time when the data source was last updated.</td></tr>
+<tr><td><i>stops</i></td> <td>QVariantList</td> <td>A list of all found stops.</td></tr>
+</table>
+<br />
+Each stop in the data received from the data engine has the following keys:<br />
+<table>
+<tr><td><i>StopName</i></td> <td>QString</td> <td>The name of the stop.</td></tr>
+<tr><td><i>StopID</i></td> <td>QString</td> <td>A unique ID for the stop, if available.</td></tr>
+<tr><td><i>StopWeight</i></td> <td>int</td> <td>The weight of the stop as a suggestion, if available.</td></tr>
+<tr><td><i>StopCity</i></td> <td>QString</td> <td>The name of the city the stop is in, if available.</td></tr>
+<tr><td><i>StopCountryCode</i></td> <td>QString</td> <td>The code of the country in with the stop is, if available.</td></tr>
+<tr><td><i>StopLatitude</i></td> <td>qreal</td> <td>The decimal latitude of the stop.
+Only available if the provider supports the ProvidesStopGeoPosition feature.</td></tr>
+<tr><td><i>StopLongitude</i></td> <td>qreal</td> <td>The decimal longitude of the stop.
+Only available if the provider supports the ProvidesStopGeoPosition feature.</td></tr>
+</table>
+
+<br />
+@section usage_service_sec Using the Timetable Service
+This service is available for all timetable data sources, ie. departure, arrival and journey
+data sources. It can be retrieved using DataEngine::serviceForSource() with the name of the
+timetable data source. The service offers some operations on timetable data sources and allows
+to change it's contents, ie. update or extend it with new data.
+
+@subsection usage_service_manual_update Manual updates
+Manual updates can be requested for timetable data sources using the @b "requestUpdate" operation.
+They may be rejected if the last update was not long enough ago (see the @em "minManualUpdateTime"
+field of the data source). Manual updates are allowed more often than automatic updates.
+Does not need any parameters.
+The following code example shows how to use the service to request a manual update:
+@code
+// Get a pointer to the service for the used data source,
+// use Plasma::Applet::dataEngine() to get a pointer to the engine,
+// alternatively Plasma::DataEngineManager can be used
+Plasma::Service *service = dataEngine("publictransport")->serviceForSource( sourceName );
+
+// Start the "requestUpdate" operation (no parameters)
+KConfigGroup op = service->operationDescription("requestUpdate");
+Plasma::ServiceJob *updateJob = service->startOperationCall( op );
+
+// Connect to the finished() slot if needed
+connect( updateJob, SIGNAL(finished(KJob*)), this, SLOT(updateRequestFinished(KJob*)) );
+@endcode
+
+@subsection usage_service_additional_data Request additional data
+Additional data (eg. route data) can be requested for specific timetable items. There are two
+operations @b "requestAdditionalData" and @b "requestAdditionalDataRange", the latter one should
+be used if additional data gets requested for multiple items at once to save data source updates
+in the engine. Uses an "itemnumber" or "itemnumberbegin"/"itemnumberend" parameters to identify
+the timetable item(s) to get additional data for.
+@code
+// Get a pointer to the service for the used data source, like in example 1
+Plasma::Service *service = dataEngine("publictransport")->serviceForSource( sourceName );
+
+// Start the "requestAdditionalData" operation
+// with an "itemnumber" parameter, 0 to get additional data for the first item
+KConfigGroup op = service->operationDescription("requestAdditionalData");
+op.writeEntry( "itemnumber", 0 );
+Plasma::ServiceJob *additionalDataJob = service->startOperationCall( op );
+@endcode
+
+@subsection usage_service_later_items Request earlier/later items
+Use the operations @b "requestEarlierItems" and @b "requestLaterItems" to get more timetable items for
+a data source. This is currently only used for journeys. The difference between these operation
+and simply requesting more journeys with an earlier/later time is that the provider may benefit
+from data stored for the request at the provider's server (if any) when using this operation.
+Another difference is that the data source will contain both the old and the earlier/later
+journeys after using this operation.
+
+These operations need the used service provider to support the @em ProvidesMoreJourneys feature.
+Does not need any parameters.
+@code
+// Get a pointer to the service for the used data source, like in example 1
+Plasma::Service *service = dataEngine("publictransport")->serviceForSource( sourceName );
+
+// Start the "requestLaterItems" operation (no parameters)
+KConfigGroup op = service->operationDescription("requestLaterItems");
+Plasma::ServiceJob *laterItemsJob = service->startOperationCall( op );
 @endcode
 */
 
@@ -1025,124 +1139,109 @@ features script editing, syntax checking, code-completion for the engine's scrip
 tests, web page viewer, network request/reply viewer with some filters, a Plasma preview etc.<br />
 
 Here is an overview of the allowed tags in the XML file (required child tags of the serviceProvider
-tag are <span style="background-color: #ffbbbb;">highlighted</span>):
+tag are <span style="background-color: #ffdddd;">highlighted</span>):
 <table>
 <tr style="background-color: #bbbbbb; font-weight: bold;"><td>Tag</td> <td>Parent Tag</td> <td>Optional?</td> <td>Description</td></tr>
 
-<tr style="background-color: #ffbbbb;"><td><b>\<serviceProvider\></b></td>
+<tr style="background-color: #ffdddd;">
+<td><b>\<serviceProvider\> </b></td>
 <td>Root</td> <td>Required</td> <td>This is the root item.</td></tr>
 
-<tr><td><b>\<xml_file_version type="publictransport" version="1.0" /\></b></td>
-<td>\<serviceProvider\></td> <td>Not used</td>
+<tr><td><b>\<xml_file_version type="publictransport" version="1.0" /\> </b></td>
+<td>\<serviceProvider\> </td> <td>Not used</td>
 <td>This is currently not used by the data engine. But to be sure that the xml is parsed correctly you should add this tag. The version is the version of the xml file structure, current version is 1.0.</td></tr>
 
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<name\></b></td>
-<td>\<serviceProvider\></td> <td>Required</td>
+<tr style="background-color: #ffdddd;">
+<td><b>\<name\> </b></td><td>\<serviceProvider\></td> <td>Required</td>
 <td>The name of the service provider (plugin). If it provides data for international stops it should begin with "International", if it's specific for a country or city it should begin with the name of that country or city. That should be followed by a short url to the service provider.</td></tr>
 
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td style="color:#888800"><b>\<author\></b></td>
-<td>\<serviceProvider\></td> <td>Required</td>
-<td>Contains information about the author of the service provider plugin.</td></tr>
-
-<tr><td style="color:#666600"><b>\<fullname\></b></td>
-<td style="color:#888800">\<author\></td> <td>Required</td>
-<td>The full name of the author of the service provider plugin.</td></tr>
-
-<tr><td style="color:#666600"><b>\<short\></b></td>
-<td style="color:#888800">\<author\></td> <td>(Optional)</td>
-<td>A short name for the author of the service provider plugin (eg. the initials).</td></tr>
-
-<tr><td style="color:#666600"><b>\<email\></b></td>
-<td style="color:#888800">\<author\></td> <td>(Optional)</td> <td>
-The email address of the author of the service provider plugin.</td></tr>
-
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<version\></b></td>
-<td>\<serviceProvider\></td> <td>Required</td>
-<td>The version of the service provider plugin, should start with "1.0".</td></tr>
-
-<tr style="background-color: #ffbbbb;"><td><b>\<type\></b></td>
-<td>\<serviceProvider\></td> <td>Required</td>
-<td>Can be either HTML or XML.</td></tr>
-
-<tr style="border-top: 3px double black;"><td style="color:#00bb00"><b>\<cities\></b></td>
-<td>\<serviceProvider\></td> <td>(Optional)</td>
-<td>A list of cities the service provider has data for (with surrounding \<city\>-tags).</td></tr>
-
-<tr><td style="color:#007700"><b>\<city\></b></td>
-<td style="color:#00bb00">\<cities\></td> <td>(Optional)</td>
-<td>A city in the list of cities (\<cities\>). Can have an attribute "replaceWith", to replace city names with values used by the service provider.</td></tr>
-
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<description\></b></td>
-<td>\<serviceProvider\></td> <td>Required</td>
+<tr style="background-color: #ffdddd;">
+<td><b>\<description\> </b></td><td>\<serviceProvider\> </td> <td>Required</td>
 <td>A description of the service provider (plugin). You don't need to list the features supported by the service provider here, the feature list is generated automatically.</td></tr>
 
-<tr><td><b>\<notes></b></td>
-<td>\<serviceProvider\></td> <td>(Optional)</td>
-<td>Custom notes for the service provider plugin. Can be a to do list.</td></tr>
+<tr style="background-color: #ffdddd;"><td style="color:#888800">
+<b>\<author\> </b></td><td>\<serviceProvider\></td> <td>Required</td>
+<td>Contains information about the author of the service provider plugin.</td></tr>
 
-<tr style="background-color: #ffbbbb;"><td><b>\<url\></b></td>
-<td>\<serviceProvider\></td> <td>Required</td>
+<tr><td style="color:#666600">
+<b>\<fullname\> </b></td><td style="color:#888800">\<author\></td> <td>Required</td>
+<td>The full name of the author of the service provider plugin.</td></tr>
+
+<tr><td style="color:#666600">
+<b>\<short\> </b></td><td style="color:#888800">\<author\></td> <td>(Optional)</td>
+<td>A short name for the author of the service provider plugin (eg. the initials).</td></tr>
+
+<tr><td style="color:#666600">
+<b>\<email\> </b></td><td style="color:#888800">\<author\></td> <td>(Optional)</td> <td>
+The email address of the author of the service provider plugin.</td></tr>
+
+<tr style="background-color: #ffdddd;">
+<td><b>\<version\> </b></td><td>\<serviceProvider\> </td> <td>Required</td>
+<td>The version of the service provider plugin, should start with "1.0".</td></tr>
+
+<tr style="background-color: #ffdddd;">
+<td><b>\<type\> </b></td><td>\<serviceProvider\></td> <td>Required</td>
+<td>Can be either HTML or XML.</td></tr>
+
+<tr style="background-color: #ffdddd;">
+<td><b>\<url\> </b></td><td>\<serviceProvider\></td> <td>Required</td>
 <td>An url to the service provider home page.</td></tr>
 
-<tr style="background-color: #ffbbbb;"><td><b>\<shortUrl\></b></td>
-<td>\<serviceProvider\></td> <td>Required</td>
+<tr style="background-color: #ffdddd;">
+<td><b>\<shortUrl\> </b></td><td>\<serviceProvider\></td> <td>Required</td>
 <td>A short version of the url, used as link text.</td></tr>
 
-<tr style="background-color: #ffbbbb;"><td><b>\<fallbackCharset\></b></td>
-<td>\<serviceProvider\></td> <td>Optional</td>
-<td>The charset of documents to be downloaded (TODO do this from the script). Important if NetworkRequest::readyRead() gets used, because the correct codec can only be determined for completely downloaded HTML pages.</td></tr>
-
-<tr style="background-color: #ffbbbb; border-top: 3px double black;"><td><b>\<script\></b></td>
-<td>\<serviceProvider\></td> <td>Required for script provider plugins</td>
+<tr style="background-color: #ffdddd;">
+<td><b>\<script\> </b></td><td>\<serviceProvider\></td> <td>Required for script provider plugins</td>
 <td>Contains the filename of the script to be used to parse timetable documents. The script must be in the same directory as the XML file. Always use "Script" as type when using a script. Can have an "extensions" attribute with a comma separated list of QtScript extensions to load when executing the script.</td></tr>
 
-<tr><td><b>\<credit\></b></td>
-<td>\<accessorInfo\></td> <td>(Optional)</td>
+<tr><td style="color:#00bb00">
+<b>\<cities\> </b></td><td>\<serviceProvider\></td> <td>(Optional)</td>
+<td>A list of cities the service provider has data for (with surrounding \<city\>-tags).</td></tr>
+
+<tr><td style="color:#007700">
+<b>\<city\> </b></td><td style="color:#00bb00">\<cities\></td> <td>(Optional)</td>
+<td>A city in the list of cities (\<cities\>). Can have an attribute "replaceWith", to replace city names with values used by the service provider.</td></tr>
+
+<tr><td><b>\<notes> </b></td><td>\<serviceProvider\> </td> <td>(Optional)</td>
+<td>Custom notes for the service provider plugin. Can be a to do list.</td></tr>
+
+<tr><td><b>\<fallbackCharset\> </b></td><td>\<serviceProvider\> </td> <td>Optional</td>
+<td>The charset of documents to be downloaded. Depending on the used service provider this might be needed or not. Scripts can use this value.</td></tr>
+
+<tr><td><b>\<credit\> </b></td><td>\<serviceProvider\> </td> <td>(Optional)</td>
 <td>A courtesy string that is required to be shown to the user when showing the timetable data of the GTFS feed. If this tag is not given, a short default string is used, eg. "data by: www.provider.com" or only the link (depending on available space). Please check the license agreement for using the GTFS feed for such a string and include it here.</td></tr>
 
-<tr style="background-color: #ffdddd; border-top: 3px double black;"><td style="color:#0000bb;"><b>\<feedUrl\></b></td>
-<td>\<accessorInfo\></td> <td>(Required only with "GTFS" type)</td>
+<tr style="background-color: #ffdddd;">
+<td><b>\<feedUrl\> </b></td><td>\<serviceProvider\> </td> <td>(Required only with "GTFS" type)</td>
 <td>An URL to the GTFS feed to use. Use an URL to the latest available feed.</td></tr>
 
-<tr><td style="color:#0000bb;"><b>\<realtimeTripUpdateUrl\></b></td>
-<td>\<accessorInfo\></td> <td>(Optional, only used with "GTFS" type)</td>
+<tr><td><b>\<realtimeTripUpdateUrl\> </b></td><td>\<serviceProvider\> </td> <td>(Optional, only used with "GTFS" type)</td>
 <td>An URL to a GTFS-realtime data source with trip updates. If this tag is not present delay information will not be available.</td></tr>
 
-<tr><td style="color:#0000bb;"><b>\<realtimeAlertsUrl\></b></td>
-<td>\<accessorInfo\></td> <td>(Optional, only used with "GTFS" type)</td>
+<tr><td><b>\<realtimeAlertsUrl\> </b></td><td>\<serviceProvider\> </td> <td>(Optional, only used with "GTFS" type)</td>
 <td>An URL to a GTFS-realtime data source with alerts. If this tag is not present journey news will not be available.</td></tr>
 
-<tr style="border-top: 3px double black;"><td style="color:#00bb00;"><b>\<changelog\></b></td>
-<td>\<serviceProvider\></td> <td>(Optional)</td>
+<tr><td style="color:#00bb00;">
+<b>\<changelog\> </b></td><td>\<serviceProvider\> </td> <td>(Optional)</td>
 <td>Contains changelog entries for this service provider plugin.</td></tr>
 
-<tr><td style="color:#007700;"><b>\<entry\></b></td>
-<td style="color:#00bb00;">\<changelog\></td> <td>(Optional)</td>
+<tr><td style="color:#007700;">
+<b>\<entry\> </b></td><td style="color:#00bb00;">\<changelog\> </td> <td>(Optional)</td>
 <td>Contains a changelog entry for this service provider plugin. The entry description is read from the contents of the \<entry\> tag. Attributes <em>"version"</em> (the plugin version where this change was applied) and <em>"engineVersion"</em> (the version of the publictransport data engine this plugin was first released with) can be added.</td></tr>
 
-<tr style="border-top: 3px double black;"><td style="color:#880088;"><b>\<samples\></b></td>
-<td>\<serviceProvider\></td> <td>(Optional)</td>
+<tr><td style="color:#880088;">
+<b>\<samples\> </b></td><td>\<serviceProvider\> </td> <td>(Optional)</td>
 <td>Contains child tags \<stop\> and \<city\> with sample stop/city names. These samples are used eg. in TimetableMate for automatic tests.</td></tr>
 
-<tr><td style="color:#660066;"><b>\<stop\></b></td>
-<td style="color:#880088;">\<samples\></td> <td>(Optional)</td>
+<tr><td style="color:#660066;">
+<b>\<stop\> </b></td><td style="color:#880088;">\<samples\> </td> <td>(Optional)</td>
 <td>A sample stop name.</td></tr>
 
-<tr><td style="color:#660066;"><b>\<city\></b></td>
-<td style="color:#880088;">\<samples\></td> <td>(Optional)</td>
+<tr><td style="color:#660066;">
+<b>\<city\> </b></td><td style="color:#880088;">\<samples\> </td> <td>(Optional)</td>
 <td>A sample city name.</td></tr>
 </table>
-
-@subsection accessor_infos_xml_post Request Data Using POST Method
-If the service provider requires the POST method to be used to send data in requests (instead of GET), some additional attributes are needed for the raw URL tags. You can also use eg. POST for departures and GET for stop suggestions.
-
-TODO DEPRECATED
-To use POST for departures, add the following attributes to the \<departures\> tag (for journeys/stop suggestions use the associated rawUrls tags):@n
-  @li <em>method="post"</em> If this attribute is not found, method is "get".
-  @li <em>data='{"stopName":"{stop}"}'</em> Template for data to be POSTed to the server in requests. Can contain the same placeholders like the raw URL used for the GET method (see above). If you are unsure what data is expected by the server, you can use eg. <em>Wireshark</em> to see what data gets sent to the server when using the web site.
-  @li <em>charset="utf-8"</em> Optional, sets the "Charsets" meta data of the request, eg. "utf-8".
-  @li <em>contenttype="application/json; charset=utf-8"</em> Optional, sets the "Content-Type" meta data of the request, can also contain charset information. The value of the <em>data</em> attribute should be of the given content type, eg. "application/json".
-@n @n
 
 @section provider_infos_script Script file structure
 Scripts are executed using QtScript (JavaScript), which can make use of Kross if other script languages
@@ -1151,23 +1250,22 @@ There are functions with special names that get called by the data engine when n
 @n
 getTimetable(), getStopSuggestions(), getJourneys() and features()
 @n
-For more information see @ref script_functions.
 
-@n @n
+@n
 @section examples Service Provider Plugin Examples
 @n
 @subsection examples_xml_script A Simple Script Provider Plugin
 Here is an example of a simple service provider plugin which uses a script to parse data from the service provider:
-@verbinclude fr_gares.pts
+@verbinclude ch_sbb.pts
 
 @subsection examples_xml_gtfs A Simple GTFS Provider Plugin
 The simplest provider XML can be written when using a GTFS feed. This example also contains tags for GTFS-realtime support, which is optional.
-@include us_bart.xml
+@verbinclude us_bart.pts
 
 @n
 @subsection examples_script A Simple Parsing-Script
-This is an example of a script used to parse data from the service provider (actually the one used by the XML from the last section).
-@include fr_gares.js
+This is an example of a script used to parse data from the service provider. The script uses the base script class for HAFAS providers, which already has quite flexible implementations for the script.
+@include ch_sbb.js
 */
 
 /** @page pageClassDiagram Class Diagram
@@ -1184,7 +1282,7 @@ digraph publicTransportDataEngine {
        fontname=Helvetica, fontsize=10
        style=filled
        fillcolor="#eeeeee"
-       ];
+    ];
 
     engine [
        label="{PublicTransportEngine|The main class of the public transport data engine.\l}"
@@ -1194,63 +1292,42 @@ digraph publicTransportDataEngine {
        ];
 
     providerScript [
-    label="{ServiceProviderScript|Parses timetable documents (eg. HTML) using scripts.\l|# requestDepartures() : bool\l# requestStopSuggestions() : bool\l}"
-    URL="\ref ServiceProviderScript"
+        label="{ServiceProviderScript|Parses timetable documents (eg. HTML) using scripts.}"
+        URL="\ref ServiceProviderScript"
+        fillcolor="#dfdfff"
+    ];
+
+    providerGtfs [
+        label="{ServiceProviderGtfs|Imports GTFS feeds into a local database.}"
+        URL="\ref ServiceProviderGtfs"
+        fillcolor="#dfdfff"
     ];
 
     provider [
-    label="{ServiceProvider|Loads and parses documents from service providers.\lIt uses ServiceProviderData to get needed information.\l|+ static createProvider( serviceProvider ) : ServiceProvider*\l+ requestDepartures() : KIO:TransferJob\l+ requestJourneys() : KIO:TransferJob\l+ data() : ServiceProviderData\l}"
-    URL="\ref ServiceProvider"
+        label="{ServiceProvider|Loads timetable data from service providers.\lIt uses ServiceProviderData to get needed information.\l|# requestDepartures()\l# requestJourneys()\l# requestStopSuggestions()\l# requestStopsByGeoPosition()\l# requestAdditionData()\l# requestMoreItems()\l+ data() : ServiceProviderData\l}"
+        URL="\ref ServiceProvider"
+        fillcolor="#dfdfff"
     ];
 
-    subgraph cluster_subDataTypes {
-    label="Data Types";
-    style="rounded, filled";
-    color="#ccccff";
-    node [ fillcolor="#dfdfff" ];
-
-    pubTransInfo [
-    label="{PublicTransportInfo|Used to store information about a received data unit.\l|+ departure() : QDateTime\l+ operatorName() : QString\l}"
-    URL="\ref PublicTransportInfo"
+    timetableData [
+        label="{TimetableData|Typedef for QHash with TimetableInformation keys and QVariant values.\lCan be used to describe a departure, arrival, journey or stop.}"
+        URL="\ref TimetableData"
     ];
-
-    depInfo [
-    label="{DepartureInfo|Stores departure / arrival information.\l|+ target() : QString\l+ line() : QString\l+ vehicleType() : VehicleType\l+ isNightLine() : bool\l+ isExpressLine() : bool\l+ platform() : QString\l+ delay() : int\l+ delayReason() : QString\l+ journeyNews() : QString\l}"
-    URL="\ref DepartureInfo"
-    ];
-
-    journeyInfo [
-    label="{JourneyInfo|Stores journey information.\l|+ pricing() : QString\l+ journeyNews() : QString\l+ startStopName() : QString\l+ targetStopName() : QString\l+ arrival() : QDateTime\l+ duration() : int\l+ vehicleTypes() : QList\<VehicleType\>\l+ changes() : int\l}"
-    URL="\ref JourneyInfo"
-    ];
-    }
-
-    subgraph cluster_subServiceProviderData {
-    label="Service Provider Data";
-    style="rounded, filled";
-    color="#ccffcc";
-
-    node [ fillcolor="#dfffdf" ];
 
     serviceProviderData [
-    label="{ServiceProviderData|Information about where to download the documents \land how to parse them.\l|+ name() : QString\l+ features() : QStringList\l... }"
-    URL="\ref ServiceProviderData"
+        label="{ServiceProviderData|Information about the service provider.\l|+ name() : QString\l+ description() : QString\l+ features() : QStringList\l... }"
+        URL="\ref ServiceProviderData"
     ];
-     }
 
-   // { rank=same; provider pubTransInfo providerScript serviceProviderData depInfo journeyInfo }
-   { rank=same; provider providerScript }
+    { rank=same; provider providerScript providerGtfs }
 
     edge [ arrowhead="empty", arrowtail="none", style="solid" ];
     providerScript -> provider;
-
-    edge [ dir=back, arrowhead="none", arrowtail="empty", style="solid" ];
-    pubTransInfo -> depInfo;
-    pubTransInfo -> journeyInfo;
+    providerGtfs -> provider;
 
     edge [ dir=back, arrowhead="normal", arrowtail="none", style="dashed", fontcolor="gray", taillabel="", headlabel="0..*" ];
     engine -> provider [ label=""uses ];
-    provider -> pubTransInfo [ label="uses" ];
+    provider -> timetableData [ label="uses" ];
     provider -> serviceProviderData [ label="uses" ];
 
     edge [ dir=both, arrowhead="normal", arrowtail="normal", color="gray", fontcolor="gray", style="dashed", headlabel="" ];
