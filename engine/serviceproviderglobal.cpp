@@ -272,6 +272,10 @@ QString ServiceProviderGlobal::featureName( Enums::ProviderFeature feature )
     case Enums::ProvidesRouteInformation:
         return i18nc("@info/plain A short string indicating that route information can be provided",
                      "Route information");
+    case Enums::ProvidesMoreJourneys:
+        return i18nc("@info/plain A short string indicating that ealier later journeys can be "
+                     "provided for existing journey data sources",
+                     "Get ealier/later journeys");
     default:
         kWarning() << "Unexpected feature value" << feature;
         return QString();

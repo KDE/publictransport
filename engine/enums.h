@@ -299,6 +299,9 @@ public:
         ProvidesPricing, /**< Pricing data is provided for departures/arrivals and/or journeys. */
         ProvidesRouteInformation, /**< Route information is provided for departures/arrivals
                 * and/or journeys. */
+        ProvidesMoreJourneys /** More journeys (earlier or later) can be provided for existing
+                * journey data sources. After requesting more items the data source will contain
+                * both the old and the new journeys. */
     };
 
     /**
