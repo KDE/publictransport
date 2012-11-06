@@ -26,6 +26,8 @@
 // KDE includes
 #include <KTextEditor/MarkInterface>
 
+class KAction;
+class KComboBox;
 class JavaScriptModel;
 namespace Debugger
 {

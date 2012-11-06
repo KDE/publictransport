@@ -25,6 +25,8 @@
 
 class NetworkMonitorModel;
 class MonitorNetworkAccessManager;
+class KWebView;
+class KUrlComboBox;
 class KUrl;
 class KToolBar;
 class QNetworkReply;
