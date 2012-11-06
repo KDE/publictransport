@@ -8,7 +8,7 @@
 /** Object for journey data. */
 var __hafas_journeys = function(hafas) {
     var processor = new HafasPrivate.DataTypeProcessor({
-        features: [],
+        features: [ PublicTransport.ProvidesMoreJourneys ],
 
         options: { format: HafasPrivate.BinaryFormat },
 
@@ -69,19 +69,40 @@ var __hafas_journeys = function(hafas) {
                 {program: "query", language: "d", type: "n"}, hafas.options );
             if ( typeof options.baseUrl != "string" || options.baseUrl.length == 0 )
                 throw TypeError("getJourneysUrl(): Second argument must be a non-empty string");
-            var query =
-                "S=" + values.originStop + "!" +
-                "&Z=" + values.targetStop + "!" +
-                "&date=" + helper.formatDateTime(values.dateTime, options.urlDateFormat) +
-                "&time=" + helper.formatDateTime(values.dateTime, options.urlTimeFormat) +
-    //     "&REQ0JourneyStopsS0ID=" + values.originStop + "!" +
-    //     "&REQ0JourneyStopsZ0ID=" + values.targetStop + "!" +
-    //     "&REQ0JourneyDate=" + helper.formatDateTime(values.dateTime, "dd.MM.yy") +
-    //     "&REQ0JourneyTime=" + helper.formatDateTime(values.dateTime, "hh:mm") +
-                "&REQ0HafasSearchForw=" + (values.dataType == "arrivals" ? "0" : "1") +
-                "&REQ0JourneyProduct_prod_list_1=" + HafasPrivate.createProductBitString(options.productBits) +
-                "&start=yes" +
-                "&sortConnections=minDeparture";
+
+            var query;
+            if ( values.moreItemsDirection == undefined ||
+                 values.moreItemsDirection == PublicTransport.RequestedItems )
+            {
+                query = "S=" + values.originStop + "!" +
+                    "&Z=" + values.targetStop + "!" +
+                    "&date=" + helper.formatDateTime(values.dateTime, options.urlDateFormat) +
+                    "&time=" + helper.formatDateTime(values.dateTime, options.urlTimeFormat) +
+                    "&REQ0HafasSearchForw=" + (values.dataType == "arrivals" ? "0" : "1") +
+                    "&REQ0JourneyProduct_prod_list_1=" +
+                            HafasPrivate.createProductBitString(options.productBits) +
+                    "&start=yes" +
+                    "&sortConnections=minDeparture";
+                    // "&REQ0JourneyStopsS0ID=" + values.originStop + "!" +
+                    // "&REQ0JourneyStopsZ0ID=" + values.targetStop + "!" +
+                    // "&REQ0JourneyDate=" + helper.formatDateTime(values.dateTime, "dd.MM.yy") +
+                    // "&REQ0JourneyTime=" + helper.formatDateTime(values.dateTime, "hh:mm")
+            } else {
+                if ( values.requestData == undefined )
+                    throw Error("No request data available, cannot request earlier/later items");
+                if ( typeof(values.requestData.sequenceNumber) != 'number' )
+                    throw TypeError("Invalid request sequence number: " + values.requestData.sequenceNumber);
+                if ( typeof(values.requestData.requestId) != 'string' )
+                    throw TypeError("Invalid request ID: " + values.requestData.requestId);
+
+                // Request earlier/later items
+                query = "seqnr=" + values.requestData.sequenceNumber +
+                    "&ident=" + values.requestData.requestId +
+                    "&REQ0HafasScrollDir=" + (values.moreItemsDirection == PublicTransport.LaterItems ? 1 : 2);
+                if ( values.requestData.ld != undefined ) {
+                    query += "&ld=" + values.requestData.ld;
+                }
+            }
             if ( options.format == HafasPrivate.BinaryFormat ) {
                 query += "&h2g-direct=11";
             }
@@ -358,8 +379,13 @@ var __hafas_journeys = function(hafas) {
                 }
 
                 stream.skip( 4 );
-                var seqNr = readUInt16();
-                var requestId = readNextString();
+
+                // TODO Store globally for all journeys
+                var requestData = {};
+                requestData.sequenceNumber = readUInt16();
+                requestData.requestId = readNextString( encoding );
+//                 result.addGlobalData( "SequenceNumber", readUInt16() );
+//                 result.addGlobalData( "RequestID", readNextString(encoding) );
 
                 var journeyDetailsPos = readUInt32();
                 var errorCode = readUInt16();
@@ -392,7 +418,7 @@ var __hafas_journeys = function(hafas) {
 
                 stream.skip( 14 );
                 var encoding = readNextByteArray();
-                var id = readNextString( encoding );
+                requestData.ld = readNextString( encoding );
                 var attributesOffset = readUInt16();
                 var attributesPos = 0;
                 if ( extensionHeaderLength >= 0x30 ) {
@@ -447,7 +473,8 @@ var __hafas_journeys = function(hafas) {
                         RouteTimesArrival: [],
                         RouteTimesDepartureDelay: [],
                         RouteTimesArrivalDelay: [],
-                        RouteSubJourneys: []
+                        RouteSubJourneys: [],
+                        RequestData: requestData
                     };
 
                     // Read journey header
