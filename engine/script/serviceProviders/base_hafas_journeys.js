@@ -585,7 +585,7 @@ var __hafas_journeys = function(hafas) {
                             transportLine = vehicleTypeAndTransportLine.substr( 0, pos );
                             vehicleTypeString = vehicleTypeAndTransportLine.substr( pos + 1 );
                         }
-                        transportLine = hafas.trimTransportLine( transportLine );
+                        transportLine = HafasPrivate.trimTransportLine( transportLine );
 
                         journey.RouteTransportLines.push( transportLine );
 

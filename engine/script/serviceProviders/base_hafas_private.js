@@ -267,6 +267,11 @@ var HafasPrivate = {
             timetableItem.JourneyNews = text;
         }
     },
+    /** Remove unneeded information from the transport line string,
+      * such as a (redundant) note about the vehicle type. */
+    trimTransportLine: function( transportLine ) {
+        return helper.simplify( transportLine.replace(/^((?:bus|str)\s+)/ig, "") );
+    },
     startRequest: function( request, addPostDataFunction, values, options ) {
         if ( options.requestType == "GET" ) {
             network.get( request, options.timeout );
@@ -567,6 +572,7 @@ var HafasPrivate = {
             return PublicTransport.Ferry;
         case "feet":
         case "byfeet":
+	case "uebergang":
             return PublicTransport.Feet;
 
         default:

@@ -179,8 +179,7 @@ var __hafas_timetable = function(hafas) {
                         transportLine = product.substr( 0, pos );
                         vehicleType = hafas.vehicleFromString( product.substr(pos + 1) );
                     }
-                    departure.TransportLine = helper.simplify(
-                            transportLine.replace(/^((?:Bus|STR)\s+)/ig, "") );
+                    departure.TransportLine = HafasPrivate.trimTransportLine( transportLine );
                     departure.TypeOfVehicle = vehicleType;
 
                     var delay = node.attributeNode("delay").nodeValue();
@@ -548,10 +547,10 @@ var __hafas_timetable = function(hafas) {
                     if ( hafas.routeData.options.format == Hafas.XmlFormat ) {
                         routeDataUrl = routeDataUrl + "&L=vs_java3";
                     }
-                    var trainHtml = network.downloadSynchronous( routeDataUrl, options.timeout );
+                    var routeDocument = network.downloadSynchronous( routeDataUrl, options.timeout );
                     if ( !network.lastDownloadAborted ) {
                         var parser = hafas.routeData.parser.parserByFormat(hafas.routeData.options.format);
-                        return parser( trainHtml, values.stop, values.dateTime );
+                        return parser( routeDocument, values.stop, values.dateTime );
                     } else {
                         return {}; // Download was aborted
                     }
