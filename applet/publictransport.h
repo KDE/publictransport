@@ -191,6 +191,9 @@ public slots:
      **/
     void setSettings( const Settings &settings );
 
+    void requestEarlierJourneys();
+    void requestLaterJourneys();
+
 protected slots:
     /** @brief The geometry of the applet has changed. */
     void appletResized();

@@ -54,6 +54,31 @@ class DepartureItem;
 class TimetableWidget;
 class PublicTransportWidget;
 
+class TimetableListItem : public QGraphicsWidget {
+    Q_OBJECT
+
+public:
+    TimetableListItem( QAction *action, PublicTransportWidget *timetableWidget,
+                       QGraphicsItem *parent = 0 )
+            : QGraphicsWidget(parent), m_action(action), m_parent(timetableWidget)
+    {
+        setFlag( ItemIsFocusable );
+        setAcceptHoverEvents( true );
+    };
+
+    virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint = QSizeF() ) const;
+
+protected:
+    virtual void hoverLeaveEvent( QGraphicsSceneHoverEvent* ) { update(); };
+    virtual void mousePressEvent( QGraphicsSceneMouseEvent* ) { m_action->trigger(); };
+    virtual void paint( QPainter *painter, const QStyleOptionGraphicsItem *option,
+                        QWidget *widget = 0 );
+
+private:
+    QAction *m_action;
+    PublicTransportWidget *m_parent;
+};
+
 /**
  * @brief Abstract base class for DepartureGraphicsItem and JourneyGraphicsItem.
  *
@@ -77,8 +102,8 @@ class PublicTransportGraphicsItem : public QGraphicsWidget {
     friend class PublicTransportWidget;
 
 public:
-    explicit PublicTransportGraphicsItem( PublicTransportWidget* publicTransportWidget,
-                                          QGraphicsItem* parent = 0,
+    explicit PublicTransportGraphicsItem( PublicTransportWidget *publicTransportWidget,
+                                          QGraphicsItem *parent = 0,
                                           StopAction *copyStopToClipboardAction = 0,
                                           StopAction *showInMapAction = 0 );
     virtual ~PublicTransportGraphicsItem();
@@ -564,8 +589,8 @@ public:
     QRectF extraIconRect( const QRectF &rect ) const;
 
 protected:
-    virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
-    virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent* event );
+    virtual void resizeEvent( QGraphicsSceneResizeEvent *event );
+    virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent *event );
     virtual void updateTextLayouts();
     virtual QGraphicsWidget *routeItem() const;
 
@@ -640,6 +665,8 @@ public:
      * (only header data gets changed...). */
     void updateItemLayouts();
 
+    virtual QList< QAction* > contextMenuActions() { return QList<QAction*>(); };
+
 signals:
     void contextMenuRequested( PublicTransportGraphicsItem *item, const QPointF &pos );
     void expandedStateChanged( PublicTransportGraphicsItem *item, bool expanded );
@@ -660,6 +687,9 @@ signals:
                                VehicleType vehicleType, const QString &target,
                                QGraphicsWidget *item );
 
+    void requestEarlierItems();
+    void requestLaterItems();
+
 protected slots:
     void itemsAboutToBeRemoved( const QList<ItemBase*> &journeys );
     virtual void rowsRemoved( const QModelIndex &parent, int first, int last );
@@ -669,14 +699,18 @@ protected slots:
 
 protected:
     virtual QSizeF sizeHint( Qt::SizeHint which, const QSizeF& constraint ) const;
-    virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent* event );
-    virtual void paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
-                        QWidget* widget = 0 );
+    virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent *event );
+    virtual void paint( QPainter *painter, const QStyleOptionGraphicsItem *option,
+                        QWidget *widget = 0 );
     void updateItemGeometries();
     virtual void setupActions();
+    void setPrefixItem( TimetableListItem *prefixItem );
+    void setPostfixItem( TimetableListItem *postfixItem );
 
     Options m_options;
     PublicTransportModel *m_model;
+    TimetableListItem *m_prefixItem;
+    TimetableListItem *m_postfixItem;
     QList<PublicTransportGraphicsItem*> m_items;
     Plasma::Svg *m_svg;
     qreal m_iconSize;
@@ -724,6 +758,7 @@ protected slots:
     virtual void dataChanged( const QModelIndex &topLeft, const QModelIndex &bottomRight );
 
 protected:
+    virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent *event );
     virtual void setupActions();
 
 private:
@@ -743,7 +778,19 @@ class JourneyTimetableWidget : public PublicTransportWidget
     friend class PublicTransportGraphicsItem;
 
 public:
-    JourneyTimetableWidget( Options options = DefaultOptions, QGraphicsItem* parent = 0 );
+    enum Flag {
+        NoFlags                 = 0x00,
+
+        ShowEarlierJourneysItem = 0x01,
+        ShowLaterJourneysItem   = 0x02,
+
+        ShowEarlierAndLaterJourneysItems = ShowEarlierJourneysItem | ShowLaterJourneysItem
+    };
+    Q_DECLARE_FLAGS( Flags, Flag );
+
+    JourneyTimetableWidget( Options options = DefaultOptions,
+                            Flags flags = ShowEarlierAndLaterJourneysItems,
+                            QGraphicsItem* parent = 0 );
 
     /** @brief Gets the journey item at the given @p row. */
     inline JourneyGraphicsItem *journeyItem( int row ) {
@@ -760,6 +807,8 @@ public:
         return qobject_cast<JourneyModel*>(m_model);
     };
 
+    virtual QList< QAction* > contextMenuActions();
+
 protected slots:
     virtual void rowsInserted( const QModelIndex &parent, int first, int last );
     virtual void dataChanged( const QModelIndex &topLeft, const QModelIndex &bottomRight );
@@ -768,8 +817,13 @@ protected:
     virtual void setupActions();
 
 private:
+    Flags m_flags;
     StopAction *m_requestJourneyToStopAction;
     StopAction *m_requestJourneyFromStopAction;
+    QAction *m_earlierAction;
+    QAction *m_laterAction;
 };
+
+Q_DECLARE_OPERATORS_FOR_FLAGS( JourneyTimetableWidget::Flags )
 
 #endif // TIMETABLEWIDGET_H

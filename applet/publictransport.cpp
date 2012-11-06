@@ -1016,8 +1016,13 @@ void PublicTransportApplet::showJourneyList()
                                   d->isStateActive("journeyDataValid") );
 
     // Create timetable widget for journeys
-    d->journeyTimetable = new JourneyTimetableWidget( d->settings.drawShadows()
-            ? PublicTransportWidget::DrawShadowsOrHalos : PublicTransportWidget::NoOption, this );
+    PublicTransportWidget::Options options = d->settings.drawShadows()
+            ? PublicTransportWidget::DrawShadowsOrHalos : PublicTransportWidget::NoOption;
+    JourneyTimetableWidget::Flags flags =
+            d->currentServiceProviderFeatures.contains("ProvidesMoreJourneys")
+            ? JourneyTimetableWidget::ShowEarlierAndLaterJourneysItems
+            : JourneyTimetableWidget::NoFlags;
+    d->journeyTimetable = new JourneyTimetableWidget( options, flags, this );
     d->journeyTimetable->setModel( d->modelJourneys );
     d->journeyTimetable->setFont( d->settings.sizedFont() );
     d->journeyTimetable->setSvg( &d->vehiclesSvg );
@@ -1029,6 +1034,8 @@ void PublicTransportApplet::showJourneyList()
              this, SLOT(processAlarmDeletionRequest(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)) );
     connect( d->states["journeyView"], SIGNAL(exited()),
              d->journeyTimetable, SLOT(deleteLater()) );
+    connect( d->journeyTimetable, SIGNAL(requestEarlierItems()), this, SLOT(requestEarlierJourneys()) );
+    connect( d->journeyTimetable, SIGNAL(requestLaterItems()), this, SLOT(requestLaterJourneys()) );
     d->journeyTimetable->setZoomFactor( d->settings.sizeFactor() );
     d->journeyTimetable->update();
 
@@ -1224,6 +1231,30 @@ bool PublicTransportApplet::eventFilter( QObject *watched, QEvent *event )
     }
 
     return Plasma::PopupApplet::eventFilter( watched, event );
+}
+
+void PublicTransportApplet::requestEarlierJourneys()
+{
+    Q_D( PublicTransportApplet );
+    Plasma::Service *service =
+            dataEngine("publictransport")->serviceForSource( d->currentJourneySource );
+    if ( service ) {
+        KConfigGroup op = service->operationDescription("requestEarlierItems");
+        Plasma::ServiceJob *ealierItemsJob = service->startOperationCall( op );
+        connect( ealierItemsJob, SIGNAL(finished(KJob*)), service, SLOT(deleteLater()) );
+    }
+}
+
+void PublicTransportApplet::requestLaterJourneys()
+{
+    Q_D( PublicTransportApplet );
+    Plasma::Service *service =
+            dataEngine("publictransport")->serviceForSource( d->currentJourneySource );
+    if ( service ) {
+        KConfigGroup op = service->operationDescription("requestLaterItems");
+        Plasma::ServiceJob *laterItemsJob = service->startOperationCall( op );
+        connect( laterItemsJob, SIGNAL(finished(KJob*)), service, SLOT(deleteLater()) );
+    }
 }
 
 void PublicTransportApplet::createConfigurationInterface( KConfigDialog* parent )

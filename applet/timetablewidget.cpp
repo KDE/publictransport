@@ -52,7 +52,7 @@
 const qreal PublicTransportGraphicsItem::ROUTE_ITEM_HEIGHT = 60.0;
 
 PublicTransportGraphicsItem::PublicTransportGraphicsItem(
-        PublicTransportWidget* publicTransportWidget, QGraphicsItem* parent,
+        PublicTransportWidget *publicTransportWidget, QGraphicsItem *parent,
         StopAction *copyStopToClipboardAction, StopAction *showInMapAction/*, QAction *toggleAlarmAction*/ )
         : QGraphicsWidget(parent), m_item(0), m_parent(publicTransportWidget),
         m_resizeAnimation(0), m_pixmap(0), m_copyStopToClipboardAction(copyStopToClipboardAction),
@@ -69,6 +69,18 @@ PublicTransportGraphicsItem::PublicTransportGraphicsItem(
 PublicTransportGraphicsItem::~PublicTransportGraphicsItem()
 {
     delete m_pixmap;
+}
+
+QList< QAction* > JourneyTimetableWidget::contextMenuActions()
+{
+    QList< QAction* > actions;
+    if ( m_earlierAction ) {
+        actions << m_earlierAction;
+    }
+    if ( m_laterAction ) {
+        actions << m_laterAction;
+    }
+    return actions;
 }
 
 void DepartureGraphicsItem::updateSettings()
@@ -132,6 +144,61 @@ void PublicTransportGraphicsItem::resizeAnimationFinished()
 void PublicTransportGraphicsItem::updateGeometry()
 {
     QGraphicsWidget::updateGeometry();
+}
+
+void TimetableListItem::paint( QPainter *painter, const QStyleOptionGraphicsItem *option,
+                               QWidget *widget )
+{
+    Q_UNUSED( widget );
+    painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
+
+    // Paint background on whole item
+    QRectF rect = boundingRect();
+    const QFontMetrics fontMetrics( font() );
+    const QString text = KGlobal::locale()->removeAcceleratorMarker( m_action->text() );
+    const int iconSize = 16;
+    const int padding = 4;
+    const int textWidth = fontMetrics.width( text );
+    const int usedWidth = iconSize + padding + textWidth;
+    const QRect targetRect( (rect.width() - usedWidth) / 2, (rect.height() - iconSize) / 2,
+                            usedWidth, iconSize );
+    const QRect iconRect( 0, 0, iconSize, iconSize );
+    const QRect textRect( iconRect.right() + padding, (iconSize - fontMetrics.height()) / 2,
+                          textWidth, fontMetrics.height() );
+    QPixmap iconPixmap = m_action->icon().pixmap( iconSize );
+
+    // Draw halo/shadow
+    // TODO Requires KDE > 4.6, remove other 4.6 #ifdefs
+    const QColor textColor = Plasma::Theme::defaultTheme()->color(
+            option->state.testFlag(QStyle::State_HasFocus) ? Plasma::Theme::ViewFocusColor :
+            (option->state.testFlag(QStyle::State_MouseOver)
+             ? Plasma::Theme::ViewHoverColor : Plasma::Theme::ViewTextColor) );
+    const bool drawShadowsOrHalos =
+            m_parent->isOptionEnabled( PublicTransportWidget::DrawShadowsOrHalos );
+    const bool drawHalos = drawShadowsOrHalos && qGray(textColor.rgb()) < 192;
+
+    // Draw everything to a pixmap
+    QPixmap pixmap( usedWidth, iconSize );
+    pixmap.fill( Qt::transparent );
+    QPainter p( &pixmap );
+    p.setPen( textColor );
+    p.drawPixmap( iconRect, iconPixmap );
+    p.drawText( textRect, text );
+    p.end();
+
+    // Draw halos/shadows under the pixmap
+    if ( drawHalos ) {
+        Plasma::PaintUtils::drawHalo( painter,
+                textRect.adjusted(targetRect.left(), targetRect.top(),
+                                  targetRect.left(), targetRect.top()) );
+    } else if ( drawShadowsOrHalos ) {
+        QImage shadow = pixmap.toImage();
+        Plasma::PaintUtils::shadowBlur( shadow, 3, Qt::black );
+        painter->drawImage( targetRect.topLeft() + QPoint(1, 2), shadow );
+    }
+
+    // Draw the pixmap above halos/shadows
+    painter->drawPixmap( targetRect.topLeft(), pixmap );
 }
 
 void PublicTransportGraphicsItem::paint( QPainter* painter,
@@ -390,7 +457,7 @@ void JourneyGraphicsItem::contextMenuEvent( QGraphicsSceneContextMenuEvent* even
     JourneyItem *item = qobject_cast<JourneyItem*>( m_item );
     KMenu contextMenu;
 
-    QList<QAction*> actionList;
+    QList< QAction* > actionList;
     QAction *infoAction = 0;
     QAction *addAlarmAction = 0;
     QAction *removeAlarmAction = 0;
@@ -406,7 +473,8 @@ void JourneyGraphicsItem::contextMenuEvent( QGraphicsSceneContextMenuEvent* even
                 infoAction = new QAction( KIcon("task-recurring"),
                         i18nc("@info/plain", "(has a recurring alarm)"), this );
             } else {
-                infoAction = new QAction( i18nc("@action:inmenu", "(has recurring/multiple alarms)"), this );
+                infoAction = new QAction(
+                        i18nc("@action:inmenu", "(has recurring/multiple alarms)"), this );
             }
         } else {
             // The 'Remove this Alarm' menu entry can only be
@@ -415,7 +483,8 @@ void JourneyGraphicsItem::contextMenuEvent( QGraphicsSceneContextMenuEvent* even
                 infoAction = new QAction( KIcon("task-recurring"),
                         i18nc("@info/plain", "(has a custom alarm)"), this );
             } else {
-                infoAction = new QAction( i18nc("@action:inmenu", "(has custom/multiple alarms)"), this );
+                infoAction = new QAction(
+                        i18nc("@action:inmenu", "(has custom/multiple alarms)"), this );
             }
         }
         if ( infoAction ) {
@@ -426,6 +495,15 @@ void JourneyGraphicsItem::contextMenuEvent( QGraphicsSceneContextMenuEvent* even
         addAlarmAction = new QAction( KIcon("task-reminder"),
                 i18nc("@action:inmenu", "Add &Alarm For This Journey"), &contextMenu );
         actionList << addAlarmAction;
+    }
+
+    // Add context menu actions of the parent PublicTransportWidget
+    QList< QAction* > parentActions = m_parent->contextMenuActions();
+    if ( !parentActions.isEmpty() ) {
+        QAction *separator = new QAction( &contextMenu );
+        separator->setSeparator( true );
+        actionList << separator;
+        actionList << parentActions;
     }
 
     contextMenu.addActions( actionList );
@@ -713,9 +791,6 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
                                            const QRectF& rect )
 {
     Q_UNUSED( option );
-    QColor alternateBackgroundColor = KColorScheme( QPalette::Active, KColorScheme::View )
-            .background( KColorScheme::AlternateBackground ).color();
-    alternateBackgroundColor.setAlphaF( 0.3 );
     QColor borderColor = textColor();
     borderColor.setAlphaF( 0.5 );
 
@@ -741,7 +816,9 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
                 : KColorUtils::mix( positiveBackground, neutralBackground, rating * 2.0 );
     } else if ( index().row() % 2 == 1 ) {
         // Use alternate background (if journey ratings aren't available)
-        backgroundColor = alternateBackgroundColor;
+        backgroundColor = KColorScheme( QPalette::Active, KColorScheme::View )
+                .background( KColorScheme::AlternateBackground ).color();
+        backgroundColor.setAlphaF( 0.3 );
     } else {
         backgroundColor = neutralBackground;
     }
@@ -1404,6 +1481,17 @@ qreal JourneyGraphicsItem::expandAreaIndentation() const
     return m_parent->iconSize() * 0.65 + padding();
 }
 
+QSizeF TimetableListItem::sizeHint( Qt::SizeHint which, const QSizeF &constraint ) const
+{
+    if ( which == Qt::MinimumSize || which == Qt::MaximumSize ) {
+        return QSizeF( which == Qt::MinimumSize ? 100 : 100000,
+                       qMax(m_parent->iconSize() * 1.1,
+                            QFontMetrics(font()).lineSpacing() + 4.0 * m_parent->zoomFactor()) );
+    } else {
+        return QGraphicsWidget::sizeHint( which, constraint );
+    }
+}
+
 QSizeF PublicTransportGraphicsItem::sizeHint(Qt::SizeHint which, const QSizeF& constraint) const
 {
     if ( which == Qt::MinimumSize ) {
@@ -1429,8 +1517,8 @@ QSizeF PublicTransportWidget::sizeHint(Qt::SizeHint which, const QSizeF& constra
 }
 
 PublicTransportWidget::PublicTransportWidget( Options options, QGraphicsItem* parent )
-    : Plasma::ScrollWidget( parent ), m_options(options), m_model(0), m_svg(0),
-      m_copyStopToClipboardAction(0), m_showInMapAction(0)/*, m_toggleAlarmAction(0)*/
+    : Plasma::ScrollWidget( parent ), m_options(options), m_model(0), m_prefixItem(0),
+      m_postfixItem(0), m_svg(0), m_copyStopToClipboardAction(0), m_showInMapAction(0)
 {
     setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
     setupActions();
@@ -1474,10 +1562,63 @@ void PublicTransportWidget::setOptions( PublicTransportWidget::Options options )
     update();
 }
 
-JourneyTimetableWidget::JourneyTimetableWidget( Options options, QGraphicsItem* parent )
-    : PublicTransportWidget(options, parent), m_requestJourneyToStopAction(0), m_requestJourneyFromStopAction(0)
+void PublicTransportWidget::setPrefixItem( TimetableListItem *prefixItem )
+{
+    QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( widget()->layout() );
+    if ( m_prefixItem == prefixItem ) {
+        if ( l->count() == 0 || l->itemAt(0) != m_prefixItem ) {
+            l->insertItem( 0, prefixItem );
+        }
+        return;
+    }
+
+    if ( m_prefixItem ) {
+        l->removeItem( m_prefixItem );
+        delete m_prefixItem;
+        m_prefixItem = 0;
+    }
+    if ( prefixItem ) {
+        kDebug() << prefixItem;
+        l->insertItem( 0, prefixItem );
+        m_prefixItem = prefixItem;
+    }
+}
+
+void PublicTransportWidget::setPostfixItem( TimetableListItem *postfixItem )
+{
+    QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( widget()->layout() );
+    if ( m_postfixItem == postfixItem ) {
+        if ( l->count() == 0 || l->itemAt(l->count() - 1) != m_postfixItem ) {
+            l->addItem( postfixItem );
+        }
+        return;
+    }
+
+    if ( m_postfixItem ) {
+        l->removeItem( m_postfixItem );
+        delete m_postfixItem;
+        m_postfixItem = 0;
+    }
+    if ( postfixItem ) {
+        l->addItem( postfixItem );
+        m_postfixItem = postfixItem;
+    }
+}
+
+JourneyTimetableWidget::JourneyTimetableWidget( Options options, Flags flags,
+                                                QGraphicsItem* parent )
+    : PublicTransportWidget(options, parent), m_flags(flags), m_requestJourneyToStopAction(0),
+      m_requestJourneyFromStopAction(0), m_earlierAction(0), m_laterAction(0)
 {
     setupActions();
+
+    // Add items to request earlier/later journeys
+    if ( m_flags.testFlag(ShowEarlierJourneysItem) && m_earlierAction ) {
+        setPrefixItem( new TimetableListItem(m_earlierAction, this, this) );
+    }
+    if ( m_flags.testFlag(ShowLaterJourneysItem) && m_laterAction ) {
+        setPostfixItem( new TimetableListItem(m_laterAction, this, this) );
+    }
 }
 
 TimetableWidget::TimetableWidget( Options options, QGraphicsItem* parent )
@@ -1518,6 +1659,17 @@ void JourneyTimetableWidget::setupActions()
              this, SIGNAL(requestStopAction(StopAction::Type,QString,QString)) );
     connect( m_requestJourneyFromStopAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
              this, SIGNAL(requestStopAction(StopAction::Type,QString,QString)) );
+
+    if ( m_flags.testFlag(ShowEarlierJourneysItem) ) {
+        m_earlierAction = new QAction( KIcon("arrow-up-double"),
+                i18nc("@action:inmenu", "Get &Earlier Journeys"), this );
+        connect( m_earlierAction, SIGNAL(triggered(bool)), this, SIGNAL(requestEarlierItems()) );
+    }
+    if ( m_flags.testFlag(ShowLaterJourneysItem) ) {
+        m_laterAction = new QAction( KIcon("arrow-down-double"),
+                i18nc("@action:inmenu", "Get &Later Journeys"), this );
+        connect( m_laterAction, SIGNAL(triggered(bool)), this, SIGNAL(requestLaterItems()) );
+    }
 }
 
 void PublicTransportWidget::setModel( PublicTransportModel* model )
@@ -1562,13 +1714,27 @@ void PublicTransportWidget::setZoomFactor( qreal zoomFactor )
 
 void PublicTransportWidget::contextMenuEvent( QGraphicsSceneContextMenuEvent* event )
 {
+    KMenu contextMenu;
+    QList< QAction* > actions = contextMenuActions();
+    if ( actions.isEmpty() ) {
+        QGraphicsItem::contextMenuEvent( event );
+        return;
+    }
+    event->accept();
+
+    contextMenu.addActions( actions );
+    contextMenu.exec( event->screenPos() );
+}
+
+void TimetableWidget::contextMenuEvent( QGraphicsSceneContextMenuEvent *event )
+{
     PublicTransportGraphicsItem *item = dynamic_cast<PublicTransportGraphicsItem*>(
             scene()->itemAt(event->scenePos()) );
     if ( item ) {
         event->accept();
         emit contextMenuRequested( item, event->pos() );
     } else {
-        QGraphicsItem::contextMenuEvent( event );
+        PublicTransportWidget::contextMenuEvent( event );
     }
 }
 
@@ -1635,6 +1801,13 @@ void JourneyTimetableWidget::rowsInserted( const QModelIndex& parent, int first,
     }
 
     QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( widget()->layout() );
+    const int prefixOffset = m_prefixItem ? 1 : 0;
+
+    if ( m_items.isEmpty() ) {
+        setPrefixItem( m_prefixItem );
+        setPostfixItem( m_postfixItem );
+    }
+
     for ( int row = first; row <= last; ++row ) {
         JourneyGraphicsItem *item = new JourneyGraphicsItem( this, widget(),
                 m_copyStopToClipboardAction, m_showInMapAction,
@@ -1656,7 +1829,7 @@ void JourneyTimetableWidget::rowsInserted( const QModelIndex& parent, int first,
         fadeAnimation->setProperty( "targetOpacity", 1.0 );
         fadeAnimation->start( QAbstractAnimation::DeleteWhenStopped );
 
-        l->insertItem( row, item );
+        l->insertItem( row + prefixOffset, item );
     }
 }
 
@@ -1668,6 +1841,7 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
     }
 
     QGraphicsLinearLayout *l = static_cast<QGraphicsLinearLayout*>( widget()->layout() );
+    const int prefixOffset = m_prefixItem ? 1 : 0;
     for ( int row = first; row <= last; ++row ) {
         DepartureGraphicsItem *item = new DepartureGraphicsItem( this, widget(),
                 m_copyStopToClipboardAction, m_showInMapAction, m_showDeparturesAction,
@@ -1685,7 +1859,7 @@ void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int la
         fadeAnimation->setProperty( "targetOpacity", 1.0 );
         fadeAnimation->start( QAbstractAnimation::DeleteWhenStopped );
 
-        l->insertItem( row, item );
+        l->insertItem( row + prefixOffset, item );
     }
 }
 
