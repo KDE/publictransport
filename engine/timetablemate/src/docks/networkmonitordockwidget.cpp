@@ -28,7 +28,6 @@
 
 // KDE includes
 #include <KLocalizedString>
-#include <KWebView>
 #include <KActionMenu>
 
 // Qt includes

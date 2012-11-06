@@ -55,8 +55,7 @@ DashboardTab::DashboardTab( Project *project, QWidget *parent )
     // Register classes in Qt's meta object system and for QML
     qRegisterMetaType< const ServiceProviderData* >( "const ServiceProviderData*" );
     qRegisterMetaType< Project* >( "Project*" );
-    qRegisterMetaType< TestModel* >( "TestModel*" );
-    qRegisterMetaType< Enums::ServiceProviderType >( "Enums::ServiceProviderType" );
+//     qRegisterMetaType< TestModel* >( "TestModel*" );
     qmlRegisterType< ServiceProviderData, 1 >( "TimetableMate", 1, 0, "ServiceProviderData" );
     qmlRegisterUncreatableType< Project >( "TimetableMate", 1, 0, "Project",
                                            "Cannot create new projects" );

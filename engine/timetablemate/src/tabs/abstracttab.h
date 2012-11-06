@@ -33,11 +33,6 @@ class ProjectSettingsDialog;
 class PlasmaPreview;
 class JavaScriptCompletionModel;
 
-class KAction;
-class KIcon;
-class KComboBox;
-class KUrlComboBox;
-class KWebView;
 namespace KTextEditor
 {
     class Document;

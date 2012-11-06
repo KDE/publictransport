@@ -31,7 +31,6 @@ namespace Debugger
 
 class Project;
 class ProjectModel;
-class KWebView;
 class KComboBox;
 class QTreeView;
 class QUrl;

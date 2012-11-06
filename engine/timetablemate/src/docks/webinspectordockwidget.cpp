@@ -27,7 +27,6 @@
 
 // KDE includes
 #include <KLocalizedString>
-#include <KWebView>
 
 // Qt includes
 #include <QWebInspector>

@@ -136,6 +136,7 @@ ScriptTab *ScriptTab::create( Project *project, QWidget *parent )
     QWidget *container = new QWidget( parent );
     KTextEditor::Document *document = createDocument( container );
     if ( !document ) {
+        kWarning() << "Service katepart.desktop not found";
         delete container;
         return 0;
     }
@@ -610,7 +611,7 @@ void ScriptTab::goToLine( int lineNumber )
 void ScriptTab::goToPreviousFunction()
 {
     if ( m_functionsWidget->currentIndex() == -1 ) {
-        FunctionNode::Ptr node =m_scriptModel->nodeBeforeLineNumber(
+        FunctionNode::Ptr node = m_scriptModel->nodeBeforeLineNumber(
                 document()->activeView()->cursorPosition().line() + 1, Function)
                 .dynamicCast<FunctionNode>();
         if ( node ) {

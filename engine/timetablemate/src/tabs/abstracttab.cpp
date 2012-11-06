@@ -34,7 +34,6 @@
 #include <engine/serviceprovider.h>
 
 // KDE includes
-#include <KWebView>
 #include <KUrlComboBox>
 #include <KAction>
 #include <KActionMenu>
