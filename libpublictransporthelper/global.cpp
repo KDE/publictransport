@@ -123,20 +123,20 @@ KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType )
         icon = KIcon( "vehicle_type_feet" );
         break;
 
-    case TrainInterurban:
+    case InterurbanTrain:
         icon = KIcon( "vehicle_type_train_interurban" );
         break;
-    case TrainRegional: // Icon not done yet, using this for now
-    case TrainRegionalExpress:
+    case RegionalTrain: // Icon not done yet, using this for now
+    case RegionalExpressTrain:
         icon = KIcon( "vehicle_type_train_regional" );
         break;
-    case TrainInterregio:
+    case InterregionalTrain:
         icon = KIcon( "vehicle_type_train_interregional" );
         break;
-    case TrainIntercityEurocity:
+    case IntercityTrain:
         icon = KIcon( "vehicle_type_train_intercity" );
         break;
-    case TrainIntercityExpress:
+    case HighSpeedTrain:
         icon = KIcon( "vehicle_type_train_highspeed" );
         break;
 
@@ -210,7 +210,7 @@ QString Global::vehicleTypeToString( const VehicleType &vehicleType, bool plural
     case Subway:
         return plural ? i18nc( "@info/plain", "subways" )
                : i18nc( "@info/plain", "subway" );
-    case TrainInterurban:
+    case InterurbanTrain:
         return plural ? i18nc( "@info/plain", "interurban trains" )
                : i18nc( "@info/plain", "interurban train" );
     case Metro:
@@ -227,19 +227,19 @@ QString Global::vehicleTypeToString( const VehicleType &vehicleType, bool plural
                         "draws its electricity from overhead wires (generally suspended from "
                         "roadside posts) using spring-loaded trolley poles.", "trolley bus" );
 
-    case TrainRegional:
+    case RegionalTrain:
         return plural ? i18nc( "@info/plain", "regional trains" )
                : i18nc( "@info/plain", "regional train" );
-    case TrainRegionalExpress:
+    case RegionalExpressTrain:
         return plural ? i18nc( "@info/plain", "regional express trains" )
                : i18nc( "@info/plain", "regional express train" );
-    case TrainInterregio:
+    case InterregionalTrain:
         return plural ? i18nc( "@info/plain", "interregional trains" )
                : i18nc( "@info/plain", "interregional train" );
-    case TrainIntercityEurocity:
+    case IntercityTrain:
         return plural ? i18nc( "@info/plain", "intercity / eurocity trains" )
                : i18nc( "@info/plain", "intercity / eurocity train" );
-    case TrainIntercityExpress:
+    case HighSpeedTrain:
         return plural ? i18nc( "@info/plain", "intercity express trains" )
                : i18nc( "@info/plain", "intercity express train" );
 

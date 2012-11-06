@@ -512,15 +512,15 @@ void AsyncDataEngineUpdater::processDepartures( const QString &sourceName,
                     vehicleType != Bus &&
                     vehicleType != Tram &&
                     vehicleType != Subway &&
-                    vehicleType != TrainInterurban &&
+                    vehicleType != InterurbanTrain &&
                     vehicleType != Metro &&
                     vehicleType != TrolleyBus ) ||
                 ( m_data.keywords.testFlag( PublicTransportRunner::OnlyTrains ) &&
-                    vehicleType != TrainRegional &&
-                    vehicleType != TrainRegionalExpress &&
-                    vehicleType != TrainInterregio &&
-                    vehicleType != TrainIntercityEurocity &&
-                    vehicleType != TrainIntercityExpress ) )
+                    vehicleType != RegionalTrain &&
+                    vehicleType != RegionalExpressTrain &&
+                    vehicleType != InterregionalTrain &&
+                    vehicleType != IntercityTrain &&
+                    vehicleType != HighSpeedTrain ) )
         {
             // Go to the next departure
             kDebug() << "Filtered" << predictedDeparture << m_data.keywords;

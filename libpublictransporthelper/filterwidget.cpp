@@ -161,9 +161,9 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
         QList< VehicleType > filterVehicleTypes;
         QList< ConstraintListWidget::ListItem > values;
         filterVehicleTypes = QList< VehicleType >()
-                << UnknownVehicleType << Tram << Bus << TrolleyBus << Subway << TrainInterurban
-                << Metro << TrainRegional << TrainRegionalExpress << TrainInterregio
-                << TrainIntercityEurocity << TrainIntercityExpress << Ferry << Plane;
+                << UnknownVehicleType << Tram << Bus << TrolleyBus << Subway << InterurbanTrain
+                << Metro << RegionalTrain << RegionalExpressTrain << InterregionalTrain
+                << IntercityTrain << HighSpeedTrain << Ferry << Plane;
         foreach( VehicleType vehicleType, filterVehicleTypes ) {
             values << ConstraintListWidget::ListItem(
                     Global::vehicleTypeToString(vehicleType), static_cast<int>(vehicleType),
