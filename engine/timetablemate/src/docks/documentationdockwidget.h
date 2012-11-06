@@ -38,8 +38,11 @@ public:
     KWebView *documentationWidget() const { return m_documentationWidget; };
 
 protected slots:
-    void documentationChosen( int index );
+    void documentationChosen( int index = 0 );
     void documentationUrlChanged( const QUrl &url );
+
+protected:
+    virtual void showEvent( QShowEvent *event );
 
 private:
     KComboBox *m_documentationChooser;

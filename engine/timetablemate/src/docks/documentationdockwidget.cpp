@@ -75,15 +75,21 @@ DocumentationDockWidget::DocumentationDockWidget( KActionMenu *showDocksAction, 
     setWidget( container );
     connect( m_documentationChooser, SIGNAL(currentIndexChanged(int)),
              this, SLOT(documentationChosen(int)) );
+}
 
-    // Load documentation
-    documentationChosen( 0 );
+void DocumentationDockWidget::showEvent( QShowEvent *event )
+{
+    if ( !m_documentationWidget->url().isValid() ) {
+        // Load documentation HTML when the dock widget gets shown for the first time
+        documentationChosen( 0 );
+    }
+    QWidget::showEvent( event );
 }
 
 void DocumentationDockWidget::documentationChosen( int index )
 {
     const QString page = m_documentationChooser->itemData( index ).toString();
-    QString documentationFileName = KGlobal::dirs()->findResource(
+    const QString documentationFileName = KGlobal::dirs()->findResource(
             "data", QString("timetablemate/doc/%1.html").arg(page) );
     m_documentationWidget->load( QUrl("file://" + documentationFileName) );
 }
@@ -94,7 +100,6 @@ void DocumentationDockWidget::documentationUrlChanged( const QUrl &url )
     if ( regExp.indexIn(url.toString()) != -1 ) {
         const QString page = regExp.cap( 1 );
         const int index = m_documentationChooser->findData( page );
-        kDebug() << page << index;
         if ( index != -1 ) {
             m_documentationChooser->setCurrentIndex( index );
         } else {
