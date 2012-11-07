@@ -30,30 +30,30 @@ class QString;
 /** @brief Tests ServiceProviderData objects for validity. */
 class ServiceProviderDataTester {
 public:
-    static bool runServiceProviderDataTest( TestModel::Test test, const QString &text,
-            QString *errorMessage = 0, QString *tooltip = 0 );
-    static bool runServiceProviderDataTest( TestModel::Test test, const ServiceProviderData *data,
-            QString *errorMessage = 0, QString *tooltip = 0 );
+    static TestModel::TestState runServiceProviderDataTest( TestModel::Test test,
+            const QString &text, QString *errorMessage = 0, QString *tooltip = 0 );
+    static TestModel::TestState runServiceProviderDataTest( TestModel::Test test,
+            const ServiceProviderData *data, QString *errorMessage = 0, QString *tooltip = 0 );
 
-    static bool isNameValid( const QString &name,
+    static TestModel::TestState isNameValid( const QString &name,
             QString *errorMessage = 0, QString *tooltip = 0 );
-    static bool isVersionValid( const QString &version,
+    static TestModel::TestState isVersionValid( const QString &version,
             QString *errorMessage = 0, QString *tooltip = 0  );
-    static bool isFileVersionValid( const QString &fileVersion,
+    static TestModel::TestState isFileVersionValid( const QString &fileVersion,
             QString *errorMessage = 0, QString *tooltip = 0 );
-    static bool isAuthorNameValid( const QString &authorName,
+    static TestModel::TestState isAuthorNameValid( const QString &authorName,
             QString *errorMessage = 0, QString *tooltip = 0 );
-    static bool isShortAuthorNameValid( const QString &shortAuthorName,
+    static TestModel::TestState isShortAuthorNameValid( const QString &shortAuthorName,
             QString *errorMessage = 0, QString *tooltip = 0 );
-    static bool isEmailValid( const QString &email,
+    static TestModel::TestState isEmailValid( const QString &email,
             QString *errorMessage = 0, QString *tooltip = 0 );
-    static bool isUrlValid( const QString &url,
+    static TestModel::TestState isUrlValid( const QString &url,
             QString *errorMessage = 0, QString *tooltip = 0 );
-    static bool isShortUrlValid( const QString &shortUrl,
+    static TestModel::TestState isShortUrlValid( const QString &shortUrl,
             QString *errorMessage = 0, QString *tooltip = 0 );
-    static bool isScriptFileNameValid( const QString &scriptFileName,
+    static TestModel::TestState isScriptFileNameValid( const QString &scriptFileName,
             QString *errorMessage = 0, QString *tooltip = 0 );
-    static bool isDescriptionValid( const QString &description,
+    static TestModel::TestState isDescriptionValid( const QString &description,
             QString *errorMessage = 0, QString *tooltip = 0 );
 };
 

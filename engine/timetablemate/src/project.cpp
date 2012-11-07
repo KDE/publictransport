@@ -1317,6 +1317,17 @@ public:
             return true;
         }
 
+        // Check that the test is applicable for the type of the provider to test
+        if ( data()->type() != Enums::ScriptedProvider ) {
+            testModel->setTestState( test, TestModel::TestNotApplicable,
+                    i18nc("@info/plain", "Only for scripted providers"),
+                    i18nc("@info", "<title>Test not Applicable</title> "
+                          "<para>This test is only applicable for scripted provider plugins.</para>") );
+            testFinished( test );
+            return false;
+        }
+
+        // Check that required tests are finished successfully
         const QList< TestModel::Test > requiredTests = TestModel::testIsDependedOf( test );
         for ( int i = 0; i < requiredTests.count(); ++i ) {
             TestModel::Test requiredTest = requiredTests[ i ];
@@ -1638,11 +1649,10 @@ public:
             testModel->markTestAsStarted( test );
 
             QString errorMessage, tooltip;
-            success = ServiceProviderDataTester::runServiceProviderDataTest(
+            TestModel::TestState state = ServiceProviderDataTester::runServiceProviderDataTest(
                     test, provider->data(), &errorMessage, &tooltip );
-            testModel->setTestState( test, success ? TestModel::TestFinishedSuccessfully
-                                                   : TestModel::TestFinishedWithErrors,
-                                     errorMessage, tooltip/*, projectAction(ShowProjectSettings)*/ );
+            success = state == TestModel::TestFinishedSuccessfully ? true : false;
+            testModel->setTestState( test, state, errorMessage, tooltip );
             testFinished( test );
         } break;
 

@@ -31,8 +31,8 @@
 #include <KLocalizedString>
 #include <KDebug>
 
-bool ServiceProviderDataTester::runServiceProviderDataTest( TestModel::Test test, const QString &text,
-                                              QString *errorMessage, QString *tooltip )
+TestModel::TestState  ServiceProviderDataTester::runServiceProviderDataTest( TestModel::Test test,
+        const QString &text, QString *errorMessage, QString *tooltip )
 {
     switch ( test ) {
     case TestModel::ServiceProviderDataNameTest:
@@ -58,13 +58,12 @@ bool ServiceProviderDataTester::runServiceProviderDataTest( TestModel::Test test
 
     default:
         kWarning() << "Unknown test";
-        return true;
+        return TestModel::TestFinishedSuccessfully;
     }
 }
 
-bool ServiceProviderDataTester::runServiceProviderDataTest( TestModel::Test test,
-                                              const ServiceProviderData *data,
-                                              QString *errorMessage, QString *tooltip )
+TestModel::TestState ServiceProviderDataTester::runServiceProviderDataTest( TestModel::Test test,
+        const ServiceProviderData *data, QString *errorMessage, QString *tooltip )
 {
     switch ( test ) {
     case TestModel::ServiceProviderDataNameTest:
@@ -84,17 +83,29 @@ bool ServiceProviderDataTester::runServiceProviderDataTest( TestModel::Test test
     case TestModel::ServiceProviderDataShortUrlTest:
         return isShortUrlValid( data->shortUrl(), errorMessage, tooltip );
     case TestModel::ServiceProviderDataScriptFileNameTest:
-        return isScriptFileNameValid( data->scriptFileName(), errorMessage, tooltip );
+        if ( data->type() != Enums::ScriptedProvider ) {
+            if ( errorMessage ) {
+                *errorMessage = i18nc("@info/plain", "Only for scripted providers");
+            }
+            if ( tooltip ) {
+                *tooltip = i18nc("@info", "<title>Test not Applicable</title> "
+                                 "<para>This test is only applicable for "
+                                 "scripted provider plugins.</para>");
+            }
+            return TestModel::TestNotApplicable;
+        } else {
+            return isScriptFileNameValid( data->scriptFileName(), errorMessage, tooltip );
+        }
     case TestModel::ServiceProviderDataDescriptionTest:
         return isDescriptionValid( data->description(), errorMessage, tooltip );
 
     default:
         kWarning() << "Unknown test";
-        return true;
+        return TestModel::TestFinishedSuccessfully;
     }
 }
 
-bool ServiceProviderDataTester::isNameValid( const QString &name, QString *errorMessage, QString *tooltip )
+TestModel::TestState ServiceProviderDataTester::isNameValid( const QString &name, QString *errorMessage, QString *tooltip )
 {
     if ( name.isEmpty() ) {
         if ( errorMessage ) {
@@ -107,14 +118,14 @@ bool ServiceProviderDataTester::isNameValid( const QString &name, QString *error
                         "<para>Applets show this name in a service provider selector widget.</para>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
 
-    return true;
+    return TestModel::TestFinishedSuccessfully;
 }
 
-bool ServiceProviderDataTester::isVersionValid( const QString &version, QString *errorMessage,
-                                                QString *tooltip )
+TestModel::TestState ServiceProviderDataTester::isVersionValid( const QString &version,
+        QString *errorMessage, QString *tooltip )
 {
     if ( version.isEmpty() ) {
         if ( errorMessage ) {
@@ -129,7 +140,7 @@ bool ServiceProviderDataTester::isVersionValid( const QString &version, QString 
                         "Open the project settings to add a <interface>Version</interface>.</para>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
 
     // Check if version contains a valid version string
@@ -143,14 +154,14 @@ bool ServiceProviderDataTester::isVersionValid( const QString &version, QString 
                 *tooltip = i18nc("@info", "<title>The version string is invalid</title>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
 
-    return true;
+    return TestModel::TestFinishedSuccessfully;
 }
 
-bool ServiceProviderDataTester::isFileVersionValid( const QString &fileVersion, QString *errorMessage,
-                                             QString *tooltip )
+TestModel::TestState ServiceProviderDataTester::isFileVersionValid( const QString &fileVersion,
+        QString *errorMessage, QString *tooltip )
 {
     if ( fileVersion.isEmpty() || fileVersion != "1.0" ) {
         if ( errorMessage ) {
@@ -165,7 +176,7 @@ bool ServiceProviderDataTester::isFileVersionValid( const QString &fileVersion, 
                         "in the project settings.</para>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
 
     // Check if fileVersion contains a valid version string
@@ -179,14 +190,14 @@ bool ServiceProviderDataTester::isFileVersionValid( const QString &fileVersion, 
                 *tooltip = i18nc("@info", "<title>The version string is invalid</title>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
 
-    return true;
+    return TestModel::TestFinishedSuccessfully;
 }
 
-bool ServiceProviderDataTester::isEmailValid( const QString &email, QString *errorMessage,
-                                       QString *tooltip )
+TestModel::TestState ServiceProviderDataTester::isEmailValid( const QString &email,
+        QString *errorMessage, QString *tooltip )
 {
     if ( email.isEmpty() ) {
         if ( errorMessage ) {
@@ -203,7 +214,7 @@ bool ServiceProviderDataTester::isEmailValid( const QString &email, QString *err
                         "<interface>E-Mail</interface> address.</para>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
 
     // Check if email contains a valid email address
@@ -218,14 +229,14 @@ bool ServiceProviderDataTester::isEmailValid( const QString &email, QString *err
                 *tooltip = i18nc("@info", "<title>The email address is invalid</title>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
 
-    return true;
+    return TestModel::TestFinishedSuccessfully;
 }
 
-bool ServiceProviderDataTester::isAuthorNameValid( const QString &authorName, QString *errorMessage,
-                                            QString *tooltip )
+TestModel::TestState ServiceProviderDataTester::isAuthorNameValid( const QString &authorName,
+        QString *errorMessage, QString *tooltip )
 {
     if ( authorName.isEmpty() ) {
         if ( errorMessage ) {
@@ -240,15 +251,14 @@ bool ServiceProviderDataTester::isAuthorNameValid( const QString &authorName, QS
                         "<interface>Author</interface>.</para>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
 
-    return true;
+    return TestModel::TestFinishedSuccessfully;
 }
 
-bool ServiceProviderDataTester::isShortAuthorNameValid( const QString &shortAuthorName,
-                                                 QString *errorMessage,
-                                                 QString *tooltip )
+TestModel::TestState ServiceProviderDataTester::isShortAuthorNameValid(
+        const QString &shortAuthorName, QString *errorMessage, QString *tooltip )
 {
     if ( shortAuthorName.isEmpty() ) {
         if ( errorMessage ) {
@@ -263,13 +273,13 @@ bool ServiceProviderDataTester::isShortAuthorNameValid( const QString &shortAuth
                         "<interface>Short Author Name</interface>.</para>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
-    return true;
+    return TestModel::TestFinishedSuccessfully;
 }
 
-bool ServiceProviderDataTester::isUrlValid( const QString &url, QString *errorMessage,
-                                     QString *tooltip )
+TestModel::TestState ServiceProviderDataTester::isUrlValid( const QString &url,
+        QString *errorMessage, QString *tooltip )
 {
     if ( url.isEmpty() ) {
         if ( errorMessage ) {
@@ -285,13 +295,13 @@ bool ServiceProviderDataTester::isUrlValid( const QString &url, QString *errorMe
                         "Open the project settings and add a <interface>Home Page URL</interface>.</para>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
-    return true;
+    return TestModel::TestFinishedSuccessfully;
 }
 
-bool ServiceProviderDataTester::isShortUrlValid( const QString &shortUrl, QString *errorMessage,
-                                          QString *tooltip )
+TestModel::TestState ServiceProviderDataTester::isShortUrlValid( const QString &shortUrl,
+        QString *errorMessage, QString *tooltip )
 {
     if ( shortUrl.isEmpty() ) {
         if ( errorMessage ) {
@@ -308,13 +318,13 @@ bool ServiceProviderDataTester::isShortUrlValid( const QString &shortUrl, QStrin
                         "Open the project settings to add a <interface>Short URL</interface>.</para>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
-    return true;
+    return TestModel::TestFinishedSuccessfully;
 }
 
-bool ServiceProviderDataTester::isDescriptionValid( const QString &description, QString *errorMessage,
-                                             QString *tooltip )
+TestModel::TestState ServiceProviderDataTester::isDescriptionValid( const QString &description,
+        QString *errorMessage, QString *tooltip )
 {
     if ( description.isEmpty() ) {
         if ( errorMessage ) {
@@ -329,14 +339,13 @@ bool ServiceProviderDataTester::isDescriptionValid( const QString &description, 
                         "project settings to add a <interface>Description</interface>.</para>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
-    return true;
+    return TestModel::TestFinishedSuccessfully;
 }
 
-bool ServiceProviderDataTester::isScriptFileNameValid( const QString &scriptFileName,
-                                                QString *errorMessage,
-                                                QString *tooltip )
+TestModel::TestState ServiceProviderDataTester::isScriptFileNameValid(
+        const QString &scriptFileName, QString *errorMessage, QString *tooltip )
 {
     if ( scriptFileName.isEmpty() ) {
         if ( errorMessage ) {
@@ -351,8 +360,8 @@ bool ServiceProviderDataTester::isScriptFileNameValid( const QString &scriptFile
                         "from a template, implement the functions and save it.</para>");
             }
         }
-        return false;
+        return TestModel::TestFinishedWithErrors;
     }
     // TODO Test if the script file exists
-    return true;
+    return TestModel::TestFinishedSuccessfully;
 }

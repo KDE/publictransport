@@ -298,6 +298,8 @@ QString TestModel::nameForState( TestModel::TestState state )
         return i18nc("@info/plain", "Delegated");
     case TestDisabled:
         return i18nc("@info/plain", "Disabled");
+    case TestNotApplicable:
+        return i18nc("@info/plain", "Not Applicable");
     case TestIsRunning:
         return i18nc("@info/plain", "Running");
     case TestFinishedSuccessfully:
@@ -344,6 +346,7 @@ QVariant TestModel::testCaseData( TestModel::TestCase testCase, const QModelInde
             case TestCaseNotFinished:
                 return KIcon("arrow-right");
             case TestDisabled:
+            case TestNotApplicable:
                 return KIcon("dialog-cancel");
             case TestDelegated:
                 return KIcon("task-delegate");
@@ -463,6 +466,7 @@ QVariant TestModel::testData( TestModel::Test test, const QModelIndex &index, in
             case TestCaseNotFinished:
                 return KIcon("arrow-right");
             case TestDisabled:
+            case TestNotApplicable:
                 return KIcon("dialog-cancel");
             case TestDelegated:
                 return KIcon("task-delegate");
@@ -636,6 +640,7 @@ QVariant TestModel::backgroundFromTestState( TestModel::TestState state ) const
     case TestAborted:
         return KColorScheme(QPalette::Active).background(KColorScheme::NegativeBackground);
     case TestDisabled:
+    case TestNotApplicable:
     case TestDelegated:
     case TestIsRunning:
     case TestNotStarted:
@@ -697,11 +702,23 @@ Qt::ItemFlags TestModel::flags( const QModelIndex &index ) const
         return Qt::NoItemFlags;
     }
 
+    // Get the test of the index, if any
     const Test test = testFromIndex( index );
-    if ( testState(test) == TestDisabled ||
-         (m_testData.contains(test) && m_testData[test].flags.testFlag(TestIsOutdated)) )
-    {
-        return Qt::ItemIsSelectable;
+    if ( test != InvalidTest ) {
+        // The item at index is a test item
+        const TestState state = testState( test );
+        if ( state == TestDisabled || state == TestNotApplicable ||
+             (m_testData.contains(test) && m_testData[test].flags.testFlag(TestIsOutdated)) )
+        {
+            return Qt::ItemIsSelectable;
+        }
+    } else {
+        // The item at index is a test case item
+        const TestCase testCase = testCaseFromIndex( index );
+        const TestState state = testCaseState( testCase );
+        if ( state == TestDisabled || state == TestNotApplicable ) {
+            return Qt::ItemIsSelectable;
+        }
     }
 
     return Qt::ItemIsEnabled | Qt::ItemIsSelectable;

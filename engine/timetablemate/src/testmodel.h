@@ -168,6 +168,8 @@ public:
         TestDisabled, /**< The test or all tests of a test case are finished and at least one test
                 * was disabled, because preconditions are not met (eg. needed provider features),
                 * no test had an error. */
+        TestNotApplicable, /**< The test or all tests of a test case are not applicable to the
+                * service provider plugin type to test. */
         TestFinishedSuccessfully, /**< The test or all tests of a test case finished successfully. */
         TestFinishedWithWarnings, /**< The test or all tests of a test case are finished,
                 * at least one test had a warning, no test had an error. */
@@ -298,7 +300,7 @@ public:
     Q_INVOKABLE inline static bool isFinishedState( TestState state ) {
         return state == TestCouldNotBeStarted || state == TestFinishedWithErrors ||
                state == TestFinishedSuccessfully || state == TestFinishedWithWarnings ||
-               state == TestDisabled;
+               state == TestDisabled || state == TestNotApplicable;
     };
 
 signals:
@@ -340,6 +342,7 @@ private:
         inline bool isNotStarted() const { return state == TestNotStarted; };
         inline bool isDelegated() const { return state == TestDelegated; };
         inline bool isDisabled() const { return state == TestDisabled; };
+        inline bool isNotApplicable() const { return state == TestNotApplicable; };
         inline bool isAborted() const { return state == TestAborted; };
         inline bool isRunning() const { return state == TestIsRunning; };
         inline bool isUnstartable() const { return state == TestCouldNotBeStarted; };
