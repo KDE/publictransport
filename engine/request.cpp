@@ -172,8 +172,8 @@ QScriptValue JourneyRequest::toScriptValue( QScriptEngine *engine ) const
 QScriptValue AdditionalDataRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();
-//     value.setProperty( QLatin1String("stop"), stop );
-//     value.setProperty( QLatin1String("city"), city );
+    value.setProperty( QLatin1String("stop"), m_stop );
+    value.setProperty( QLatin1String("city"), m_city );
     value.setProperty( QLatin1String("dataType"),
             m_sourceName.startsWith(QLatin1String("Arrivals"), Qt::CaseInsensitive)
             ? parseModeName(ParseForArrivals) : parseModeName(ParseForDepartures));
