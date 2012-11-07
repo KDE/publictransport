@@ -455,6 +455,19 @@ void TimetableMate::initialize()
     const int threadCount = settings->maximumThreadCount();
     m_projectModel->weaver()->setMaximumNumberOfThreads( threadCount < 1 ? 32 : threadCount );
 
+    KConfig *config = settings->config();
+    if ( !config->hasGroup("Kate Document Defaults") ) {
+        // Kate document settings not written yet,
+        // write default values for TimetableMate to have consistent indentation
+        // with 4 spaces and no tabulators by default, also make removing spaces the default
+        KConfigGroup group = config->group("Kate Document Defaults");
+        group.writeEntry( "Indentation Width", 4 );
+        group.writeEntry( "ReplaceTabsDyn", true ); // Indent with (4) spaces, no tabs
+        group.writeEntry( "Remove Spaces", true );
+        group.writeEntry( "RemoveTrailingDyn", true );
+        group.sync();
+    }
+
     bool restoreProjects = settings->restoreProjects();
     if ( settings->lastSessionCrashed() ) {
         // The last session has crashed
