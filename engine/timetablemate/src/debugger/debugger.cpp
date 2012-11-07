@@ -104,8 +104,11 @@ Debugger::~Debugger()
     // Abort all running jobs, wait for them to finish and then delete them.
     // When there are undeleted jobs with queue policies assigned, deleting m_weaver would crash
     m_mutex->lock();
-    m_weaver->requestAbort();
-    m_weaver->finish();
+    if ( hasRunningJobs() ) {
+        m_weaver->requestAbort();
+        m_weaver->finish();
+        qApp->processEvents();
+    }
     foreach ( const QPointer<DebuggerJob> &job, m_runningJobs ) {
         if ( job ) {
             job->finish();
@@ -131,7 +134,10 @@ Debugger::~Debugger()
 void Debugger::finish()
 {
     QMutexLocker locker( m_mutex );
-    m_weaver->finish();
+    if ( hasRunningJobs() ) {
+        m_weaver->finish();
+        qApp->processEvents();
+    }
     while ( hasRunningJobs() ) {
         const QPointer< DebuggerJob > job = currentJob();
         Q_ASSERT( job );
