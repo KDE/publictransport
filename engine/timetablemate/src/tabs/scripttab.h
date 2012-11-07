@@ -97,7 +97,7 @@ protected slots:
     void contextMenuAboutToShow( KTextEditor::View *view, QMenu* menu );
 
 private:
-    ScriptTab( Project *project, KTextEditor::Document *document, QWidget *parent = 0 );
+    ScriptTab( Project *project, QWidget *parent = 0 );
     void updateNextPreviousFunctionActions();
 
     JavaScriptModel *m_scriptModel;

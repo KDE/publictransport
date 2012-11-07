@@ -34,8 +34,8 @@
 // Qt includes
 #include <QWidget>
 
-ProjectSourceTab::ProjectSourceTab( Project *project, KTextEditor::Document *document, QWidget *parent )
-        : AbstractDocumentTab( project, document, Tabs::ProjectSource, parent )
+ProjectSourceTab::ProjectSourceTab( Project *project, QWidget *parent )
+        : AbstractDocumentTab( project, Tabs::ProjectSource, parent )
 {
 }
 
@@ -45,17 +45,9 @@ ProjectSourceTab::~ProjectSourceTab()
 
 ProjectSourceTab *ProjectSourceTab::create( Project *project, QWidget *parent )
 {
-    // Create script document
-    QWidget *container = new QWidget( parent );
-    KTextEditor::Document *document = createDocument( container );
-    if ( !document ) {
-        delete container;
-        return 0;
-    }
-
     // Create tab
-    ProjectSourceTab *tab = new ProjectSourceTab( project, document, parent );
-    document->setHighlightingMode( "XML" );
+    ProjectSourceTab *tab = new ProjectSourceTab( project, parent );
+    tab->document()->setHighlightingMode( "XML" );
 
     KTextEditor::View *view = tab->defaultView();
     view->setWhatsThis( i18nc("@info:whatsthis", "<subtitle>Project Source</subtitle>"

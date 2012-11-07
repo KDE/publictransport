@@ -60,8 +60,8 @@
 #include <QFileInfo>
 #include <QDir>
 
-ScriptTab::ScriptTab( Project *project, KTextEditor::Document *document, QWidget *parent )
-        : AbstractDocumentTab(project, document, Tabs::Script, parent),
+ScriptTab::ScriptTab( Project *project, QWidget *parent )
+        : AbstractDocumentTab(project, Tabs::Script, parent),
           m_scriptModel(0), m_completionModel(0), m_functionsModel(0), m_functionsWidget(0),
           m_previousFunctionAction(0), m_nextFunctionAction(0), m_backgroundParserTimer(0),
           m_executionLine(-1)
@@ -132,17 +132,10 @@ KAction *ScriptTab::createPreviousFunctionAction( QObject *parent )
 
 ScriptTab *ScriptTab::create( Project *project, QWidget *parent )
 {
-    // Create script document
-    QWidget *container = new QWidget( parent );
-    KTextEditor::Document *document = createDocument( container );
-    if ( !document ) {
-        kWarning() << "Service katepart.desktop not found";
-        delete container;
-        return 0;
-    }
-
     // Create script tab
-    ScriptTab *tab = new ScriptTab( project, document, parent );
+    ScriptTab *tab = new ScriptTab( project, parent );
+    KTextEditor::Document *document = tab->document();
+    QWidget *container = new QWidget( parent );
     tab->setWidget( container );
 
     // Setup actions

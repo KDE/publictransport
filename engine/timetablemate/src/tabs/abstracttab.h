@@ -164,6 +164,8 @@ private:
 class AbstractDocumentTab : public AbstractTab {
     Q_OBJECT
 public:
+    virtual ~AbstractDocumentTab();
+
     /** @brief Get a pointer to the KTextEditor document used in this tab. */
     inline KTextEditor::Document *document() const { return m_document; };
 
@@ -171,7 +173,7 @@ public:
      * @brief Get a pointer to the view shown in this tab.
      * If no view was created it gets created here.
      **/
-    KTextEditor::View *defaultView() const;
+    KTextEditor::View *defaultView();
 
     /**
      * @brief Get the file name where the tabs document is saved.
@@ -189,10 +191,7 @@ protected slots:
 
 protected:
     /** @brief Create a new document tab object for @p project. */
-    AbstractDocumentTab( Project *project, KTextEditor::Document *document,
-                         TabType type, QWidget *parent = 0 );
-
-    virtual ~AbstractDocumentTab();
+    AbstractDocumentTab( Project *project, TabType type, QWidget *parent = 0 );
 
     /** @brief Create a new KTextEditor::Document. */
     static KTextEditor::Document *createDocument( QWidget *parent );

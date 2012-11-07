@@ -40,12 +40,14 @@
 #include <KLocalizedString>
 #include <KService>
 #include <KStandardDirs>
+#include <KTextEditor/Editor>
+#include <KTextEditor/EditorChooser>
 #include <KTextEditor/Document>
+#include <KTextEditor/View>
 #include <KTextEditor/ConfigInterface>
 #include <KTextEditor/TextHintInterface>
 #include <KTextEditor/MarkInterface>
 #include <KTextEditor/CodeCompletionInterface>
-#include <KTextEditor/View>
 
 // Qt includes
 #include <QVBoxLayout>
@@ -76,9 +78,8 @@ AbstractTab::~AbstractTab()
     }
 }
 
-AbstractDocumentTab::AbstractDocumentTab( Project *project, KTextEditor::Document *document,
-                                        TabType type, QWidget *parent )
-        : AbstractTab(project, type, parent), m_document(document)
+AbstractDocumentTab::AbstractDocumentTab( Project *project, TabType type, QWidget *parent )
+        : AbstractTab(project, type, parent), m_document(createDocument(this))
 {
     connect( m_document, SIGNAL(modifiedChanged(KTextEditor::Document*)),
              this, SLOT(slotModifiedChanged(KTextEditor::Document*)) );
@@ -88,6 +89,12 @@ AbstractDocumentTab::AbstractDocumentTab( Project *project, KTextEditor::Documen
 
 AbstractDocumentTab::~AbstractDocumentTab()
 {
+    KTextEditor::Editor *editor = KTextEditor::EditorChooser::editor();
+    if ( editor ) {
+        // Write editor configuration
+        editor->writeConfig();
+    }
+
     delete m_document;
 }
 
@@ -103,9 +110,9 @@ void AbstractTab::setWidget( QWidget *widget )
 
 KTextEditor::Document *AbstractDocumentTab::createDocument( QWidget *parent )
 {
-    // First check if the kate part can be found
-    KService::Ptr service = KService::serviceByDesktopPath( "katepart.desktop" );
+    KService::Ptr service = KService::serviceByStorageId( "katepart" );
     if ( !service ) {
+        kWarning() << "Could not find the kate part";
         return 0;
     }
 
@@ -114,14 +121,14 @@ KTextEditor::Document *AbstractDocumentTab::createDocument( QWidget *parent )
             service->createInstance<KParts::ReadWritePart>(parent) );
 }
 
-KTextEditor::View *AbstractDocumentTab::defaultView() const
+KTextEditor::View *AbstractDocumentTab::defaultView()
 {
     // Ensure a view gets created
     m_document->widget();
 
     if ( m_document->views().isEmpty() ) {
         kWarning() << "No view created";
-        return 0;
+        return m_document->createView( this );
     } else {
         return m_document->views().first();
     }

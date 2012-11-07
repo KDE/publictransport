@@ -34,7 +34,7 @@ public:
     virtual bool save();
 
 private:
-    ProjectSourceTab( Project *project, KTextEditor::Document *document, QWidget *parent = 0 );
+    ProjectSourceTab( Project *project, QWidget *parent = 0 );
 };
 
 #endif // Multiple inclusion guard
