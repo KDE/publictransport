@@ -308,6 +308,7 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     connect( ui_provider->onlyAllowPredefinedCities, SIGNAL(stateChanged(int)), m_mapper, SLOT(map()) );
     connect( ui_provider->url, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->shortUrl, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
+    connect( ui_provider->credit, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->minFetchWait, SIGNAL(valueChanged(int)), m_mapper, SLOT(map()) );
     connect( ui_provider->author, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->shortAuthor, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
@@ -329,6 +330,7 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     m_mapper->setMapping( ui_provider->onlyAllowPredefinedCities, ui_provider->onlyAllowPredefinedCities );
     m_mapper->setMapping( ui_provider->url, ui_provider->url );
     m_mapper->setMapping( ui_provider->shortUrl, ui_provider->shortUrl );
+    m_mapper->setMapping( ui_provider->credit, ui_provider->credit );
     m_mapper->setMapping( ui_provider->minFetchWait, ui_provider->minFetchWait );
     m_mapper->setMapping( ui_provider->author, ui_provider->author );
     m_mapper->setMapping( ui_provider->shortAuthor, ui_provider->shortAuthor );
@@ -571,6 +573,7 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     m_providerData->setUseSeparateCityValue( ui_provider->useCityValue->isChecked() );
     m_providerData->setOnlyUseCitiesInList( ui_provider->onlyAllowPredefinedCities->isChecked() );
     m_providerData->setUrl( ui_provider->url->text(), ui_provider->shortUrl->text() );
+    m_providerData->setCredit( ui_provider->credit->text() );
     m_providerData->setMinFetchWait( ui_provider->minFetchWait->value() );
     m_providerData->setAuthor( ui_provider->author->text(), ui_provider->shortAuthor->text(),
                                ui_provider->email->text() );
@@ -900,6 +903,7 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *data,
     ui_provider->onlyAllowPredefinedCities->setChecked( data->onlyUseCitiesInList() );
     ui_provider->url->setText( data->url() );
     ui_provider->shortUrl->setText( data->shortUrl() );
+    ui_provider->credit->setText( data->credit() );
     ui_provider->minFetchWait->setValue( data->minFetchWait() );
     ui_provider->author->setText( data->author() );
     ui_provider->shortAuthor->setText( data->shortAuthor() );
