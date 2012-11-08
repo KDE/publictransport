@@ -24,8 +24,10 @@
 
 class Project;
 class ProjectModel;
+class KLineEdit;
 class QModelIndex;
 class QTreeView;
+class QSortFilterProxyModel;
 
 class ProjectsDockWidget : public AbstractDockWidget {
     Q_OBJECT
@@ -45,6 +47,8 @@ protected slots:
 private:
     ProjectModel *m_model;
     QTreeView *m_projectsWidget;
+    KLineEdit *m_searchLine;
+    QSortFilterProxyModel *m_proxyModel;
 };
 
 #endif // Multiple inclusion guard

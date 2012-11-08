@@ -36,18 +36,21 @@
 #include <KIcon>
 #include <KMenu>
 #include <KFileDialog>
+#include <KLineEdit>
 
 // Qt includes
 #include <QLabel>
 #include <QBoxLayout>
 #include <QTreeView>
 #include <QFormLayout>
+#include <QSortFilterProxyModel>
 
 ProjectsDockWidget::ProjectsDockWidget( ProjectModel *model, KActionMenu *showDocksAction,
                                         QWidget *parent )
         : AbstractDockWidget( i18nc("@window:title Dock title", "Projects"),
                              showDocksAction, parent ),
-          m_model(model), m_projectsWidget(0)
+          m_model(model), m_projectsWidget(0), m_searchLine(0),
+          m_proxyModel(new QSortFilterProxyModel(this))
 {
     setObjectName( "projects" );
 
@@ -62,8 +65,19 @@ ProjectsDockWidget::ProjectsDockWidget( ProjectModel *model, KActionMenu *showDo
 
     QWidget *container = new QWidget( this );
     container->setMinimumSize( 150, 150 );
+
+    m_searchLine = new KLineEdit( container );
+    m_searchLine->setClickMessage(
+            i18nc("@info/plain A KLineEdit click message to filter projects", "Type to search") );
+    m_searchLine->setClearButtonShown( true );
+
+    m_proxyModel->setSourceModel( model );
+    m_proxyModel->setFilterCaseSensitivity( Qt::CaseInsensitive );
+    connect( m_searchLine, SIGNAL(textChanged(QString)),
+             m_proxyModel, SLOT(setFilterFixedString(QString)) );
+
     m_projectsWidget = new QTreeView( container );
-    m_projectsWidget->setModel( model );
+    m_projectsWidget->setModel( m_proxyModel );
     m_projectsWidget->setHeaderHidden( true );
     m_projectsWidget->setIndentation( 10 );
     m_projectsWidget->setAnimated( true );
@@ -78,6 +92,7 @@ ProjectsDockWidget::ProjectsDockWidget( ProjectModel *model, KActionMenu *showDo
     projectsLayout->setContentsMargins( 0, 0, 0, 0 );
     projectsLayout->setVerticalSpacing( 0 );
     projectsLayout->setRowWrapPolicy( QFormLayout::WrapLongRows );
+    projectsLayout->addRow( m_searchLine );
     projectsLayout->addRow( m_projectsWidget );
     setWidget( container );
     connect( m_projectsWidget, SIGNAL(doubleClicked(QModelIndex)),
@@ -118,9 +133,13 @@ void ProjectsDockWidget::projectItemDoubleClicked( const QModelIndex &index )
             ProjectModelCodeItem *codeItem = dynamic_cast< ProjectModelCodeItem* >( projectItem );
             ProjectModelIncludedScriptItem *includedScriptItem = // TODO
                     dynamic_cast< ProjectModelIncludedScriptItem* >( codeItem->parent() );
+            if ( includedScriptItem ) {
+                Q_ASSERT( !includedScriptItem->filePath().isEmpty() );
+            }
             ScriptTab *scriptTab = includedScriptItem
                     ? project->showExternalScriptTab(includedScriptItem->filePath(), this)
                     : project->showScriptTab(this);
+            Q_ASSERT( scriptTab );
             scriptTab->goToLine( codeItem->node()->line() );
             break;
         }
