@@ -772,6 +772,7 @@ QModelIndex ProjectModel::indexFromProjectItem( ProjectModelItem *projectItem ) 
 
 ProjectModelItem *ProjectModel::projectItemFromIndex( const QModelIndex &index ) const
 {
+    Q_ASSERT( index.model() == this );
     return static_cast< ProjectModelItem* >( index.internalPointer() );
 }
 

@@ -101,8 +101,10 @@ ProjectsDockWidget::ProjectsDockWidget( ProjectModel *model, KActionMenu *showDo
              this, SLOT(projectItemContextMenuRequested(QPoint)) );
 }
 
-void ProjectsDockWidget::projectItemDoubleClicked( const QModelIndex &index )
+void ProjectsDockWidget::projectItemDoubleClicked( const QModelIndex &proxyIndex )
 {
+    const QModelIndex index = ( proxyIndex.model() != m_model)
+            ? m_proxyModel->mapToSource(proxyIndex) : proxyIndex;
     if ( !m_model->flags(index).testFlag(Qt::ItemIsEnabled) ) {
         // A disabled item was double clicked
         return;
@@ -162,11 +164,13 @@ void ProjectsDockWidget::projectItemDoubleClicked( const QModelIndex &index )
 
 void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
 {
-    const QModelIndex index = m_projectsWidget->indexAt( pos );
-    if ( !index.isValid() ) {
+    const QModelIndex proxyIndex = m_projectsWidget->indexAt( pos );
+    if ( !proxyIndex.isValid() ) {
         return; // No item clicked
     }
 
+    const QModelIndex index = ( proxyIndex.model() != m_model)
+            ? m_proxyModel->mapToSource(proxyIndex) : proxyIndex;
     ProjectModelItem *projectItem = m_model->projectItemFromIndex( index );
     Project *project = projectItem->project();
     if ( index.parent().isValid() ) {
