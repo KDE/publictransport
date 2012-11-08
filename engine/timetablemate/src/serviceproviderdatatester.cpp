@@ -30,31 +30,42 @@
 // KDE includes
 #include <KLocalizedString>
 #include <KDebug>
+#include <KUrl>
+
+// Qt includes
+#include <QFile>
 
 TestModel::TestState  ServiceProviderDataTester::runServiceProviderDataTest( TestModel::Test test,
-        const QString &text, QString *errorMessage, QString *tooltip )
+        const QString &text, QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
 {
     switch ( test ) {
     case TestModel::ServiceProviderDataNameTest:
-        return isNameValid( text, errorMessage, tooltip );
+        return isNameValid( text, errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataVersionTest:
-        return isVersionValid( text, errorMessage, tooltip );
+        return isVersionValid( text, errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataFileFormatVersionTest:
-        return isFileVersionValid( text, errorMessage, tooltip );
+        return isFileVersionValid( text, errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataAuthorNameTest:
-        return isAuthorNameValid( text, errorMessage, tooltip );
+        return isAuthorNameValid( text, errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataShortAuthorNameTest:
-        return isShortAuthorNameValid( text, errorMessage, tooltip );
+        return isShortAuthorNameValid( text, errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataEmailTest:
-        return isEmailValid( text, errorMessage, tooltip );
+        return isEmailValid( text, errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataUrlTest:
-        return isUrlValid( text, errorMessage, tooltip );
+        return isUrlValid( text, errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataShortUrlTest:
-        return isShortUrlValid( text, errorMessage, tooltip );
-    case TestModel::ServiceProviderDataScriptFileNameTest:
-        return isScriptFileNameValid( text, errorMessage, tooltip );
+        return isShortUrlValid( text, errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataDescriptionTest:
-        return isDescriptionValid( text, errorMessage, tooltip );
+        return isDescriptionValid( text, errorMessage, tooltip, childrenExplanations );
+    case TestModel::ServiceProviderDataScriptFileNameTest:
+        return isScriptFileNameValid( text, errorMessage, tooltip, childrenExplanations );
+
+    case TestModel::ServiceProviderDataGtfsFeedUrlTest:
+        return isGtfsFeedUrlValid( text, errorMessage, tooltip, childrenExplanations );
+    case TestModel::ServiceProviderDataGtfsRealtimeUpdatesUrlTest:
+    case TestModel::ServiceProviderDataGtfsRealtimeAlertsTest:
+        return isGtfsRealtimeUrlValid( text, errorMessage, tooltip, childrenExplanations );
 
     default:
         kWarning() << "Unknown test";
@@ -63,41 +74,46 @@ TestModel::TestState  ServiceProviderDataTester::runServiceProviderDataTest( Tes
 }
 
 TestModel::TestState ServiceProviderDataTester::runServiceProviderDataTest( TestModel::Test test,
-        const ServiceProviderData *data, QString *errorMessage, QString *tooltip )
+        const ServiceProviderData *data, QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
 {
+    if ( !TestModel::isTestApplicableTo(test, data, errorMessage, tooltip) ) {
+        return TestModel::TestNotApplicable;
+    }
+
     switch ( test ) {
     case TestModel::ServiceProviderDataNameTest:
-        return isNameValid( data->name(), errorMessage, tooltip );
+        return isNameValid( data->name(), errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataVersionTest:
-        return isVersionValid( data->version(), errorMessage, tooltip );
+        return isVersionValid( data->version(), errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataFileFormatVersionTest:
-        return isFileVersionValid( data->fileFormatVersion(), errorMessage, tooltip );
+        return isFileVersionValid( data->fileFormatVersion(), errorMessage, tooltip,
+                                   childrenExplanations );
     case TestModel::ServiceProviderDataAuthorNameTest:
-        return isAuthorNameValid( data->author(), errorMessage, tooltip );
+        return isAuthorNameValid( data->author(), errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataShortAuthorNameTest:
-        return isShortAuthorNameValid( data->shortAuthor(), errorMessage, tooltip );
+        return isShortAuthorNameValid( data->shortAuthor(), errorMessage, tooltip,
+                                       childrenExplanations );
     case TestModel::ServiceProviderDataEmailTest:
-        return isEmailValid( data->email(), errorMessage, tooltip );
+        return isEmailValid( data->email(), errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataUrlTest:
-        return isUrlValid( data->url(), errorMessage, tooltip );
+        return isUrlValid( data->url(), errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataShortUrlTest:
-        return isShortUrlValid( data->shortUrl(), errorMessage, tooltip );
-    case TestModel::ServiceProviderDataScriptFileNameTest:
-        if ( data->type() != Enums::ScriptedProvider ) {
-            if ( errorMessage ) {
-                *errorMessage = i18nc("@info/plain", "Only for scripted providers");
-            }
-            if ( tooltip ) {
-                *tooltip = i18nc("@info", "<title>Test not Applicable</title> "
-                                 "<para>This test is only applicable for "
-                                 "scripted provider plugins.</para>");
-            }
-            return TestModel::TestNotApplicable;
-        } else {
-            return isScriptFileNameValid( data->scriptFileName(), errorMessage, tooltip );
-        }
+        return isShortUrlValid( data->shortUrl(), errorMessage, tooltip, childrenExplanations );
     case TestModel::ServiceProviderDataDescriptionTest:
-        return isDescriptionValid( data->description(), errorMessage, tooltip );
+        return isDescriptionValid( data->description(), errorMessage, tooltip,
+                                   childrenExplanations );
+    case TestModel::ServiceProviderDataScriptFileNameTest:
+        return isScriptFileNameValid( data->scriptFileName(), errorMessage, tooltip,
+                                      childrenExplanations );
+    case TestModel::ServiceProviderDataGtfsFeedUrlTest:
+        return isGtfsFeedUrlValid( data->feedUrl(), errorMessage, tooltip, childrenExplanations );
+    case TestModel::ServiceProviderDataGtfsRealtimeUpdatesUrlTest:
+    case TestModel::ServiceProviderDataGtfsRealtimeAlertsTest: {
+        QString url = test == TestModel::ServiceProviderDataGtfsRealtimeUpdatesUrlTest
+                ? data->realtimeTripUpdateUrl() : data->realtimeAlertsUrl();
+        return isGtfsRealtimeUrlValid( url, errorMessage, tooltip, childrenExplanations );
+    }
 
     default:
         kWarning() << "Unknown test";
@@ -105,8 +121,11 @@ TestModel::TestState ServiceProviderDataTester::runServiceProviderDataTest( Test
     }
 }
 
-TestModel::TestState ServiceProviderDataTester::isNameValid( const QString &name, QString *errorMessage, QString *tooltip )
+TestModel::TestState ServiceProviderDataTester::isNameValid( const QString &name,
+        QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
 {
+    Q_UNUSED( childrenExplanations )
     if ( name.isEmpty() ) {
         if ( errorMessage ) {
             if ( errorMessage ) {
@@ -125,8 +144,10 @@ TestModel::TestState ServiceProviderDataTester::isNameValid( const QString &name
 }
 
 TestModel::TestState ServiceProviderDataTester::isVersionValid( const QString &version,
-        QString *errorMessage, QString *tooltip )
+        QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
 {
+    Q_UNUSED( childrenExplanations )
     if ( version.isEmpty() ) {
         if ( errorMessage ) {
             if ( errorMessage ) {
@@ -161,8 +182,10 @@ TestModel::TestState ServiceProviderDataTester::isVersionValid( const QString &v
 }
 
 TestModel::TestState ServiceProviderDataTester::isFileVersionValid( const QString &fileVersion,
-        QString *errorMessage, QString *tooltip )
+        QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
 {
+    Q_UNUSED( childrenExplanations )
     if ( fileVersion.isEmpty() || fileVersion != "1.0" ) {
         if ( errorMessage ) {
             if ( errorMessage ) {
@@ -197,8 +220,10 @@ TestModel::TestState ServiceProviderDataTester::isFileVersionValid( const QStrin
 }
 
 TestModel::TestState ServiceProviderDataTester::isEmailValid( const QString &email,
-        QString *errorMessage, QString *tooltip )
+        QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
 {
+    Q_UNUSED( childrenExplanations )
     if ( email.isEmpty() ) {
         if ( errorMessage ) {
             if ( errorMessage ) {
@@ -236,8 +261,10 @@ TestModel::TestState ServiceProviderDataTester::isEmailValid( const QString &ema
 }
 
 TestModel::TestState ServiceProviderDataTester::isAuthorNameValid( const QString &authorName,
-        QString *errorMessage, QString *tooltip )
+        QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
 {
+    Q_UNUSED( childrenExplanations )
     if ( authorName.isEmpty() ) {
         if ( errorMessage ) {
             if ( errorMessage ) {
@@ -258,8 +285,10 @@ TestModel::TestState ServiceProviderDataTester::isAuthorNameValid( const QString
 }
 
 TestModel::TestState ServiceProviderDataTester::isShortAuthorNameValid(
-        const QString &shortAuthorName, QString *errorMessage, QString *tooltip )
+        const QString &shortAuthorName, QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
 {
+    Q_UNUSED( childrenExplanations )
     if ( shortAuthorName.isEmpty() ) {
         if ( errorMessage ) {
             if ( errorMessage ) {
@@ -279,8 +308,10 @@ TestModel::TestState ServiceProviderDataTester::isShortAuthorNameValid(
 }
 
 TestModel::TestState ServiceProviderDataTester::isUrlValid( const QString &url,
-        QString *errorMessage, QString *tooltip )
+        QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
 {
+    Q_UNUSED( childrenExplanations )
     if ( url.isEmpty() ) {
         if ( errorMessage ) {
             if ( errorMessage ) {
@@ -301,8 +332,10 @@ TestModel::TestState ServiceProviderDataTester::isUrlValid( const QString &url,
 }
 
 TestModel::TestState ServiceProviderDataTester::isShortUrlValid( const QString &shortUrl,
-        QString *errorMessage, QString *tooltip )
+        QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
 {
+    Q_UNUSED( childrenExplanations )
     if ( shortUrl.isEmpty() ) {
         if ( errorMessage ) {
             if ( errorMessage ) {
@@ -324,8 +357,10 @@ TestModel::TestState ServiceProviderDataTester::isShortUrlValid( const QString &
 }
 
 TestModel::TestState ServiceProviderDataTester::isDescriptionValid( const QString &description,
-        QString *errorMessage, QString *tooltip )
+        QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
 {
+    Q_UNUSED( childrenExplanations )
     if ( description.isEmpty() ) {
         if ( errorMessage ) {
             if ( errorMessage ) {
@@ -345,23 +380,78 @@ TestModel::TestState ServiceProviderDataTester::isDescriptionValid( const QStrin
 }
 
 TestModel::TestState ServiceProviderDataTester::isScriptFileNameValid(
-        const QString &scriptFileName, QString *errorMessage, QString *tooltip )
+        const QString &scriptFileName, QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
 {
+    Q_UNUSED( childrenExplanations )
     if ( scriptFileName.isEmpty() ) {
         if ( errorMessage ) {
-            if ( errorMessage ) {
-                *errorMessage = i18nc("@info/plain", "No script file created for the project");
-            }
-            if ( tooltip ) {
-                *tooltip = i18nc("@info/plain",
-                        "<title>No script file created for the project</title> "
-                        "<para>The script does the actual work of the project, ie. it requests and parses "
-                        "documents from the service provider. Open the script tab to create a new script "
-                        "from a template, implement the functions and save it.</para>");
-            }
+            *errorMessage = i18nc("@info/plain", "No script file created for the project");
+        }
+        if ( tooltip ) {
+            *tooltip = i18nc("@info/plain",
+                    "<title>No script file created for the project</title> "
+                    "<para>The script does the actual work of the project, ie. it requests and parses "
+                    "documents from the service provider. Open the script tab to create a new script "
+                    "from a template, implement the functions and save it.</para>");
         }
         return TestModel::TestFinishedWithErrors;
     }
-    // TODO Test if the script file exists
+
+    // Test if the script file exists
+    if ( !QFile::exists(scriptFileName) ) {
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info/plain", "Script file does not exist: <filename>%1</filename>",
+                                  scriptFileName);
+        }
+        return TestModel::TestFinishedWithErrors;
+    }
+
+    return TestModel::TestFinishedSuccessfully;
+}
+
+TestModel::TestState ServiceProviderDataTester::isGtfsFeedUrlValid( const QString &gtfsFeedUrl,
+        QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
+{
+    Q_UNUSED( tooltip )
+    Q_UNUSED( childrenExplanations )
+    if ( gtfsFeedUrl.isEmpty() ) {
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info/plain", "No GTFS feed URL set for the project");
+        }
+        return TestModel::TestFinishedWithErrors;
+    }
+
+    const KUrl url( gtfsFeedUrl );
+    if ( !url.isValid() ) {
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info/plain", "GTFS feed URL is invalid");
+        }
+        return TestModel::TestFinishedWithErrors;
+    }
+
+    return TestModel::TestFinishedSuccessfully;
+}
+
+TestModel::TestState ServiceProviderDataTester::isGtfsRealtimeUrlValid(
+        const QString &gtfsRealtimeUrl, QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
+{
+    Q_UNUSED( tooltip )
+    Q_UNUSED( childrenExplanations )
+    if ( gtfsRealtimeUrl.isEmpty() ) {
+        // GTFS-realtime is optional
+        return TestModel::TestFinishedSuccessfully;
+    }
+
+    const KUrl url( gtfsRealtimeUrl );
+    if ( !url.isValid() ) {
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info/plain", "GTFS-realtime URL is invalid");
+        }
+        return TestModel::TestFinishedWithErrors;
+    }
+
     return TestModel::TestFinishedSuccessfully;
 }

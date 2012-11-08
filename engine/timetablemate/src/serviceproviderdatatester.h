@@ -31,30 +31,48 @@ class QString;
 class ServiceProviderDataTester {
 public:
     static TestModel::TestState runServiceProviderDataTest( TestModel::Test test,
-            const QString &text, QString *errorMessage = 0, QString *tooltip = 0 );
+            const QString &text, QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
     static TestModel::TestState runServiceProviderDataTest( TestModel::Test test,
-            const ServiceProviderData *data, QString *errorMessage = 0, QString *tooltip = 0 );
+            const ServiceProviderData *data, QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
 
     static TestModel::TestState isNameValid( const QString &name,
-            QString *errorMessage = 0, QString *tooltip = 0 );
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
     static TestModel::TestState isVersionValid( const QString &version,
-            QString *errorMessage = 0, QString *tooltip = 0  );
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
     static TestModel::TestState isFileVersionValid( const QString &fileVersion,
-            QString *errorMessage = 0, QString *tooltip = 0 );
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
     static TestModel::TestState isAuthorNameValid( const QString &authorName,
-            QString *errorMessage = 0, QString *tooltip = 0 );
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
     static TestModel::TestState isShortAuthorNameValid( const QString &shortAuthorName,
-            QString *errorMessage = 0, QString *tooltip = 0 );
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
     static TestModel::TestState isEmailValid( const QString &email,
-            QString *errorMessage = 0, QString *tooltip = 0 );
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
     static TestModel::TestState isUrlValid( const QString &url,
-            QString *errorMessage = 0, QString *tooltip = 0 );
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
     static TestModel::TestState isShortUrlValid( const QString &shortUrl,
-            QString *errorMessage = 0, QString *tooltip = 0 );
-    static TestModel::TestState isScriptFileNameValid( const QString &scriptFileName,
-            QString *errorMessage = 0, QString *tooltip = 0 );
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
     static TestModel::TestState isDescriptionValid( const QString &description,
-            QString *errorMessage = 0, QString *tooltip = 0 );
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
+    static TestModel::TestState isScriptFileNameValid( const QString &scriptFileName,
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
+    static TestModel::TestState isGtfsFeedUrlValid( const QString &gtfsFeedUrl,
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
+    static TestModel::TestState isGtfsRealtimeUrlValid( const QString &gtfsRealtimeUrl,
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
 };
 
 #endif // Multiple inclusion guard

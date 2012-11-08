@@ -51,6 +51,7 @@ set( timetablemate_SRCS
    javascriptparser.cpp
    testmodel.cpp
    networkmonitormodel.cpp
+   linkchecker.cpp
 
    ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
 

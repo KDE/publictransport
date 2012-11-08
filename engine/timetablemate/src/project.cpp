@@ -27,6 +27,7 @@
 #include "serviceproviderdatawriter.h"
 #include "serviceproviderdatatester.h"
 #include "testmodel.h"
+#include "linkchecker.h"
 #include "tabs/abstracttab.h"
 #include "tabs/dashboardtab.h"
 #include "tabs/projectsourcetab.h"
@@ -442,7 +443,7 @@ public:
         return name;
     };
 
-    inline const ServiceProviderData *data()
+    inline const ServiceProviderData *data() const
     {
         return provider->data();
     };
@@ -915,7 +916,8 @@ public:
         case Project::DebugGetStopSuggestions:
         case Project::DebugGetStopsByGeoPosition:
         case Project::DebugGetJourneys:
-            return !isTestRunning() && !isDebuggerRunning() && scriptState != InitializingScript;
+            return !isTestRunning() && !isDebuggerRunning() &&
+                   (data()->type() != Enums::ScriptedProvider || scriptState != InitializingScript);
 #else
             // Only enabled if the debugger and the test are both currently not running
             return !isTestRunning() && !isDebuggerRunning();
@@ -1318,11 +1320,9 @@ public:
         }
 
         // Check that the test is applicable for the type of the provider to test
-        if ( data()->type() != Enums::ScriptedProvider ) {
-            testModel->setTestState( test, TestModel::TestNotApplicable,
-                    i18nc("@info/plain", "Only for scripted providers"),
-                    i18nc("@info", "<title>Test not Applicable</title> "
-                          "<para>This test is only applicable for scripted provider plugins.</para>") );
+        QString errorMessage, tooltip;
+        if ( !TestModel::isTestApplicableTo(test, data(), &errorMessage, &tooltip) ) {
+            testModel->setTestState( test, TestModel::TestNotApplicable, errorMessage, tooltip );
             testFinished( test );
             return false;
         }
@@ -1618,6 +1618,90 @@ public:
     };
 #endif // BUILD_PROVIDER_TYPE_SCRIPT
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    bool startGtfsTest( TestModel::Test test )
+    {
+        Q_Q( Project );
+
+        QString errorMessage, tooltip;
+        if ( !TestModel::isTestApplicableTo(test, data(), &errorMessage, &tooltip) ) {
+            testModel->setTestState( test, TestModel::TestNotApplicable, errorMessage, tooltip );
+            testFinished( test );
+            return false;
+        }
+
+        testModel->markTestAsStarted( test );
+        qApp->processEvents();
+
+        switch ( test ) {
+        case TestModel::GtfsFeedExistsTest:
+        case TestModel::GtfsRealtimeAlertsTest:
+        case TestModel::GtfsRealtimeUpdatesTest: {
+            QEventLoop loop;
+            QString url;
+            if ( test == TestModel::GtfsFeedExistsTest ) {
+                url = data()->feedUrl();
+            } else if ( test == TestModel::GtfsRealtimeUpdatesTest ) {
+                url = data()->realtimeTripUpdateUrl();
+            } else if ( test == TestModel::GtfsRealtimeAlertsTest ) {
+                url = data()->realtimeAlertsUrl();
+            }
+
+            if ( url.isEmpty() ) {
+                if ( test == TestModel::GtfsFeedExistsTest ) {
+                    testModel->setTestState( test, TestModel::TestFinishedWithErrors,
+                                             i18nc("@info/plain", "No GTFS feed URL given") );
+                    testFinished( test );
+                    return false;
+                }
+
+                // GTFS-realtime URL(s) not given, but not required
+                testModel->setTestState( test, TestModel::TestDisabled,
+                                         i18nc("@info/plain", "Not used") );
+                testFinished( test );
+                return true;
+            }
+
+            LinkChecker checker( url );
+            q->connect( &checker, SIGNAL(finished(QDateTime,qulonglong,Error,QString)),
+                        &loop, SLOT(quit()) );
+            checker.start();
+            loop.exec();
+
+            if ( checker.hasError() ) {
+                testModel->setTestState( test, TestModel::TestFinishedWithErrors,
+                                         checker.errorString() );
+                return false;
+            }
+
+            QList< TimetableDataRequestMessage > childrenExplanations;
+            if ( !checker.redirectedUrl().isEmpty() ) {
+                childrenExplanations << TimetableDataRequestMessage(
+                        i18nc("@info/plain", "Redirected to: <link>%1</link>",
+                              checker.redirectedUrl()) );
+            }
+            childrenExplanations << TimetableDataRequestMessage(
+                    i18nc("@info/plain", "Size: %1",
+                          KGlobal::locale()->formatByteSize(checker.size())) );
+            if ( checker.lastModificationTime().isValid() ) {
+                childrenExplanations << TimetableDataRequestMessage(
+                        i18nc("@info/plain", "Modified: %1",
+                              KGlobal::locale()->formatDateTime(checker.lastModificationTime(),
+                                                                KLocale::FancyShortDate)) );
+            }
+            testModel->setTestState( test, TestModel::TestFinishedSuccessfully,
+                                     QString(), QString(), 0, childrenExplanations );
+            testFinished( test );
+            return true;
+        }
+
+        default:
+            kWarning() << "Unknown GTFS test" << test;
+            return false;
+        }
+    };
+#endif // BUILD_PROVIDER_TYPE_GTFS
+
     void startTests( const QList< TestModel::Test > &tests )
     {
         foreach ( TestModel::Test test, tests ) {
@@ -1643,25 +1727,31 @@ public:
 
         bool success;
         const TestModel::TestCase testCase = TestModel::testCaseOfTest( test );
-        bool scriptExecutionTestCase = false;
+        bool testIsAsynchronous = false;
         switch ( testCase ) {
         case TestModel::ServiceProviderDataTestCase: {
             testModel->markTestAsStarted( test );
-
             QString errorMessage, tooltip;
+            QList< TimetableDataRequestMessage > childrenExplanations;
             TestModel::TestState state = ServiceProviderDataTester::runServiceProviderDataTest(
-                    test, provider->data(), &errorMessage, &tooltip );
+                    test, provider->data(), &errorMessage, &tooltip, &childrenExplanations );
             success = state == TestModel::TestFinishedSuccessfully ? true : false;
-            testModel->setTestState( test, state, errorMessage, tooltip );
+            testModel->setTestState( test, state, errorMessage, tooltip, 0, childrenExplanations );
             testFinished( test );
         } break;
 
-    #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        case TestModel::GtfsTestCase:
+            success = startGtfsTest( test );
+            break;
+#endif
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case TestModel::ScriptExecutionTestCase:
             success = startScriptExecutionTest( test );
-            scriptExecutionTestCase = true;
+            testIsAsynchronous = true;
             break;
-    #endif
+#endif
 
         default:
             kWarning() << "Unknown test" << test;
@@ -1669,7 +1759,7 @@ public:
             break;
         }
 
-        if ( finishedAfterThisTest && !scriptExecutionTestCase ) {
+        if ( finishedAfterThisTest && !testIsAsynchronous ) {
             endTesting();
         } else if ( !success ) {
             // Test could not be started
@@ -3414,7 +3504,7 @@ void Project::scriptSaved()
 {
     Q_D( Project );
     QMutexLocker locker( d->mutex );
-    if ( d->data()->isValid() ) {
+    if ( d->data()->isValid() && d->data()->type() == Enums::ScriptedProvider ) {
         d->debugger->loadScript( scriptText(), d->data() );
         d->testModel->markTestsAsOutdated(
                 TestModel::testsOfTestCase(TestModel::ScriptExecutionTestCase) );
@@ -3684,6 +3774,7 @@ void Project::testProject()
     d->mutex->unlock();
 
     startTestCase( TestModel::ServiceProviderDataTestCase ); // This test case runs synchronously
+    startTestCase( TestModel::GtfsTestCase ); // TODO This test case runs synchronously
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     // Run the script and check the results

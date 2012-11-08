@@ -33,6 +33,7 @@
 
 class Project;
 class AbstractRequest;
+class ServiceProviderData;
 class QAction;
 
 Q_DECLARE_METATYPE( QAction* );
@@ -110,6 +111,9 @@ public:
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         ScriptExecutionTestCase,
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        GtfsTestCase,
+#endif
 
         TestCaseCount, /**< @internal */
         InvalidTestCase
@@ -128,8 +132,13 @@ public:
         ServiceProviderDataEmailTest,
         ServiceProviderDataUrlTest,
         ServiceProviderDataShortUrlTest,
-        ServiceProviderDataScriptFileNameTest,
         ServiceProviderDataDescriptionTest,
+        ServiceProviderDataScriptFileNameTest,
+        ServiceProviderDataGtfsFeedUrlTest, /**< Checks the GTFS feed URL for validity. */
+        ServiceProviderDataGtfsRealtimeUpdatesUrlTest,
+                /**< Checks the GTFS-realtime updates URL for validity. */
+        ServiceProviderDataGtfsRealtimeAlertsTest,
+                /**< Checks the GTFS-realtime alerts URL for validity. */
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         LoadScriptTest, /**< Tries to load the script, without calling any function. Syntax errors
@@ -147,6 +156,14 @@ public:
         AdditionalDataTest, /**< Tests for an implemented getAdditionalData() function and for
                 * valid results. */
         FeaturesTest, /**< Tests for an implemented features() function and for valid results. */
+#endif
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        GtfsFeedExistsTest, /**< Tests whether or not the GTFS feed exists. */
+        GtfsRealtimeUpdatesTest, /**< Tests whether or not the GTFS-realtime updates URL gives
+                * valid updates, if it is not empty ie. not used. */
+        GtfsRealtimeAlertsTest, /**< Tests whether or not the GTFS-realtime alerts URL gives
+                * valid updates, if it is not empty ie. not used. */
 #endif
 
         TestCount, /**< @internal */
@@ -302,6 +319,9 @@ public:
                state == TestFinishedSuccessfully || state == TestFinishedWithWarnings ||
                state == TestDisabled || state == TestNotApplicable;
     };
+
+    static bool isTestApplicableTo( Test test, const ServiceProviderData *data,
+                                    QString *errorMessage = 0, QString *tooltip = 0 );
 
 signals:
     void testResultsChanged();

@@ -426,7 +426,9 @@ void ProjectModel::appendProject( Project *project )
     beginInsertRows( projectIndex, 0, 4 );
     projectItem->addChild( ProjectModelItem::createDashboardtItem(project) );
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    projectItem->addChild( ProjectModelItem::createScriptItem(project) );
+    if ( project->data()->type() == Enums::ScriptedProvider ) {
+        projectItem->addChild( ProjectModelItem::createScriptItem(project) );
+    }
 #endif
     projectItem->addChild( ProjectModelItem::createProjectSourceDocumentItem(project) );
     projectItem->addChild( ProjectModelItem::createWebItem(project) );
@@ -491,6 +493,10 @@ void ProjectModel::updateProjects()
     m_updateProjectsTimer = 0;
 
     foreach ( Project *project, m_changedScriptProjects ) {
+        if ( project->data()->type() != Enums::ScriptedProvider ) {
+            continue;
+        }
+
         // Remove all items for previously included files
         QList< ProjectModelItem* > itemsToRemove;
         const QModelIndex projectIndex = indexFromProject( project );

@@ -749,6 +749,11 @@ bool TestModel::hasErroneousTests() const
         return true;
     }
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    if ( isErroneousTestState(testCaseState(GtfsTestCase)) ) {
+        return true;
+    }
+#endif
     return isErroneousTestState( testCaseState(ServiceProviderDataTestCase) );
 }
 
@@ -838,6 +843,70 @@ QSharedPointer<AbstractRequest> TestModel::testRequest( TestModel::Test test ) c
     return m_testData.contains(test) ? m_testData[test].request : QSharedPointer<AbstractRequest>();
 }
 
+bool TestModel::isTestApplicableTo( Test test, const ServiceProviderData *data,
+                                    QString *errorMessage, QString *tooltip )
+{
+    switch ( test ) {
+    case ServiceProviderDataNameTest:
+    case ServiceProviderDataVersionTest:
+    case ServiceProviderDataFileFormatVersionTest:
+    case ServiceProviderDataAuthorNameTest:
+    case ServiceProviderDataShortAuthorNameTest:
+    case ServiceProviderDataEmailTest:
+    case ServiceProviderDataUrlTest:
+    case ServiceProviderDataShortUrlTest:
+    case ServiceProviderDataDescriptionTest:
+        return true;
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    case LoadScriptTest:
+    case DepartureTest:
+    case ArrivalTest:
+    case AdditionalDataTest:
+    case StopSuggestionTest:
+    case StopsByGeoPositionTest:
+    case JourneyTest:
+    case FeaturesTest:
+#endif
+    case ServiceProviderDataScriptFileNameTest:
+        if ( data->type() == Enums::ScriptedProvider ) {
+            return true;
+        }
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info/plain", "Only for scripted providers");
+        }
+        if ( tooltip ) {
+            *tooltip = i18nc("@info", "<title>Test not Applicable</title> "
+                            "<para>This test is only applicable for scripted provider plugins.</para>");
+        }
+        return false;
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case GtfsFeedExistsTest:
+    case GtfsRealtimeUpdatesTest:
+    case GtfsRealtimeAlertsTest:
+#endif
+    case ServiceProviderDataGtfsFeedUrlTest:
+    case ServiceProviderDataGtfsRealtimeUpdatesUrlTest:
+    case ServiceProviderDataGtfsRealtimeAlertsTest:
+        if ( data->type() == Enums::GtfsProvider ) {
+            return true;
+        }
+        if ( errorMessage ) {
+            *errorMessage = i18nc("@info/plain", "Only for GTFS providers");
+        }
+        if ( tooltip ) {
+            *tooltip = i18nc("@info", "<title>Test not Applicable</title> "
+                            "<para>This test is only applicable for GTFS provider plugins.</para>");
+        }
+        return false;
+
+    default:
+        kDebug() << "Unknown test" << test;
+        return false;
+    }
+}
+
 QList< TestModel::Test > TestModel::testsOfTestCase( TestModel::TestCase testCase )
 {
     QList< TestModel::Test > tests;
@@ -847,13 +916,20 @@ QList< TestModel::Test > TestModel::testsOfTestCase( TestModel::TestCase testCas
               << ServiceProviderDataFileFormatVersionTest
               << ServiceProviderDataAuthorNameTest << ServiceProviderDataShortAuthorNameTest
               << ServiceProviderDataEmailTest << ServiceProviderDataUrlTest
-              << ServiceProviderDataShortUrlTest
-              << ServiceProviderDataScriptFileNameTest << ServiceProviderDataDescriptionTest;
+              << ServiceProviderDataShortUrlTest << ServiceProviderDataDescriptionTest
+              << ServiceProviderDataScriptFileNameTest << ServiceProviderDataGtfsFeedUrlTest
+              << ServiceProviderDataGtfsRealtimeUpdatesUrlTest
+              << ServiceProviderDataGtfsRealtimeAlertsTest;
         break;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptExecutionTestCase:
         tests << LoadScriptTest << DepartureTest << ArrivalTest << AdditionalDataTest
               << StopSuggestionTest << StopsByGeoPositionTest << JourneyTest << FeaturesTest;
+        break;
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case GtfsTestCase:
+        tests << GtfsFeedExistsTest << GtfsRealtimeUpdatesTest << GtfsRealtimeAlertsTest;
         break;
 #endif
     default:
@@ -875,8 +951,11 @@ TestModel::TestCase TestModel::testCaseOfTest( TestModel::Test test )
     case ServiceProviderDataEmailTest:
     case ServiceProviderDataUrlTest:
     case ServiceProviderDataShortUrlTest:
-    case ServiceProviderDataScriptFileNameTest:
     case ServiceProviderDataDescriptionTest:
+    case ServiceProviderDataScriptFileNameTest:
+    case ServiceProviderDataGtfsFeedUrlTest:
+    case ServiceProviderDataGtfsRealtimeUpdatesUrlTest:
+    case ServiceProviderDataGtfsRealtimeAlertsTest:
         return ServiceProviderDataTestCase;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -891,6 +970,13 @@ TestModel::TestCase TestModel::testCaseOfTest( TestModel::Test test )
         return ScriptExecutionTestCase;
 #endif
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case GtfsFeedExistsTest:
+    case GtfsRealtimeUpdatesTest:
+    case GtfsRealtimeAlertsTest:
+        return GtfsTestCase;
+#endif
+
     default:
         kDebug() << "Unknown test" << test;
         return InvalidTestCase;
@@ -900,21 +986,34 @@ TestModel::TestCase TestModel::testCaseOfTest( TestModel::Test test )
 QList< TestModel::Test > TestModel::testIsDependedOf( TestModel::Test test )
 {
     switch ( test ) {
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case GtfsFeedExistsTest:
+        return QList< TestModel::Test >() << ServiceProviderDataGtfsFeedUrlTest;
+    case GtfsRealtimeUpdatesTest:
+        return QList< TestModel::Test >() << ServiceProviderDataGtfsRealtimeUpdatesUrlTest;
+    case GtfsRealtimeAlertsTest:
+        return QList< TestModel::Test >() << ServiceProviderDataGtfsRealtimeAlertsTest;
+#endif
+
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case AdditionalDataTest:
-        return QList< TestModel::Test >() << LoadScriptTest << FeaturesTest << DepartureTest;
+        return QList< TestModel::Test >() << ServiceProviderDataScriptFileNameTest
+                << LoadScriptTest << FeaturesTest << DepartureTest;
 
     case ArrivalTest:
     case StopsByGeoPositionTest:
-        return QList< TestModel::Test >() << LoadScriptTest << FeaturesTest;
+        return QList< TestModel::Test >() << ServiceProviderDataScriptFileNameTest
+                << LoadScriptTest << FeaturesTest;
 
     case DepartureTest:
     case StopSuggestionTest:
     case JourneyTest:
     case FeaturesTest:
-        return QList< TestModel::Test >() << LoadScriptTest;
+        return QList< TestModel::Test >() << ServiceProviderDataScriptFileNameTest
+                << LoadScriptTest;
 
     case LoadScriptTest:
+        return QList< TestModel::Test >() << ServiceProviderDataScriptFileNameTest;
 #endif
 
     case ServiceProviderDataNameTest:
@@ -925,8 +1024,11 @@ QList< TestModel::Test > TestModel::testIsDependedOf( TestModel::Test test )
     case ServiceProviderDataEmailTest:
     case ServiceProviderDataUrlTest:
     case ServiceProviderDataShortUrlTest:
-    case ServiceProviderDataScriptFileNameTest:
     case ServiceProviderDataDescriptionTest:
+    case ServiceProviderDataScriptFileNameTest:
+    case ServiceProviderDataGtfsFeedUrlTest:
+    case ServiceProviderDataGtfsRealtimeUpdatesUrlTest:
+    case ServiceProviderDataGtfsRealtimeAlertsTest:
     default:
         return QList< TestModel::Test >();
     }
@@ -940,6 +1042,10 @@ QString TestModel::nameForTestCase( TestModel::TestCase testCase )
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptExecutionTestCase:
         return i18nc("@info/plain", "Script Execution Test Case" );
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case GtfsTestCase:
+        return i18nc("@info/plain", "GTFS Test Case" );
 #endif
     default:
         kDebug() << "Unknown test case" << testCase;
@@ -966,10 +1072,16 @@ QString TestModel::nameForTest( TestModel::Test test )
         return i18nc("@info/plain", "URL Test" );
     case ServiceProviderDataShortUrlTest:
         return i18nc("@info/plain", "Short URL Test" );
-    case ServiceProviderDataScriptFileNameTest:
-        return i18nc("@info/plain", "Script File Test" );
     case ServiceProviderDataDescriptionTest:
         return i18nc("@info/plain", "Description Test" );
+    case ServiceProviderDataScriptFileNameTest:
+        return i18nc("@info/plain", "Script File Test" );
+    case ServiceProviderDataGtfsFeedUrlTest:
+        return i18nc("@info/plain", "GTFS Feed URL Test" );
+    case ServiceProviderDataGtfsRealtimeUpdatesUrlTest:
+        return i18nc("@info/plain", "GTFS-realtime Updates URL Test" );
+    case ServiceProviderDataGtfsRealtimeAlertsTest:
+        return i18nc("@info/plain", "GTFS-realtime Alerts URL Test" );
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case LoadScriptTest:
@@ -989,6 +1101,15 @@ QString TestModel::nameForTest( TestModel::Test test )
     case FeaturesTest:
         return i18nc("@info/plain", "Features Test" );
 #endif
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    case GtfsFeedExistsTest:
+        return i18nc("@info/plain", "GTFS Feed Exists Test" );
+    case GtfsRealtimeUpdatesTest:
+        return i18nc("@info/plain", "GTFS-realtime Updates Test" );
+    case GtfsRealtimeAlertsTest:
+        return i18nc("@info/plain", "GTFS-realtime Alerts Test" );
+#endif
     default:
         kDebug() << "Unknown test" << test;
         return QString();
@@ -1003,6 +1124,10 @@ QString TestModel::descriptionForTestCase( TestModel::TestCase testCase )
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptExecutionTestCase:
         return i18nc("@info/plain", "Runs script functions and tests collected data" );
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case GtfsTestCase:
+        return i18nc("@info/plain", "Test GTFS feeds" );
 #endif
     default:
         kDebug() << "Unknown test case" << testCase;
@@ -1029,10 +1154,16 @@ QString TestModel::descriptionForTest( TestModel::Test test )
         return i18nc("@info/plain", "Tests for a valid URL to the homepage of the service provider" );
     case ServiceProviderDataShortUrlTest:
         return i18nc("@info/plain", "Tests for a valid short version of URL" );
-    case ServiceProviderDataScriptFileNameTest:
-        return i18nc("@info/plain", "Tests for a valid script file" );
     case ServiceProviderDataDescriptionTest:
         return i18nc("@info/plain", "Tests for a valid description" );
+    case ServiceProviderDataScriptFileNameTest:
+        return i18nc("@info/plain", "Tests for a valid script file" );
+    case ServiceProviderDataGtfsFeedUrlTest:
+        return i18nc("@info/plain", "Tests for a valid GTFS feed URL" );
+    case ServiceProviderDataGtfsRealtimeUpdatesUrlTest:
+        return i18nc("@info/plain", "Tests for a valid GTFS-realtime updates URL" );
+    case ServiceProviderDataGtfsRealtimeAlertsTest:
+        return i18nc("@info/plain", "Tests for a valid GTFS-realtime alerts URL" );
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case LoadScriptTest:
@@ -1061,6 +1192,15 @@ QString TestModel::descriptionForTest( TestModel::Test test )
         return i18nc("@info/plain", "Runs the %1() script function and tests the returned list of "
                      "strings, which should name TimetableInformation enumerables",
                      ServiceProviderScript::SCRIPT_FUNCTION_FEATURES );
+#endif
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case GtfsFeedExistsTest:
+        return i18nc("@info/plain", "Checks if the feed at the given URL exists" );
+    case GtfsRealtimeUpdatesTest:
+        return i18nc("@info/plain", "Tests GTFS-realtime updates, if used" );
+    case GtfsRealtimeAlertsTest:
+        return i18nc("@info/plain", "Tests GTFS-realtime alerts, if used" );
 #endif
 
     default:

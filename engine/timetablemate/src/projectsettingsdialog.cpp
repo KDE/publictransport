@@ -454,6 +454,8 @@ TestModel::Test testFromWidget( Ui::timetablemateview_base *ui, QWidget *widget 
         return TestModel::ServiceProviderDataShortUrlTest;
     } else if ( widget == ui->scriptFile ) {
         return TestModel::ServiceProviderDataScriptFileNameTest;
+    } else if ( widget == ui->gtfsFeed ) {
+        return TestModel::ServiceProviderDataGtfsFeedUrlTest;
     } else if ( widget == ui->description ) {
         return TestModel::ServiceProviderDataDescriptionTest;
     } else {
