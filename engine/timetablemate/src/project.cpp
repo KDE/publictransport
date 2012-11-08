@@ -2238,8 +2238,9 @@ Project::~Project()
     d->debugger->weaver()->requestAbort();
     d->debugger->abortDebugger();
     d->debugger->finish();
-    delete d_ptr;
 #endif
+
+    delete d_ptr;
 }
 
 bool Project::loadProject( const QString &projectSoureFile )
