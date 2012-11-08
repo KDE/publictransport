@@ -423,7 +423,7 @@ void ProjectModel::appendProject( Project *project )
 
     // Create child items
     const QModelIndex projectIndex = indexFromProjectItem( projectItem );
-    beginInsertRows( projectIndex, 0, 4 );
+    beginInsertRows( projectIndex, 0, project->data()->type() == Enums::ScriptedProvider ? 4 : 3 );
     projectItem->addChild( ProjectModelItem::createDashboardtItem(project) );
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     if ( project->data()->type() == Enums::ScriptedProvider ) {
@@ -563,14 +563,18 @@ void ProjectModel::insertCodeNodes( ProjectModelItem *scriptItem, bool emitSigna
     }
 
     // Insert new script child items
-    if ( emitSignals ) {
-        beginInsertRows( index, 0, flatNodes.count() - 1 );
-    }
+    QList< FunctionNode::Ptr > functionNodes;
     foreach ( const CodeNode::Ptr &node, flatNodes ) {
         const FunctionNode::Ptr functionNode = node.dynamicCast<FunctionNode>();
         if ( functionNode ) {
-            scriptItem->addChild( new ProjectModelCodeItem(project, functionNode) );
+            functionNodes << functionNode;
         }
+    }
+    if ( emitSignals ) {
+        beginInsertRows( index, 0, functionNodes.count() - 1 );
+    }
+    foreach ( const FunctionNode::Ptr &functionNode, functionNodes ) {
+        scriptItem->addChild( new ProjectModelCodeItem(project, functionNode) );
     }
     if ( emitSignals ) {
         endInsertRows();
