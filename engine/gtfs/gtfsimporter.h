@@ -78,6 +78,8 @@ class QSqlRecord;
  * The fields "monday", "tuesday", ..., "sunday" in @em calendar.txt are combines into one field
  * "weekdays", which gets stored as a string of 7 characters, each '0' or '1'. The values get
  * concatenated beginning with sunday.
+ * The biggest file is most probably stop_times.txt, the importer will spent the most time on
+ * importing it into the database.
  * The @em shapes.txt file currently is not imported.
  **/
 class GeneralTransitFeedImporter : public QThread
@@ -156,7 +158,10 @@ signals:
      * @param completed A value between 0 (just started) and 1 (fully completed) indicating
      *   the progress.
      **/
-    void progress( qreal completed );
+    void progress( qreal completed, const QString &currentTableName = QString() );
+
+    /** @brief Emitted eg. when errors are found in the GTFS feed. */
+    void logMessage( const QString &message );
 
 public slots:
     /** @brief Cancel a running import process. */
@@ -178,11 +183,14 @@ private:
 
     bool readHeader( const QString &header, QStringList *fieldNames,
                      const QStringList &requiredFields );
-    bool readFields( const QString &line, QVariantList *fieldValues,
+
+    bool readFields( const QByteArray &line, QVariantList *fieldValues,
                      const QList<GeneralTransitFeedDatabase::FieldType> &types,
                      int expectedFieldCount );
 
     void setError( State errorState, const QString &errorText );
+
+    inline QString decode( const QByteArray &gtfsString ) { return QString::fromUtf8(gtfsString); };
 
     State m_state;
     QString m_providerName;

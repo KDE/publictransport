@@ -59,6 +59,10 @@ public:
         Url /**< The source value is converted to a QUrl before storing it in the database. */
     };
 
+    static inline QSqlDatabase database( const QString &providerName ) {
+        return QSqlDatabase::database(providerName);
+    };
+
     /**
      * @brief Initializes the database
      *
@@ -103,7 +107,7 @@ public:
      *
      * @return A QVariant with @p fieldValue converted to @p type.
      **/
-    static QVariant convertFieldValue( const QString &fieldValue, FieldType type );
+    static QVariant convertFieldValue( const QByteArray &fieldValue, FieldType type );
 };
 
 #endif // Multiple inclusion guard

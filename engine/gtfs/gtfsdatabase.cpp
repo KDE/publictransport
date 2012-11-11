@@ -291,65 +291,80 @@ bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText, QSqlD
     return true;
 }
 
-QVariant GeneralTransitFeedDatabase::convertFieldValue( const QString &fieldValue, FieldType type )
+QVariant GeneralTransitFeedDatabase::convertFieldValue( const QByteArray &fieldValue,
+                                                        FieldType type )
 {
     if ( fieldValue.isEmpty() ) {
         return QVariant();
     }
 
     switch ( type ) {
+    case Integer:
+    case Date:
+    case Double:
+    case Url:
+        return fieldValue;
     case HashId:
         return qHash( fieldValue ); // Use the hash to convert string IDs
-    case Integer:
-        return fieldValue.toInt();
     case SecondsSinceMidnight: {
         // May contain hour values >= 24 (for times the next day), which is no valid QTime
         // Convert valid time format 'h:mm:ss' to 'hh:mm:ss'
-        const QString timeString = fieldValue.length() == 7 ? '0' + fieldValue : fieldValue;
+        const QByteArray timeString = fieldValue.length() == 7 ? '0' + fieldValue : fieldValue;
         return timeString.left(2).toInt() * 60 * 60 + timeString.mid(3, 2).toInt() * 60
                 + timeString.right(2).toInt();
-    } case Date:
-        return /*QDate::fromString(*/ fieldValue/*, "yyyyMMdd" )*/;
-    case Double:
-        return fieldValue.toDouble();
-    case Url:
-        return QUrl( fieldValue );
+    }
     case Color: {
-        return fieldValue.trimmed().isEmpty() ? Qt::transparent
-                                              : QColor( '#' + fieldValue.trimmed() );
-    } case String:
+        const QString trimmed = fieldValue.trimmed();
+        return trimmed.isEmpty() ? Qt::transparent : QColor('#' + trimmed);
+    }
+    case String:
     default:
         // TODO Make camel case if everything is upper case?
-        return fieldValue;
+        return QString::fromUtf8( fieldValue );
     }
 }
 
 GeneralTransitFeedDatabase::FieldType GeneralTransitFeedDatabase::typeOfField(
         const QString &fieldName )
 {
-    if ( fieldName == "min_transfer_time" || fieldName == "transfer_type" ||
-         fieldName == "headway_secs" || fieldName == "transfer_duration" ||
-         fieldName == "transfers" || fieldName == "payment_method" ||
-         fieldName == "exception_type" || fieldName == "shape_dist_traveled" ||
-         fieldName == "drop_off_type" || fieldName == "pickup_type" ||
-         fieldName == "stop_sequence" || fieldName == "shape_pt_sequence" ||
-         fieldName == "parent_station" || fieldName == "location_type" ||
-         fieldName == "route_type" )
+    if ( fieldName == QLatin1String("min_transfer_time") ||
+         fieldName == QLatin1String("transfer_type") ||
+         fieldName == QLatin1String("headway_secs") ||
+         fieldName == QLatin1String("transfer_duration") ||
+         fieldName == QLatin1String("transfers") ||
+         fieldName == QLatin1String("payment_method") ||
+         fieldName == QLatin1String("exception_type") ||
+         fieldName == QLatin1String("shape_dist_traveled") ||
+         fieldName == QLatin1String("drop_off_type") ||
+         fieldName == QLatin1String("pickup_type") ||
+         fieldName == QLatin1String("stop_sequence") ||
+         fieldName == QLatin1String("shape_pt_sequence") ||
+         fieldName == QLatin1String("parent_station") ||
+         fieldName == QLatin1String("location_type") ||
+         fieldName == QLatin1String("route_type") )
     {
         return Integer;
     } else if ( fieldName.endsWith("_id") ) {
         return HashId;
-    } else if ( fieldName == "start_time" || fieldName == "end_time" ||
-         fieldName == "arrival_time" || fieldName == "departure_time" )
+    } else if ( fieldName == QLatin1String("start_time") ||
+                fieldName == QLatin1String("end_time") ||
+                fieldName == QLatin1String("arrival_time") ||
+                fieldName == QLatin1String("departure_time") )
     {
         return SecondsSinceMidnight; // A time stored as INTEGER
-    } else if ( fieldName == "date" || fieldName == "startDate" || fieldName == "endDate" ) {
+    } else if ( fieldName == QLatin1String("date") ||
+                fieldName == QLatin1String("startDate") ||
+                fieldName == QLatin1String("endDate") )
+    {
         return Date;
-    } else if ( fieldName.endsWith("_lat") || fieldName.endsWith("_lon") || fieldName == "price" ) {
+    } else if ( fieldName.endsWith(QLatin1String("_lat")) ||
+                fieldName.endsWith(QLatin1String("_lon")) ||
+                fieldName == QLatin1String("price") )
+    {
         return Double;
-    } else if ( fieldName.endsWith("_url") ) {
+    } else if ( fieldName.endsWith(QLatin1String("_url")) ) {
         return Url;
-    } else if ( fieldName.endsWith("_color") ) {
+    } else if ( fieldName.endsWith(QLatin1String("_color")) ) {
         return Color;
     } else {
         return String;

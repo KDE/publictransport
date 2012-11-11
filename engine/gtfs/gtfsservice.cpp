@@ -82,6 +82,7 @@ DeleteGtfsDatabaseJob::DeleteGtfsDatabaseJob( const QString &destination,
 
 void ImportGtfsToDatabaseJob::start()
 {
+    Q_ASSERT( m_data );
     kDebug() << "Start import for" << m_data->id();
 //     downloadFeed(); // TODO Check datacache?
     emit description( this, i18nc("@info", "Importing GTFS feed"),
@@ -124,7 +125,7 @@ void DeleteGtfsDatabaseJob::start()
     kDebug() << "Finished deleting GTFS database";
 
     // Update the accessor cache file to indicate that the GTFS feed needs to be imported again
-    const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+    KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
     KConfigGroup group = config.group( m_serviceProviderId );
     KConfigGroup gtfsGroup = group.group( "gtfs" );
     gtfsGroup.writeEntry( "feedImportFinished", false );
@@ -236,7 +237,7 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
 //         qDebug() << ">>>>> GTFS feed was last modified (UTC):" << newLastModified
 //                  << "and it's size is:" << (newSizeInBytes/qreal(1024*1024)) << "MB";
         // Read accessor information cache
-        const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+        KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
         KConfigGroup group = config.group( data()->id() );
         KConfigGroup gtfsGroup = group.group( "gtfs" );
         bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
@@ -282,6 +283,13 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
     reply->deleteLater();
 }
 
+void ImportGtfsToDatabaseJob::speed( KJob *job, ulong speed )
+{
+    emit infoMessage( this, i18nc("@info/plain %1 is the formatted download amount per second",
+                                  "Downloading GTFS feed with %1/s",
+                                  KGlobal::locale()->formatByteSize(speed)) );
+}
+
 void ImportGtfsToDatabaseJob::downloadFeed()
 {
     if ( m_state == DownloadingFeed || m_state == ReadingFeed || m_state == StatingFeed ) {
@@ -318,6 +326,7 @@ void ImportGtfsToDatabaseJob::downloadFeed()
         connect( job, SIGNAL(percent(KJob*,ulong)), this, SLOT(downloadProgress(KJob*,ulong)) );
         connect( job, SIGNAL(mimetype(KIO::Job*,QString)), this, SLOT(mimeType(KIO::Job*,QString)) );
         connect( job, SIGNAL(totalSize(KJob*,qulonglong)), this, SLOT(totalSize(KJob*,qulonglong)) );
+        connect( job, SIGNAL(speed(KJob*,ulong)), this, SLOT(speed(KJob*,ulong)) );
     } else {
         kDebug() << "Could not create a temporary file to download the GTFS feed";
 //         TODO emit error...
@@ -383,16 +392,30 @@ void ImportGtfsToDatabaseJob::feedReceived( KJob *job )
     m_state = ReadingFeed;
     emit infoMessage( this, i18nc("@info/plain", "Importing GTFS feed") );
     m_importer = new GeneralTransitFeedImporter( m_data->id() );
-    connect( m_importer, SIGNAL(progress(qreal)), this, SLOT(importerProgress(qreal)) );
+    connect( m_importer, SIGNAL(logMessage(QString)), this, SLOT(logMessage(QString)) );
+    connect( m_importer, SIGNAL(progress(qreal,QString)),
+             this, SLOT(importerProgress(qreal,QString)) );
     connect( m_importer, SIGNAL(finished(GeneralTransitFeedImporter::State,QString)),
              this, SLOT(importerFinished(GeneralTransitFeedImporter::State,QString)) );
     m_importer->startImport( tmpFilePath );
 }
 
-void ImportGtfsToDatabaseJob::importerProgress( qreal importerProgress )
+void ImportGtfsToDatabaseJob::logMessage( const QString &message )
+{
+    emit warning( this, message );
+}
+
+void ImportGtfsToDatabaseJob::importerProgress( qreal importerProgress,
+                                                const QString &currentTableName )
 {
     m_progress = PROGRESS_PART_FOR_FEED_DOWNLOAD * (1.0 - importerProgress) + importerProgress;
     emitPercent( m_progress * 1000, 1000 );
+
+    if ( currentTableName != m_lastTableName ) {
+        emit infoMessage( this, i18nc("@info/plain", "Importing GTFS feed (%1)",
+                                      currentTableName) );
+        m_lastTableName = currentTableName;
+    }
 }
 
 void ImportGtfsToDatabaseJob::importerFinished(
@@ -452,16 +475,35 @@ Plasma::ServiceJob* GtfsService::createJob(
         const QString &operation, QMap< QString, QVariant > &parameters )
 {
     if ( operation == "updateGtfsFeed" ) {
-        return new UpdateGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
+        UpdateGtfsToDatabaseJob *updateJob =
+                new UpdateGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
+        if ( !updateJob->data() ) {
+            kWarning() << "No 'serviceProviderId' given for updateGtfsFeed operation";
+            delete updateJob;
+            return 0;
+        }
+        return updateJob;
     } else if ( operation == "importGtfsFeed" ) {
         ImportGtfsToDatabaseJob *importJob =
                 new ImportGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
+        if ( !importJob->data() ) {
+            kWarning() << "No 'serviceProviderId' given for importGtfsFeed operation";
+            delete importJob;
+            return 0;
+        }
         // Track import jobs
         KJobTrackerInterface *jobTracker = KIO::getJobTracker();
         jobTracker->registerJob( importJob );
         return importJob;
     } else if ( operation == "deleteGtfsDatabase" ) {
-        return new DeleteGtfsDatabaseJob( "PublicTransport", operation, parameters, this );
+        DeleteGtfsDatabaseJob *deleteJob =
+                new DeleteGtfsDatabaseJob( "PublicTransport", operation, parameters, this );
+        if ( deleteJob->serviceProviderId().isEmpty() ) {
+            kWarning() << "No 'serviceProviderId' given for deleteGtfsDatabase operation";
+            delete deleteJob;
+            return 0;
+        }
+        return deleteJob;
     } else {
         kWarning() << "Operation" << operation << "not supported";
         return 0;

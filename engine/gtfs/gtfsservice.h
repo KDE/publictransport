@@ -61,15 +61,20 @@ public:
 
     inline const ServiceProviderData *data() const { return m_data; };
 
+signals:
+    void logChanged();
+
 protected slots:
     void statFeedFinished( QNetworkReply *reply );
     void downloadProgress( KJob *job, ulong percent );
     void mimeType( KIO::Job *job, const QString &type );
     void totalSize( KJob *job, qulonglong size );
+    void speed( KJob *job, ulong speed );
     void feedReceived( KJob *job );
 
-    void importerProgress( qreal progress );
+    void importerProgress( qreal progress, const QString &currentTableName = QString() );
     void importerFinished( GeneralTransitFeedImporter::State state, const QString &errorText );
+    void logMessage( const QString &message );
 
 protected:
     void statFeed();
@@ -103,6 +108,7 @@ private:
     ServiceProviderData *m_data;
     GeneralTransitFeedImporter *m_importer;
     QString m_lastRedirectUrl;
+    QString m_lastTableName;
 };
 
 /**
@@ -145,6 +151,8 @@ public:
      * @brief Starts the GTFS database deletion or produces an error if there was no database.
      **/
     virtual void start();
+
+    QString serviceProviderId() const { return m_serviceProviderId; };
 
 private:
     QString m_serviceProviderId;

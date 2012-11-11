@@ -23,6 +23,7 @@
 #include <KZip>
 #include <KStandardDirs>
 #include <KDebug>
+#include <KLocalizedString>
 
 #include <QDir>
 #include <QVariant>
@@ -92,13 +93,23 @@ void GeneralTransitFeedImporter::setError( GeneralTransitFeedImporter::State err
                                            const QString &errorText )
 {
     m_mutex.lock();
+    if ( errorState <= m_state ) {
+        // A more fatal error is already recorded
+        m_mutex.unlock();
+        return;
+    }
     m_state = errorState;
     m_errorString = errorText;
     m_mutex.unlock();
 
     kDebug() << errorText;
     if ( errorState == FatalError ) {
+        emit logMessage( i18nc("@info/plain GTFS feed import logbook entry",
+                               "Fatal error: <message>%1</message>", errorText) );
         emit finished( errorState, errorText );
+    } else {
+        emit logMessage( i18nc("@info/plain GTFS feed import logbook entry",
+                               "Error: <message>%1</message>", errorText) );
     }
 }
 
@@ -107,9 +118,14 @@ void GeneralTransitFeedImporter::run()
     m_mutex.lock();
     m_state = Importing;
     const QString fileName = m_fileName;
-    QSqlDatabase database = QSqlDatabase::database( m_providerName );
+    const QString providerName = m_providerName;
+    QSqlDatabase database = GeneralTransitFeedDatabase::database( m_providerName );
     m_mutex.unlock();
 
+    emit logMessage( i18nc("@info/plain GTFS feed import logbook entry",
+                         "Start import of GTFS feed for %1", providerName) );
+
+    // stop_times.txt is the biggest, importing it takes most time
     QStringList requiredFiles;
     requiredFiles << "agency.txt" << "stops.txt" << "routes.txt" << "trips.txt" << "stop_times.txt";
 
@@ -214,8 +230,9 @@ void GeneralTransitFeedImporter::run()
         } else if ( fileInfo.fileName() == "fare_rules.txt" ) {
             requiredFields << "fare_id";
         } else if ( fileInfo.fileName() == "shapes.txt" ) {
-            kDebug() << "Skipping 'shapes.txt', data is unused";
-//             requiredFields << "shape_id" << "shape_pt_lat" << "shape_pt_lon" << "shape_pt_sequence";
+            emit logMessage( i18nc("@info/plain GTFS feed import logbook entry",
+                                 "Skip <filename>shapes.txt</filename>, data is unused") );
+            // requiredFields << "shape_id" << "shape_pt_lat" << "shape_pt_lon" << "shape_pt_sequence";
             totalFilePosition += fileInfo.size();
             continue;
         } else if ( fileInfo.fileName() == "frequencies.txt" ) {
@@ -223,7 +240,9 @@ void GeneralTransitFeedImporter::run()
         } else if ( fileInfo.fileName() == "transfers.txt" ) {
             requiredFields << "from_stop_id" << "to_stop_id" << "transfer_type";
         } else {
-            kDebug() << "Filename unexpected:" << fileInfo.fileName();
+            kDebug() << "Unexpected filename:" << fileInfo.fileName();
+            emit logMessage( i18nc("@info/plain GTFS feed import logbook entry",
+                                 "Unexpected filename: %1</filename>", fileInfo.fileName()) );
             totalFilePosition += fileInfo.size();
             continue;
         }
@@ -234,7 +253,7 @@ void GeneralTransitFeedImporter::run()
             errors = true;
         }
         totalFilePosition += fileInfo.size();
-        emit progress( qreal(totalFilePosition) / qreal(totalFileSize) );
+        emit progress( qreal(totalFilePosition) / qreal(totalFileSize), fileInfo.baseName() );
 
         m_mutex.lock();
         if ( m_quit ) {
@@ -245,11 +264,16 @@ void GeneralTransitFeedImporter::run()
         m_mutex.unlock();
     }
 
-// TODO Test required files...
-
     m_mutex.lock();
     m_state = errors ? FinishedWithErrors : FinishedSuccessfully;
     kDebug() << "Importer finished" << m_providerName;
+    if ( errors ) {
+        emit logMessage( i18nc("@info/plain GTFS feed import logbook entry",
+                             "Import finished with error <message>%1</message>", m_errorString) );
+    } else {
+        emit logMessage( i18nc("@info/plain GTFS feed import logbook entry",
+                             "Import finished successfully") );
+    }
     m_mutex.unlock();
 
     emit finished( errors ? FinishedWithErrors : FinishedSuccessfully );
@@ -267,10 +291,9 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
         return false;
     }
 
-    // Create a text stream
-    QTextStream stream( &file );
-    if ( stream.atEnd() ) {
-        kDebug() << "Empty file" << fileName;
+    // Check if the file is empty
+    if ( file.atEnd() ) {
+        file.close();
         if ( minimalRecordCount == 0 ) {
             return true;
         } else {
@@ -281,16 +304,19 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
 
     // Open the database
     if ( !database.isValid() || !database.isOpen() ) {
+        file.close();
         setError( FatalError, "Can not open database" );
         return false;
     }
 
     const QString tableName = QFileInfo(file).baseName();
-    kDebug() << "Read GTFS data for table" << tableName << database.connectionName();
+    emit logMessage( i18nc("@info/plain GTFS feed import logbook entry",
+                         "Import GTFS data for table %1", tableName) );
 
     // Read first line from file (header with used field names)
     QStringList fieldNames;
-    if ( stream.atEnd() || !readHeader(stream.readLine(), &fieldNames, requiredFields) ) {
+    if ( file.atEnd() || !readHeader(decode(file.readLine()), &fieldNames, requiredFields) ) {
+        file.close();
         return false; // Error in header
     }
     // Get types of the fields
@@ -299,7 +325,6 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
         fieldTypes << GeneralTransitFeedDatabase::typeOfField( fieldName );
     }
 
-    QStringList availableFields;
     QSqlRecord table = database.record( tableName );
     QStringList unavailableFieldNames; // Field names not used in the database
     QList<int> unavailableFieldIndices;
@@ -318,24 +343,13 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
     if ( !unavailableFieldNames.isEmpty() ) {
         kDebug() << "Not all used fields are available in the database:" << unavailableFieldNames
                  << "table:" << tableName;
-    }
-
-    // Performance optimization
-    QSqlQuery query( database );
-    if( !query.exec("PRAGMA synchronous=OFF;") ) {
-        qDebug() << query.lastError();
-    }
-    if( !query.exec("PRAGMA journal_mode=WAL;") ) {
-        qDebug() << query.lastError();
-    }
-
-    // Begin transaction
-    if ( !database.driver()->beginTransaction() ) {
-        qDebug() << database.lastError();
+        emit logMessage( i18nc("@info/plain GTFS feed import logbook entry",
+                             "Not all used fields are available in table %1: %2",
+                             tableName, unavailableFieldNames.join(", ")) );
     }
 
     QStringList dbFieldNames = fieldNames;
-    if ( tableName == "calendar" ) {
+    if ( tableName == QLatin1String("calendar") ) {
         dbFieldNames.removeOne( "monday" );
         dbFieldNames.removeOne( "tuesday" );
         dbFieldNames.removeOne( "wednesday" );
@@ -350,14 +364,39 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
         placeholder += ",?";
     }
 
+    // Simple benchmark, prints the time it took until the Block got destructed
+    KDebug::Block insertBlock( ("Import GTFS table " + tableName).toUtf8() );
+
+    // Create a query for the database
+    QSqlQuery query( database );
+
+    // Performance optimization
+    if( !query.exec("PRAGMA synchronous=OFF;") ) {
+        qDebug() << query.lastError();
+        emit logMessage( query.lastError().text() );
+    }
+
+    // Disable journal completely, because it's much faster
+    // and there is nothing to loose, if the import crashes the database will
+    // very likely go corrupt, but the import can be simply restarted
+    if( !query.exec("PRAGMA journal_mode=OFF;") ) {
+        qDebug() << query.lastError();
+        emit logMessage( query.lastError().text() );
+    }
+
+    // Begin transaction
+    if ( !database.driver()->beginTransaction() ) {
+        qDebug() << database.lastError();
+        emit logMessage( database.lastError().text() );
+    }
+
     // Prepare an INSERT query to be used for each dataset to be inserted
     query.prepare( QString("INSERT OR REPLACE INTO %1 (%2) VALUES (%3)")
-                   .arg(tableName, dbFieldNames.join(","), placeholder) );
+                .arg(tableName, dbFieldNames.join(","), placeholder) );
 
     int counter = 0;
-    kDebug() << "fieldNames:" << fieldNames;
-    while ( !stream.atEnd() ) {
-        QString line = stream.readLine();
+    while ( !file.atEnd() ) {
+        const QByteArray line = file.readLine();
         QVariantList fieldValues;
         if ( readFields(line, &fieldValues, fieldTypes, fieldNames.count()) ) {
             // Remove values for fields that do not exist in the database
@@ -428,6 +467,8 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
                 }
             }
             if ( !query.exec() ) {
+                QMutexLocker locker( &m_mutex );
+                emit logMessage( query.lastError().text() );
                 kDebug() << query.lastError();
                 kDebug() << "With this query:" << query.executedQuery();
                 continue;
@@ -440,16 +481,19 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
             if ( counter % 50000 == 0 ) {
                 if ( !database.driver()->commitTransaction() ) {
                     qDebug() << database.lastError();
+                    emit logMessage( database.lastError().text() );
                 }
                 if ( !database.driver()->beginTransaction() ) {
                     qDebug() << database.lastError();
+                    emit logMessage( database.lastError().text() );
                 }
             }
 
             // Report progress and check for quit/suspend after each 500 INSERTs
             if ( counter % 500 == 0 ) {
                 // Report progress
-                emit progress( qreal(totalFilePosition + file.pos()) / qreal(totalFileSize) );
+                emit progress( qreal(totalFilePosition + file.pos()) / qreal(totalFileSize),
+                                tableName );
 
                 // Check if the job should be cancelled
                 m_mutex.lock();
@@ -464,6 +508,7 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
                     // Commit before going to sleep for suspension
                     if ( !database.driver()->commitTransaction() ) {
                         qDebug() << database.lastError();
+                        emit logMessage( database.lastError().text() );
                     }
 
                     do {
@@ -481,6 +526,7 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
                     // Start a new transaction
                     if ( !database.driver()->beginTransaction() ) {
                         qDebug() << database.lastError();
+                        emit logMessage( database.lastError().text() );
                     }
                 }
 
@@ -489,15 +535,19 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
             }
         }
     }
-    file.close();
 
     // End transaction, restore synchronous=FULL
     if ( !database.driver()->commitTransaction() ) {
         qDebug() << database.lastError();
+                        emit logMessage( database.lastError().text() );
     }
     if( !query.exec("PRAGMA synchronous=FULL;") ) {
         qDebug() << query.lastError();
+        emit logMessage( query.lastError().text() );
     }
+
+    // Close the file again
+    file.close();
 
     // Return true (success) if at least one stop has been read
     if ( counter >= minimalRecordCount ) {
@@ -513,26 +563,37 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
 bool GeneralTransitFeedImporter::readHeader( const QString &header, QStringList *fieldNames,
                                              const QStringList &requiredFields )
 {
-    *fieldNames = header.split(',');
-
-    if ( fieldNames->isEmpty() ) {
+    QStringList names = header.simplified().split(',');
+    *fieldNames = QStringList();
+    if ( names.isEmpty() ) {
         setError( FatalError, "No field names found in header: " + header );
         return false;
     }
 
     // Only allow alphanumerical characters as field names (and prevent SQL injection).
-    foreach ( const QString &fieldName, *fieldNames ) {
-        if ( fieldName.contains(QRegExp("[^A-Z0-9_]", Qt::CaseInsensitive)) ) {
-            setError( FatalError, "Field name contains disallowed characters: " + fieldName
-                      + " at " + fieldName.indexOf(QRegExp("[^A-Z0-9_]", Qt::CaseInsensitive)) );
-            return false;
+    QRegExp regExp( "[^A-Z0-9_]", Qt::CaseInsensitive );
+    foreach ( const QString &fieldName, names ) {
+        QString name = fieldName;
+        if ( (name.startsWith('"') && name.endsWith('"')) ||
+             (name.startsWith('\'') && name.endsWith('\'')) )
+        {
+            name = name.mid( 1, name.length() - 2 );
+        }
+        if ( regExp.indexIn(name) != -1 ) {
+            emit logMessage( i18nc("@info", "Field name <emphasis>%1</emphasis> contains "
+                                   "a disallowed character <emphasis>%2</emphasis>' at %3",
+                                   fieldName, regExp.cap(), regExp.pos()) );
+        } else {
+            fieldNames->append( name );
         }
     }
 
     // Check required fields
     foreach ( const QString &requiredField, requiredFields ) {
         if ( !fieldNames->contains(requiredField) ) {
+            emit logMessage( i18nc("@info", "Required field '%1' is missing", requiredField) );
             kDebug() << "Required field missing:" << requiredField;
+
             if ( requiredField == "agency_timezone" ) {
                 kDebug() << "Will use default timezone";
                 fieldNames->append( "agency_timezone" );
@@ -547,14 +608,14 @@ bool GeneralTransitFeedImporter::readHeader( const QString &header, QStringList 
     return true;
 }
 
-bool GeneralTransitFeedImporter::readFields( const QString& line, QVariantList *fieldValues,
+bool GeneralTransitFeedImporter::readFields( const QByteArray &line, QVariantList *fieldValues,
         const QList<GeneralTransitFeedDatabase::FieldType> &fieldTypes, int expectedFieldCount )
 {
     int pos = 0;
     QList<GeneralTransitFeedDatabase::FieldType>::ConstIterator fieldType = fieldTypes.constBegin();
     while ( pos < line.length() && fieldType != fieldTypes.constEnd() ) {
         int endPos = pos;
-        QString newField;
+        QByteArray newField;
         if ( line[pos] == '"' ) {
             // A field with a quotation mark in it must start and end with a quotation mark,
             // all other quotation marks must be preceded with another quotation mark
@@ -571,15 +632,20 @@ bool GeneralTransitFeedImporter::readFields( const QString& line, QVariantList *
                 }
                 ++endPos;
             }
+
             if ( endPos >= line.length() || line[endPos] != '"' ) {
-                kDebug() << "Didn't find field end, wrong file format";
-                return false; // Didn't find field end, wrong file format
+                kWarning() << "No field end delimiter found in line" << line;
+                kWarning() << "for field starting with a delimiter at position" << pos;
+                kWarning() << "Read until the end of the line";
+                // Do not remove 1, because it gets done below,
+                // there is no delimiter to remove at the end
+                endPos = line.length();
             }
 
             // Add field value without the quotation marks around it
             // and doubled quotation marks replaced with single ones
             newField = line.mid( pos + 1, endPos - pos - 1 )
-                    .replace( QLatin1String("\"\""), QLatin1String("\"") );
+                    .replace( QByteArray("\"\""), QByteArray("\"") );
             pos = endPos + 2;
         } else if ( line[pos] == ',' ) {
             // Empty field, newField stays empty
@@ -603,7 +669,7 @@ bool GeneralTransitFeedImporter::readFields( const QString& line, QVariantList *
 
         if ( pos == line.length() && line[pos - 1] == ',' ) {
             // The current line ends after a ','. Add another empty field:
-            fieldValues->append( GeneralTransitFeedDatabase::convertFieldValue(QString(), *fieldType) );
+            fieldValues->append( GeneralTransitFeedDatabase::convertFieldValue(QByteArray(), *fieldType) );
             ++fieldType;
         }
     }
