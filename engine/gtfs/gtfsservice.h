@@ -61,6 +61,10 @@ public:
 
     inline const ServiceProviderData *data() const { return m_data; };
 
+    void setOnlyGetInformation( bool onlyGetInformation ) {
+        m_onlyGetInformation = onlyGetInformation;
+    };
+
 signals:
     void logChanged();
 
@@ -109,6 +113,7 @@ private:
     GeneralTransitFeedImporter *m_importer;
     QString m_lastRedirectUrl;
     QString m_lastTableName;
+    bool m_onlyGetInformation;
 };
 
 /**

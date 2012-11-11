@@ -40,7 +40,7 @@ const qreal ImportGtfsToDatabaseJob::PROGRESS_PART_FOR_FEED_DOWNLOAD = 0.1;
 ImportGtfsToDatabaseJob::ImportGtfsToDatabaseJob( const QString &destination,
         const QString &operation, const QMap< QString, QVariant > &parameters, QObject *parent )
         : ServiceJob(destination, operation, parameters, parent),
-          m_state(Initializing), m_data(0), m_importer(0)
+          m_state(Initializing), m_data(0), m_importer(0), m_onlyGetInformation(false)
 {
     setCapabilities( Suspendable | Killable );
 
@@ -249,6 +249,13 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
         gtfsGroup.writeEntry( "feedSizeInBytes", newSizeInBytes );
         gtfsGroup.writeEntry( "feedUrl", m_data->feedUrl() );
 
+        // Stop here for "updateGtfsFeedInfo" operation
+        if ( m_onlyGetInformation ) {
+            m_state = Ready;
+            emitResult();
+            return;
+        }
+
         if ( !importFinished ) {
             qDebug() << "Last GTFS feed import did not finish for" << m_data->id();
         }
@@ -437,7 +444,7 @@ void ImportGtfsToDatabaseJob::importerFinished(
         kDebug() << "There was an error importing the GTFS feed into the database" << errorText;
         emit infoMessage( this, i18nc("@info/plain",
                 "There was an error importing the GTFS feed into the database: "
-                "<message>%2</message>", errorText) );
+                "<message>%1</message>", errorText) );
     } else {
         m_state = Ready;
         emit infoMessage( this, i18nc("@info/plain", "GTFS feed has been successfully imported") );
@@ -474,7 +481,7 @@ GtfsService::GtfsService( const QString &name, QObject *parent )
 Plasma::ServiceJob* GtfsService::createJob(
         const QString &operation, QMap< QString, QVariant > &parameters )
 {
-    if ( operation == "updateGtfsFeed" ) {
+    if ( operation == QLatin1String("updateGtfsFeed") ) {
         UpdateGtfsToDatabaseJob *updateJob =
                 new UpdateGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
         if ( !updateJob->data() ) {
@@ -483,7 +490,7 @@ Plasma::ServiceJob* GtfsService::createJob(
             return 0;
         }
         return updateJob;
-    } else if ( operation == "importGtfsFeed" ) {
+    } else if ( operation == QLatin1String("importGtfsFeed") ) {
         ImportGtfsToDatabaseJob *importJob =
                 new ImportGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
         if ( !importJob->data() ) {
@@ -495,7 +502,7 @@ Plasma::ServiceJob* GtfsService::createJob(
         KJobTrackerInterface *jobTracker = KIO::getJobTracker();
         jobTracker->registerJob( importJob );
         return importJob;
-    } else if ( operation == "deleteGtfsDatabase" ) {
+    } else if ( operation == QLatin1String("deleteGtfsDatabase") ) {
         DeleteGtfsDatabaseJob *deleteJob =
                 new DeleteGtfsDatabaseJob( "PublicTransport", operation, parameters, this );
         if ( deleteJob->serviceProviderId().isEmpty() ) {
@@ -504,6 +511,16 @@ Plasma::ServiceJob* GtfsService::createJob(
             return 0;
         }
         return deleteJob;
+    } else if ( operation == QLatin1String("updateGtfsFeedInfo") ) {
+        ImportGtfsToDatabaseJob *importJob =
+                new ImportGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
+        if ( !importJob->data() ) {
+            kWarning() << "No 'serviceProviderId' given for importGtfsFeed operation";
+            delete importJob;
+            return 0;
+        }
+        importJob->setOnlyGetInformation( true );
+        return importJob;
     } else {
         kWarning() << "Operation" << operation << "not supported";
         return 0;
