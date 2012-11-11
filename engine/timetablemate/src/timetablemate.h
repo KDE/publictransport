@@ -31,7 +31,6 @@
 // Qt includes
 #include <QQueue>
 
-class QProgressBar;
 class Project;
 class ProjectModel;
 
@@ -43,6 +42,10 @@ class DashboardTab;
 class ProjectSourceTab;
 class PlasmaPreviewTab;
 class WebTab;
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    class GtfsDatabaseTab;
+#endif
 
 class DocumentationDockWidget;
 class ProjectsDockWidget;
@@ -90,6 +93,7 @@ class KUrl;
 class KTabWidget;
 class KMessageWidget;
 
+class QProgressBar;
 class QModelIndex;
 class QVBoxLayout;
 class QScriptValue;
@@ -197,6 +201,7 @@ protected slots:
     void projectAboutToBeRemoved( Project *project );
     void projectCloseRequest();
     void activeProjectAboutToChange( Project *project, Project *previousProject );
+    void activeProjectChanged( Project *project, Project *previousProject );
     void infoMessage( const QString &message,
                       KMessageWidget::MessageType type = KMessageWidget::Information,
                       int timeout = 4000, QList<QAction*> actions = QList<QAction*>() );
@@ -309,6 +314,9 @@ private:
     void webTabAction( WebTab *webTab, TabAction tabAction );
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     void scriptTabAction( ScriptTab *scriptTab, TabAction tabAction );
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    void gtfsDatabaseTabAction( GtfsDatabaseTab *gtfsDatabaseTab, TabAction tabAction );
 #endif
 
     bool hasHomePageURL( const ServiceProviderData *data );

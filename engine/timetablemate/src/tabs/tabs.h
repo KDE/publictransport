@@ -40,7 +40,10 @@ public:
         Script = 3, /**< Script document tab. */
 #endif
         Web = 4, /**< Web tab. */
-        PlasmaPreview = 5 /**< Plasma preview tab. */
+        PlasmaPreview = 5, /**< Plasma preview tab. */
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        GtfsDatabase = 6, /**< GTFS database tab. */
+#endif
     };
 
     static QLatin1String nameForType( Type type ) {
@@ -57,6 +60,10 @@ public:
             return QLatin1String("web");
         case Tabs::PlasmaPreview:
             return QLatin1String("plasma");
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        case Tabs::GtfsDatabase:
+            return QLatin1String("gtfs_database");
+#endif
         default:
             return QLatin1String("unknown");
         }

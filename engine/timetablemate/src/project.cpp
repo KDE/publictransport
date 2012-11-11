@@ -37,6 +37,9 @@
     #include "tabs/scripttab.h"
     #include "../../script/scripting.h" // For Q_DECLARE_METATYPE's (eg. Helper::ErrorSeverity used in connections)
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    #include "tabs/gtfsdatabasetab.h"
+#endif
 #include "debugger/debugger.h"
 #include "debugger/backtracemodel.h"
 #include "debugger/breakpointmodel.h"
@@ -50,6 +53,9 @@
 #include <engine/script/serviceproviderscript.h>
 #include <engine/request.h>
 #include <engine/global.h>
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    #include <engine/gtfs/gtfsdatabase.h>
+#endif
 
 // KDE includes
 #include <KUrlComboBox>
@@ -75,6 +81,11 @@
 #include <KTextEditor/TemplateInterface>
 #include <KTextEditor/MarkInterface>
 #include <ThreadWeaver/WeaverInterface>
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    #include <Plasma/DataEngineManager>
+    #include <Plasma/ServiceJob>
+#endif
 
 #ifdef MARBLE_FOUND
     #include <marble/LatLonEdit.h>
@@ -125,6 +136,10 @@ public:
         : state(Project::Uninitialized), projectModel(0), mutex(new QMutex(QMutex::Recursive)),
           projectSourceBufferModified(false),
           dashboardTab(0), projectSourceTab(0), plasmaPreviewTab(0), webTab(0),
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+          gtfsDatabaseTab(0), gtfsDatabaseState(Project::InitializingGtfsDatabase),
+          gtfsFeedImportProgress(0), gtfsDatabaseSize(0),
+#endif
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
           scriptState(InitializingScript), scriptTab(0),
           debugger(new Debugger::Debugger(weaver, project)),
@@ -260,9 +275,9 @@ public:
     bool initialize()
     {
         Q_ASSERT( state == Project::Uninitialized );
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Q_Q( Project );
 
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         // Connect to signals of the debugger
         q->connect( debugger, SIGNAL(interrupted(int,QString,QDateTime)),
                     q, SLOT(debugInterrupted(int,QString,QDateTime)) );
@@ -296,11 +311,104 @@ public:
                     q, SLOT(commandExecutionResult(QString)) );
         q->connect( debugger, SIGNAL(waitingForSignal()), q, SLOT(waitingForSignal()) );
         q->connect( debugger, SIGNAL(wokeUpFromSignal(int)), q, SLOT(wokeUpFromSignal(int)) );
-#endif
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
         state = Project::NoProjectLoaded;
         return true;
     };
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    void setGtfsDatabaseState( Project::GtfsDatabaseState state ) {
+        Q_Q( Project );
+        if ( gtfsDatabaseState == state ) {
+            return;
+        }
+
+        if ( state != Project::GtfsDatabaseError && !gtfsDatabaseErrorString.isEmpty() ) {
+            // Clear old error strings
+            gtfsDatabaseErrorString.clear();
+            q->emit gtfsDatabaseErrorStringChanged( gtfsDatabaseErrorString );
+        }
+        if ( state != Project::GtfsDatabaseImportFinished && gtfsDatabaseSize != 0 ) {
+            gtfsDatabaseSize = 0;
+            q->emit gtfsDatabaseSizeChanged( 0 );
+        }
+        if ( state != Project::GtfsDatabaseImportRunning && !gtfsFeedImportInfoMessage.isEmpty() ) {
+            gtfsFeedImportInfoMessage.clear();
+            q->emit gtfsFeedImportInfoMessageChanged( gtfsFeedImportInfoMessage );
+        }
+
+        switch ( state ) {
+        case Project::GtfsDatabaseImportPending:
+        case Project::GtfsDatabaseError:
+            if ( gtfsFeedImportProgress != 0 ) {
+                gtfsFeedImportProgress = 0;
+                q->emit gtfsFeedImportProgressChanged( 0 );
+            }
+            q->emit gtfsDatabasePathChanged( QString() );
+            break;
+        case Project::GtfsDatabaseImportFinished: {
+            if ( gtfsFeedImportProgress != 100 ) {
+                gtfsFeedImportProgress = 100;
+                q->emit gtfsFeedImportProgressChanged( 100 );
+            }
+
+            // Update GTFS database size
+            const QString databasePath = GeneralTransitFeedDatabase::databasePath( data()->id() );
+            quint64 newGtfsDatabaseSize = QFileInfo( databasePath ).size();
+            if ( gtfsDatabaseSize != newGtfsDatabaseSize ) {
+                gtfsDatabaseSize = newGtfsDatabaseSize;
+                q->emit gtfsDatabaseSizeChanged( newGtfsDatabaseSize );
+            }
+            q->emit gtfsDatabasePathChanged( databasePath );
+            break;
+        }
+        default:
+            break;
+        }
+
+        gtfsDatabaseState = state;
+        updateProjectActions( Project::GtfsDatabaseActionGroup );
+        q->emit gtfsDatabaseStateChanged( state );
+    };
+
+    void updateGtfsDatabaseState( bool calledByFinishedUpdateInfoJob = false ) {
+        Q_Q( Project );
+        if ( provider->type() != Enums::GtfsProvider ) {
+            return;
+        }
+
+        // Read provider information cache
+        KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+        KConfigGroup group = config.group( data()->id() );
+        KConfigGroup gtfsGroup = group.group( "gtfs" );
+
+        if ( !GeneralTransitFeedDatabase::initDatabase(data()->id(), &gtfsDatabaseErrorString) ) {
+            kWarning() << "Error initializing the database" << gtfsDatabaseErrorString;
+            setGtfsDatabaseState( Project::GtfsDatabaseError );
+        } else {
+            if ( gtfsGroup.readEntry("feedImportFinished", false) ) {
+                setGtfsDatabaseState( Project::GtfsDatabaseImportFinished );
+            } else {
+                setGtfsDatabaseState( Project::GtfsDatabaseImportPending );
+            }
+        }
+
+        const QString feedModifiedTimeString =
+                gtfsGroup.readEntry( "feedModifiedTime", QString() );
+        gtfsFeedModifiedTime = QDateTime::fromString( feedModifiedTimeString, Qt::ISODate );
+        gtfsFeedSize = gtfsGroup.readEntry( "feedSizeInBytes", 0 );
+        if ( !calledByFinishedUpdateInfoJob && gtfsFeedSize <= 0 ) {
+            Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+            Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
+            KConfigGroup op = gtfsService->operationDescription("updateGtfsFeedInfo");
+            op.writeEntry( "serviceProviderId", data()->id() );
+            Plasma::ServiceJob *updateJob = gtfsService->startOperationCall( op );
+            q->connect( updateJob, SIGNAL(result(KJob*)), q, SLOT(updateGtfsDatabaseState()) );
+            q->connect( updateJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
+        }
+    };
+#endif // BUILD_PROVIDER_TYPE_GTFS
 
     // Load project from service provider XML document at @p projectSourceFile
     bool loadProject( const QString &projectSourceFile )
@@ -587,6 +695,7 @@ public:
         ServiceProviderData *readData = reader.read(
                 device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q, &xmlComments );
         if ( readData ) {
+            Enums::ServiceProviderType oldType = provider ? provider->type() : Enums::InvalidProvider;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
             if ( readData->type() == Enums::ScriptedProvider ) {
                 provider = new ServiceProviderScript( readData, q );
@@ -596,6 +705,10 @@ public:
                 // Do not create sub class instance for unknown types
                 provider = new ServiceProvider( readData, q );
             }
+
+            if ( provider->type() != oldType ) {
+                q->emit providerTypeChanged( provider->type(), oldType );
+            }
         } else {
             kDebug() << "Service provider plugin is invalid" << reader.errorString() << fileName;
             errorHappened( Project::ErrorWhileLoadingProject, reader.errorString() );
@@ -603,20 +716,15 @@ public:
             return false;
         }
 
-        if ( provider /*&& provider->type() != InvalidProvider*/ ) {
-            q->emit nameChanged( projectName() );
-            q->emit iconNameChanged( iconName() );
-            q->emit iconChanged( projectIcon() );
-            q->emit dataChanged( data() );
-            return true;
-        } else {
-            kDebug() << "Service provider plugin has invalid type" << fileName;
-            errorHappened( Project::ErrorWhileLoadingProject,
-                           i18nc("@info", "The provider plugin file <filename>%1</filename> "
-                                 "has an invalid type.", fileName) );
-            insertProjectSourceTemplate();
-            return false;
-        }
+        q->emit nameChanged( projectName() );
+        q->emit iconNameChanged( iconName() );
+        q->emit iconChanged( projectIcon() );
+        q->emit dataChanged( data() );
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        updateGtfsDatabaseState();
+#endif
+        return true;
     };
 
     // Write service provider plugin XML document to @p fileName
@@ -765,9 +873,17 @@ public:
     void insertProjectSourceTemplate()
     {
         Q_Q( Project );
+        Enums::ServiceProviderType oldType = provider ? provider->type() : Enums::InvalidProvider;
         delete provider;
         provider = ServiceProvider::createInvalidProvider( q );
         xmlComments.clear();
+
+        if ( provider->type() != oldType ) {
+            q->emit providerTypeChanged( provider->type(), oldType );
+        }
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        updateGtfsDatabaseState();
+#endif
         q->emit nameChanged( projectName() );
         q->emit iconNameChanged( iconName() );
         q->emit iconChanged( projectIcon() );
@@ -845,6 +961,9 @@ public:
         case Project::ShowScript:
         case Project::ShowExternalScript:
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        case Project::ShowGtfsDatabase:
+#endif
         case Project::ShowProjectSource:
         case Project::ShowPlasmaPreview:
             // Always enabled actions
@@ -890,6 +1009,14 @@ public:
         case Project::RemoveAllBreakpoints:
             // Only enabled if the breakpoint model isn't empty
             return debugger->breakpointModel()->rowCount() > 0;
+#endif
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        case Project::ImportGtfsFeed:
+            return gtfsDatabaseState == Project::GtfsDatabaseError ||
+                   gtfsDatabaseState == Project::GtfsDatabaseImportPending;
+        case Project::DeleteGtfsDatabase:
+            return gtfsDatabaseState == Project::GtfsDatabaseImportFinished;
 #endif
 
         case Project::ClearTestResults:
@@ -2175,6 +2302,16 @@ public:
     ProjectSourceTab *projectSourceTab;
     PlasmaPreviewTab *plasmaPreviewTab;
     WebTab *webTab;
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    GtfsDatabaseTab *gtfsDatabaseTab;
+    Project::GtfsDatabaseState gtfsDatabaseState;
+    int gtfsFeedImportProgress;
+    QString gtfsFeedImportInfoMessage;
+    QDateTime gtfsFeedModifiedTime;
+    quint64 gtfsFeedSize;
+    quint64 gtfsDatabaseSize;
+    QString gtfsDatabaseErrorString;
+#endif
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     ScriptState scriptState;
     ScriptTab *scriptTab;
@@ -2223,6 +2360,7 @@ Project::Project( const WeaverInterfacePointer &weaver, QWidget *parent )
     Q_D( Project );
     QMutexLocker locker( d->mutex );
     qRegisterMetaType< ProjectActionData >( "ProjectActionData" );
+    Plasma::DataEngineManager::self()->loadEngine("publictransport");
     d->initialize();
 }
 
@@ -2232,6 +2370,8 @@ Project::~Project()
     if ( isModified() ) {
         kWarning() << "Destroying project with modifications";
     }
+
+    Plasma::DataEngineManager::self()->unloadEngine("publictransport");
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     disconnect( d->debugger, 0, this, 0 );
@@ -2579,6 +2719,14 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
     case ShowExternalScript:
         return "project_show_external_script";
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case ShowGtfsDatabase:
+        return "project_show_gtfs_database";
+    case Project::ImportGtfsFeed:
+        return "project_import_gtfs_database";
+    case Project::DeleteGtfsDatabase:
+        return "project_delete_gtfs_database";
+#endif
     case ShowProjectSource:
         return "project_show_source";
     case ShowPlasmaPreview:
@@ -2690,11 +2838,21 @@ QList< QAction* > Project::contextMenuActions( QWidget *parent )
             << projectAction(Uninstall) << projectAction(UninstallGlobally)
             << separator1
             << projectAction(SetAsActiveProject)
-            << projectAction(ShowDashboard)
+            << projectAction(ShowDashboard);
+
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-            << debuggerSubMenuAction(parent)
+    if ( d->provider->type() == Enums::ScriptedProvider ) {
+        actions << debuggerSubMenuAction(parent);
+    }
 #endif
-            << testSubMenuAction(parent)
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    if ( d->provider->type() == Enums::GtfsProvider ) {
+        actions << gtfsSubMenuAction(parent);
+    }
+#endif
+
+    actions << testSubMenuAction(parent)
             << separator2
             << projectAction(ShowProjectSettings)
             << projectAction(Close);
@@ -2723,7 +2881,26 @@ QPointer< KActionMenu > Project::debuggerSubMenuAction( QWidget *parent )
     debuggerMenuAction->addAction( projectAction(StepOut)  );
     return debuggerMenuAction;
 }
-#endif
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+QPointer< KActionMenu > Project::gtfsSubMenuAction( QWidget *parent )
+{
+    Q_D( Project );
+    parent = d->parentWidget( parent );
+
+    // Create a KActionMenu containing debug actions
+    // TODO GTFS icon?
+    QPointer<KActionMenu> gtfsMenuAction( new KActionMenu(KIcon("application-zip"),
+                                          i18nc("@action", "GTFS"), parent) );
+    gtfsMenuAction->setObjectName( "debuggerMenuAction" );
+    gtfsMenuAction->addAction( projectAction(ShowGtfsDatabase)  );
+    gtfsMenuAction->addSeparator();
+    gtfsMenuAction->addAction( projectAction(ImportGtfsFeed)  );
+    gtfsMenuAction->addAction( projectAction(DeleteGtfsDatabase) );
+    return gtfsMenuAction;
+}
+#endif // BUILD_PROVIDER_TYPE_GTFS
 
 QPointer< KActionMenu > Project::testSubMenuAction( QWidget *parent )
 {
@@ -2741,9 +2918,12 @@ QPointer< KActionMenu > Project::testSubMenuAction( QWidget *parent )
 
     // Fill test action list
     for ( int i = 0; i < TestModel::TestCaseCount; ++i ) {
+        // Only add test cases that contain applicable tests
         const TestModel::TestCase testCase = static_cast<TestModel::TestCase>( i );
-        testMenuAction->addAction( projectAction(SpecificTestCaseMenuAction,
-                                                 QVariant::fromValue(static_cast<int>(testCase))) );
+        if ( TestModel::isTestCaseApplicableTo(testCase, d->data()) ) {
+            testMenuAction->addAction( projectAction(
+                    SpecificTestCaseMenuAction, QVariant::fromValue(static_cast<int>(testCase))) );
+        }
     }
     return testMenuAction;
 }
@@ -2881,6 +3061,19 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
         break;
     case ShowExternalScript:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(showExternalScriptActionTriggered()), flags );
+        break;
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case ShowGtfsDatabase:
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(showGtfsDatabaseTab()), flags );
+        break;
+    case Project::ImportGtfsFeed:
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(importGtfsFeed()),
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
+        break;
+    case Project::DeleteGtfsDatabase:
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(deleteGtfsDatabase()),
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
 #endif
     case ShowProjectSource:
@@ -3060,6 +3253,14 @@ QString Project::projectActionText( Project::ProjectAction actionType, const QVa
                                           QFileInfo(filePath).fileName());
     }
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case ShowGtfsDatabase:
+        return i18nc("@action", "Open &GTFS Database");
+    case Project::ImportGtfsFeed:
+        return i18nc("@action", "Import &GTFS Feed");
+    case Project::DeleteGtfsDatabase:
+        return i18nc("@action", "Delete &GTFS Database");
+#endif
     case ShowProjectSource:
         return i18nc("@action", "Open Project &Source");
     case ShowPlasmaPreview:
@@ -3203,6 +3404,20 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
     case ShowExternalScript:
         action = new KAction( KIcon("document-open"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Opens an external <emphasis>script</emphasis> in a tab.") );
+        break;
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case ShowGtfsDatabase:
+        action = new KAction( KIcon("server-database"), text, parent );
+        action->setToolTip( i18nc("@info:tooltip", "Opens the <emphasis>GTFS database</emphasis> in a tab.") );
+        break;
+    case ImportGtfsFeed:
+        action = new KAction( KIcon("document-import"), text, parent );
+        action->setToolTip( i18nc("@info:tooltip", "Downloads the GTFS feed and imports it into the GTFS database.") );
+        break;
+    case DeleteGtfsDatabase:
+        action = new KAction( KIcon("edit-delete"), text, parent );
+        action->setToolTip( i18nc("@info:tooltip", "Deletes the GTFS database.") );
         break;
 #endif
     case ShowProjectSource:
@@ -3518,7 +3733,24 @@ ScriptTab *Project::showExternalScriptActionTriggered( QWidget *parent )
     const QString filePath = projectActionData(action).data.toString();
     return showExternalScriptTab( filePath, parent );
 }
-#endif
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+GtfsDatabaseTab *Project::showGtfsDatabaseTab( QWidget *parent )
+{
+    Q_D( Project );
+    QMutexLocker locker( d->mutex );
+    if ( d->gtfsDatabaseTab ) {
+        emit tabGoToRequest( d->gtfsDatabaseTab );
+    } else {
+        d->gtfsDatabaseTab = createGtfsDatabaseTab( d->parentWidget(parent) );
+        if ( d->gtfsDatabaseTab ) {
+            emit tabOpenRequest( d->gtfsDatabaseTab );
+        }
+    }
+    return d->gtfsDatabaseTab;
+}
+#endif // BUILD_PROVIDER_TYPE_GTFS
 
 ProjectSourceTab *Project::showProjectSourceTab( QWidget *parent )
 {
@@ -3583,6 +3815,9 @@ Project::ProjectActionGroup Project::actionGroupFromType( Project::ProjectAction
     case ShowScript:
     case ShowExternalScript:
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case ShowGtfsDatabase:
+#endif
     case ShowProjectSource:
     case ShowPlasmaPreview:
         return UiActionGroup;
@@ -3620,6 +3855,12 @@ Project::ProjectActionGroup Project::actionGroupFromType( Project::ProjectAction
     case SpecificTestCaseMenuAction:
         return TestActionGroup;
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case ImportGtfsFeed:
+    case DeleteGtfsDatabase:
+        return GtfsDatabaseActionGroup;
+#endif
+
     case Close:
     case SetAsActiveProject:
         return OtherActionGroup;
@@ -3642,6 +3883,9 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
                     << ShowProjectSource << ShowPlasmaPreview
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
                     << ShowScript << ShowExternalScript
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+                    << ShowGtfsDatabase
 #endif
                     ;
         break;
@@ -3666,6 +3910,11 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
     case OtherActionGroup:
         actionTypes << Close << SetAsActiveProject;
         break;
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case GtfsDatabaseActionGroup:
+        actionTypes << ImportGtfsFeed << DeleteGtfsDatabase;
+        break;
+#endif
     case InvalidProjectActionGroup:
     default:
         kWarning() << "Invalid group" << group;
@@ -3673,6 +3922,171 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
     }
     return actionTypes;
 }
+
+Project::GtfsDatabaseState Project::gtfsDatabaseState() const
+{
+    Q_D( const Project );
+    QMutexLocker locker( d->mutex );
+    return d->gtfsDatabaseState;
+}
+
+QString Project::gtfsDatabaseErrorString() const
+{
+    Q_D( const Project );
+    QMutexLocker locker( d->mutex );
+    return d->gtfsDatabaseErrorString;
+}
+
+int Project::gtfsFeedImportProgress() const
+{
+    Q_D( const Project );
+    QMutexLocker locker( d->mutex );
+    return d->gtfsFeedImportProgress;
+}
+
+QString Project::gtfsFeedImportInfoMessage() const
+{
+    Q_D( const Project );
+    QMutexLocker locker( d->mutex );
+    return d->gtfsFeedImportInfoMessage;
+}
+
+quint64 Project::gtfsFeedSize() const
+{
+    Q_D( const Project );
+    QMutexLocker locker( d->mutex );
+    return d->gtfsFeedSize;
+}
+
+QString Project::gtfsFeedSizeString() const
+{
+    Q_D( const Project );
+    QMutexLocker locker( d->mutex );
+    return KGlobal::locale()->formatByteSize( d->gtfsFeedSize );
+}
+
+quint64 Project::gtfsDatabaseSize() const
+{
+    Q_D( const Project );
+    QMutexLocker locker( d->mutex );
+    return d->gtfsDatabaseSize;
+}
+
+QString Project::gtfsDatabaseSizeString() const
+{
+    Q_D( const Project );
+    QMutexLocker locker( d->mutex );
+    return KGlobal::locale()->formatByteSize( d->gtfsDatabaseSize );
+}
+
+QString Project::gtfsDatabasePath() const
+{
+    Q_D( const Project );
+    QMutexLocker locker( d->mutex );
+    return GeneralTransitFeedDatabase::databasePath( d->data()->id() );
+}
+
+void Project::importGtfsFeed()
+{
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    Q_D( Project );
+    if ( d->provider->type() != Enums::GtfsProvider ) {
+        return;
+    }
+
+    d->updateGtfsDatabaseState();
+    if ( d->gtfsDatabaseState == GtfsDatabaseError ) {
+        kWarning() << "Cannot import GTFS feed" << d->gtfsDatabaseErrorString;
+        return;
+    }
+
+    d->setGtfsDatabaseState( GtfsDatabaseImportRunning );
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
+    KConfigGroup op = gtfsService->operationDescription("importGtfsFeed");
+    op.writeEntry( "serviceProviderId", d->data()->id() );
+    Plasma::ServiceJob *importJob = gtfsService->startOperationCall( op );
+    connect( importJob, SIGNAL(result(KJob*)), this, SLOT(gtfsDatabaseImportFinished(KJob*)) );
+    connect( importJob, SIGNAL(percent(KJob*,ulong)),
+             this, SLOT(gtfsDatabaseImportProgress(KJob*,ulong)) );
+    connect( importJob, SIGNAL(infoMessage(KJob*,QString,QString)),
+             this, SLOT(gtfsDatabaseImportInfoMessage(KJob*,QString,QString)) );
+    connect( importJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
+#endif
+}
+
+void Project::deleteGtfsDatabase()
+{
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    Q_D( Project );
+    if ( d->provider->type() != Enums::GtfsProvider ) {
+        return;
+    }
+
+    d->updateGtfsDatabaseState();
+    if ( d->gtfsDatabaseState != GtfsDatabaseImportFinished ) {
+        kWarning() << "Cannot delete GTFS feed" << d->gtfsDatabaseErrorString;
+        return;
+    }
+
+    const QString databasePath = GeneralTransitFeedDatabase::databasePath( d->data()->id() );
+    qint64 feedSizeInBytes = QFileInfo( databasePath ).size();
+    if ( KMessageBox::warningContinueCancel(d->parentWidget(), i18nc("@info",
+            "<title>Delete GTFS database</title>"
+            "<para>Do you really want to delete the GTFS database? You will need to import the "
+            "GTFS feed again to use this service provider again.</para>"
+            "<para>By deleting the database %1 disk space get freed.</para>",
+            KGlobal::locale()->formatByteSize(feedSizeInBytes))) == KMessageBox::Continue )
+    {
+        d->setGtfsDatabaseState( GtfsDatabaseImportPending );
+
+        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+        Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
+        KConfigGroup op = gtfsService->operationDescription("deleteGtfsDatabase");
+        op.writeEntry( "serviceProviderId", d->data()->id() );
+        Plasma::ServiceJob *deleteJob = gtfsService->startOperationCall( op );
+        connect( deleteJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
+    }
+#endif
+}
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+void Project::updateGtfsDatabaseState()
+{
+    Q_D( Project );
+    Plasma::ServiceJob *updateJob = qobject_cast< Plasma::ServiceJob* >( sender() );
+    d->updateGtfsDatabaseState( updateJob != 0 );
+}
+
+void Project::gtfsDatabaseImportFinished( KJob *importJob )
+{
+    Q_D( Project );
+    if ( importJob->error() == 0 ) {
+        d->setGtfsDatabaseState( GtfsDatabaseImportFinished );
+    } else {
+        d->gtfsDatabaseErrorString = importJob->errorString();
+        d->setGtfsDatabaseState( GtfsDatabaseError );
+        emit gtfsDatabaseErrorStringChanged( d->gtfsDatabaseErrorString );
+    }
+}
+
+void Project::gtfsDatabaseImportProgress( KJob *importJob, ulong percent )
+{
+    Q_UNUSED( importJob );
+    Q_D( Project );
+    d->gtfsFeedImportProgress = percent;
+    emit gtfsFeedImportProgressChanged( percent );
+}
+
+void Project::gtfsDatabaseImportInfoMessage( KJob *importJob, const QString &plain,
+                                             const QString &rich )
+{
+    Q_UNUSED( importJob );
+    Q_D( Project );
+    d->gtfsFeedImportInfoMessage = plain;
+    emit gtfsFeedImportInfoMessageChanged( d->gtfsFeedImportInfoMessage );
+}
+#endif // BUILD_PROVIDER_TYPE_GTFS
 
 bool Project::isTestRunning() const
 {
@@ -4762,11 +5176,11 @@ ProjectSourceTab *Project::createProjectSourceTab( QWidget *parent )
     // Get project source text
     const QString text = projectSourceText( ReadProjectDocumentFromBuffer );
 
-    // Try to create an project source document tab
+    // Try to create a project source document tab
     parent = d->parentWidget( parent );
     d->projectSourceTab = ProjectSourceTab::create( this, parent );
     if ( !d->projectSourceTab ) {
-        d->errorHappened( KatePartError, i18nc("@info", "service katepart.desktop not found") );
+        d->errorHappened( KatePartError, i18nc("@info", "Service katepart.desktop not found") );
         return 0;
     }
 
@@ -4794,6 +5208,41 @@ ProjectSourceTab *Project::createProjectSourceTab( QWidget *parent )
     }
     return d->projectSourceTab;
 }
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+GtfsDatabaseTab *Project::createGtfsDatabaseTab( QWidget *parent )
+{
+    Q_D( Project );
+    QMutexLocker locker( d->mutex );
+
+    if ( d->gtfsDatabaseTab ) {
+        kWarning() << "GTFS database tab already created";
+        return d->gtfsDatabaseTab;
+    }
+
+    // Try to create a GTFS database tab
+    parent = d->parentWidget( parent );
+    d->gtfsDatabaseTab = GtfsDatabaseTab::create( this, parent );
+    if ( !d->gtfsDatabaseTab ) {
+        d->errorHappened( OtherError, i18nc("@info", "Could not create GTFS database tab") );
+        return 0;
+    }
+
+    // Connect default tab slots with the tab
+    d->connectTab( d->gtfsDatabaseTab );
+    connect( d->gtfsDatabaseTab, SIGNAL(destroyed(QObject*)),
+             this, SLOT(gtfsDatabaseTabDestroyed()) );
+
+    return d->gtfsDatabaseTab;
+}
+
+GtfsDatabaseTab *Project::gtfsDatabaseTab() const
+{
+    Q_D( const Project );
+    QMutexLocker locker( d->mutex );
+    return d->gtfsDatabaseTab;
+}
+#endif // BUILD_PROVIDER_TYPE_GTFS
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
 ScriptTab *Project::createScriptTab( QWidget *parent )
@@ -4883,7 +5332,7 @@ ScriptTab *Project::createExternalScriptTab( const QString &filePath, QWidget *p
 //              this, SIGNAL(externalScriptModifiedStateChanged(bool)) );
     return externalScriptTab;
 }
-#endif
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
 ServiceProvider *Project::provider() const
 {
@@ -4893,12 +5342,21 @@ ServiceProvider *Project::provider() const
     return d->provider;
 }
 
+Enums::ServiceProviderType Project::providerType() const
+{
+    Q_D( const Project );
+    QMutexLocker locker( d->mutex );
+    Q_ASSERT( d->provider );
+    return d->provider->type();
+}
+
 void Project::setProviderData( const ServiceProviderData *providerData )
 {
     Q_D( Project );
     QMutexLocker locker( d->mutex );
 
     // Recreate service provider plugin with new info
+    Enums::ServiceProviderType oldType = d->provider ? d->provider->type() : Enums::InvalidProvider;
     delete d->provider;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     if ( providerData->type() == Enums::ScriptedProvider ) {
@@ -4908,6 +5366,14 @@ void Project::setProviderData( const ServiceProviderData *providerData )
     {
         d->provider = new ServiceProvider( providerData, this );
     }
+
+    if ( d->provider->type() != oldType ) {
+        emit providerTypeChanged( d->provider->type(), oldType );
+    }
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    d->updateGtfsDatabaseState();
+#endif
     emit nameChanged( projectName() );
     emit iconNameChanged( iconName() );
     emit iconChanged( projectIcon() );
@@ -4989,6 +5455,15 @@ void Project::projectSourceTabDestroyed()
     d->projectSourceTab = 0;
 }
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+void Project::gtfsDatabaseTabDestroyed()
+{
+    Q_D( Project );
+    QMutexLocker locker( d->mutex );
+    d->gtfsDatabaseTab = 0;
+}
+#endif // BUILD_PROVIDER_TYPE_GTFS
+
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
 void Project::scriptTabDestroyed()
 {
@@ -5012,7 +5487,7 @@ void Project::externalScriptTabDestroyed( QObject *tab )
     }
     qWarning() << "Internal error: Script tab destroyed but not found in the list";
 }
-#endif
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
 void Project::plasmaPreviewTabDestroyed()
 {

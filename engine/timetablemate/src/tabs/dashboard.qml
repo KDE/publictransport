@@ -242,7 +242,12 @@ Flickable { id: flickable
 //             ActionButton { action: project.projectAction(Project.DebugGetTimetable) }
 //             ActionButton { action: project.projectAction(Project.DebugGetStopSuggestions) }
 //             ActionButton { action: project.projectAction(Project.DebugGetJourneys) }
-            ActionButton { action: project.projectAction(Project.AbortDebugger) }
+            ActionButton { action: project.projectAction(Project.AbortDebugger)
+                visible: project.data.type == PublicTransport.ScriptedProvider
+            }
+            ActionButton { action: project.projectAction(Project.ShowGtfsDatabase)
+                visible: project.data.type == PublicTransport.GtfsProvider
+            }
             ActionButton { action: project.projectAction(Project.AbortRunningTests) }
 
             ActionButton { action: project.projectAction(Project.Install) }

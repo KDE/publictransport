@@ -145,7 +145,12 @@ void ProjectsDockWidget::projectItemDoubleClicked( const QModelIndex &proxyIndex
             scriptTab->goToLine( codeItem->node()->line() );
             break;
         }
-#endif
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        case ProjectModelItem::GtfsDatabaseItem:
+            project->showGtfsDatabaseTab( this );
+            break;
+#endif // BUILD_PROVIDER_TYPE_GTFS
         case ProjectModelItem::PlasmaPreviewItem:
             project->showPlasmaPreviewTab( this );
             break;
@@ -196,7 +201,6 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
         AbstractTab *tab = project->tab( tabType );
 #endif
 
-
         if ( tab ) {
             projectMenu->addTitle( tab->icon(), tab->title() );
         } else {
@@ -222,7 +226,8 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
 #else
                 const QString fileName = project->scriptFileName();
 #endif
-                openInTabAction = fileName.isEmpty()
+                openInTabAction =
+                        fileName.isEmpty() && project->data()->type() == Enums::ScriptedProvider
                         ? projectMenu->addAction(KIcon("document-new"),
                                                  i18nc("@item:inmenu", "Create From Template"))
                         : projectMenu->addAction(KIcon("document-open"),

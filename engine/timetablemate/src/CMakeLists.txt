@@ -78,6 +78,12 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
     add_subdirectory( debugger )
 endif ( BUILD_PROVIDER_TYPE_SCRIPT )
 
+if ( BUILD_PROVIDER_TYPE_GTFS )
+    set ( timetablemate_SRCS ${timetablemate_SRCS}
+        ../../gtfs/gtfsdatabase.cpp
+    )
+endif ( BUILD_PROVIDER_TYPE_GTFS )
+
 add_subdirectory( docks )
 add_subdirectory( tabs )
 

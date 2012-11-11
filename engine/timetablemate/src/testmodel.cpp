@@ -174,7 +174,15 @@ int TestModel::rowCount( const QModelIndex &parent ) const
             return testsOfTestCase( testCase ).count();
         }
     } else {
-        return TestCaseCount;
+        // Do not show test cases without applicable tests
+        int count = TestCaseCount;
+        if ( !isTestCaseApplicableTo(ScriptExecutionTestCase, project()->data()) ) {
+            --count;
+        }
+        if ( !isTestCaseApplicableTo(GtfsTestCase, project()->data()) ) {
+            --count;
+        }
+        return count;
     }
 }
 
@@ -186,7 +194,19 @@ TestModel::TestCase TestModel::testCaseFromIndex( const QModelIndex &testCaseInd
         // Not a test case item
         return InvalidTestCase;
     } else {
-        return static_cast< TestCase >( testCaseIndex.row() );
+        // Do not show test cases without applicable tests
+        int testCase = testCaseIndex.row();
+        if ( testCase >= ScriptExecutionTestCase &&
+            !isTestCaseApplicableTo(ScriptExecutionTestCase, project()->data()) )
+        {
+            ++testCase;
+        }
+        if ( testCase >= GtfsTestCase &&
+            !isTestCaseApplicableTo(GtfsTestCase, project()->data()) )
+        {
+            ++testCase;
+        }
+        return static_cast< TestCase >( testCase );
     }
 }
 
@@ -622,7 +642,7 @@ QVariant TestModel::data( const QModelIndex &index, int role ) const
         }
     } else {
         // Get data for a top level item, ie. a test case item
-        return testCaseData( static_cast<TestCase>(index.row()), index, role );
+        return testCaseData( testCaseFromIndex(index), index, role );
     }
 
     return QVariant();
@@ -905,6 +925,22 @@ bool TestModel::isTestApplicableTo( Test test, const ServiceProviderData *data,
         kDebug() << "Unknown test" << test;
         return false;
     }
+}
+
+bool TestModel::isTestCaseApplicableTo( TestModel::TestCase testCase,
+        const ServiceProviderData *data, QString *errorMessage, QString *tooltip )
+{
+    const QList< TestModel::Test > tests = testsOfTestCase( testCase );
+    foreach ( TestModel::Test test, tests ) {
+        if ( isTestApplicableTo(test, data, errorMessage, tooltip) ) {
+            // Found an applicable test of the test case,
+            // which is therefore also applicable
+            return true;
+        }
+    }
+
+    // The test case contains no applicable tests
+    return false;
 }
 
 QList< TestModel::Test > TestModel::testsOfTestCase( TestModel::TestCase testCase )

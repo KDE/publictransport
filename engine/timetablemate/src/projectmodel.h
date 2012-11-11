@@ -55,6 +55,9 @@ public:
         IncludedScriptItem, /**< A child of the project item, represents an included script document. */
         CodeItem, /**< A child of the script item, represents a code node. */
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        GtfsDatabaseItem, /**< A child of the project item, shows the GTFS database of the provider. */
+#endif
         WebItem, /**< A child of the project item, represents the web view. */
         PlasmaPreviewItem /**< A child of the project item, represents the plasma preview. */
 
@@ -67,6 +70,8 @@ public:
     Project *project() const { return m_project; };
     ProjectModelItem *parent() const { return m_parent; };
     QList< ProjectModelItem* > children() const { return m_children; };
+    ProjectModelItem *firstChildFromType( Type type ) const;
+    QList<ProjectModelItem*> childrenFromType( Type type ) const;
     Type type() const { return m_type; };
     static TabType tabTypeFromProjectItemType( Type projectItemType );
     static Type projectItemTypeFromTabType( TabType tabType );
@@ -79,6 +84,11 @@ public:
 #else
     inline bool isScriptItem() const { return false; };
     inline bool isIncludedScriptItem() const { return false; };
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    inline bool isGtfsDatabaseItem() const { return m_type == GtfsDatabaseItem; };
+#else
+    inline bool isGtfsDatabaseItem() const { return false; };
 #endif
     inline bool isPlasmaPreviewItem() const { return m_type == PlasmaPreviewItem; };
     inline bool isWebItem() const { return m_type == WebItem; };
@@ -93,6 +103,10 @@ protected:
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     static ProjectModelItem *createScriptItem( Project *project ) {
             return new ProjectModelItem( project, ScriptItem ); };
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    static ProjectModelItem *createGtfsDatabaseItem( Project *project ) {
+            return new ProjectModelItem( project, GtfsDatabaseItem ); };
 #endif
     static ProjectModelItem *createPlasmaPreviewItem( Project *project ) {
             return new ProjectModelItem( project, PlasmaPreviewItem ); };
@@ -257,6 +271,10 @@ protected slots:
     void setAsActiveProjectRequest();
     void projectTestProgress( const QList< TestModel::Test > &finishedTests,
                               const QList< TestModel::Test > &startedTests );
+
+    /** @brief The type of a provider changed, signaled from Project. */
+    void providerTypeChanged( Enums::ServiceProviderType newType,
+                              Enums::ServiceProviderType oldType );
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     void updateProjects();

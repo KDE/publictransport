@@ -52,6 +52,7 @@ class AbstractTab;
 class DashboardTab;
 class ProjectSourceTab;
 class ScriptTab;
+class GtfsDatabaseTab;
 class WebTab;
 class PlasmaPreviewTab;
 
@@ -73,6 +74,7 @@ namespace Debugger {
     class DebuggerJob;
 }
 
+class KJob;
 class KActionMenu;
 class KIcon;
 namespace KTextEditor
@@ -133,6 +135,16 @@ class Project : public QObject {
     Q_PROPERTY( bool isInstalledGlobally READ isInstalledGlobally NOTIFY globalInstallationStateChanged )
     Q_PROPERTY( bool isDebuggerRunning READ isDebuggerRunning NOTIFY debuggerRunningChanged )
     Q_PROPERTY( bool isTestRunning READ isTestRunning NOTIFY testRunningChanged )
+    Q_PROPERTY( Enums::ServiceProviderType providerType READ providerType NOTIFY providerTypeChanged );
+    Q_PROPERTY( int gtfsFeedImportProgress READ gtfsFeedImportProgress NOTIFY gtfsFeedImportProgressChanged )
+    Q_PROPERTY( QString gtfsFeedImportInfoMessage READ gtfsFeedImportInfoMessage NOTIFY gtfsFeedImportInfoMessageChanged )
+    Q_PROPERTY( quint64 gtfsFeedSize READ gtfsFeedSize NOTIFY gtfsFeedSizeChanged )
+    Q_PROPERTY( QString gtfsFeedSizeString READ gtfsFeedSizeString NOTIFY gtfsFeedSizeChanged )
+    Q_PROPERTY( quint64 gtfsDatabaseSize READ gtfsDatabaseSize NOTIFY gtfsDatabaseSizeChanged )
+    Q_PROPERTY( QString gtfsDatabaseSizeString READ gtfsDatabaseSizeString NOTIFY gtfsDatabaseSizeChanged )
+    Q_PROPERTY( QString gtfsDatabasePath READ gtfsDatabasePath NOTIFY gtfsDatabasePathChanged )
+    Q_PROPERTY( GtfsDatabaseState gtfsDatabaseState READ gtfsDatabaseState NOTIFY gtfsDatabaseStateChanged )
+    Q_PROPERTY( QString gtfsDatabaseErrorString READ gtfsDatabaseErrorString NOTIFY gtfsDatabaseErrorStringChanged )
     Q_PROPERTY( QString name READ projectName NOTIFY nameChanged )
     Q_PROPERTY( ServiceProviderData *data READ data NOTIFY dataChanged )
     Q_PROPERTY( QString iconName READ iconName NOTIFY iconNameChanged )
@@ -142,7 +154,7 @@ class Project : public QObject {
     Q_PROPERTY( QString output READ output NOTIFY outputChanged )
     Q_PROPERTY( QString consoleText READ consoleText NOTIFY consoleTextChanged )
     Q_ENUMS( State Error ScriptTemplateType ProjectAction ProjectActionGroup
-             ProjectDocumentSource InstallType )
+             ProjectDocumentSource InstallType GtfsDatabaseState )
     friend class ProjectSourceTab;
     friend class ScriptTab;
     friend class WebTab;
@@ -169,7 +181,8 @@ public:
         KatePartNotFound, /**< The Kate part was not found. */
         KatePartError, /**< There was an error with the Kate part. */
         PlasmaPreviewError, /**< There was an error with the plasma preview. */
-        WebError /**< There was an error with the web widget. */
+        WebError, /**< There was an error with the web widget. */
+        OtherError
     };
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -185,6 +198,17 @@ public:
         DefaultScriptTemplate = ScriptQtScriptTemplate /**< Default script template type. */
     };
 #endif
+
+    /** @brief States of the GTFS database. */
+    enum GtfsDatabaseState {
+        InitializingGtfsDatabase = 0, /**< Only used for initialization in the constructor. */
+        GtfsDatabaseImportPending, /**< An import of the GTFS feed is pending, no GTFS database available. */
+        GtfsDatabaseImportRunning, /**< The GTFS feed currently gets downloaded and imported
+                * into the GTFS database. */
+        GtfsDatabaseImportFinished, /**< The GTFS feed was successfully downloaded and imported
+                * into the GTFS database. */
+        GtfsDatabaseError /**< There was an error while importing the GTFS database. */
+    };
 
     /**
      * @brief Types of project actions.
@@ -216,6 +240,10 @@ public:
                                * later be included into the main script. */
         OpenScript = ShowScript,
         OpenExternalScript = ShowExternalScript,
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        ShowGtfsDatabase, /**< Show/open the GTFS database in a tab. */
+        OpenGtfsDatabase = ShowGtfsDatabase,
 #endif
         ShowProjectSource, /**< Show the project source XML document tab. */
         OpenProjectSource = ShowProjectSource,
@@ -250,6 +278,11 @@ public:
         DebugGetStopsByGeoPosition, /**< Run the getStopSuggestions() script function
                 * with a geo position as argument, interrupt at start. */
         DebugGetJourneys, /**< Run the getJourneys() script function, interrupt at start. */
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        ImportGtfsFeed, /**< Download the GTFS feed and import it to the GTFS database. */
+        DeleteGtfsDatabase, /**< Delete an existing GTFS database. */
 #endif
 
         // TestActionGroup
@@ -280,6 +313,9 @@ public:
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         DebuggerActionGroup,
         RunActionGroup,
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        GtfsDatabaseActionGroup,
 #endif
         TestActionGroup,
         OtherActionGroup
@@ -412,6 +448,11 @@ public:
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Get a KActionMenu which contains actions related to the debugger. */
     Q_INVOKABLE QPointer< KActionMenu > debuggerSubMenuAction( QWidget *parent = 0 );
+#endif
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    /** @brief Get a KActionMenu which contains actions related to GTFS. */
+    Q_INVOKABLE QPointer< KActionMenu > gtfsSubMenuAction( QWidget *parent = 0 );
 #endif
 
     /** @brief Get a KActionMenu which contains actions related to tests. */
@@ -624,6 +665,17 @@ public:
     ScriptTab *createExternalScriptTab( const QString &filePath, QWidget *parent = 0 );
 #endif
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    /**
+     * @brief Get a pointer to the GTFS database tab tab, if it was created.
+     * @see createGtfsDatabaseTab
+     * @see showGtfsDatabaseTab
+     **/
+    GtfsDatabaseTab *gtfsDatabaseTab() const;
+
+    GtfsDatabaseTab *createGtfsDatabaseTab( QWidget *parent = 0 );
+#endif // BUILD_PROVIDER_TYPE_GTFS
+
     /**
      * @brief Create a plasma preview tab or return an already created one.
      * @see plasmaPreviewTab
@@ -642,6 +694,11 @@ public:
      * This function always returns a valid pointer.
      **/
     ServiceProvider *provider() const;
+
+    /**
+     * @brief Get the type of the current ServiceProvider object of this project.
+     **/
+    Enums::ServiceProviderType providerType() const;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Get the debugger used by this project. */
@@ -743,6 +800,33 @@ public:
     /** @brief Whether or not the debugger is currently running. */
     Q_INVOKABLE bool isDebuggerRunning() const;
 
+    /** @brief Get the state of the GTFS database, eg. if the GTFS feed was successfully imported. */
+    Q_INVOKABLE GtfsDatabaseState gtfsDatabaseState() const;
+
+    /** @brief Get an error string if gtfsDatabaseState is GtfsDatabaseError. */
+    Q_INVOKABLE QString gtfsDatabaseErrorString() const;
+
+    /** @brief The percentage of the GTFS feed import progress. */
+    Q_INVOKABLE int gtfsFeedImportProgress() const;
+
+    /** @brief A human readable string describing the current state of the GTFS feed import. */
+    Q_INVOKABLE QString gtfsFeedImportInfoMessage() const;
+
+    /** @brief The size in bytes of the remote GTFS feed. */
+    Q_INVOKABLE quint64 gtfsFeedSize() const;
+
+    /** @brief The size of the remote GTFS feed formatted as string. */
+    Q_INVOKABLE QString gtfsFeedSizeString() const;
+
+    /** @brief The size in bytes of the GTFS database. */
+    Q_INVOKABLE quint64 gtfsDatabaseSize() const;
+
+    /** @brief The size of the GTFS database formatted as string. */
+    Q_INVOKABLE QString gtfsDatabaseSizeString() const;
+
+    /** @brief The file path of the GTFS database. */
+    Q_INVOKABLE QString gtfsDatabasePath() const;
+
     /** @brief Get an info string describing the current save location of the project. */
     Q_INVOKABLE QString savePathInfoString() const;
 
@@ -765,6 +849,8 @@ public:
     QList< TestModel::Test > startedTests() const;
 
 signals:
+    void providerTypeChanged( Enums::ServiceProviderType newType,
+                              Enums::ServiceProviderType oldType );
     void nameChanged( const QString &newName );
     void dataChanged( const ServiceProviderData *newData );
     void iconNameChanged( const QString &newIconName );
@@ -775,6 +861,13 @@ signals:
     void testRunningChanged( bool testRunning );
     void outputChanged();
     void consoleTextChanged( const QString &consoleText );
+    void gtfsDatabaseStateChanged( Project::GtfsDatabaseState state );
+    void gtfsDatabaseErrorStringChanged( const QString &errorString );
+    void gtfsFeedImportProgressChanged( int progress );
+    void gtfsFeedImportInfoMessageChanged( const QString &infoMessage );
+    void gtfsFeedSizeChanged( quint64 size );
+    void gtfsDatabaseSizeChanged( quint64 size );
+    void gtfsDatabasePathChanged( const QString &path );
 
     void debuggerReady();
 
@@ -952,12 +1045,22 @@ public slots:
     /** @brief Run the getJourneys() script function and interrupt at breakpoints and executions. */
     void debugGetJourneys();
 
+    /** @brief Download the GTFS feed and import it to the GTFS database. */
+    void importGtfsFeed();
+
+    /** @brief Delete an existing GTFS database. */
+    void deleteGtfsDatabase();
+
     /** @brief Show the main script tab. */
     ScriptTab *showScriptTab( QWidget *parent = 0 );
 
     /** @brief Show a script tab containing the external script at @p filePath. */
     ScriptTab *showExternalScriptTab( const QString &filePath, QWidget *parent = 0 );
 #endif // BUILD_PROVIDER_TYPE_SCRIPT
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    GtfsDatabaseTab *showGtfsDatabaseTab( QWidget *parent = 0 );
+#endif // BUILD_PROVIDER_TYPE_GTFS
 
     /** @brief Show the project dashboard tab. */
     DashboardTab *showDashboardTab( QWidget *parent = 0 );
@@ -1071,12 +1174,22 @@ protected slots:
     void scriptException( int lineNumber, const QString &errorMessage,
                           const QString &fileName = QString() );
 
-    void scriptTabDestroyed();
     void externalScriptTabDestroyed( QObject *tab );
 
     void evaluationResult( const EvaluationResult &result );
     void commandExecutionResult( const QString &returnValue, bool error = false );
-#endif
+
+    void scriptTabDestroyed();
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    void gtfsDatabaseTabDestroyed();
+    void gtfsDatabaseImportFinished( KJob *importJob );
+    void gtfsDatabaseImportProgress( KJob *importJob, ulong percent );
+    void gtfsDatabaseImportInfoMessage( KJob *importJob, const QString &plain,
+                                        const QString &rich = QString() );
+    void updateGtfsDatabaseState();
+#endif // BUILD_PROVIDER_TYPE_GTFS
 
     void dashboardTabDestroyed();
     void projectSourceTabDestroyed();

@@ -39,6 +39,9 @@
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     #include "tabs/scripttab.h"
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    #include "tabs/gtfsdatabasetab.h"
+#endif
 
 // Dock widgets
 #include "docks/docktoolbar.h"
@@ -201,6 +204,8 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
     m_projectModel = new ProjectModel( this );
     connect( m_projectModel, SIGNAL(activeProjectAboutToChange(Project*,Project*)),
              this, SLOT(activeProjectAboutToChange(Project*,Project*)) );
+    connect( m_projectModel, SIGNAL(activeProjectChanged(Project*,Project*)),
+             this, SLOT(activeProjectChanged(Project*,Project*)) );
     connect( m_projectModel, SIGNAL(projectAdded(Project*)), this, SLOT(projectAdded(Project*)) );
     connect( m_projectModel, SIGNAL(projectAboutToBeRemoved(Project*)),
              this, SLOT(projectAboutToBeRemoved(Project*)) );
@@ -373,6 +378,9 @@ void TimetableMate::saveProperties( KConfigGroup &config )
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
                     << Tabs::Script
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+                    << Tabs::GtfsDatabase
+#endif
                     ;
             foreach ( TabType tab, allTabs ) {
                 if ( project->isTabOpened(tab) ) {
@@ -519,12 +527,20 @@ void TimetableMate::populateTestMenu()
 {
     // Fill test action list with menu actions for each test case
     m_testCaseActions.clear();
-    for ( int i = 0; i < TestModel::TestCaseCount; ++i ) {
-        const TestModel::TestCase testCase = static_cast<TestModel::TestCase>( i );
-        QAction *action = Project::createProjectAction( Project::SpecificTestCaseMenuAction,
-                QVariant::fromValue(static_cast<int>(testCase)), this );
-        m_testCaseActions << action;
+    if ( m_projectModel->activeProject() ) {
+        for ( int i = 0; i < TestModel::TestCaseCount; ++i ) {
+            // Only add test cases that contain applicable tests
+            const TestModel::TestCase testCase = static_cast<TestModel::TestCase>( i );
+            if ( TestModel::isTestCaseApplicableTo(testCase,
+                                                   m_projectModel->activeProject()->data()) )
+            {
+                QAction *action = Project::createProjectAction( Project::SpecificTestCaseMenuAction,
+                        QVariant::fromValue(static_cast<int>(testCase)), this );
+                m_testCaseActions << action;
+            }
+        }
     }
+    unplugActionList( "test_list" );
     plugActionList( "test_list", m_testCaseActions );
 }
 
@@ -870,6 +886,11 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
     }
 }
 
+void TimetableMate::activeProjectChanged( Project *project, Project *previousProject )
+{
+    populateTestMenu();
+}
+
 bool TimetableMate::queryClose()
 {
     // Save session properties into a special group in the configuration
@@ -898,52 +919,62 @@ Project *TimetableMate::currentProject()
 void TimetableMate::updateWindowTitle() {
     AbstractTab *tab = 0;
     QString caption;
-    Project *project = m_projectModel->activeProject();
+    Project *activeProject = m_projectModel->activeProject();
 
     // Start caption with the name of the current tab, if any
     if ( m_tabWidget->currentIndex() != -1 ) {
         tab = projectTabAt( m_tabWidget->currentIndex() );
+        Project *tabProject = tab->project();
         const ProjectModelItem::Type type =
                 ProjectModelItem::projectItemTypeFromTabType( tab->type() );
+
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        if ( type != ProjectModelItem::ScriptItem || tab->fileName() == project->scriptFileName() ) {
-            // Get caption from the model by tab type, but not for external script tabs
-            caption = m_projectModel->projectItemChildFromProject( project, type )->text();
+        if ( tabProject->data()->type() == Enums::ScriptedProvider ) {
+            if ( type != ProjectModelItem::ScriptItem ||
+                 tab->fileName() == tabProject->scriptFileName() )
+            {
+                // Get caption from the model by tab type, but not for external script tabs
+                caption = m_projectModel->projectItemChildFromProject( tabProject, type )->text();
+            } else {
+                // External script tab, manually construct caption
+                QString name = tab->fileName().isEmpty()
+                        ? i18nc("@info/plain", "External Script File")
+                        : QFileInfo(tab->fileName()).fileName();
+                caption = KDialog::makeStandardCaption( name, 0,
+                        tab && tab->isModified() ? KDialog::ModifiedCaption : KDialog::NoCaptionFlags );
+            }
         } else {
-            // External script tab, manually construct caption
-            QString name = tab->fileName().isEmpty()
-                    ? i18nc("@info/plain", "External Script File")
-                    : QFileInfo(tab->fileName()).fileName();
-            caption = KDialog::makeStandardCaption( name, 0,
-                    tab && tab->isModified() ? KDialog::ModifiedCaption : KDialog::NoCaptionFlags );
+            caption = m_projectModel->projectItemChildFromProject( tabProject, type )->text();
         }
 #else
-        caption = m_projectModel->projectItemChildFromProject( project, type )->text();
+        caption = m_projectModel->projectItemChildFromProject( tabProject, type )->text();
 #endif
 
         // Add project name
-        caption += " - " + tab->project()->projectName();
+        caption += " - " + tabProject->projectName();
     }
 
     // Add information about the test state
-    if ( project->isTestRunning() ) {
-        caption += " - " + i18nc("@info/plain", "Testing");
-    }
+    if ( activeProject ) {
+        if ( activeProject->isTestRunning() ) {
+            caption += " - " + i18nc("@info/plain", "Testing");
+        }
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    // Add information about the debugger state
-    Debugger::Debugger *debugger = project->debugger();
-    if ( debugger ) {
-        if ( debugger->hasUncaughtException() ) {
-            caption += " - " + i18nc("@info/plain", "Debugging (Exception in Line %1)",
-                                     debugger->uncaughtExceptionLineNumber());
-        } else if ( debugger->isInterrupted() ) {
-            caption += " - " + i18nc("@info/plain", "Debugger Interrupted at Line %1", debugger->lineNumber());
-        } else if ( debugger->isRunning() ) {
-            caption += " - " + i18nc("@info/plain", "Debugger Running");
+        // Add information about the debugger state
+        Debugger::Debugger *debugger = activeProject->debugger();
+        if ( debugger ) {
+            if ( debugger->hasUncaughtException() ) {
+                caption += " - " + i18nc("@info/plain", "Debugging (Exception in Line %1)",
+                                        debugger->uncaughtExceptionLineNumber());
+            } else if ( debugger->isInterrupted() ) {
+                caption += " - " + i18nc("@info/plain", "Debugger Interrupted at Line %1", debugger->lineNumber());
+            } else if ( debugger->isRunning() ) {
+                caption += " - " + i18nc("@info/plain", "Debugger Running");
+            }
         }
-    }
 #endif
+    }
 
     setCaption( caption, tab ? tab->isModified() : false );
 }
@@ -1290,6 +1321,17 @@ void TimetableMate::currentTabChanged( int index ) {
     }
 #endif
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    // Adjust if a GTFS database tab was left or newly shown
+    const bool leftGtfsDatabaseTab = m_currentTab && m_currentTab->isGtfsDatabaseTab();
+    const bool movedToGtfsDatabaseTab = tab && tab->isGtfsDatabaseTab();
+    if ( leftGtfsDatabaseTab && !movedToGtfsDatabaseTab ) {
+        gtfsDatabaseTabAction( qobject_cast<GtfsDatabaseTab*>(m_currentTab), LeaveTab );
+    } else if ( movedToGtfsDatabaseTab && !leftGtfsDatabaseTab ) {
+        gtfsDatabaseTabAction( qobject_cast<GtfsDatabaseTab*>(tab), MoveToTab );
+    }
+#endif
+
     // Adjust if a web tab was left or newly shown
     const bool leftWebTab = m_currentTab && m_currentTab->isWebTab();
     const bool movedToWebTab = tab && tab->isWebTab();
@@ -1353,6 +1395,15 @@ void TimetableMate::scriptTabAction( ScriptTab *scriptTab, TimetableMate::TabAct
     }
 }
 #endif // BUILD_PROVIDER_TYPE_SCRIPT
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+void TimetableMate::gtfsDatabaseTabAction( GtfsDatabaseTab *gtfsDatabaseTab,
+                                           TimetableMate::TabAction tabAction )
+{
+    Q_UNUSED( tabAction );
+    Q_ASSERT( gtfsDatabaseTab );
+}
+#endif // BUILD_PROVIDER_TYPE_GTFS
 
 void TimetableMate::plasmaPreviewTabAction( PlasmaPreviewTab *plasmaPreviewTab,
                                             TimetableMate::TabAction tabAction )

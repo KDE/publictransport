@@ -150,6 +150,10 @@ QString ProjectModelItem::text() const
                 ? KDialog::ModifiedCaption : KDialog::NoCaptionFlags );
     }
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case ProjectModelItem::GtfsDatabaseItem:
+        return i18nc("@info/plain", "GTFS database");
+#endif
     case ProjectModelItem::ProjectSourceItem: {
         QString name = m_project->filePath().isEmpty()
                 ? i18nc("@info/plain", "Project Source XML File (experts)")
@@ -191,6 +195,10 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
             case ProjectModelItem::CodeItem:
                 return KIcon("code-function");
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+            case ProjectModelItem::GtfsDatabaseItem:
+                return KIcon("server-database");
+#endif
             case ProjectModelItem::PlasmaPreviewItem:
                 return KIcon("plasma");
             case ProjectModelItem::WebItem:
@@ -211,6 +219,11 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
             case ProjectModelItem::IncludedScriptItem:
                 return i18nc("@info:tooltip", "View/edit included script <filename>%1</filename>.",
                              dynamic_cast<ProjectModelIncludedScriptItem*>(projectItem)->fileName() );
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+            case ProjectModelItem::GtfsDatabaseItem:
+                return i18nc("@info:tooltip", "Shows the GTFS database and allows to start it's "
+                             "import from the GTFS feed.");
 #endif
             case ProjectModelItem::ProjectSourceItem:
                 return i18nc("@info:tooltip", "Edit project settings directly in the XML "
@@ -263,6 +276,9 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
             } break;
 
             case ProjectModelItem::CodeItem:
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+            case ProjectModelItem::GtfsDatabaseItem: // TODO
 #endif
             case ProjectModelItem::PlasmaPreviewItem:
             case ProjectModelItem::WebItem:
@@ -331,6 +347,9 @@ Qt::ItemFlags ProjectModel::flags( const QModelIndex &index ) const
         case ProjectModelItem::IncludedScriptItem:
         case ProjectModelItem::CodeItem:
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        case ProjectModelItem::GtfsDatabaseItem:
+#endif
             return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
         case ProjectModelItem::WebItem:
             if ( project->provider()->data()->url().isEmpty() ) {
@@ -364,6 +383,31 @@ ProjectModelItem::~ProjectModelItem()
         // Use deleteLater(), because otherwise using project action Project::Close causes a crash
         m_project->deleteLater();
     }
+}
+
+QList< ProjectModelItem* > ProjectModelItem::childrenFromType( ProjectModelItem::Type type ) const
+{
+    QList< ProjectModelItem* > children;
+    foreach ( ProjectModelItem *child, m_children ) {
+        if ( child->type() == type ) {
+            // Found a child of the given type
+            children << child;
+        }
+    }
+    return children;
+}
+
+ProjectModelItem *ProjectModelItem::firstChildFromType( ProjectModelItem::Type type ) const
+{
+    foreach ( ProjectModelItem *child, m_children ) {
+        if ( child->type() == type ) {
+            // Found a child of the given type
+            return child;
+        }
+    }
+
+    // No child of the given type found
+    return 0;
 }
 
 void ProjectModelItem::addChild( ProjectModelItem *item )
@@ -423,11 +467,25 @@ void ProjectModel::appendProject( Project *project )
 
     // Create child items
     const QModelIndex projectIndex = indexFromProjectItem( projectItem );
-    beginInsertRows( projectIndex, 0, project->data()->type() == Enums::ScriptedProvider ? 4 : 3 );
+    int itemNumber = 3;
+    switch ( project->data()->type() ) {
+    case Enums::ScriptedProvider:
+    case Enums::GtfsProvider:
+        ++itemNumber;
+        break;
+    default:
+        break;
+    }
+    beginInsertRows( projectIndex, 0, itemNumber );
     projectItem->addChild( ProjectModelItem::createDashboardtItem(project) );
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     if ( project->data()->type() == Enums::ScriptedProvider ) {
         projectItem->addChild( ProjectModelItem::createScriptItem(project) );
+    }
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    if ( project->data()->type() == Enums::GtfsProvider ) {
+        projectItem->addChild( ProjectModelItem::createGtfsDatabaseItem(project) );
     }
 #endif
     projectItem->addChild( ProjectModelItem::createProjectSourceDocumentItem(project) );
@@ -435,6 +493,8 @@ void ProjectModel::appendProject( Project *project )
     projectItem->addChild( ProjectModelItem::createPlasmaPreviewItem(project) );
     endInsertRows();
 
+    connect( project, SIGNAL(providerTypeChanged(Enums::ServiceProviderType,Enums::ServiceProviderType)),
+             this, SLOT(providerTypeChanged(Enums::ServiceProviderType,Enums::ServiceProviderType)) );
     connect( project, SIGNAL(modifiedStateChanged(bool)), this, SLOT(slotProjectModified()) );
     connect( project, SIGNAL(debuggerReady()), this, SLOT(scriptSaved()) );
     connect( project->testModel(), SIGNAL(testResultsChanged()), this, SLOT(slotProjectModified()) );
@@ -452,6 +512,35 @@ void ProjectModel::appendProject( Project *project )
         // Make new project the active project if no other project is set
         setActiveProject( project );
     }
+}
+
+void ProjectModel::providerTypeChanged( Enums::ServiceProviderType newType,
+                                        Enums::ServiceProviderType oldType )
+{
+    Project *project = qobject_cast< Project* >( sender() );
+    Q_ASSERT( project );
+    ProjectModelItem *projectItem = projectItemFromProject( project );
+
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    if ( oldType == Enums::ScriptedProvider ) {
+        QList< ProjectModelItem* > items;
+        items << projectItem->firstChildFromType( ProjectModelItem::ScriptItem );
+        items << projectItem->childrenFromType( ProjectModelItem::IncludedScriptItem );
+        items << projectItem->childrenFromType( ProjectModelItem::CodeItem );
+        projectItem->removeChildren( items );
+    } else if ( newType == Enums::ScriptedProvider ) {
+        projectItem->insertChild( 1, ProjectModelItem::createScriptItem(project) );
+    }
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    if ( oldType == Enums::GtfsProvider ) {
+        QList< ProjectModelItem* > items;
+        items << projectItem->firstChildFromType( ProjectModelItem::GtfsDatabaseItem );
+        projectItem->removeChildren( items );
+    } else if ( newType == Enums::GtfsProvider ) {
+        projectItem->insertChild( 1, ProjectModelItem::createGtfsDatabaseItem(project) );
+    }
+#endif
 }
 
 void ProjectModel::updateIsIdle()
@@ -623,6 +712,10 @@ TabType ProjectModelItem::tabTypeFromProjectItemType( ProjectModelItem::Type pro
         return Tabs::PlasmaPreview;
     case WebItem:
         return Tabs::Web;
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case GtfsDatabaseItem:
+        return Tabs::GtfsDatabase;
+#endif
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptItem:
     case IncludedScriptItem:
@@ -646,6 +739,10 @@ ProjectModelItem::Type ProjectModelItem::projectItemTypeFromTabType( TabType tab
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Tabs::Script:
         return ScriptItem;
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case Tabs::GtfsDatabase:
+        return GtfsDatabaseItem;
 #endif
     case Tabs::PlasmaPreview:
         return PlasmaPreviewItem;
@@ -800,6 +897,7 @@ ProjectModelItem *ProjectModel::projectItemChildFromProject( Project *project,
     }
 
     // Not found
+    kWarning() << "Project" << project->data()->id() << "has no child of type" << type;
     return 0;
 }
 

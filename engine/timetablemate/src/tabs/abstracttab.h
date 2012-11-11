@@ -69,6 +69,14 @@ public:
     inline bool isScriptTab() const { return false; };
 #endif
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    /** @brief Whether or not this is a GTFS database tab. */
+    inline bool isGtfsDatabaseTab() const { return type() == Tabs::GtfsDatabase; };
+#else
+    // Dummy function
+    inline bool isGtfsDatabaseTab() const { return false; };
+#endif
+
     /** @brief Whether or not this is a web tab. */
     inline bool isWebTab() const { return type() == Tabs::Web; };
 

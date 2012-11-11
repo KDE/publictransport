@@ -205,6 +205,10 @@ QIcon AbstractTab::icon() const
         case Tabs::Script:
             return KIcon("application-javascript");
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        case Tabs::GtfsDatabase:
+            return KIcon("server-database");
+#endif
         case Tabs::Web:
             return KIcon("applications-internet");
         case Tabs::PlasmaPreview:
@@ -259,7 +263,11 @@ QString AbstractTab::title() const
         }
         return title;
     }
-#endif
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case Tabs::GtfsDatabase:
+        return i18nc("@title:tab", "GTFS database %1", m_project->serviceProviderId());
+#endif // BUILD_PROVIDER_TYPE_GTFS
     case Tabs::Web:
         return i18nc("@title:tab", "Web %1", m_project->serviceProviderId());
     case Tabs::PlasmaPreview:

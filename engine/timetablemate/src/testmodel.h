@@ -320,8 +320,16 @@ public:
                state == TestDisabled || state == TestNotApplicable;
     };
 
+    /** @brief Whether or not @p test is applicable for a provider plugin using @p data. */
     static bool isTestApplicableTo( Test test, const ServiceProviderData *data,
                                     QString *errorMessage = 0, QString *tooltip = 0 );
+
+    /**
+     * @brief Whether or not @p testCase is applicable for a provider plugin using @p data.
+     * A test case is not applicable when none of it's tests are applicable.
+     **/
+    static bool isTestCaseApplicableTo( TestCase testCase, const ServiceProviderData *data,
+                                        QString *errorMessage = 0, QString *tooltip = 0 );
 
 signals:
     void testResultsChanged();
