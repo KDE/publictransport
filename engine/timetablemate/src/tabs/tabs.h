@@ -20,9 +20,6 @@
 #ifndef TABS_ENUMS_H
 #define TABS_ENUMS_H
 
-// Own includes
-#include "config.h"
-
 // Qt includes
 #include <QObject>
 
@@ -36,14 +33,10 @@ public:
 
         Dashboard = 1, /**< Dashboard tab. */
         ProjectSource = 2, /**< Project source document tab. */
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Script = 3, /**< Script document tab. */
-#endif
         Web = 4, /**< Web tab. */
         PlasmaPreview = 5, /**< Plasma preview tab. */
-#ifdef BUILD_PROVIDER_TYPE_GTFS
         GtfsDatabase = 6, /**< GTFS database tab. */
-#endif
     };
 
     static QLatin1String nameForType( Type type ) {
@@ -52,18 +45,14 @@ public:
             return QLatin1String("dashboard");
         case Tabs::ProjectSource:
             return QLatin1String("source");
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case Tabs::Script:
             return QLatin1String("script");
-#endif
         case Tabs::Web:
             return QLatin1String("web");
         case Tabs::PlasmaPreview:
             return QLatin1String("plasma");
-#ifdef BUILD_PROVIDER_TYPE_GTFS
         case Tabs::GtfsDatabase:
             return QLatin1String("gtfs_database");
-#endif
         default:
             return QLatin1String("unknown");
         }
