@@ -138,6 +138,7 @@ class Project : public QObject {
     Q_PROPERTY( Enums::ServiceProviderType providerType READ providerType NOTIFY providerTypeChanged );
     Q_PROPERTY( int gtfsFeedImportProgress READ gtfsFeedImportProgress NOTIFY gtfsFeedImportProgressChanged )
     Q_PROPERTY( QString gtfsFeedImportInfoMessage READ gtfsFeedImportInfoMessage NOTIFY gtfsFeedImportInfoMessageChanged )
+    Q_PROPERTY( QDateTime gtfsFeedLastModified READ gtfsFeedLastModified NOTIFY gtfsFeedSizeChanged ) // Changes with the size
     Q_PROPERTY( quint64 gtfsFeedSize READ gtfsFeedSize NOTIFY gtfsFeedSizeChanged )
     Q_PROPERTY( QString gtfsFeedSizeString READ gtfsFeedSizeString NOTIFY gtfsFeedSizeChanged )
     Q_PROPERTY( quint64 gtfsDatabaseSize READ gtfsDatabaseSize NOTIFY gtfsDatabaseSizeChanged )
@@ -811,6 +812,9 @@ public:
 
     /** @brief A human readable string describing the current state of the GTFS feed import. */
     Q_INVOKABLE QString gtfsFeedImportInfoMessage() const;
+
+    /** @brief Get the last modified time of the GTFS feed. */
+    Q_INVOKABLE QDateTime gtfsFeedLastModified() const;
 
     /** @brief The size in bytes of the remote GTFS feed. */
     Q_INVOKABLE quint64 gtfsFeedSize() const;

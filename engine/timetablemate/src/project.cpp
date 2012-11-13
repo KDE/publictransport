@@ -397,6 +397,7 @@ public:
 
         const QString feedModifiedTimeString =
                 gtfsGroup.readEntry( "feedModifiedTime", QString() );
+        kDebug() << "TEST" << feedModifiedTimeString;
         gtfsFeedModifiedTime = QDateTime::fromString( feedModifiedTimeString, Qt::ISODate );
         gtfsFeedSize = gtfsGroup.readEntry( "feedSizeInBytes", 0 );
         if ( !calledByFinishedUpdateInfoJob && gtfsFeedSize <= 0 ) {
@@ -3971,19 +3972,30 @@ int Project::gtfsFeedImportProgress() const
 QString Project::gtfsFeedImportInfoMessage() const
 {
     Q_D( const Project );
-    QMutexLocker locker( d->mutex );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    QMutexLocker locker( d->mutex );
     return d->gtfsFeedImportInfoMessage;
 #else
     return QString();
 #endif
 }
 
+QDateTime Project::gtfsFeedLastModified() const
+{
+    Q_D( const Project );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    QMutexLocker locker( d->mutex );
+    return d->gtfsFeedModifiedTime;
+#else
+    return 0;
+#endif
+}
+
 quint64 Project::gtfsFeedSize() const
 {
     Q_D( const Project );
-    QMutexLocker locker( d->mutex );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    QMutexLocker locker( d->mutex );
     return d->gtfsFeedSize;
 #else
     return 0;
@@ -3993,8 +4005,8 @@ quint64 Project::gtfsFeedSize() const
 QString Project::gtfsFeedSizeString() const
 {
     Q_D( const Project );
-    QMutexLocker locker( d->mutex );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    QMutexLocker locker( d->mutex );
     return KGlobal::locale()->formatByteSize( d->gtfsFeedSize );
 #else
     return QString();
@@ -4004,8 +4016,8 @@ QString Project::gtfsFeedSizeString() const
 quint64 Project::gtfsDatabaseSize() const
 {
     Q_D( const Project );
-    QMutexLocker locker( d->mutex );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    QMutexLocker locker( d->mutex );
     return d->gtfsDatabaseSize;
 #else
     return 0;
@@ -4015,8 +4027,8 @@ quint64 Project::gtfsDatabaseSize() const
 QString Project::gtfsDatabaseSizeString() const
 {
     Q_D( const Project );
-    QMutexLocker locker( d->mutex );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    QMutexLocker locker( d->mutex );
     return KGlobal::locale()->formatByteSize( d->gtfsDatabaseSize );
 #else
     return QString();
@@ -4026,8 +4038,8 @@ QString Project::gtfsDatabaseSizeString() const
 QString Project::gtfsDatabasePath() const
 {
     Q_D( const Project );
-    QMutexLocker locker( d->mutex );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    QMutexLocker locker( d->mutex );
     return GeneralTransitFeedDatabase::databasePath( d->data()->id() );
 #else
     return QString();

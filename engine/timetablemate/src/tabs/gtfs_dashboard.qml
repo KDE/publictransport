@@ -161,6 +161,15 @@ Item { id: root
             onLinkActivated: project.showSettingsDialog()
         }
 
+        // Show the GTFS feed last modified time
+        Text { id: lblFeedLastModified; text: i18nc("@label", "GTFS Feed Last Modified:");
+            width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
+        Text { id: feedLastModified
+            text: project.gtfsFeedSize == 0 ? i18nc("@info/plain", "(unknown)")
+                                            : project.gtfsFeedLastModified.toString()
+            width: parent.fieldWidth; wrapMode: Text.Wrap
+        }
+
         // Show the GTFS feed size
         Text { id: lblFeedSize; text: i18nc("@label", "GTFS Feed Size (remote):");
             width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true }
