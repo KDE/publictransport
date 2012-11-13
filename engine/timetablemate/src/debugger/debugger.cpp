@@ -303,7 +303,7 @@ void Debugger::slotJobDone( ThreadWeaver::Job *job )
     EvaluateInContextJob *evaluateInContextJob = qobject_cast< EvaluateInContextJob* >( job );
 
     if ( job == m_loadScriptJob ) {
-        kDebug() << "LoadScriptJob is done";
+        DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_loadScriptJob, "LoadScriptJob is done" );
         m_loadScriptJob = 0;
     }
     m_mutex->unlock();
