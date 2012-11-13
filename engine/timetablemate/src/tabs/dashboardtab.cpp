@@ -42,7 +42,7 @@
 #include <QContextMenuEvent>
 
 DashboardTab::DashboardTab( Project *project, QWidget *parent )
-        : AbstractTab(project, type(), parent), m_qmlView(0), m_project(project)
+        : AbstractTab(project, type(), parent), m_qmlView(0)
 {
     // Find the QML file used for the dashboard tab
     const QString fileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.qml" );
@@ -106,5 +106,5 @@ DashboardTab *DashboardTab::create( Project *project, QWidget *parent )
 
 void DashboardTab::contextMenuEvent( QContextMenuEvent *event )
 {
-    m_project->showProjectContextMenu( event->globalPos() );
+    project()->showProjectContextMenu( event->globalPos() );
 }
