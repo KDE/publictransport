@@ -332,6 +332,7 @@ public:
         }
         if ( state != Project::GtfsDatabaseImportFinished && gtfsDatabaseSize != 0 ) {
             gtfsDatabaseSize = 0;
+            gtfsDatabaseModifiedTime = QDateTime();
             q->emit gtfsDatabaseSizeChanged( 0 );
         }
         if ( state != Project::GtfsDatabaseImportRunning && !gtfsFeedImportInfoMessage.isEmpty() ) {
@@ -348,7 +349,8 @@ public:
             }
             q->emit gtfsDatabasePathChanged( QString() );
             break;
-        case Project::GtfsDatabaseImportFinished: {
+        case Project::GtfsDatabaseImportFinished:
+        case Project::GtfsDatabaseUpdateAvailable: {
             if ( gtfsFeedImportProgress != 100 ) {
                 gtfsFeedImportProgress = 100;
                 q->emit gtfsFeedImportProgressChanged( 100 );
@@ -356,9 +358,11 @@ public:
 
             // Update GTFS database size
             const QString databasePath = GeneralTransitFeedDatabase::databasePath( data()->id() );
-            quint64 newGtfsDatabaseSize = QFileInfo( databasePath ).size();
+            const QFileInfo databaseInfo( databasePath );
+            quint64 newGtfsDatabaseSize = databaseInfo.size();
             if ( gtfsDatabaseSize != newGtfsDatabaseSize ) {
                 gtfsDatabaseSize = newGtfsDatabaseSize;
+                gtfsDatabaseModifiedTime = databaseInfo.lastModified();
                 q->emit gtfsDatabaseSizeChanged( newGtfsDatabaseSize );
             }
             q->emit gtfsDatabasePathChanged( databasePath );
@@ -384,22 +388,43 @@ public:
         KConfigGroup group = config.group( data()->id() );
         KConfigGroup gtfsGroup = group.group( "gtfs" );
 
+        Project::GtfsDatabaseState state;
         if ( !GeneralTransitFeedDatabase::initDatabase(data()->id(), &gtfsDatabaseErrorString) ) {
             kWarning() << "Error initializing the database" << gtfsDatabaseErrorString;
-            setGtfsDatabaseState( Project::GtfsDatabaseError );
+            state = Project::GtfsDatabaseError;
+        } else if ( gtfsGroup.readEntry("feedImportFinished", false) ) {
+            state = Project::GtfsDatabaseImportFinished;
         } else {
-            if ( gtfsGroup.readEntry("feedImportFinished", false) ) {
-                setGtfsDatabaseState( Project::GtfsDatabaseImportFinished );
-            } else {
-                setGtfsDatabaseState( Project::GtfsDatabaseImportPending );
-            }
+            state = Project::GtfsDatabaseImportPending;
         }
 
         const QString feedModifiedTimeString =
                 gtfsGroup.readEntry( "feedModifiedTime", QString() );
-        kDebug() << "TEST" << feedModifiedTimeString;
         gtfsFeedModifiedTime = QDateTime::fromString( feedModifiedTimeString, Qt::ISODate );
         gtfsFeedSize = gtfsGroup.readEntry( "feedSizeInBytes", 0 );
+
+        // Update size/modified time of the GTFS database
+        if ( gtfsDatabaseSize <= 0 || !gtfsDatabaseModifiedTime.isValid() ) {
+            // Update GTFS database size/last modified time
+            const QString databasePath = GeneralTransitFeedDatabase::databasePath( data()->id() );
+            const QFileInfo databaseInfo( databasePath );
+            quint64 newGtfsDatabaseSize = databaseInfo.size();
+            if ( gtfsDatabaseSize != newGtfsDatabaseSize ) {
+                gtfsDatabaseSize = newGtfsDatabaseSize;
+                gtfsDatabaseModifiedTime = databaseInfo.lastModified();
+                q->emit gtfsDatabaseSizeChanged( newGtfsDatabaseSize );
+            }
+        }
+
+        // Check if a new version is available
+        if ( state == Project::GtfsDatabaseImportFinished &&
+             gtfsDatabaseModifiedTime.isValid() &&
+             gtfsFeedModifiedTime > gtfsDatabaseModifiedTime )
+        {
+            state = Project::GtfsDatabaseUpdateAvailable;
+        }
+        setGtfsDatabaseState( state );
+
         if ( !calledByFinishedUpdateInfoJob && gtfsFeedSize <= 0 ) {
             Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
             Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
@@ -1017,8 +1042,11 @@ public:
         case Project::ImportGtfsFeed:
             return gtfsDatabaseState == Project::GtfsDatabaseError ||
                    gtfsDatabaseState == Project::GtfsDatabaseImportPending;
+        case Project::UpdateGtfsDatabase:
+            return gtfsDatabaseState == Project::GtfsDatabaseUpdateAvailable;
         case Project::DeleteGtfsDatabase:
-            return gtfsDatabaseState == Project::GtfsDatabaseImportFinished;
+            return gtfsDatabaseState == Project::GtfsDatabaseImportFinished ||
+                   gtfsDatabaseState == Project::GtfsDatabaseUpdateAvailable;
 #endif
 
         case Project::ClearTestResults:
@@ -2314,6 +2342,7 @@ public:
     int gtfsFeedImportProgress;
     QString gtfsFeedImportInfoMessage;
     QDateTime gtfsFeedModifiedTime;
+    QDateTime gtfsDatabaseModifiedTime;
     quint64 gtfsFeedSize;
     quint64 gtfsDatabaseSize;
     QString gtfsDatabaseErrorString;
@@ -2736,7 +2765,9 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
     case ShowGtfsDatabase:
         return "project_show_gtfs_database";
     case Project::ImportGtfsFeed:
-        return "project_import_gtfs_database";
+        return "project_import_gtfs_feed";
+    case Project::UpdateGtfsDatabase:
+        return "project_update_gtfs_database";
     case Project::DeleteGtfsDatabase:
         return "project_delete_gtfs_database";
 #endif
@@ -2907,9 +2938,10 @@ QPointer< KActionMenu > Project::gtfsSubMenuAction( QWidget *parent )
     QPointer<KActionMenu> gtfsMenuAction( new KActionMenu(KIcon("application-zip"),
                                           i18nc("@action", "GTFS"), parent) );
     gtfsMenuAction->setObjectName( "debuggerMenuAction" );
-    gtfsMenuAction->addAction( projectAction(ShowGtfsDatabase)  );
+    gtfsMenuAction->addAction( projectAction(ShowGtfsDatabase) );
     gtfsMenuAction->addSeparator();
-    gtfsMenuAction->addAction( projectAction(ImportGtfsFeed)  );
+    gtfsMenuAction->addAction( projectAction(ImportGtfsFeed) );
+    gtfsMenuAction->addAction( projectAction(UpdateGtfsDatabase) );
     gtfsMenuAction->addAction( projectAction(DeleteGtfsDatabase) );
     return gtfsMenuAction;
 }
@@ -3082,6 +3114,10 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
         break;
     case Project::ImportGtfsFeed:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(importGtfsFeed()),
+                                 flags | ProjectPrivate::AutoUpdateEnabledState );
+        break;
+    case Project::UpdateGtfsDatabase:
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(updateGtfsDatabase()),
                                  flags | ProjectPrivate::AutoUpdateEnabledState );
         break;
     case Project::DeleteGtfsDatabase:
@@ -3268,11 +3304,13 @@ QString Project::projectActionText( Project::ProjectAction actionType, const QVa
 #endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     case ShowGtfsDatabase:
-        return i18nc("@action", "Open &GTFS Database");
+        return i18nc("@action", "Open GTFS &Database");
     case Project::ImportGtfsFeed:
-        return i18nc("@action", "Import &GTFS Feed");
+        return i18nc("@action", "&Import GTFS Feed");
+    case Project::UpdateGtfsDatabase:
+        return i18nc("@action", "&Update GTFS Database");
     case Project::DeleteGtfsDatabase:
-        return i18nc("@action", "Delete &GTFS Database");
+        return i18nc("@action", "&Delete GTFS Database");
 #endif
     case ShowProjectSource:
         return i18nc("@action", "Open Project &Source");
@@ -3427,6 +3465,11 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
     case ImportGtfsFeed:
         action = new KAction( KIcon("document-import"), text, parent );
         action->setToolTip( i18nc("@info:tooltip", "Downloads the GTFS feed and imports it into the GTFS database.") );
+        break;
+    case UpdateGtfsDatabase:
+        action = new KAction( KIcon("view-refresh"), text, parent );
+        action->setToolTip( i18nc("@info:tooltip", "Updates the GTFS database by downloading and "
+                                  "importing a new version of the GTFS feed.") );
         break;
     case DeleteGtfsDatabase:
         action = new KAction( KIcon("edit-delete"), text, parent );
@@ -3870,6 +3913,7 @@ Project::ProjectActionGroup Project::actionGroupFromType( Project::ProjectAction
 
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     case ImportGtfsFeed:
+    case UpdateGtfsDatabase:
     case DeleteGtfsDatabase:
         return GtfsDatabaseActionGroup;
 #endif
@@ -3925,7 +3969,7 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
         break;
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     case GtfsDatabaseActionGroup:
-        actionTypes << ImportGtfsFeed << DeleteGtfsDatabase;
+        actionTypes << ImportGtfsFeed << UpdateGtfsDatabase << DeleteGtfsDatabase;
         break;
 #endif
     case InvalidProjectActionGroup:
@@ -3986,6 +4030,17 @@ QDateTime Project::gtfsFeedLastModified() const
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     QMutexLocker locker( d->mutex );
     return d->gtfsFeedModifiedTime;
+#else
+    return 0;
+#endif
+}
+
+QDateTime Project::gtfsDatabaseLastModified() const
+{
+    Q_D( const Project );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    QMutexLocker locker( d->mutex );
+    return d->gtfsDatabaseModifiedTime;
 #else
     return 0;
 #endif
@@ -4064,6 +4119,35 @@ void Project::importGtfsFeed()
     Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
     Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
     KConfigGroup op = gtfsService->operationDescription("importGtfsFeed");
+    op.writeEntry( "serviceProviderId", d->data()->id() );
+    Plasma::ServiceJob *importJob = gtfsService->startOperationCall( op );
+    connect( importJob, SIGNAL(result(KJob*)), this, SLOT(gtfsDatabaseImportFinished(KJob*)) );
+    connect( importJob, SIGNAL(percent(KJob*,ulong)),
+             this, SLOT(gtfsDatabaseImportProgress(KJob*,ulong)) );
+    connect( importJob, SIGNAL(infoMessage(KJob*,QString,QString)),
+             this, SLOT(gtfsDatabaseImportInfoMessage(KJob*,QString,QString)) );
+    connect( importJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
+#endif
+}
+
+void Project::updateGtfsDatabase()
+{
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    Q_D( Project );
+    if ( d->provider->type() != Enums::GtfsProvider ) {
+        return;
+    }
+
+    d->updateGtfsDatabaseState();
+    if ( d->gtfsDatabaseState == GtfsDatabaseError ) {
+        kWarning() << "Cannot update GTFS feed" << d->gtfsDatabaseErrorString;
+        return;
+    }
+
+    d->setGtfsDatabaseState( GtfsDatabaseImportRunning );
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
+    KConfigGroup op = gtfsService->operationDescription("updateGtfsFeed");
     op.writeEntry( "serviceProviderId", d->data()->id() );
     Plasma::ServiceJob *importJob = gtfsService->startOperationCall( op );
     connect( importJob, SIGNAL(result(KJob*)), this, SLOT(gtfsDatabaseImportFinished(KJob*)) );

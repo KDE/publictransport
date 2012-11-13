@@ -139,6 +139,7 @@ class Project : public QObject {
     Q_PROPERTY( int gtfsFeedImportProgress READ gtfsFeedImportProgress NOTIFY gtfsFeedImportProgressChanged )
     Q_PROPERTY( QString gtfsFeedImportInfoMessage READ gtfsFeedImportInfoMessage NOTIFY gtfsFeedImportInfoMessageChanged )
     Q_PROPERTY( QDateTime gtfsFeedLastModified READ gtfsFeedLastModified NOTIFY gtfsFeedSizeChanged ) // Changes with the size
+    Q_PROPERTY( QDateTime gtfsDatabaseLastModified READ gtfsDatabaseLastModified NOTIFY gtfsDatabaseSizeChanged ) // Changes with the size
     Q_PROPERTY( quint64 gtfsFeedSize READ gtfsFeedSize NOTIFY gtfsFeedSizeChanged )
     Q_PROPERTY( QString gtfsFeedSizeString READ gtfsFeedSizeString NOTIFY gtfsFeedSizeChanged )
     Q_PROPERTY( quint64 gtfsDatabaseSize READ gtfsDatabaseSize NOTIFY gtfsDatabaseSizeChanged )
@@ -208,6 +209,8 @@ public:
                 * into the GTFS database. */
         GtfsDatabaseImportFinished, /**< The GTFS feed was successfully downloaded and imported
                 * into the GTFS database. */
+        GtfsDatabaseUpdateAvailable, /**< Like GtfsDatabaseImportFinished, but a new version
+                * of the GTFS feed is available. */
         GtfsDatabaseError /**< There was an error while importing the GTFS database. */
     };
 
@@ -283,6 +286,8 @@ public:
 
 #ifdef BUILD_PROVIDER_TYPE_GTFS
         ImportGtfsFeed, /**< Download the GTFS feed and import it to the GTFS database. */
+        UpdateGtfsDatabase, /**< Update the GTFS database by importing a new version
+                * of the GTFS feed. */
         DeleteGtfsDatabase, /**< Delete an existing GTFS database. */
 #endif
 
@@ -816,6 +821,9 @@ public:
     /** @brief Get the last modified time of the GTFS feed. */
     Q_INVOKABLE QDateTime gtfsFeedLastModified() const;
 
+    /** @brief Get the last modified time of the GTFS database. */
+    Q_INVOKABLE QDateTime gtfsDatabaseLastModified() const;
+
     /** @brief The size in bytes of the remote GTFS feed. */
     Q_INVOKABLE quint64 gtfsFeedSize() const;
 
@@ -1061,6 +1069,9 @@ public slots:
 
     /** @brief Download the GTFS feed and import it to the GTFS database. */
     void importGtfsFeed();
+
+    /** @brief Update the GTFS database by importing a new version of the GTFS feed. */
+    void updateGtfsDatabase();
 
     /** @brief Delete an existing GTFS database. */
     void deleteGtfsDatabase();

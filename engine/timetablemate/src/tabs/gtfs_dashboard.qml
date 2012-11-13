@@ -106,6 +106,8 @@ Item { id: root
                         switch ( project.gtfsDatabaseState ) {
                         case Project.GtfsDatabaseImportFinished:
                             return i18nc("@info", "GTFS feed successfully imported");
+                        case Project.GtfsDatabaseUpdateAvailable:
+                            return i18nc("@info", "GTFS feed successfully imported, update available");
                         case Project.GtfsDatabaseImportRunning:
                             return i18nc("@info %1 is a translated info message of the import job, " +
                                          "%2 is the percentage", "%1, %2% finished",
@@ -146,6 +148,7 @@ Item { id: root
             move: Transition { NumberAnimation { properties: "x,y" } }
 
             ActionButton { action: project.projectAction(Project.ImportGtfsFeed) }
+            ActionButton { action: project.projectAction(Project.UpdateGtfsDatabase) }
             ActionButton { action: project.projectAction(Project.DeleteGtfsDatabase) }
         }
         PlasmaCore.SvgItem { width: titleBar.width; height: 20;
@@ -182,19 +185,38 @@ Item { id: root
         // Show the path of the GTFS database
         Text { id: lblDatabasePath; text: i18nc("@label", "GTFS Database Path:");
             width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true
-            visible: project.gtfsDatabaseState == Project.GtfsDatabaseImportFinished }
+            visible: project.gtfsDatabaseState == Project.GtfsDatabaseImportFinished ||
+                     project.gtfsDatabaseState == Project.GtfsDatabaseUpdateAvailable
+        }
         Text { id: databasePath; text: project.gtfsDatabasePath
             width: parent.fieldWidth; wrapMode: Text.Wrap
-            visible: project.gtfsDatabaseState == Project.GtfsDatabaseImportFinished
+            visible: project.gtfsDatabaseState == Project.GtfsDatabaseImportFinished ||
+                     project.gtfsDatabaseState == Project.GtfsDatabaseUpdateAvailable
+        }
+
+        // Show the GTFS database last modified time
+        Text { id: lblDatabaseLastModified; text: i18nc("@label", "GTFS Database Last Modified:");
+            width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true
+            visible: project.gtfsDatabaseState == Project.GtfsDatabaseImportFinished ||
+                     project.gtfsDatabaseState == Project.GtfsDatabaseUpdateAvailable
+        }
+        Text { id: databaseLastModified
+            text: project.gtfsDatabaseLastModified.toString()
+            width: parent.fieldWidth; wrapMode: Text.Wrap
+            visible: project.gtfsDatabaseState == Project.GtfsDatabaseImportFinished ||
+                     project.gtfsDatabaseState == Project.GtfsDatabaseUpdateAvailable
         }
 
         // Show the GTFS database size
         Text { id: lblDatabaseSize; text: i18nc("@label", "GTFS Database Size (local):");
             width: parent.labelWidth; wrapMode: Text.WordWrap; font.bold: true
-            visible: project.gtfsDatabaseState == Project.GtfsDatabaseImportFinished }
+            visible: project.gtfsDatabaseState == Project.GtfsDatabaseImportFinished ||
+                     project.gtfsDatabaseState == Project.GtfsDatabaseUpdateAvailable
+        }
         Text { id: databaseSize; text: project.gtfsDatabaseSizeString
             width: parent.fieldWidth; wrapMode: Text.Wrap
-            visible: project.gtfsDatabaseState == Project.GtfsDatabaseImportFinished
+            visible: project.gtfsDatabaseState == Project.GtfsDatabaseImportFinished ||
+                     project.gtfsDatabaseState == Project.GtfsDatabaseUpdateAvailable
         }
     } // container
 
