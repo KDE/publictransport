@@ -292,6 +292,7 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
 
 void ImportGtfsToDatabaseJob::speed( KJob *job, ulong speed )
 {
+    Q_UNUSED( job );
     emit infoMessage( this, i18nc("@info/plain %1 is the formatted download amount per second",
                                   "Downloading GTFS feed with %1/s",
                                   KGlobal::locale()->formatByteSize(speed)) );

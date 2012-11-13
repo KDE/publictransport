@@ -290,7 +290,7 @@ bool Global::checkTimetableInformation( Enums::TimetableInformation info, const 
             return false;
         } else {
             bool ok;
-            qreal real = value.toReal( &ok );
+            (void) value.toReal( &ok );
             return ok;
         }
     case Enums::Delay:

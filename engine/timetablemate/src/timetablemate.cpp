@@ -888,6 +888,8 @@ void TimetableMate::activeProjectAboutToChange( Project *project, Project *previ
 
 void TimetableMate::activeProjectChanged( Project *project, Project *previousProject )
 {
+    Q_UNUSED( project );
+    Q_UNUSED( previousProject );
     populateTestMenu();
 }
 

@@ -445,7 +445,8 @@ QList<Enums::ProviderFeature> ServiceProviderGtfs::features() const
     QList<Enums::ProviderFeature> features;
     features << Enums::ProvidesDepartures << Enums::ProvidesArrivals
              << Enums::ProvidesStopSuggestions << Enums::ProvidesRouteInformation
-             << Enums::ProvidesStopID; // TODO << Enums::ProvidesStopPosition;
+             << Enums::ProvidesStopID << Enums::ProvidesStopGeoPosition;
+             // Enums::ProvidesMoreJourneys TODO
 #ifdef BUILD_GTFS_REALTIME
     if ( !m_data->realtimeAlertsUrl().isEmpty() ) {
         features << Enums::ProvidesNews;

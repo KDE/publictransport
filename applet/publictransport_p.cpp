@@ -1237,6 +1237,7 @@ StopDataConnection::StopDataConnection( Plasma::DataEngine *engine, const QStrin
 void StopDataConnection::dataUpdated( const QString &sourceName,
                                       const Plasma::DataEngine::Data &data )
 {
+    Q_UNUSED( sourceName );
     if ( !data.contains("stops") ) {
         kWarning() << "Stop coordinates not found";
     } else {

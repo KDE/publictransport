@@ -1045,12 +1045,6 @@ public slots:
     /** @brief Run the getJourneys() script function and interrupt at breakpoints and executions. */
     void debugGetJourneys();
 
-    /** @brief Download the GTFS feed and import it to the GTFS database. */
-    void importGtfsFeed();
-
-    /** @brief Delete an existing GTFS database. */
-    void deleteGtfsDatabase();
-
     /** @brief Show the main script tab. */
     ScriptTab *showScriptTab( QWidget *parent = 0 );
 
@@ -1060,6 +1054,12 @@ public slots:
 
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     GtfsDatabaseTab *showGtfsDatabaseTab( QWidget *parent = 0 );
+
+    /** @brief Download the GTFS feed and import it to the GTFS database. */
+    void importGtfsFeed();
+
+    /** @brief Delete an existing GTFS database. */
+    void deleteGtfsDatabase();
 #endif // BUILD_PROVIDER_TYPE_GTFS
 
     /** @brief Show the project dashboard tab. */

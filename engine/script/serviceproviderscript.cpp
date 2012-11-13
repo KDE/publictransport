@@ -505,6 +505,9 @@ void ServiceProviderScript::additionDataReady( const TimetableData &data,
         const GlobalTimetableInfo &globalInfo, const AdditionalDataRequest &request,
         bool couldNeedForcedUpdate )
 {
+    Q_UNUSED( features );
+    Q_UNUSED( hints );
+    Q_UNUSED( globalInfo );
     Q_UNUSED( couldNeedForcedUpdate );
     if ( data.isEmpty() ) {
         kDebug() << "The script didn't find any new data" << request.sourceName();

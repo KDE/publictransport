@@ -50,17 +50,12 @@ public:
         DashboardItem, /**< A child of the project item, shows the dashboard of the project. */
         ProjectSourceItem, /**< A child of the project item, represents the project source XML
           document, ie the service provider plugin XML document. */
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         ScriptItem, /**< A child of the project item, represents the script document. */
         IncludedScriptItem, /**< A child of the project item, represents an included script document. */
         CodeItem, /**< A child of the script item, represents a code node. */
-#endif
-#ifdef BUILD_PROVIDER_TYPE_GTFS
         GtfsDatabaseItem, /**< A child of the project item, shows the GTFS database of the provider. */
-#endif
         WebItem, /**< A child of the project item, represents the web view. */
         PlasmaPreviewItem /**< A child of the project item, represents the plasma preview. */
-
     };
 
     virtual ~ProjectModelItem();
@@ -164,7 +159,7 @@ protected:
 private:
     QString m_filePath;
 };
-#endif
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
 /**
  * @brief A model for TimetableMate projects.

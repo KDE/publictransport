@@ -33,6 +33,7 @@
 // Public Transport engine includes
 #include <engine/serviceprovider.h>
 #include <engine/serviceproviderdata.h>
+#include <serviceproviderglobal.h>
 
 // KDE includes
 #include <KLocalizedString>
@@ -188,17 +189,13 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                 return KIcon("dashboard-show");
             case ProjectModelItem::ProjectSourceItem:
                 return KIcon("application-x-publictransport-serviceprovider");
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
             case ProjectModelItem::ScriptItem:
             case ProjectModelItem::IncludedScriptItem:
                 return project->scriptIcon();
             case ProjectModelItem::CodeItem:
                 return KIcon("code-function");
-#endif
-#ifdef BUILD_PROVIDER_TYPE_GTFS
             case ProjectModelItem::GtfsDatabaseItem:
                 return KIcon("server-database");
-#endif
             case ProjectModelItem::PlasmaPreviewItem:
                 return KIcon("plasma");
             case ProjectModelItem::WebItem:
@@ -219,11 +216,18 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
             case ProjectModelItem::IncludedScriptItem:
                 return i18nc("@info:tooltip", "View/edit included script <filename>%1</filename>.",
                              dynamic_cast<ProjectModelIncludedScriptItem*>(projectItem)->fileName() );
+#else
+            case ProjectModelItem::ScriptItem:
+            case ProjectModelItem::IncludedScriptItem:
+                return QString();
 #endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
             case ProjectModelItem::GtfsDatabaseItem:
                 return i18nc("@info:tooltip", "Shows the GTFS database and allows to start it's "
                              "import from the GTFS feed.");
+#else
+            case ProjectModelItem::GtfsDatabaseItem:
+                return QString();
 #endif
             case ProjectModelItem::ProjectSourceItem:
                 return i18nc("@info:tooltip", "Edit project settings directly in the XML "
@@ -276,10 +280,12 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
             } break;
 
             case ProjectModelItem::CodeItem:
+#else
+            case ProjectModelItem::ScriptItem:
+            case ProjectModelItem::IncludedScriptItem:
+            case ProjectModelItem::CodeItem:
 #endif
-#ifdef BUILD_PROVIDER_TYPE_GTFS
-            case ProjectModelItem::GtfsDatabaseItem: // TODO
-#endif
+            case ProjectModelItem::GtfsDatabaseItem:
             case ProjectModelItem::PlasmaPreviewItem:
             case ProjectModelItem::WebItem:
             case ProjectModelItem::DashboardItem:
@@ -342,14 +348,10 @@ Qt::ItemFlags ProjectModel::flags( const QModelIndex &index ) const
         case ProjectModelItem::DashboardItem:
         case ProjectModelItem::ProjectSourceItem:
         case ProjectModelItem::PlasmaPreviewItem:
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case ProjectModelItem::ScriptItem:
         case ProjectModelItem::IncludedScriptItem:
         case ProjectModelItem::CodeItem:
-#endif
-#ifdef BUILD_PROVIDER_TYPE_GTFS
         case ProjectModelItem::GtfsDatabaseItem:
-#endif
             return Qt::ItemIsSelectable | Qt::ItemIsEnabled;
         case ProjectModelItem::WebItem:
             if ( project->provider()->data()->url().isEmpty() ) {
@@ -471,7 +473,11 @@ void ProjectModel::appendProject( Project *project )
     switch ( project->data()->type() ) {
     case Enums::ScriptedProvider:
     case Enums::GtfsProvider:
-        ++itemNumber;
+        // If support for the projects provider type was build into the engine,
+        // another item will get added
+        if ( ServiceProviderGlobal::isProviderTypeAvailable(project->data()->type()) ) {
+            ++itemNumber;
+        }
         break;
     default:
         break;
@@ -669,7 +675,7 @@ void ProjectModel::insertCodeNodes( ProjectModelItem *scriptItem, bool emitSigna
         endInsertRows();
     }
 }
-#endif
+#endif // BUILD_PROVIDER_TYPE_SCRIPT
 
 void ProjectModel::scriptSaved()
 {
@@ -712,17 +718,13 @@ TabType ProjectModelItem::tabTypeFromProjectItemType( ProjectModelItem::Type pro
         return Tabs::PlasmaPreview;
     case WebItem:
         return Tabs::Web;
-#ifdef BUILD_PROVIDER_TYPE_GTFS
     case GtfsDatabaseItem:
         return Tabs::GtfsDatabase;
-#endif
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case ScriptItem:
     case IncludedScriptItem:
         return Tabs::Script;
 
     case CodeItem:
-#endif
     case ProjectItem:
     default:
         return Tabs::NoTab;
@@ -736,14 +738,10 @@ ProjectModelItem::Type ProjectModelItem::projectItemTypeFromTabType( TabType tab
         return DashboardItem;
     case Tabs::ProjectSource:
         return ProjectSourceItem;
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Tabs::Script:
         return ScriptItem;
-#endif
-#ifdef BUILD_PROVIDER_TYPE_GTFS
     case Tabs::GtfsDatabase:
         return GtfsDatabaseItem;
-#endif
     case Tabs::PlasmaPreview:
         return PlasmaPreviewItem;
     case Tabs::Web:

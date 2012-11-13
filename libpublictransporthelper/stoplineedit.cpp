@@ -392,6 +392,8 @@ void StopLineEdit::importGtfsFeed()
 
 void StopLineEdit::importInfoMessage( KJob *job, const QString &plain, const QString &rich )
 {
+    Q_UNUSED( job );
+    Q_UNUSED( rich );
     Q_D( StopLineEdit );
     d->infoMessage = plain;
     update();
@@ -400,11 +402,9 @@ void StopLineEdit::importInfoMessage( KJob *job, const QString &plain, const QSt
 bool StopLineEdit::cancelImport()
 {
     Q_D( StopLineEdit );
-
     if ( d->importJob ) {
         return d->importJob->kill( KJob::EmitResult );
     }
-
     return false;
 }
 
@@ -712,6 +712,7 @@ bool StopLineEdit::event( QEvent *ev )
 
 void StopLineEdit::importProgress( KJob *job, ulong percent )
 {
+    Q_UNUSED( job );
     Q_D( StopLineEdit );
     d->progress = percent / 100.0;
     setToolTip( i18nc("@info:tooltip Tooltip for StopLineEdits, ie. shown in the "
@@ -726,7 +727,6 @@ void StopLineEdit::importProgress( KJob *job, ulong percent )
 void StopLineEdit::importFinished( KJob *job )
 {
     Q_D( StopLineEdit );
-
     kDebug() << "Finished GTFS feed import" << job->errorString();
     d->importJob = 0;
     const bool hasError = job->error() < 0 && job->error() != -2; // -2 => Not a GTFS provider

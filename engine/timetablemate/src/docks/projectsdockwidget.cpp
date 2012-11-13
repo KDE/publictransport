@@ -183,11 +183,11 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
         KMenu *projectMenu = new KMenu( this );
         const TabType tabType = ProjectModelItem::tabTypeFromProjectItemType( projectItem->type() );
         QAction *openInTabAction = 0;
-        QAction *showCodeNodeAction = 0;
         QAction *closeTabAction = 0;
         QAction *documentSaveAction = 0;
         ProjectSourceTab *projectSourceTab = project->projectSourceTab();
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        QAction *showCodeNodeAction = 0;
         ProjectModelCodeItem *codeItem = dynamic_cast< ProjectModelCodeItem* >( projectItem );
         ProjectModelIncludedScriptItem *includedScriptItem =
                 dynamic_cast< ProjectModelIncludedScriptItem* >( projectItem );

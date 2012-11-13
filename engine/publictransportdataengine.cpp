@@ -954,6 +954,9 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                                                     QTime::fromString(parameterValue, "hh:mm")) );
                 } else if ( parameterName == QLatin1String("datetime") ) {
                     request->setDateTime( QDateTime::fromString(parameterValue) );
+                    if ( !request->dateTime().isValid() ) {
+                        request->setDateTime( QDateTime::fromString(parameterValue, Qt::ISODate) );
+                    }
                 } else if ( parameterName == QLatin1String("maxcount") ) {
                     bool ok;
                     request->setMaxCount( parameterValue.toInt(&ok) );
@@ -1105,6 +1108,9 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
         const GlobalTimetableInfo &globalInfo, const DepartureRequest &request,
         bool deleteDepartureInfos, bool isDepartureData )
 {
+    Q_UNUSED( requestUrl );
+    Q_UNUSED( provider );
+    Q_UNUSED( deleteDepartureInfos );
     const QString sourceName = request.sourceName();
     DEBUG_ENGINE_JOBS( items.count() << (isDepartureData ? "departures" : "arrivals")
                        << "received" << sourceName );
@@ -1228,6 +1234,9 @@ void PublicTransportEngine::updateTimeout()
 void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
         const QUrl &requestUrl, const TimetableData &data, const AdditionalDataRequest &request )
 {
+    Q_UNUSED( provider );
+    Q_UNUSED( requestUrl );
+
     // Check if the destination data source exists
     const QString nonAmbiguousName = disambiguateSourceName( request.sourceName() );
     if ( !m_dataSources.contains(nonAmbiguousName) ) {
@@ -1355,6 +1364,7 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
         bool deleteJourneyInfos )
 {
     Q_UNUSED( provider );
+    Q_UNUSED( deleteJourneyInfos );
     const QString sourceName = request.sourceName();
     DEBUG_ENGINE_JOBS( journeys.count() << "journeys received" << sourceName );
 
@@ -1366,7 +1376,10 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
     }
     TimetableDataSource *dataSource =
             dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
-    Q_ASSERT( dataSource );
+    if ( !dataSource ) {
+        kWarning() << "Data source already deleted" << nonAmbiguousName;
+        return;
+    }
     dataSource->data.clear();
     QVariantList journeysData;
     foreach( const JourneyInfoPtr &journeyInfo, journeys ) {

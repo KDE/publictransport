@@ -275,9 +275,10 @@ public:
     bool initialize()
     {
         Q_ASSERT( state == Project::Uninitialized );
-        Q_Q( Project );
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
+        Q_Q( Project );
+
         // Connect to signals of the debugger
         q->connect( debugger, SIGNAL(interrupted(int,QString,QDateTime)),
                     q, SLOT(debugInterrupted(int,QString,QDateTime)) );
@@ -2216,6 +2217,8 @@ public:
 
         return true;
 #else
+        Q_UNUSED( test );
+        Q_UNUSED( features );
         return false;
 #endif
     };
@@ -2265,7 +2268,6 @@ public:
 
     void testFinished( TestModel::Test test )
     {
-    #ifdef BUILD_PROVIDER_TYPE_SCRIPT // TODO Remove #ifdef?
         Q_Q( Project );
         if ( finishedTests.contains(test) ) {
             // Test already marked as finished
@@ -2275,8 +2277,12 @@ public:
         finishedTests << test;
         q->emit testProgress( finishedTests, startedTests );
 
-        if ( !debugger->isRunning() && finishedTests.count() >= startedTests.count() &&
-             pendingTests.isEmpty() && dependendTests.isEmpty() )
+        if ( finishedTests.count() >= startedTests.count() &&
+             pendingTests.isEmpty() && dependendTests.isEmpty()
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+             && !debugger->isRunning()
+#endif
+           )
         {
             // The last pending test has finished
             DEBUGGER_JOB_SYNCHRONIZATION("The last pending test has finished" << data()->id());
@@ -2284,7 +2290,6 @@ public:
         } else {
             startTests( takeStartableDependentTests(test) );
         }
-    #endif
     };
 
     Project::State state;
@@ -2360,7 +2365,11 @@ Project::Project( const WeaverInterfacePointer &weaver, QWidget *parent )
     Q_D( Project );
     QMutexLocker locker( d->mutex );
     qRegisterMetaType< ProjectActionData >( "ProjectActionData" );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    // Load publictransport engine only if GTFS is available (but if it is load it also for
+    // scripted providers), used to access the GTFS service of the engine
     Plasma::DataEngineManager::self()->loadEngine("publictransport");
+#endif
     d->initialize();
 }
 
@@ -2371,7 +2380,10 @@ Project::~Project()
         kWarning() << "Destroying project with modifications";
     }
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    // Unload publictransport engine again
     Plasma::DataEngineManager::self()->unloadEngine("publictransport");
+#endif
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     disconnect( d->debugger, 0, this, 0 );
@@ -3927,63 +3939,99 @@ Project::GtfsDatabaseState Project::gtfsDatabaseState() const
 {
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     return d->gtfsDatabaseState;
+#else
+    return InitializingGtfsDatabase;
+#endif
 }
 
 QString Project::gtfsDatabaseErrorString() const
 {
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     return d->gtfsDatabaseErrorString;
+#else
+    return QString();
+#endif
 }
 
 int Project::gtfsFeedImportProgress() const
 {
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     return d->gtfsFeedImportProgress;
+#else
+    return 0;
+#endif
 }
 
 QString Project::gtfsFeedImportInfoMessage() const
 {
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     return d->gtfsFeedImportInfoMessage;
+#else
+    return QString();
+#endif
 }
 
 quint64 Project::gtfsFeedSize() const
 {
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     return d->gtfsFeedSize;
+#else
+    return 0;
+#endif
 }
 
 QString Project::gtfsFeedSizeString() const
 {
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     return KGlobal::locale()->formatByteSize( d->gtfsFeedSize );
+#else
+    return QString();
+#endif
 }
 
 quint64 Project::gtfsDatabaseSize() const
 {
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     return d->gtfsDatabaseSize;
+#else
+    return 0;
+#endif
 }
 
 QString Project::gtfsDatabaseSizeString() const
 {
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     return KGlobal::locale()->formatByteSize( d->gtfsDatabaseSize );
+#else
+    return QString();
+#endif
 }
 
 QString Project::gtfsDatabasePath() const
 {
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     return GeneralTransitFeedDatabase::databasePath( d->data()->id() );
+#else
+    return QString();
+#endif
 }
 
 void Project::importGtfsFeed()
@@ -4082,6 +4130,7 @@ void Project::gtfsDatabaseImportInfoMessage( KJob *importJob, const QString &pla
                                              const QString &rich )
 {
     Q_UNUSED( importJob );
+    Q_UNUSED( rich );
     Q_D( Project );
     d->gtfsFeedImportInfoMessage = plain;
     emit gtfsFeedImportInfoMessageChanged( d->gtfsFeedImportInfoMessage );
@@ -4254,11 +4303,12 @@ TestModel::Test Project::testFromObjectName( const QString &objectName )
         return TestModel::JourneyTest;
     } else if ( objectName == QLatin1String("TEST_FEATURES") ) {
         return TestModel::FeaturesTest;
-    } else
-#endif
-    {
-        return TestModel::InvalidTest;
     }
+#else
+    Q_UNUSED( objectName );
+#endif
+
+    return TestModel::InvalidTest;
 }
 
 void Project::testJobStarted( TestModel::Test test, JobType type, const QString &useCase )
@@ -4318,6 +4368,10 @@ void Project::testJobDone( TestModel::Test test, JobType type, const QString &us
     }
 
     d->testFinished( test );
+#else
+    // Test jobs are (currently) only used by script execution tests
+    Q_UNUSED( test );
+    Q_UNUSED( result );
 #endif
 }
 
