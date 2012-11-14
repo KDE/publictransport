@@ -71,28 +71,38 @@ public:
      * @see sourceTypeFromName
      **/
     enum SourceType {
-        InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName, if
-                * the source name is invalid. */
+        InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName,
+                * if the source name is invalid. */
 
         // Data sources providing information about the engine, available providers
         ServiceProviderSource = 1, /**< The source contains information about available
-                * service providers for a given country. */
+                * service providers for a given country. See also @ref usage_serviceproviders_sec. */
         ServiceProvidersSource = 2, /**< The source contains information about available
-                * service providers. */
+                * service providers. See also @ref usage_serviceproviders_sec. */
         ErroneousServiceProvidersSource = 3, /**< The source contains a list of erroneous
                 * service providers. */
         LocationsSource = 4, /**< The source contains information about locations
                 * for which supported service providers exist. */
+        VehicleTypesSource = 5, /**< The source contains information about all available
+                * vehicle types. They are stored by integer keys, matching the values of
+                * the Enums::VehicleType (engine) and PublicTransport::VehicleType
+                * (libpublictransporthelper) enumerations. The information stored stored in
+                * this data source can also be retrieved from PublicTransport::VehicleType
+                * using libpublictransporthelper. See also @ref usage_vehicletypes_sec.  */
 
         // Data sources providing timetable data
-        DeparturesSource = 10, /**< The source contains timetable data for departures. */
-        ArrivalsSource, /**< The source contains timetable data for arrivals. */
-        StopsSource, /**< The source contains a list of stop suggestions. */
-        JourneysSource, /**< The source contains information about journeys. */
+        DeparturesSource = 10, /**< The source contains timetable data for departures.
+                * See also @ref usage_departures_sec. */
+        ArrivalsSource, /**< The source contains timetable data for arrivals.
+                * See also @ref usage_departures_sec. */
+        StopsSource, /**< The source contains a list of stop suggestions.
+                * See also @ref usage_stopList_sec. */
+        JourneysSource, /**< The source contains information about journeys.
+                * See also @ref usage_journeys_sec. */
         JourneysDepSource, /**< The source contains information about journeys,
-                * that depart at the given date and time. */
+                * that depart at the given date and time. See also @ref usage_journeys_sec. */
         JourneysArrSource /**< The source contains information about journeys,
-                * that arrive at the given date and time. */
+                * that arrive at the given date and time. See also @ref usage_journeys_sec. */
     };
 
     /** @brief Every data engine needs a constructor with these arguments. */
@@ -379,7 +389,7 @@ protected:
      **/
     bool updateSourceEvent( const QString &name );
 
-    bool requestOrUpdateSourceEvent( const QString &name );
+    bool requestOrUpdateSourceEvent( const QString &name, bool update = false );
 
     /**
      * @brief Updates the ServiceProviders data source.
@@ -437,6 +447,9 @@ protected:
      * @return True, if the data source could be updated successfully. False, otherwise.
      **/
     bool updateTimetableDataSource( const SourceRequestData &data );
+
+    /** @brief Fill the VehicleTypes data source */
+    void initVehicleTypesSource();
 
     /**
      * @brief Wheather or not the data source with the given @p name is up to date.
@@ -626,6 +639,7 @@ You might need to run kbuildsycoca4 in order to get the .desktop file recognized
 
 @par Sections
 <ul><li>@ref usage_serviceproviders_sec </li>
+<ul><li>@ref usage_vehicletypes_sec </li>
     <li>@ref usage_departures_sec </li>
     <ul><li>@ref usage_departures_datastructure_sec </li></ul>
     <li>@ref usage_journeys_sec </li>
@@ -738,6 +752,41 @@ to get information about the default service provider for the given country or a
 provider with the given ID.
 
 <br />
+@section usage_vehicletypes_sec Receiving Information About Available Vehicle Types
+Information about all available vehicle types can be retrieved from the data source
+<em>"VehicleTypes"</em>. It stores vehicle type information by vehicle type ID, which matches
+the values of the Enums::VehicleType (engine) and PublicTransport::VehicleType
+(libpublictransporthelper) enumerations. The information stored in this data source can also be
+retrieved from PublicTransport::VehicleType using libpublictransporthelper, ie. the static
+functions of PublicTransport::Global.
+For each vehicle type there are the following key/value pairs:
+<br />
+<table>
+<tr><td><i>id</i></td> <td>QString</td> <td>An untranslated unique string identifying the vehicle
+type. These strings match the names of the Enums::VehicleType enumerables.</td> </tr>
+<tr><td><i>name</i></td> <td>QString</td> <td>The translated name of the vehicle type.</td></tr>
+<tr><td><i>namePlural</i></td> <td>QString</td> <td>Like <i>name</i> but in plural form.</td></tr>
+<tr><td><i>iconName</i></td> <td>QString</td> <td>The name of the icon associated with the
+vehicle type. This name can be used as argument for the QIcon contructor.</td></tr>
+</table>
+<br />
+Here is an example of how to get more information for a specific vehicle type by it's (integer) ID:
+@code
+// This value can be retrieved from eg. a departures data source
+const int vehicleType;
+
+// Query the data engine for information about all available vehicle types
+Plasma::DataEngine::Data allVehicleTypes = dataEngine("publictransport")->query("VehicleTypes");
+
+// Extract the information
+const QVariantHash vehicleData = allVehicleTypes[ QString::number(vehicleType) ].toHash();
+QString id = vehicleData["id"].toString();
+QString name = vehicleData["name"].toString();
+QString namePlural = vehicleData["namePlural"].toString();
+KIcon icon = KIcon( vehicleData["iconName"].toString() );
+@endcode
+
+<br />
 @section usage_departures_sec Receiving Departures or Arrivals
 To get a list of departures/arrivals you need to construct the name of the data source. For
 departures it begins with "Departures", for arrivals it begins with "Arrivals". Next comes a
@@ -842,14 +891,12 @@ example) has the following keys:<br />
 <tr><td><i>TransportLine</i></td> <td>QString</td> <td>The name of the public transport line, e.g. "S1", "6", "1E", "RB 24155".</td></tr>
 <tr><td><i>Target</i></td> <td>QString</td> <td>The name of the target / origin of the public transport line.</td></tr>
 <tr><td><i>DepartureDateTime</i></td> <td>QDateTime</td> <td>The date and time of the departure / arrival.</td></tr>
-<tr><td><i>TypeOfVehicle</i></td> <td>int</td> <td>An int containing the ID of the vehicle type used for the
-departure/arrival. You can cast the ID to VehicleType using "static_cast<VehicleType>( iVehicleType )".</td></tr>
-<tr><td><i>VehicleName</i></td> <td>QString</td> <td>A translated name for the vehicle type used for the
-departure/arrival.</td></tr>
-<tr><td><i>VehicleNamePlural</i></td> <td>QString</td> <td>A translated name for the vehicle type used for the
-departure/arrival, plural version.</td></tr>
-<tr><td><i>VehicleIconName</i></td> <td>QString</td> <td>The name of the icon for the vehicle type used for the
-departure/arrival. Can be used as argument to the KIcon constructor.</td></tr>
+<tr><td><i>TypeOfVehicle</i></td> <td>int</td> <td>An integer containing the ID of the vehicle type
+used for the departure/arrival. When you are using libpublictransporthelper, you can cast this ID to
+PublicTransport::VehicleType and get more information about the vehicle type using the static
+functions of PublicTransport::Global. Alternatively you can use the "VehicleTypes" data source,
+it stores vehicle type information in a hash with vehicle type ID's as keys.
+See also @ref usage_vehicletypes_sec. </td></tr>
 <tr><td><i>Nightline</i></td> <td>bool</td> <td>Wheather or not the public transport line is a night line.</td></tr>
 <tr><td><i>Expressline</i></td> <td>bool</td> <td>Wheather or not the public transport line is an express line.</td></tr>
 <tr><td><i>Platform</i></td> <td>QString</td> <td>The platform from/at which the vehicle departs/arrives.</td></tr>
@@ -925,9 +972,10 @@ public slots:
 
                 // Get vehicle type list
                 QVariantList = journey["TypesOfVehicleInJourney"].toList();
-                QList<VehicleType> vehicleTypes;
-                foreach( QVariant vehicleType, vehicleTypesVariant )
-                vehicleTypes.append( static_cast<VehicleType>(vehicleType.toInt()) );
+                QList< PublicTransport::VehicleType > vehicleTypes;
+                foreach( QVariant vehicleType, vehicleTypesVariant ) {
+                    vehicleTypes.append( static_cast<PublicTransport::VehicleType>(vehicleType.toInt()) );
+                }
 
                 QString target = journey["StartStopName"].toString();
                 QDateTime departure = journey["DepartureDateTime"].toDateTime();
@@ -954,7 +1002,11 @@ The data received from the data engine always contains these keys:<br />
 <br />
 Each journey in the data received from the data engine (journeyData in the code
 example) has the following keys:<br />
-<i>vehicleTypes</i>: A QVariantList containing a list of vehicle types used in the journey. You can cast the list to QList<VehicleType> as seen in the code example (QVariantList).<br />
+<i>vehicleTypes</i>: A QVariantList containing a list of vehicle type ID's (integers) of vehicles
+used in the journey. You can cast the list to QList<PublicTransport::VehicleType> as seen in the
+code example above (QVariantList), if you use libpublictransporthelper. Alternatively the
+"VehicleTypes" data source can be used to get more information about the vehicle types.
+See also @ref usage_vehicletypes_sec. <br />
 <table>
 <tr><td><i>ArrivalDateTime</i></td> <td>QDateTime</td> <td>The date and time of the arrival at the target stop.</td></tr>
 <tr><td><i>DepartureDateTime</i></td> <td>QDateTime</td> <td>The date and time of the departure from the origin stop.</td></tr>
@@ -970,7 +1022,9 @@ example) has the following keys:<br />
 <tr><td><i>RouteTimesDeparture</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of departure times of the journey to it's destination stop. If 'routeStops' and 'routeTimesDeparture' are both set, the latter contains one element less (because the last stop has no departure, only an arrival time). Elements with equal indices are associated (the times at which the vehicle departs from the stops).</td></tr>
 <tr><td><i>RouteTimesArrival</i></td> <td>QList< QTime > (stored as QVariantList)</td> <td>A list of arrival times of the journey to it's destination stop. If 'routeStops' and 'routeTimesArrival' are both set, the latter contains one element less (because the last stop has no departure, only an arrival time). Elements with equal indices are associated (the times at which the vehicle departs from the stops).</td></tr>
 <tr><td><i>RouteExactStops</i></td> <td>int</td> <td>The number of exact route stops. The route stop list isn't complete from the last exact route stop.</td></tr>
-<tr><td><i>RouteTypesOfVehicles</i></td> <td>QList< int > (stored as QVariantList)</td> <td>A list of vehicle types used for each "sub-journey" in the journey. The vehicle types are described by integers (see @ref pageUsage).</td></tr>
+<tr><td><i>RouteTypesOfVehicles</i></td> <td>QList< int > (stored as QVariantList)</td>
+<td>A list of vehicle type ID's (integers) of vehicles used for each "sub-journey" in the journey.
+See the <i>vehicleTypes</i> field or @ref usage_vehicletypes_sec for more information. </td></tr>
 <tr><td><i>RouteTransportLines</i></td> <td>QStringList</td> <td>A list of transport lines used for each "sub-journey" in the journey.</td></tr>
 <tr><td><i>RoutePlatformsDeparture</i></td> <td>QStringList</td> <td>A list of platforms of the departure used for each stop in the journey.</td></tr>
 <tr><td><i>RoutePlatformsArrival</i></td> <td>QStringList</td> <td>A list of platforms of the arrival used for each stop in the journey.</td></tr>

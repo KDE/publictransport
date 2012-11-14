@@ -105,7 +105,8 @@ QStringList PublicTransportEngine::sources() const
     QStringList sources = Plasma::DataEngine::sources();
     sources << sourceTypeKeyword(LocationsSource)
             << sourceTypeKeyword(ServiceProvidersSource)
-            << sourceTypeKeyword(ErroneousServiceProvidersSource);
+            << sourceTypeKeyword(ErroneousServiceProvidersSource)
+            << sourceTypeKeyword(VehicleTypesSource);
     sources.removeDuplicates();
     return sources;
 }
@@ -863,6 +864,8 @@ const QLatin1String PublicTransportEngine::sourceTypeKeyword( SourceType sourceT
         return QLatin1String("ErroneousServiceProviders");
     case LocationsSource:
         return QLatin1String("Locations");
+    case VehicleTypesSource:
+        return QLatin1String("VehicleTypes");
     case DeparturesSource:
         return QLatin1String("Departures");
     case ArrivalsSource:
@@ -893,6 +896,8 @@ PublicTransportEngine::SourceType PublicTransportEngine::sourceTypeFromName(
         return ErroneousServiceProvidersSource;
     } else if ( sourceName.compare(sourceTypeKeyword(LocationsSource), Qt::CaseInsensitive) == 0 ) {
         return LocationsSource;
+    } else if ( sourceName.compare(sourceTypeKeyword(VehicleTypesSource), Qt::CaseInsensitive) == 0 ) {
+        return VehicleTypesSource;
     } else if ( sourceName.startsWith(sourceTypeKeyword(DeparturesSource), Qt::CaseInsensitive) ) {
         return DeparturesSource;
     } else if ( sourceName.startsWith(sourceTypeKeyword(ArrivalsSource), Qt::CaseInsensitive) ) {
@@ -1110,10 +1115,10 @@ bool PublicTransportEngine::sourceRequestEvent( const QString &name )
 
 bool PublicTransportEngine::updateSourceEvent( const QString &name )
 {
-    return requestOrUpdateSourceEvent( name );
+    return requestOrUpdateSourceEvent( name, true );
 }
 
-bool PublicTransportEngine::requestOrUpdateSourceEvent( const QString &name )
+bool PublicTransportEngine::requestOrUpdateSourceEvent( const QString &name, bool update )
 {
     SourceRequestData sourceData( name );
     if ( !sourceData.isValid() ) {
@@ -1141,7 +1146,32 @@ bool PublicTransportEngine::requestOrUpdateSourceEvent( const QString &name )
     default:
         kDebug() << "Source name incorrect" << name;
         return false;
+
+    // This data source never changes, ie. needs no updates
+    case VehicleTypesSource:
+        if ( !update ) {
+            initVehicleTypesSource();
+        }
+        return true;
     }
+}
+
+void PublicTransportEngine::initVehicleTypesSource()
+{
+    QVariantHash vehicleTypes;
+    const int index = Enums::staticMetaObject.indexOfEnumerator("VehicleType");
+    const QMetaEnum enumerator = Enums::staticMetaObject.enumerator( index );
+    // Start at i = 1 to skip Enums::InvalidVehicleType
+    for ( int i = 1; i < enumerator.keyCount(); ++i ) {
+        Enums::VehicleType vehicleType = static_cast< Enums::VehicleType >( enumerator.value(i) );
+        QVariantHash vehicleTypeData;
+        vehicleTypeData.insert( "id", enumerator.key(i) );
+        vehicleTypeData.insert( "name", Global::vehicleTypeToString(vehicleType) );
+        vehicleTypeData.insert( "namePlural", Global::vehicleTypeToString(vehicleType, true) );
+        vehicleTypeData.insert( "iconName", Global::vehicleTypeToIcon(vehicleType) );
+        vehicleTypes.insert( QString::number(enumerator.value(i)), vehicleTypeData );
+    }
+    setData( sourceTypeKeyword(VehicleTypesSource), vehicleTypes );
 }
 
 void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
@@ -1180,11 +1210,6 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
             }
         }
 
-        Enums::VehicleType vehicleType =
-                static_cast< Enums::VehicleType >( departure[Enums::TypeOfVehicle].toInt() );
-        departureData.insert( "VehicleIconName", Global::vehicleTypeToIcon(vehicleType) );
-        departureData.insert( "VehicleName", Global::vehicleTypeToString(vehicleType) );
-        departureData.insert( "VehicleNamePlural", Global::vehicleTypeToString(vehicleType, true) );
         departureData.insert( "Nightline", departureInfo->isNightLine() );
         departureData.insert( "Expressline", departureInfo->isExpressLine() );
 
@@ -1437,9 +1462,6 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
                 journeyData.insert( Global::timetableInformationToString(it.key()), it.value() );
             }
         }
-        journeyData.insert( "VehicleIconNames", journeyInfo->vehicleIconNames() );
-        journeyData.insert( "VehicleNames", journeyInfo->vehicleNames() );
-        journeyData.insert( "VehicleNamesPlural", journeyInfo->vehicleNames( true ) );
 
         journeysData << journeyData;
     }

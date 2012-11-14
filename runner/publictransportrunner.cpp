@@ -467,6 +467,7 @@ void AsyncDataEngineUpdater::processDepartures( const QString &sourceName,
     qreal min = INT_MAX, max = 0;
     int filtered = 0;
 
+    const QVariantHash allVehicleTypes = m_engine->query( "VehicleTypes" );
     QVariantList departuresData = data.contains("departures")
             ? data["departures"].toList() : data["arrivals"].toList();
     kDebug() << departuresData.count() << "departures to be processed";
@@ -476,18 +477,20 @@ void AsyncDataEngineUpdater::processDepartures( const QString &sourceName,
         QList< QTime > routeTimes;
         if ( departureData.contains( "RouteTimes" ) ) {
             QVariantList times = departureData[ "RouteTimes" ].toList();
-            foreach( const QVariant &time, times )
-            routeTimes << time.toTime();
+            foreach( const QVariant &time, times ) {
+                routeTimes << time.toTime();
+            }
         }
         QString operatorName = departureData["Operator"].toString();
         QString line = departureData["TransportLine"].toString();
         QString target = departureData["Target"].toString();
         QDateTime departureTime = departureData["DepartureDateTime"].toDateTime();
-        QString vehicle = departureData["VehicleName"].toString();
-        QString vehicleIconName = departureData["VehicleIconName"].toString();
-        KIcon vehicleIcon = KIcon( vehicleIconName.isEmpty()
-                                   ? "public-transport-stop" : vehicleIconName );
         VehicleType vehicleType = static_cast<VehicleType>( departureData["TypeOfVehicle"].toInt() );
+        const QVariantHash vehicleData = allVehicleTypes[ QString::number(vehicleType) ].toHash();
+        QString vehicle = vehicleData["name"].toString();
+        QString vehicleIconName = vehicleData["iconName"].toString();
+        KIcon vehicleIcon = KIcon( vehicleIconName.isEmpty()
+                ? "public-transport-stop" : vehicleIconName );
 //     QString nightline = dataMap["nightline"].toBool();
 //     QString expressline = dataMap["expressline"].toBool();
         QString platform = departureData["Platform"].toString();
@@ -639,6 +642,7 @@ void AsyncDataEngineUpdater::processJourneys( const QString& sourceName, const P
     QDateTime updated = data["updated"].toDateTime();
     qreal min = INT_MAX, max = 0;
 
+    const QVariantHash allVehicleTypes = m_engine->query( "VehicleTypes" );
     QVariantList journeysData = data["journeys"].toList();
     kDebug() << "  - " << journeysData.count() << "journeys to be processed";
     int filtered = 0;
@@ -684,9 +688,15 @@ void AsyncDataEngineUpdater::processJourneys( const QString& sourceName, const P
 //     }
 
         QString operatorName = journeyData["Operator"].toString();
-//     QList<QVariant> vehicleTypes = dataMap["vehicleTypes"].toList();
-        QStringList vehicles = journeyData["VehicleNames"].toStringList();
-        QStringList vehicleIconNames = journeyData["VehicleIconNames"].toStringList();
+        QVariantList vehicleTypes = journeyData["VehicleTypes"].toList();
+        QStringList vehicles;
+        QStringList vehicleIconNames;
+        foreach ( const QVariant &vehicleTypeVariant, vehicleTypes ) {
+            VehicleType vehicleType = static_cast< VehicleType >( vehicleTypeVariant.toInt() );
+            const QVariantHash vehicleData = allVehicleTypes[ QString::number(vehicleType) ].toHash();
+            vehicles << vehicleData["name"].toString();
+            vehicleIconNames << vehicleData["iconName"].toString();
+        }
         KIcon icon = KIcon( vehicleIconNames.isEmpty() ? "public-transport-stop" : vehicleIconNames.first() );
         QDateTime departure = journeyData["DepartureDateTime"].toDateTime();
         QDateTime arrival = journeyData["ArrivalDateTime"].toDateTime();
