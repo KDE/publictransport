@@ -219,6 +219,7 @@ public slots:
 
 protected slots:
     void slotSourceRemoved( const QString &name );
+    void networkStateChanged( uint state );
 
     void forceUpdate();
     void updateTimeout();

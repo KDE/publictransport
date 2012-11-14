@@ -47,6 +47,7 @@
 #include <QFileSystemWatcher>
 #include <QFileInfo>
 #include <QTimer>
+#include <QDBusConnection>
 
 const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
 
@@ -83,6 +84,12 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
     setMinimumPollingInterval( 60000 );
 
     connect( this, SIGNAL(sourceRemoved(QString)), this, SLOT(slotSourceRemoved(QString)) );
+
+    // Get notified when the network state changes to update data sources,
+    // which update timers were missed because of missing network connection
+    QDBusConnection::sessionBus().connect( "org.kde.kded", "/modules/networkstatus",
+                                           "org.kde.Solid.Networking.Client", "statusChanged",
+                                           this, SLOT(networkStateChanged(uint)) );
 }
 
 PublicTransportEngine::~PublicTransportEngine()
@@ -101,6 +108,40 @@ QStringList PublicTransportEngine::sources() const
             << sourceTypeKeyword(ErroneousServiceProvidersSource);
     sources.removeDuplicates();
     return sources;
+}
+
+void PublicTransportEngine::networkStateChanged( uint state )
+{
+    if ( state != 4 ) {
+        // 4 => Connected
+        return;
+    }
+
+    // Network is connected again, check for missed update timers in connected data sources
+    for ( QHash<QString, DataSource*>::ConstIterator it = m_dataSources.constBegin();
+          it != m_dataSources.constEnd(); ++it )
+    {
+        // Check if the current data source is a timetable data source, without running update
+        TimetableDataSource *dataSource = dynamic_cast< TimetableDataSource* >( *it );
+        if ( !dataSource || m_runningSources.contains(it.key()) ) {
+            continue;
+        }
+
+        // Check if the next automatic update time was missed (stored in the data source)
+        const QDateTime nextAutomaticUpdate = dataSource->data["nextAutomaticUpdate"].toDateTime();
+        if ( nextAutomaticUpdate <= QDateTime::currentDateTime() ) {
+            // Found a timetable data source that should have been updated already and
+            // is not currently being updated (not in m_runningSources).
+            // This happens if there was no network connection while an automatic update
+            // was triggered. If the system is suspended the QTimer's for automatic updates
+            // are not triggered at all.
+            // Do now manually request updates for all connected sources, ie. do what should
+            // have been done in updateTimeout().
+            foreach ( const QString &sourceName, dataSource->usingDataSources() ) {
+                updateTimetableDataSource( SourceRequestData(sourceName) );
+            }
+        }
+    }
 }
 
 bool PublicTransportEngine::isProviderUsed( const QString &serviceProviderId )
