@@ -162,6 +162,11 @@ LocationModel::LocationModel( QObject* parent )
 LocationModel::~LocationModel()
 {
     delete d_ptr;
+
+    // Disconnect sources to prevent warnings (No such slot QObject::dataUpdated...)
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    engine->disconnectSource( "Locations", this );
+
     Plasma::DataEngineManager::self()->unloadEngine( "publictransport" );
 }
 

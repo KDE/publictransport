@@ -195,6 +195,12 @@ ServiceProviderDataWidget::ServiceProviderDataWidget( const QString &providerId,
 
 ServiceProviderDataWidget::~ServiceProviderDataWidget()
 {
+    Q_D( ServiceProviderDataWidget );
+
+    // Disconnect sources to prevent warnings (No such slot QObject::dataUpdated...)
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    engine->disconnectSource( "ServiceProvider " + d->providerId, this );
+
     delete d_ptr;
 
     Plasma::DataEngineManager::self()->unloadEngine( "publictransport" );

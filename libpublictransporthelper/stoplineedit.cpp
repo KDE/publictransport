@@ -118,9 +118,23 @@ public:
 
     ~StopLineEditPrivate()
     {
+        Q_Q( StopLineEdit );
+
 #ifdef MARBLE_FOUND
         delete mapPopup;
 #endif
+
+        // Disconnect sources to prevent warnings (No such slot QObject::dataUpdated...)
+        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+        if ( !sourceName.isEmpty() ) {
+            engine->disconnectSource( sourceName, q );
+            sourceName.clear();
+        }
+
+        if ( !serviceProvider.isEmpty() ) {
+            engine->disconnectSource( "ServiceProvider " + serviceProvider, q );
+        }
+
         Plasma::DataEngineManager::self()->unloadEngine("publictransport");
     };
 
