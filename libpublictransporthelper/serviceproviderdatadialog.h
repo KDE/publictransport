@@ -43,6 +43,7 @@ namespace PublicTransport {
 
 class ServiceProviderDataDialog;
 class ServiceProviderDataWidgetPrivate;
+class ServiceProviderDataDialogPrivate;
 
 /**
  * @brief This dialog shows information about a service provider (plugin).
@@ -52,6 +53,7 @@ class PUBLICTRANSPORTHELPER_EXPORT ServiceProviderDataWidget : public QWidget
 {
     Q_OBJECT
     friend ServiceProviderDataDialog;
+    friend ServiceProviderDataDialogPrivate;
 
 public:
     /**
@@ -76,24 +78,31 @@ public:
 
     virtual ~ServiceProviderDataWidget();
 
-    bool isImportFinished() const;
+    /** @brief Get the last received state of the provider. */
+    QString providerState() const;
+
+    /** @brief Get the last received state data of the provider. */
+    QVariantHash providerStateData() const;
 
 Q_SIGNALS:
     /** @brief The state of the provider has changed in the data engine. */
     void providerStateChanged( const QString &state, const QVariantHash &stateData );
 
+public Q_SLOTS:
+    /** @brief The button to import the GTFS feed has been clicked. */
+    void importGtfsFeed();
+
+    /** @brief The button to update the GTFS database has been clicked. */
+    void updateGtfsDatabase();
+
+    /** @brief The button to delete the GTFS database has been clicked. */
+    void deleteGtfsDatabase();
+
 protected Q_SLOTS:
     /** @brief The data from the favicons data engine was updated. */
     void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
-    /**
-     * @brief The button to delete the GTFS database has been clicked.
-     **/
-    void deleteGtfsDatabase();
-
-    /**
-     * @brief Deletion of the GTFS database has finished.
-     **/
+    /** @brief Deletion of the GTFS database has finished. */
     void deletionFinished( KJob *job );
 
 protected:
@@ -104,8 +113,6 @@ private:
     Q_DISABLE_COPY( ServiceProviderDataWidget )
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS(ServiceProviderDataWidget::Options)
-
-class ServiceProviderDataDialogPrivate;
 
 /**
  * @brief This dialog shows information about a service provider (plugin).

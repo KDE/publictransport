@@ -41,8 +41,7 @@ public:
     ServiceProviderDataWidgetPrivate( const QString &providerId,
                                       ServiceProviderDataWidget::Options _options,
                                       ServiceProviderDataWidget *q )
-            : q(q), providerId(providerId), options(_options),
-              importFinished(false), feedSizeInBytes(0)
+            : q(q), providerId(providerId), options(_options), feedSizeInBytes(0)
     {
         uiProviderData.setupUi( q );
     };
@@ -54,14 +53,15 @@ public:
     void update( const Plasma::DataEngine::Data &data ) {
         uiProviderData.type->setText( data["type"].toString() );
 
-        const QString state = data["state"].toString();
-        const QVariantHash stateData = data["stateData"].toHash();
+        state = data["state"].toString();
+        stateData = data["stateData"].toHash();
         uiProviderData.state->setText( stateData["statusMessage"].toString() );
 
         const QString type = data["type"].toString();
         if ( type != QLatin1String("GTFS") ) {
             uiProviderData.lblGtfsFeed->hide();
             uiProviderData.gtfsFeed->hide();
+            uiProviderData.importGtfsFeedButton->hide();
             uiProviderData.deleteGtfsDatabaseButton->hide();
         } else {
             // Is a GTFS provider
@@ -69,13 +69,15 @@ public:
             uiProviderData.lblGtfsFeed->show();
             uiProviderData.gtfsFeed->show();
             if ( state == QLatin1String("ready") ) {
+                uiProviderData.importGtfsFeedButton->setEnabled( false );
                 uiProviderData.deleteGtfsDatabaseButton->setEnabled( true );
                 feedSizeInBytes = stateData["gtfsDatabaseSize"].toInt();
-                importFinished = true;
                 uiProviderData.gtfsFeed->setText( i18nc("@info:label",
                         "<a href='%1'>%1</a>,<nl/>%2 disk space used",
                         feedUrl, KGlobal::locale()->formatByteSize(feedSizeInBytes)) );
             } else {
+                uiProviderData.importGtfsFeedButton->setEnabled(
+                        state == QLatin1String("gtfs_feed_import_pending") );
                 uiProviderData.deleteGtfsDatabaseButton->setEnabled( false );
                 uiProviderData.gtfsFeed->setText(
                         i18nc("@info:label", "<a href='%1'>%1</a>", feedUrl) );
@@ -91,10 +93,10 @@ public:
                     "imported again to make this service provider usable again.</para>"
                     "<para>By deleting the database %1 disk space get freed.</para>",
                 KGlobal::locale()->formatByteSize(feedSizeInBytes) ) );
-        if ( !importFinished ||
-             !options.testFlag(ServiceProviderDataWidget::ShowDeleteGtfsDatabaseButton) )
-        {
+        if ( !options.testFlag(ServiceProviderDataWidget::ShowDeleteGtfsDatabaseButton) ) {
             uiProviderData.lblOperations->hide();
+            uiProviderData.importGtfsFeedButton->hide();
+            uiProviderData.updateGtfsDatabaseButton->hide();
             uiProviderData.deleteGtfsDatabaseButton->hide();
         }
 
@@ -168,7 +170,8 @@ public:
     Ui::providerData uiProviderData;
     QString providerId;
     ServiceProviderDataWidget::Options options;
-    bool importFinished;
+    QString state;
+    QVariantHash stateData;
     qint64 feedSizeInBytes;
 };
 
@@ -177,15 +180,23 @@ ServiceProviderDataWidget::ServiceProviderDataWidget( const QString &providerId,
         : QWidget(parent),
           d_ptr(new ServiceProviderDataWidgetPrivate(providerId, options, this))
 {
+    Q_D( ServiceProviderDataWidget );
     Plasma::DataEngineManager::self()->loadEngine( "publictransport" );
     Plasma::DataEngineManager::self()->loadEngine( "favicons" );
     Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine( "publictransport" );
     engine->connectSource( "ServiceProvider " + providerId, this );
+    connect( d->uiProviderData.deleteGtfsDatabaseButton, SIGNAL(pressed()),
+             this, SLOT(deleteGtfsDatabase()) );
+    connect( d->uiProviderData.importGtfsFeedButton, SIGNAL(pressed()),
+             this, SLOT(importGtfsFeed()) );
+    connect( d->uiProviderData.updateGtfsDatabaseButton, SIGNAL(pressed()),
+             this, SLOT(updateGtfsDatabase()) );
 }
 
 ServiceProviderDataWidget::~ServiceProviderDataWidget()
 {
     delete d_ptr;
+
     Plasma::DataEngineManager::self()->unloadEngine( "publictransport" );
     Plasma::DataEngineManager::self()->unloadEngine( "favicons" );
 }
@@ -216,21 +227,60 @@ void ServiceProviderDataWidget::dataUpdated( const QString &sourceName,
     }
 }
 
-bool ServiceProviderDataWidget::isImportFinished() const
+QString ServiceProviderDataWidget::providerState() const
 {
     Q_D( const ServiceProviderDataWidget );
-    return d->importFinished;
+    return d->state;
+}
+
+QVariantHash ServiceProviderDataWidget::providerStateData() const
+{
+    Q_D( const ServiceProviderDataWidget );
+    return d->stateData;
 }
 
 class ServiceProviderDataDialogPrivate {
+    friend ServiceProviderDataWidget;
+
 public:
-    ServiceProviderDataDialogPrivate() : widget(0) {};
+    ServiceProviderDataDialogPrivate( ServiceProviderDataDialog *q ) : q(q), widget(0) {};
+
+    void updateDialogButtons()
+    {
+        if ( q->button(KDialog::User2) ) {
+            KPushButton *button;
+            if ( widget->providerState() == QLatin1String("gtfs_feed_import_pending") ) {
+                button = widget->d_ptr->uiProviderData.importGtfsFeedButton;
+                q->enableButton( KDialog::User2, true );
+            } else if ( widget->providerState() == QLatin1String("ready") ) {
+                button = widget->d_ptr->uiProviderData.deleteGtfsDatabaseButton;
+                q->enableButton( KDialog::User2, true );
+            } else {
+                button = widget->d_ptr->uiProviderData.importGtfsFeedButton;
+                q->enableButton( KDialog::User2, false );
+            }
+
+            q->setButtonIcon( KDialog::User2, KIcon( button->icon()) );
+            q->setButtonText( KDialog::User2, button->text() );
+            q->setButtonToolTip( KDialog::User2, button->toolTip() );
+        }
+
+        if ( q->button(KDialog::User3) ) {
+            const bool isReady = widget->providerState() == QLatin1String("ready");
+            const bool updateAvailable =
+                    isReady && widget->providerStateData().value("updatable").toBool();
+            q->showButton( KDialog::User3, isReady );
+            q->enableButton( KDialog::User3, updateAvailable );
+        }
+    };
+
+    ServiceProviderDataDialog *q;
     ServiceProviderDataWidget *widget;
 };
 
 ServiceProviderDataDialog::ServiceProviderDataDialog( const QString &providerId,
         ServiceProviderDataDialog::Options options, QWidget *parent )
-        : KDialog(parent), d_ptr(new ServiceProviderDataDialogPrivate())
+        : KDialog(parent), d_ptr(new ServiceProviderDataDialogPrivate(this))
 {
     Q_D( ServiceProviderDataDialog );
 
@@ -250,7 +300,8 @@ ServiceProviderDataDialog::ServiceProviderDataDialog( const QString &providerId,
         buttonCodes |= User1; // Add "Open in TimetableMate..." button
     }
     if ( options.testFlag(ShowDeleteGtfsDatabaseButton) ) {
-        buttonCodes |= User2; // Add "Delete GTFS database" button
+        buttonCodes |= User2; // Add delete/import button
+        buttonCodes |= User3; // Add update button
     }
 
     setButtons( buttonCodes );
@@ -260,13 +311,12 @@ ServiceProviderDataDialog::ServiceProviderDataDialog( const QString &providerId,
         setButtonText( User1, i18nc("@action:button", "Open in TimetableMate...") );
     }
 
-    if ( buttonCodes.testFlag(User2) ) {
-        KPushButton *button = d->widget->d_ptr->uiProviderData.deleteGtfsDatabaseButton;
-        setButtonIcon( User2, KIcon(button->icon()) );
-        setButtonText( User2, button->text() );
-        setButtonToolTip( User2, button->toolTip() );
-        enableButton( User2, d->widget->isImportFinished() );
-    }
+    KPushButton *button = d->widget->d_ptr->uiProviderData.updateGtfsDatabaseButton;
+    setButtonIcon( User3, KIcon( button->icon()) );
+    setButtonText( User3, button->text() );
+    setButtonToolTip( User3, button->toolTip() );
+
+    d->updateDialogButtons();
 }
 
 ServiceProviderDataDialog::~ServiceProviderDataDialog()
@@ -283,11 +333,13 @@ ServiceProviderDataWidget *ServiceProviderDataDialog::providerDataWidget() const
 void ServiceProviderDataDialog::providerStateChanged( const QString &state,
                                                       const QVariantHash &stateData )
 {
+    Q_UNUSED( state )
     Q_UNUSED( stateData )
+    Q_D( ServiceProviderDataDialog );
 
-    // Enable the "Delete GTFS Database" button only when the provider is ready,
+    // TODO Enable the "Delete GTFS Database" button only when the provider is ready,
     // ie. the GTFS feed was imported
-    enableButton( User2, state == QLatin1String("ready") );
+    d->updateDialogButtons();
 }
 
 void ServiceProviderDataDialog::slotButtonClicked( int button )
@@ -298,7 +350,14 @@ void ServiceProviderDataDialog::slotButtonClicked( int button )
         openInTimetableMate();
         break;
     case User2:
-        d->widget->deleteGtfsDatabase();
+        if ( d->widget->providerState() == QLatin1String("ready") ) {
+            d->widget->deleteGtfsDatabase();
+        } else {
+            d->widget->importGtfsFeed();
+        }
+        break;
+    case User3:
+        d->widget->updateGtfsDatabase();
         break;
     default:
         KDialog::slotButtonClicked( button );
@@ -334,10 +393,33 @@ void ServiceProviderDataWidget::deleteGtfsDatabase()
         KConfigGroup op = gtfsService->operationDescription("deleteGtfsDatabase");
         op.writeEntry( "serviceProviderId", d->providerId );
         Plasma::ServiceJob *deleteJob = gtfsService->startOperationCall( op );
-        kDebug() << gtfsService << "call deleteGtfsDatabase" << deleteJob;
         connect( deleteJob, SIGNAL(result(KJob*)), this, SLOT(deletionFinished(KJob*)) );
         connect( deleteJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
     }
+}
+
+void ServiceProviderDataWidget::importGtfsFeed()
+{
+    Q_D( ServiceProviderDataWidget );
+
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
+    KConfigGroup op = gtfsService->operationDescription("importGtfsFeed");
+    op.writeEntry( "serviceProviderId", d->providerId );
+    Plasma::ServiceJob *importJob = gtfsService->startOperationCall( op );
+    connect( importJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
+}
+
+void ServiceProviderDataWidget::updateGtfsDatabase()
+{
+    Q_D( ServiceProviderDataWidget );
+
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
+    KConfigGroup op = gtfsService->operationDescription("updateGtfsFeed");
+    op.writeEntry( "serviceProviderId", d->providerId );
+    Plasma::ServiceJob *updateJob = gtfsService->startOperationCall( op );
+    connect( updateJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
 }
 
 void ServiceProviderDataWidget::deletionFinished( KJob *job )
