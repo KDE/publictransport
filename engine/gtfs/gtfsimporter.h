@@ -21,10 +21,10 @@
 * @brief This file contains a class to import data from GTFS feeds.
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#ifndef GENERALTRANSITFEEDIMPORTER_HEADER
-#define GENERALTRANSITFEEDIMPORTER_HEADER
+#ifndef GTFSIMPORTER_HEADER
+#define GTFSIMPORTER_HEADER
 
-#include "gtfsdatabase.h" // For GeneralTransitFeedDatabase::FieldType
+#include "gtfsdatabase.h" // For GtfsDatabase::FieldType
 
 #include <QThread>
 #include <QString>
@@ -82,7 +82,7 @@ class QSqlRecord;
  * importing it into the database.
  * The @em shapes.txt file currently is not imported.
  **/
-class GeneralTransitFeedImporter : public QThread
+class GtfsImporter : public QThread
 {
     Q_OBJECT
 
@@ -106,9 +106,9 @@ public:
      *
      * @param providerName The name of the provider for which a GTFS database should be opened.
      **/
-    explicit GeneralTransitFeedImporter( const QString &providerName );
+    explicit GtfsImporter( const QString &providerName );
 
-    virtual ~GeneralTransitFeedImporter();
+    virtual ~GtfsImporter();
 
     /**
      * @brief Starts importing the GTFS feed at the given @p fileName.
@@ -150,7 +150,7 @@ signals:
      * @param state The resulting state of the importer.
      * @param errorText A string explaining an error. If there was no error this is an empty string.
      **/
-    void finished( GeneralTransitFeedImporter::State state, const QString &errorText = QString() );
+    void finished( GtfsImporter::State state, const QString &errorText = QString() );
 
     /**
      * @brief Gets emitted from time to time to report the progress of the importer.
@@ -185,7 +185,7 @@ private:
                      const QStringList &requiredFields );
 
     bool readFields( const QByteArray &line, QVariantList *fieldValues,
-                     const QList<GeneralTransitFeedDatabase::FieldType> &types,
+                     const QList<GtfsDatabase::FieldType> &types,
                      int expectedFieldCount );
 
     void setError( State errorState, const QString &errorText );

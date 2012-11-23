@@ -43,7 +43,7 @@ class KTimeZone;
  * @brief This class uses a database similiar to the GTFS structure to access public transport data.
  *
  * To fill the GTFS database with data from a GeneralTransitFeedSpecification feed (zip file)
- * GeneralTransitFeedImporter is used by PublicTransportService. This service has an operation
+ * GtfsImporter is used by PublicTransportService. This service has an operation
  * "UpdateGtfsFeed", which gets called by this class. That operation only updates already imported
  * GTFS feeds if there is a new version. To import a new GTFS feed for the first time the operation
  * "ImportGtfsFeed" should be used. That operation does @em not get called by this class. This is

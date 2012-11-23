@@ -21,8 +21,8 @@
 * @brief This file contains a class to access data from GTFS realtime data.
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#ifndef GENERALTRANSITFEEDREALTIME_HEADER
-#define GENERALTRANSITFEEDREALTIME_HEADER
+#ifndef GTFSREALTIME_HEADER
+#define GTFSREALTIME_HEADER
 
 #include <QDateTime>
 

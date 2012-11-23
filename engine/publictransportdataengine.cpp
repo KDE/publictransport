@@ -117,7 +117,7 @@ bool PublicTransportEngine::tryToStartGtfsFeedImportJob( Plasma::ServiceJob *job
 
     // Update provider state in service provider data source(s)
     QVariantHash stateData = dataSource->providerStateData( providerId );
-    const QString databasePath = GeneralTransitFeedDatabase::databasePath( providerId );
+    const QString databasePath = GtfsDatabase::databasePath( providerId );
     stateData[ "gtfsDatabasePath" ] = databasePath;
     stateData[ "gtfsDatabaseSize" ] = 0;
     stateData[ "progress" ] = 0;

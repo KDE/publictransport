@@ -357,7 +357,7 @@ public:
             }
 
             // Update GTFS database size
-            const QString databasePath = GeneralTransitFeedDatabase::databasePath( data()->id() );
+            const QString databasePath = GtfsDatabase::databasePath( data()->id() );
             const QFileInfo databaseInfo( databasePath );
             quint64 newGtfsDatabaseSize = databaseInfo.size();
             if ( gtfsDatabaseSize != newGtfsDatabaseSize ) {
@@ -389,7 +389,7 @@ public:
         KConfigGroup gtfsGroup = group.group( "gtfs" );
 
         Project::GtfsDatabaseState state;
-        if ( !GeneralTransitFeedDatabase::initDatabase(data()->id(), &gtfsDatabaseErrorString) ) {
+        if ( !GtfsDatabase::initDatabase(data()->id(), &gtfsDatabaseErrorString) ) {
             kWarning() << "Error initializing the database" << gtfsDatabaseErrorString;
             state = Project::GtfsDatabaseError;
         } else if ( gtfsGroup.readEntry("feedImportFinished", false) ) {
@@ -406,7 +406,7 @@ public:
         // Update size/modified time of the GTFS database
         if ( gtfsDatabaseSize <= 0 || !gtfsDatabaseModifiedTime.isValid() ) {
             // Update GTFS database size/last modified time
-            const QString databasePath = GeneralTransitFeedDatabase::databasePath( data()->id() );
+            const QString databasePath = GtfsDatabase::databasePath( data()->id() );
             const QFileInfo databaseInfo( databasePath );
             quint64 newGtfsDatabaseSize = databaseInfo.size();
             if ( gtfsDatabaseSize != newGtfsDatabaseSize ) {
@@ -4095,7 +4095,7 @@ QString Project::gtfsDatabasePath() const
     Q_D( const Project );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     QMutexLocker locker( d->mutex );
-    return GeneralTransitFeedDatabase::databasePath( d->data()->id() );
+    return GtfsDatabase::databasePath( d->data()->id() );
 #else
     return QString();
 #endif
@@ -4173,7 +4173,7 @@ void Project::deleteGtfsDatabase()
         return;
     }
 
-    const QString databasePath = GeneralTransitFeedDatabase::databasePath( d->data()->id() );
+    const QString databasePath = GtfsDatabase::databasePath( d->data()->id() );
     qint64 feedSizeInBytes = QFileInfo( databasePath ).size();
     if ( KMessageBox::warningContinueCancel(d->parentWidget(), i18nc("@info",
             "<title>Delete GTFS database</title>"

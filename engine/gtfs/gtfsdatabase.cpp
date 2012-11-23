@@ -31,13 +31,13 @@
 #include <QSqlError>
 #include <QSqlQuery>
 
-QString GeneralTransitFeedDatabase::databasePath( const QString &providerName )
+QString GtfsDatabase::databasePath( const QString &providerName )
 {
     const QString dir = KGlobal::dirs()->saveLocation("data", "plasma_engine_publictransport/gtfs/");
     return dir + providerName + ".sqlite";
 }
 
-bool GeneralTransitFeedDatabase::initDatabase( const QString &providerName, QString *errorText )
+bool GtfsDatabase::initDatabase( const QString &providerName, QString *errorText )
 {
     QSqlDatabase db = QSqlDatabase::database( providerName );
     if ( !db.isValid() ) {
@@ -59,7 +59,7 @@ bool GeneralTransitFeedDatabase::initDatabase( const QString &providerName, QStr
     return true;
 }
 
-bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText, QSqlDatabase database )
+bool GtfsDatabase::createDatabaseTables( QString *errorText, QSqlDatabase database )
 {
     QSqlQuery query( database );
     kDebug() << "Create tables";
@@ -291,7 +291,7 @@ bool GeneralTransitFeedDatabase::createDatabaseTables( QString *errorText, QSqlD
     return true;
 }
 
-QVariant GeneralTransitFeedDatabase::convertFieldValue( const QByteArray &fieldValue,
+QVariant GtfsDatabase::convertFieldValue( const QByteArray &fieldValue,
                                                         FieldType type )
 {
     if ( fieldValue.isEmpty() ) {
@@ -324,7 +324,7 @@ QVariant GeneralTransitFeedDatabase::convertFieldValue( const QByteArray &fieldV
     }
 }
 
-GeneralTransitFeedDatabase::FieldType GeneralTransitFeedDatabase::typeOfField(
+GtfsDatabase::FieldType GtfsDatabase::typeOfField(
         const QString &fieldName )
 {
     if ( fieldName == QLatin1String("min_transfer_time") ||

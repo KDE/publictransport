@@ -226,7 +226,7 @@ void GtfsDatabaseTab::gtfsDatabaseStateChanged( Project::GtfsDatabaseState state
         m_tableView->setModel( 0 );
         delete m_model;
         m_model = new QSqlTableModel( this,
-                GeneralTransitFeedDatabase::database(project()->data()->id()) );
+                GtfsDatabase::database(project()->data()->id()) );
         tableChosen( m_tableChooser->currentIndex() );
         m_tableView->setModel( m_model );
         m_tabWidget->setTabEnabled( 1, true );

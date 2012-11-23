@@ -47,7 +47,7 @@ void GeneralTransitTest::readGtfsDataTest()
     // Expects that the test is started from path engine/build/tests/
     const QString fileName( "../../tests/sample-feed.zip" );
 
-    GeneralTransitFeedImporter importer( "sample_gtfs" );
+    GtfsImporter importer( "sample_gtfs" );
     importer.startImport( fileName );
     importer.wait();
 

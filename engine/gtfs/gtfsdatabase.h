@@ -21,8 +21,8 @@
 * @brief This file contains a class to handle a GTFS database.
 * @author Friedrich Pülz <fpuelz@gmx.de> */
 
-#ifndef GENERALTRANSITFEEDDATABASE_HEADER
-#define GENERALTRANSITFEEDDATABASE_HEADER
+#ifndef GTFSDATABASE_HEADER
+#define GTFSDATABASE_HEADER
 
 #include <qsql.h>
 #include <QSqlDatabase>
@@ -36,7 +36,7 @@ class QVariant;
  * @warning Before using any other method, @ref initDatabase must be called to open a connection
  *   to the correct database for a specific provider.
  **/
-class GeneralTransitFeedDatabase {
+class GtfsDatabase {
 public:
     /**
      * @brief Types of fields in the database tables.

@@ -103,7 +103,7 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
 
     // Try to initialize the database
     QString errorText;
-    if ( !GeneralTransitFeedDatabase::initDatabase(providerId, &errorText) ) {
+    if ( !GtfsDatabase::initDatabase(providerId, &errorText) ) {
         kWarning() << "Error initializing the database" << errorText;
         if ( importFinished ) {
             // Update 'feedImportFinished' value in the cache
@@ -122,7 +122,7 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
     if ( importFinished ) {
         // Import was marked as finished, test if the database file still exists and
         // is not empty (some space is needed for the tables also if they are empty)
-        QFileInfo fi( GeneralTransitFeedDatabase::databasePath(providerId) );
+        QFileInfo fi( GtfsDatabase::databasePath(providerId) );
         if ( fi.exists() && fi.size() > 10000 ) {
             if ( stateData ) {
                 // Insert a status message
@@ -131,7 +131,7 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
 
                 // Update GTFS database state fields
                 const QString databasePath =
-                        GeneralTransitFeedDatabase::databasePath( providerId );
+                        GtfsDatabase::databasePath( providerId );
                 stateData->insert( "gtfsDatabasePath", databasePath );
                 stateData->insert( "gtfsDatabaseSize", QFileInfo(databasePath).size() );
 
@@ -356,7 +356,7 @@ int ServiceProviderGtfs::AgencyInformation::timeZoneOffset() const
 
 qint64 ServiceProviderGtfs::databaseSize() const
 {
-    QFileInfo fi( GeneralTransitFeedDatabase::databasePath(m_data->id()) );
+    QFileInfo fi( GtfsDatabase::databasePath(m_data->id()) );
     return fi.size();
 }
 
@@ -405,7 +405,7 @@ bool ServiceProviderGtfs::isUpdateAvailable( const QString &providerId,
     KConfigGroup group = cache->group( providerId );
     KConfigGroup gtfsGroup = group.group( "gtfs" );
     const bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
-    const QString databasePath = GeneralTransitFeedDatabase::databasePath( providerId );
+    const QString databasePath = GtfsDatabase::databasePath( providerId );
     const QFileInfo databaseInfo( databasePath );
     const bool databaseReady = importFinished && databaseInfo.exists();
 
@@ -806,13 +806,13 @@ bool ServiceProviderGtfs::checkForDiskIoErrorInDatabase( const QSqlError &error,
 
         m_state = Initializing;
         QString errorText;
-        if ( !GeneralTransitFeedDatabase::initDatabase(m_data->id(), &errorText) ) {
+        if ( !GtfsDatabase::initDatabase(m_data->id(), &errorText) ) {
             kDebug() << "Error initializing the database" << errorText;
             m_state = Error;
             return true;
         }
 
-        QFileInfo fi( GeneralTransitFeedDatabase::databasePath(m_data->id()) );
+        QFileInfo fi( GtfsDatabase::databasePath(m_data->id()) );
         if ( fi.exists() && fi.size() > 10000 ) {
             loadAgencyInformation();
 #ifdef BUILD_GTFS_REALTIME

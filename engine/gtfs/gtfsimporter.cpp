@@ -33,14 +33,14 @@
 #include <QSqlRecord>
 #include <QSqlDriver>
 
-GeneralTransitFeedImporter::GeneralTransitFeedImporter( const QString &providerName )
+GtfsImporter::GtfsImporter( const QString &providerName )
         : m_state(Initializing), m_providerName(providerName), m_quit(false)
 {
     // Register state enum to be able to use it in queued connections
-    qRegisterMetaType< GeneralTransitFeedImporter::State >( "GeneralTransitFeedImporter::State" );
+    qRegisterMetaType< GtfsImporter::State >( "GtfsImporter::State" );
 
     QMutexLocker locker( &m_mutex );
-    if ( !GeneralTransitFeedDatabase::initDatabase(providerName, &m_errorString) ) {
+    if ( !GtfsDatabase::initDatabase(providerName, &m_errorString) ) {
         m_state = FatalError;
         kDebug() << m_errorString;
     } else {
@@ -48,13 +48,13 @@ GeneralTransitFeedImporter::GeneralTransitFeedImporter( const QString &providerN
     }
 }
 
-GeneralTransitFeedImporter::~GeneralTransitFeedImporter()
+GtfsImporter::~GtfsImporter()
 {
     QMutexLocker locker( &m_mutex );
     m_quit = true;
 }
 
-void GeneralTransitFeedImporter::quit()
+void GtfsImporter::quit()
 {
     QMutexLocker locker( &m_mutex );
     if ( m_state == Importing ) {
@@ -63,7 +63,7 @@ void GeneralTransitFeedImporter::quit()
     m_quit = true;
 }
 
-void GeneralTransitFeedImporter::suspend()
+void GtfsImporter::suspend()
 {
     QMutexLocker locker( &m_mutex );
     if ( m_state == Importing ) {
@@ -72,7 +72,7 @@ void GeneralTransitFeedImporter::suspend()
     }
 }
 
-void GeneralTransitFeedImporter::resume()
+void GtfsImporter::resume()
 {
     QMutexLocker locker( &m_mutex );
     if ( m_state == ImportingSuspended ) {
@@ -80,7 +80,7 @@ void GeneralTransitFeedImporter::resume()
     }
 }
 
-void GeneralTransitFeedImporter::startImport( const QString &fileName )
+void GtfsImporter::startImport( const QString &fileName )
 {
     m_mutex.lock();
     m_fileName = fileName;
@@ -89,7 +89,7 @@ void GeneralTransitFeedImporter::startImport( const QString &fileName )
     start( LowPriority );
 }
 
-void GeneralTransitFeedImporter::setError( GeneralTransitFeedImporter::State errorState,
+void GtfsImporter::setError( GtfsImporter::State errorState,
                                            const QString &errorText )
 {
     m_mutex.lock();
@@ -113,13 +113,13 @@ void GeneralTransitFeedImporter::setError( GeneralTransitFeedImporter::State err
     }
 }
 
-void GeneralTransitFeedImporter::run()
+void GtfsImporter::run()
 {
     m_mutex.lock();
     m_state = Importing;
     const QString fileName = m_fileName;
     const QString providerName = m_providerName;
-    QSqlDatabase database = GeneralTransitFeedDatabase::database( m_providerName );
+    QSqlDatabase database = GtfsDatabase::database( m_providerName );
     m_mutex.unlock();
 
     emit logMessage( i18nc("@info/plain GTFS feed import logbook entry",
@@ -194,7 +194,7 @@ void GeneralTransitFeedImporter::run()
     }
 
     QString errorText;
-    if ( !GeneralTransitFeedDatabase::createDatabaseTables(&errorText, database) ) {
+    if ( !GtfsDatabase::createDatabaseTables(&errorText, database) ) {
         setError( FatalError, "Error initializing tables in the database: " + errorText );
         return;
     }
@@ -280,7 +280,7 @@ void GeneralTransitFeedImporter::run()
     return;
 }
 
-bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
+bool GtfsImporter::writeGtfsDataToDatabase( QSqlDatabase database,
         const QString &fileName, const QStringList &requiredFields, int minimalRecordCount,
         qint64 totalFilePosition, qint64 totalFileSize )
 {
@@ -320,9 +320,9 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
         return false; // Error in header
     }
     // Get types of the fields
-    QList<GeneralTransitFeedDatabase::FieldType> fieldTypes;
+    QList<GtfsDatabase::FieldType> fieldTypes;
     foreach ( const QString &fieldName, fieldNames ) {
-        fieldTypes << GeneralTransitFeedDatabase::typeOfField( fieldName );
+        fieldTypes << GtfsDatabase::typeOfField( fieldName );
     }
 
     QSqlRecord table = database.record( tableName );
@@ -539,7 +539,7 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
     // End transaction, restore synchronous=FULL
     if ( !database.driver()->commitTransaction() ) {
         qDebug() << database.lastError();
-                        emit logMessage( database.lastError().text() );
+        emit logMessage( database.lastError().text() );
     }
     if( !query.exec("PRAGMA synchronous=FULL;") ) {
         qDebug() << query.lastError();
@@ -560,7 +560,7 @@ bool GeneralTransitFeedImporter::writeGtfsDataToDatabase( QSqlDatabase database,
     }
 }
 
-bool GeneralTransitFeedImporter::readHeader( const QString &header, QStringList *fieldNames,
+bool GtfsImporter::readHeader( const QString &header, QStringList *fieldNames,
                                              const QStringList &requiredFields )
 {
     QStringList names = header.simplified().split(',');
@@ -608,11 +608,11 @@ bool GeneralTransitFeedImporter::readHeader( const QString &header, QStringList 
     return true;
 }
 
-bool GeneralTransitFeedImporter::readFields( const QByteArray &line, QVariantList *fieldValues,
-        const QList<GeneralTransitFeedDatabase::FieldType> &fieldTypes, int expectedFieldCount )
+bool GtfsImporter::readFields( const QByteArray &line, QVariantList *fieldValues,
+        const QList<GtfsDatabase::FieldType> &fieldTypes, int expectedFieldCount )
 {
     int pos = 0;
-    QList<GeneralTransitFeedDatabase::FieldType>::ConstIterator fieldType = fieldTypes.constBegin();
+    QList<GtfsDatabase::FieldType>::ConstIterator fieldType = fieldTypes.constBegin();
     while ( pos < line.length() && fieldType != fieldTypes.constEnd() ) {
         int endPos = pos;
         QByteArray newField;
@@ -664,12 +664,12 @@ bool GeneralTransitFeedImporter::readFields( const QByteArray &line, QVariantLis
         }
 
         // Append the new field value
-        fieldValues->append( GeneralTransitFeedDatabase::convertFieldValue(newField, *fieldType) );
+        fieldValues->append( GtfsDatabase::convertFieldValue(newField, *fieldType) );
         ++fieldType;
 
         if ( pos == line.length() && line[pos - 1] == ',' ) {
             // The current line ends after a ','. Add another empty field:
-            fieldValues->append( GeneralTransitFeedDatabase::convertFieldValue(QByteArray(), *fieldType) );
+            fieldValues->append( GtfsDatabase::convertFieldValue(QByteArray(), *fieldType) );
             ++fieldType;
         }
     }

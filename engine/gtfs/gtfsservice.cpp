@@ -212,10 +212,10 @@ void DeleteGtfsDatabaseJob::work()
     // Close the database before deleting it,
     // otherwise a newly created database won't get opened,
     // because the already opened database connection gets used instead
-    GeneralTransitFeedDatabase::closeDatabase( m_serviceProviderId );
+    GtfsDatabase::closeDatabase( m_serviceProviderId );
 
     // Delete the database file
-    const QString databasePath = GeneralTransitFeedDatabase::databasePath( m_serviceProviderId );
+    const QString databasePath = GtfsDatabase::databasePath( m_serviceProviderId );
     if ( !QFile::remove(databasePath) ) {
         kDebug() << "Failed to delete GTFS database";
         setError( GtfsErrorCannotDeleteDatabase );
@@ -505,12 +505,12 @@ void ImportGtfsToDatabaseJob::feedReceived( KJob *job )
     // Read feed and write data into the DB
     m_state = ReadingFeed;
     emit infoMessage( this, i18nc("@info/plain", "Importing GTFS feed") );
-    m_importer = new GeneralTransitFeedImporter( m_data->id() );
+    m_importer = new GtfsImporter( m_data->id() );
     connect( m_importer, SIGNAL(logMessage(QString)), this, SLOT(logMessage(QString)) );
     connect( m_importer, SIGNAL(progress(qreal,QString)),
              this, SLOT(importerProgress(qreal,QString)) );
-    connect( m_importer, SIGNAL(finished(GeneralTransitFeedImporter::State,QString)),
-             this, SLOT(importerFinished(GeneralTransitFeedImporter::State,QString)) );
+    connect( m_importer, SIGNAL(finished(GtfsImporter::State,QString)),
+             this, SLOT(importerFinished(GtfsImporter::State,QString)) );
     m_importer->startImport( tmpFilePath );
 }
 
@@ -533,7 +533,7 @@ void ImportGtfsToDatabaseJob::importerProgress( qreal importerProgress,
 }
 
 void ImportGtfsToDatabaseJob::importerFinished(
-        GeneralTransitFeedImporter::State state, const QString &errorText )
+        GtfsImporter::State state, const QString &errorText )
 {
     // Remove temporary file
     if ( m_importer && !QFile::remove(m_importer->sourceFileName()) ) {
@@ -544,7 +544,7 @@ void ImportGtfsToDatabaseJob::importerFinished(
     KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
     KConfigGroup group = config.group( data()->id() );
     KConfigGroup gtfsGroup = group.group( "gtfs" );
-    gtfsGroup.writeEntry( "feedImportFinished", state != GeneralTransitFeedImporter::FatalError );
+    gtfsGroup.writeEntry( "feedImportFinished", state != GtfsImporter::FatalError );
 
     // Write to disk now, important for the data engine to get the correct state
     // directly after this job has finished
@@ -555,8 +555,8 @@ void ImportGtfsToDatabaseJob::importerFinished(
     emitPercent( 1000, 1000 );
     kDebug() << "Finished" << state << errorText;
 
-    // Ignore GeneralTransitFeedImporter::FinishedWithErrors
-    if ( state == GeneralTransitFeedImporter::FatalError ) {
+    // Ignore GtfsImporter::FinishedWithErrors
+    if ( state == GtfsImporter::FatalError ) {
         m_state = ErrorReadingFeed;
         kDebug() << "There was an error importing the GTFS feed into the database" << errorText;
         emit infoMessage( this, i18nc("@info/plain",

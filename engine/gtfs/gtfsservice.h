@@ -123,7 +123,7 @@ protected slots:
     void feedReceived( KJob *job );
 
     void importerProgress( qreal progress, const QString &currentTableName = QString() );
-    void importerFinished( GeneralTransitFeedImporter::State state, const QString &errorText );
+    void importerFinished( GtfsImporter::State state, const QString &errorText );
     void logMessage( const QString &message );
 
 protected:
@@ -157,7 +157,7 @@ private:
     qreal m_progress;
     qulonglong m_size;
     ServiceProviderData *m_data;
-    GeneralTransitFeedImporter *m_importer;
+    GtfsImporter *m_importer;
     QString m_lastRedirectUrl;
     QString m_lastTableName;
     bool m_onlyGetInformation;
