@@ -20,6 +20,7 @@
 #include "serviceprovidermodel.h"
 #include "enums.h"
 #include <Plasma/DataEngine>
+#include <Plasma/DataEngineManager>
 #include <KCategorizedSortFilterProxyModel>
 
 /** @brief Namespace for the publictransport helper library. */
@@ -114,31 +115,41 @@ QString ServiceProviderItem::sortValue() const {
     return d->sortString;
 }
 
-void ServiceProviderItem::setIcon(const KIcon& icon) {
+void ServiceProviderItem::setIcon( const KIcon &icon ) {
     Q_D( ServiceProviderItem );
     d->icon = icon;
+}
+
+void ServiceProviderItem::setData( const QVariantHash &data ) {
+    Q_D( ServiceProviderItem );
+    d->data = data;
 }
 
 class ServiceProviderModelPrivate
 {
 public:
-    ServiceProviderModelPrivate() : favIconEngine(0) {};
+    ServiceProviderModelPrivate() {};
     ~ServiceProviderModelPrivate() {
         qDeleteAll( items );
     };
 
     QList<ServiceProviderItem*> items;
-    Plasma::DataEngine* favIconEngine;
 };
 
 ServiceProviderModel::ServiceProviderModel( QObject* parent )
         : QAbstractListModel( parent ), d_ptr(new ServiceProviderModelPrivate())
 {
+    Plasma::DataEngineManager::self()->loadEngine( "publictransport" );
+    Plasma::DataEngineManager::self()->loadEngine( "favicons" );
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine( "publictransport" );
+    engine->connectSource( "ServiceProviders", this );
 }
 
 ServiceProviderModel::~ServiceProviderModel()
 {
     delete d_ptr;
+    Plasma::DataEngineManager::self()->unloadEngine( "publictransport" );
+    Plasma::DataEngineManager::self()->unloadEngine( "favicons" );
 }
 
 QModelIndex ServiceProviderModel::index( int row, int column, const QModelIndex& parent ) const
@@ -194,6 +205,20 @@ int ServiceProviderModel::rowCount( const QModelIndex& parent ) const
     return parent.isValid() ? 0 : d->items.count();
 }
 
+ServiceProviderItem *ServiceProviderModel::itemFromServiceProvider(
+        const QString &serviceProviderId )
+{
+    Q_D( const ServiceProviderModel );
+    foreach ( ServiceProviderItem *item, d->items ) {
+        if ( item->id() == serviceProviderId ) {
+            return item;
+        }
+    }
+
+    // Location for given country code not found
+    return 0;
+}
+
 QModelIndex ServiceProviderModel::indexOfServiceProvider( const QString& serviceProviderId )
 {
     Q_D( const ServiceProviderModel );
@@ -208,60 +233,92 @@ QModelIndex ServiceProviderModel::indexOfServiceProvider( const QString& service
     return QModelIndex();
 }
 
+QModelIndex ServiceProviderModel::indexFromItem( ServiceProviderItem *item )
+{
+    Q_D( const ServiceProviderModel );
+    if ( !d->items.contains(item) ) {
+        // Provider item is not contained in this model
+        return QModelIndex();
+    }
+
+    return createIndex( d->items.indexOf(item), 0, item );
+}
+
 bool serviceProviderGreaterThan( ServiceProviderItem* item1, ServiceProviderItem* item2 )
 {
     return item1->sortValue() < item2->sortValue();
 }
 
-void ServiceProviderModel::syncWithDataEngine( Plasma::DataEngine* publicTransportEngine,
-        Plasma::DataEngine* favIconEngine )
-{
-    Q_D( ServiceProviderModel );
-
-    // Store pointer to favicons data engine to be able to disconnect sources from it later
-    d->favIconEngine = favIconEngine;
-
-    Plasma::DataEngine::Data serviceProviderData = publicTransportEngine->query( "ServiceProviders" );
-    for ( Plasma::DataEngine::Data::const_iterator it = serviceProviderData.constBegin();
-          it != serviceProviderData.constEnd(); ++it )
-    {
-        QVariantHash serviceProviderData = it.value().toHash();
-        d->items << new ServiceProviderItem( serviceProviderData["name"].toString(),
-                                             serviceProviderData );
-
-        // Request favicons
-        if ( favIconEngine ) {
-            QString favIconSource = serviceProviderData["url"].toString();
-            favIconEngine->connectSource( favIconSource, this );
-        }
-    }
-
-    qSort( d->items.begin(), d->items.end(), serviceProviderGreaterThan );
-}
-
 void ServiceProviderModel::dataUpdated( const QString &sourceName,
                                         const Plasma::DataEngine::Data &data )
 {
-    Q_D( const ServiceProviderModel );
+    Q_D( ServiceProviderModel );
+    if ( sourceName == QLatin1String("ServiceProviders") ) {
+        QList< ServiceProviderItem* > newProviders;
+        for ( Plasma::DataEngine::Data::ConstIterator it = data.constBegin();
+              it != data.constEnd(); ++it )
+        {
+            QVariantHash serviceProviderData = it.value().toHash();
+            const QString id = serviceProviderData["id"].toString();
+            const QString name = serviceProviderData["name"].toString();
+            ServiceProviderItem *item = itemFromServiceProvider( id );
+            if ( item ) {
+                // Update a service provider, that was already added to the model
+                item->setData( serviceProviderData );
+                const QModelIndex index = indexFromItem( item );
+                dataChanged( index, index );
+            } else {
+                // Add new service provider
+                newProviders << new ServiceProviderItem( name, serviceProviderData );
 
-    if ( sourceName.contains(QRegExp("^http")) ) {
+            }
+        }
+
+        // Append new providers sorted to the end of the provider list
+        qSort( newProviders.begin(), newProviders.end(), serviceProviderGreaterThan );
+        beginInsertRows( QModelIndex(), d->items.count(),
+                         d->items.count() + newProviders.count() - 1 );
+        d->items << newProviders;
+        endInsertRows();
+
+        // Request favicons for newly inserted providers
+        // after inserting them (otherwise there will be no item to set the received icon for)
+        foreach ( ServiceProviderItem *item, newProviders ) {
+            Plasma::DataEngine *faviconEngine =
+                    Plasma::DataEngineManager::self()->engine( "favicons" );
+            if ( faviconEngine ) {
+                QString favIconSource = item->data()["url"].toString();
+                faviconEngine->connectSource( favIconSource, this );
+            }
+        }
+
+        // TODO persistent indexes?
+//         qSort( d->items.begin(), d->items.end(), serviceProviderGreaterThan );
+    } else if ( sourceName.contains(QRegExp("^http")) ) {
         // Favicon of a service provider arrived
         QPixmap favicon( QPixmap::fromImage( data["Icon"].value<QImage>() ) );
         if ( favicon.isNull() ) {
-            // No favicon found for sourceName;
+            // No favicon found for sourceName
             favicon = QPixmap( 16, 16 );
             favicon.fill( Qt::transparent );
         }
 
-        for ( int i = 0; i < rowCount(); ++i ) {
-            ServiceProviderItem *item = d->items[i];
-            QString favIconSource = item->data()["url"].toString();
-            if ( favIconSource.compare( sourceName ) == 0 ) {
+        for ( int row = 0; row < rowCount(); ++row ) {
+            ServiceProviderItem *item = d->items[ row ];
+            const QString favIconSource = item->data()["url"].toString();
+            if ( favIconSource.compare(sourceName) == 0 ) {
                 item->setIcon( KIcon(favicon) );
+                const QModelIndex index = createIndex( row, 0, item );
+                dataChanged( index, index );
+
+                Plasma::DataEngine *faviconEngine =
+                        Plasma::DataEngineManager::self()->engine( "favicons" );
+                faviconEngine->disconnectSource( sourceName, this );
+                break;
             }
         }
 
-        d->favIconEngine->disconnectSource( sourceName, this );
+//         d->favIconEngine->disconnectSource( sourceName, this );
     }
 }
 

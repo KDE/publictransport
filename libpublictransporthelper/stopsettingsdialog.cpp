@@ -165,8 +165,7 @@ public:
             StopSettingsDialog *q )
             : factory(_factory), detailsWidget(0), stopFinder(0), nearStopsDialog(0),
             modelLocations(0), modelServiceProviders(0),
-            modelLocationServiceProviders(0), stopList(0), resizer(0),
-            dataEngineManager(0), q_ptr(q)
+            modelLocationServiceProviders(0), stopList(0), resizer(0), q_ptr(q)
     {
         // Store options and given stop settings
         options = _options;
@@ -180,26 +179,21 @@ public:
         correctSettings();
 
         // Load data engines
-        dataEngineManager = Plasma::DataEngineManager::self();
-        publicTransportEngine = dataEngineManager->loadEngine("publictransport");
-        geolocationEngine = dataEngineManager->loadEngine("geolocation");
-        osmEngine = dataEngineManager->loadEngine("openstreetmap");
+        Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
+        manager->loadEngine("publictransport");
+        manager->loadEngine("geolocation");
+        manager->loadEngine("openstreetmap");
 
         // Create location and service provider models
         modelLocations = new LocationModel( q );
-        modelLocations->syncWithDataEngine( publicTransportEngine );
         modelServiceProviders = new ServiceProviderModel( q );
-        modelServiceProviders->syncWithDataEngine( publicTransportEngine,
-                dataEngineManager->loadEngine("favicons") );
     };
 
     ~StopSettingsDialogPrivate() {
-        if ( dataEngineManager ) {
-            dataEngineManager->unloadEngine("publictransport");
-            dataEngineManager->unloadEngine("geolocation");
-            dataEngineManager->unloadEngine("openstreetmap");
-            dataEngineManager->unloadEngine("favicons");
-        }
+        Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
+        manager->unloadEngine("publictransport");
+        manager->unloadEngine("geolocation");
+        manager->unloadEngine("openstreetmap");
     };
 
     void init( const StopSettings &_oldStopSettings,
@@ -681,11 +675,6 @@ public:
     StopLineEditList *stopList;
     ColumnResizer *resizer;
 
-    Plasma::DataEngineManager *dataEngineManager;
-    Plasma::DataEngine *publicTransportEngine;
-    Plasma::DataEngine *osmEngine;
-    Plasma::DataEngine *geolocationEngine;
-
     int stopIndex; // The index of the edited stop settings, if in a StopSettingsList
     QHash< QString, QVariant > stopToStopID; // A hash with stop names as keys and the
                                              // corresponding stop IDs as values.
@@ -971,7 +960,6 @@ void StopSettingsDialog::geolocateClicked()
 {
     Q_D( StopSettingsDialog );
     d->stopFinder = new StopFinder( StopFinder::ValidatedStopNamesFromOSM,
-                                    d->publicTransportEngine, d->osmEngine, d->geolocationEngine,
                                     25, StopFinder::DeleteWhenFinished, this );
     connect( d->stopFinder, SIGNAL(geolocationData(QString,QString,qreal,qreal,int)),
              this, SLOT(stopFinderGeolocationData(QString,QString,qreal,qreal,int)) );
@@ -1006,7 +994,8 @@ void StopSettingsDialog::stopFinderFinished()
         d->nearStopsDialog = 0;
 
         // Get data from the geolocation data engine
-        Plasma::DataEngine::Data dataGeo = d->geolocationEngine->query( "location" );
+        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("geolocation");
+        Plasma::DataEngine::Data dataGeo = engine->query( "location" );
         QString country = dataGeo["country code"].toString().toLower();
         QString city = dataGeo["city"].toString();
 
@@ -1063,7 +1052,8 @@ void StopSettingsDialog::nearStopsDialogFinished( int result )
             kDebug() << "No stop selected";
         } else {
             StopSettings settings = stopSettings();
-            Plasma::DataEngine::Data geoData = d->geolocationEngine->query( "location" );
+            Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("geolocation");
+            Plasma::DataEngine::Data geoData = engine->query( "location" );
             settings.set( CitySetting, geoData["city"].toString() );
             settings.set( LocationSetting, geoData["country code"].toString() );
             settings.set( ServiceProviderSetting, d->stopFinderServiceProviderID );
@@ -1130,7 +1120,8 @@ void StopSettingsDialog::locationChanged( int index )
 
     // Select default provider of the selected location
     QString locationCode = d->uiStop.location->itemData( index, LocationCodeRole ).toString();
-    Plasma::DataEngine::Data locationData = d->publicTransportEngine->query( "Locations" );
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::DataEngine::Data locationData = engine->query( "Locations" );
     QString defaultProviderId = locationData[locationCode].toHash()["defaultProvider"].toString();
     if ( !defaultProviderId.isEmpty() ) {
         QModelIndexList indices = d->uiStop.serviceProvider->model()->match(
@@ -1196,13 +1187,12 @@ void StopSettingsDialog::cityNameChanged( const QString& cityName )
 void StopSettingsDialog::clickedServiceProviderInfo()
 {
     Q_D( const StopSettingsDialog );
-    QVariantHash serviceProviderData = d->uiStop.serviceProvider->model()->index(
-                                           d->uiStop.serviceProvider->currentIndex(), 0 )
-                                       .data( ServiceProviderDataRole ).toHash();
-    ServiceProviderDataDialog *infoDialog = new ServiceProviderDataDialog( serviceProviderData,
-            d->uiStop.serviceProvider->itemIcon(d->uiStop.serviceProvider->currentIndex()),
+    const QModelIndex index = d->uiStop.serviceProvider->model()->index(
+            d->uiStop.serviceProvider->currentIndex(), 0 );
+    const QString providerId = index.data( ServiceProviderIdRole ).toString();
+    ServiceProviderDataDialog *infoDialog = new ServiceProviderDataDialog( providerId,
             d->providerDataDialogOptions, this );
-    connect( infoDialog, SIGNAL(gtfsDatabaseDeleted()),
+    connect( infoDialog->providerDataWidget(), SIGNAL(gtfsDatabaseDeleted()),
              d->stopList, SLOT(updateToDataEngineState()) );
     infoDialog->show();
 }

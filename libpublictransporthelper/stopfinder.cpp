@@ -18,6 +18,7 @@
  */
 
 #include "stopfinder.h"
+#include <Plasma/DataEngineManager>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
@@ -107,13 +108,9 @@ class StopFinderPrivate
     Q_DECLARE_PUBLIC( StopFinder )
 
 public:
-    StopFinderPrivate( StopFinder::Mode _mode,
-            Plasma::DataEngine* _publicTransportEngine, Plasma::DataEngine* _osmEngine,
-            Plasma::DataEngine* _geolocationEngine, int _resultLimit,
+    StopFinderPrivate( StopFinder::Mode _mode, int _resultLimit,
             StopFinder::DeletionPolicy _deletionPolicy, StopFinder *q )
-            : mode(_mode), deletionPolicy(_deletionPolicy),
-            publicTransportEngine(_publicTransportEngine),
-            osmEngine(_osmEngine), geolocationEngine(_geolocationEngine), q_ptr(q)
+            : mode(_mode), deletionPolicy(_deletionPolicy), q_ptr(q)
     {
         osmFinished = false;
         resultLimit = _resultLimit;
@@ -129,13 +126,12 @@ public:
 
         QString stop = stopsToBeChecked.dequeue();
         kDebug() << "Validate stop" << stop;
+        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
         if ( !city.isEmpty() ) { // useSeparateCityValue ) {
-            publicTransportEngine->connectSource(
-                QString("Stops %1|stop=%2|city=%3")
-                .arg(serviceProviderID, stop, city), q );
+            engine->connectSource( QString("Stops %1|stop=%2|city=%3")
+                                   .arg(serviceProviderID, stop, city), q );
         } else {
-            publicTransportEngine->connectSource(
-                QString("Stops %1|stop=%2").arg(serviceProviderID, stop), q );
+            engine->connectSource( QString("Stops %1|stop=%2").arg(serviceProviderID, stop), q );
         }
 
         return true;
@@ -152,8 +148,8 @@ public:
         emit q->geolocationData( countryCode, city, latitude, longitude, accuracy );
 
         // Check if a service provider is available for the given country
-        Plasma::DataEngine::Data dataProvider =
-            publicTransportEngine->query( "ServiceProvider " + countryCode );
+        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+        Plasma::DataEngine::Data dataProvider = engine->query( "ServiceProvider " + countryCode );
         if ( dataProvider.isEmpty() ) {
             QString errorMessage = i18nc("@info", "There's no supported "
                                         "service provider for the country you're currently in (%1).\n"
@@ -168,6 +164,8 @@ public:
             }
         } else {
             serviceProviderID = dataProvider["id"].toString();
+            Plasma::DataEngine *osmEngine =
+                    Plasma::DataEngineManager::self()->engine("openstreetmap");
             if ( osmEngine->isValid() ) {
                 // Get stop list near the user from the OpenStreetMap data engine.
                 // If the OSM engine isn't available, the city is used as stop name.
@@ -262,7 +260,6 @@ public:
 
     StopFinder::Mode mode;
     StopFinder::DeletionPolicy deletionPolicy;
-    Plasma::DataEngine *publicTransportEngine, *osmEngine, *geolocationEngine;
 
     QStringList foundStops, foundStopIDs;
     QQueue< QString > stopsToBeChecked;
@@ -278,24 +275,29 @@ protected:
     StopFinder* const q_ptr;
 };
 
-StopFinder::StopFinder( StopFinder::Mode mode,
-        Plasma::DataEngine* publicTransportEngine, Plasma::DataEngine* osmEngine,
-        Plasma::DataEngine* geolocationEngine, int resultLimit, DeletionPolicy deletionPolicy,
+StopFinder::StopFinder( StopFinder::Mode mode, int resultLimit, DeletionPolicy deletionPolicy,
         QObject* parent )
-        : QObject(parent), d_ptr(new StopFinderPrivate(mode, publicTransportEngine, osmEngine,
-            geolocationEngine, resultLimit, deletionPolicy, this))
+        : QObject(parent), d_ptr(new StopFinderPrivate(mode, resultLimit, deletionPolicy, this))
 {
+    Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
+    manager->loadEngine("publictransport");
+    manager->loadEngine("geolocation");
+    manager->loadEngine("openstreetmap");
 }
 
 StopFinder::~StopFinder()
 {
     delete d_ptr;
+    Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
+    manager->unloadEngine("publictransport");
+    manager->unloadEngine("geolocation");
+    manager->unloadEngine("openstreetmap");
 }
 
 void StopFinder::start()
 {
-    Q_D( StopFinder );
-    d->geolocationEngine->connectSource( "location", this );
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("geolocation");
+    engine->connectSource( "location", this );
 }
 
 void StopFinder::dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data )
@@ -303,15 +305,18 @@ void StopFinder::dataUpdated( const QString& sourceName, const Plasma::DataEngin
     Q_D( StopFinder );
 
     if ( sourceName.startsWith(QLatin1String("Stops"), Qt::CaseInsensitive) ) {
-        d->publicTransportEngine->disconnectSource( sourceName, this );
+        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+        engine->disconnectSource( sourceName, this );
         d->processPublicTransportData( data );
     } else if ( sourceName == QLatin1String("location") ) {
-        d->geolocationEngine->disconnectSource( sourceName, this );
+        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("geolocation");
+        engine->disconnectSource( sourceName, this );
         d->processGeolocationData( data );
     } else if ( sourceName.contains("publictransportstops") ) {
         bool finished = d->processOpenStreetMapData( data );
         if ( finished || (d->foundStops.count() + d->stopsToBeChecked.count()) >= d->resultLimit ) {
-            d->osmEngine->disconnectSource( sourceName, this );
+            Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("openstreetmap");
+            engine->disconnectSource( sourceName, this );
         }
     }
 }

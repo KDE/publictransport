@@ -35,6 +35,7 @@ class DynamicWidget;
 namespace Plasma {
     class DataEngine;
 }
+class QModelIndex;
 
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
@@ -58,6 +59,8 @@ public:
      * @brief Creates a new stop widget.
      *
      * @param parent The parent widget of the stop widget. Default is 0.
+     * @param providerModel A pointer to an already created ServiceProviderModel. If this is 0,
+     *   a new model gets created.
      * @param stopSettings The stop settings to initialize the stop widget with.
      * @param stopSettingsDialogOptions Options for used StopSettingsDialog. The user can open
      *   a stop settings dialog to change the stop settings.
@@ -72,7 +75,7 @@ public:
      *   @ref StopSettingsWidgetFactory::widgetForSetting.
      *   To be used in StopSettingsDialogs.
      **/
-    explicit StopWidget( QWidget* parent = 0,
+    explicit StopWidget( QWidget* parent = 0, ServiceProviderModel *providerModel = 0,
             const StopSettings &stopSettings = StopSettings(),
             StopSettingsDialog::Options stopSettingsDialogOptions = StopSettingsDialog::DefaultOptions,
             ServiceProviderDataDialog::Options providerDataDialogOptions = ServiceProviderDataDialog::DefaultOptions,
@@ -132,6 +135,10 @@ public Q_SLOTS:
      **/
     void editSettings();
 
+protected Q_SLOTS:
+    /** @brief The connected ServiceProviderModel has changed. */
+    void providerModelChanged( const QModelIndex &topLeft, const QModelIndex &bottomRight );
+
 protected:
     StopWidgetPrivate* const d_ptr;
 
@@ -157,6 +164,9 @@ public:
      * @brief Creates a new stop list widget.
      *
      * @param parent The parent widget of the dialog. Default is 0.
+     * @param providerModel A pointer to an already created ServiceProviderModel. If this is 0,
+     *   a new model gets created. The model also gets used for the StopWidget's contained in this
+     *   StopListWidget.
      * @param stopSettingsList A list of stop settings to initialize the stop list widget with.
      * @param stopSettingsDialogOptions Options for used StopSettingsDialog. The user can open
      *   a stop settings dialog to change stop settings.
@@ -171,7 +181,7 @@ public:
      *   @ref StopSettingsWidgetFactory::widgetForSetting.
      *   To be used in StopSettingsDialogs.
      **/
-    StopListWidget( QWidget *parent = 0,
+    StopListWidget( QWidget *parent = 0, ServiceProviderModel *providerModel = 0,
             const StopSettingsList &stopSettingsList = StopSettingsList(),
             StopSettingsDialog::Options stopSettingsDialogOptions = StopSettingsDialog::DefaultOptions,
             ServiceProviderDataDialog::Options providerDataDialogOptions = ServiceProviderDataDialog::DefaultOptions,

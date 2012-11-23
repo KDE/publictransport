@@ -36,136 +36,230 @@
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
 
-class ServiceProviderDataDialogPrivate {
+class ServiceProviderDataWidgetPrivate {
 public:
-    ServiceProviderDataDialogPrivate( const QVariantHash &_serviceProviderData,
-                                      ServiceProviderDataDialog::Options _options )
-            : serviceProviderData(_serviceProviderData), options(_options)
+    ServiceProviderDataWidgetPrivate( const QString &providerId,
+                                      ServiceProviderDataWidget::Options _options,
+                                      ServiceProviderDataWidget *q )
+            : providerId(providerId), options(_options), importFinished(false), feedSizeInBytes(0)
     {
+        uiProviderData.setupUi( q );
+    };
+
+    void updateIcon( const QIcon &icon ) {
+        uiProviderData.icon->setPixmap( icon.pixmap( 32 ) );
+    }
+
+    void update( const Plasma::DataEngine::Data &data ) {
+        uiProviderData.type->setText( data["type"].toString() );
+
+        const QVariantHash stateData = data["stateData"].toHash();
+        uiProviderData.state->setText( stateData["statusMessage"].toString() );
+
+        const QString type = data["type"].toString();
+        if ( type != QLatin1String("GTFS") ) {
+            uiProviderData.lblGtfsFeed->hide();
+            uiProviderData.gtfsFeed->hide();
+        } else {
+            // Is a GTFS provider
+            const QString state = data["state"].toString();
+            const QString feedUrl = data["feedUrl"].toString();
+            uiProviderData.lblGtfsFeed->show();
+            uiProviderData.gtfsFeed->show();
+            if ( state == QLatin1String("ready") ) {
+                feedSizeInBytes = stateData["gtfsDatabaseSize"].toInt();
+                importFinished = true;
+                uiProviderData.gtfsFeed->setText( i18nc("@info:label",
+                        "<a href='%1'>%1</a>,<nl/>%2 disk space used",
+                        feedUrl, KGlobal::locale()->formatByteSize(feedSizeInBytes)) );
+            } else {
+                uiProviderData.gtfsFeed->setText(
+                        i18nc("@info:label", "<a href='%1'>%1</a>", feedUrl) );
+            }
+        }
+
+        // Set the tooltip for the "Delete GTFS Database" button also if it gets hidden,
+        // because ServiceProviderDataDialog may use this tooltip for it's own (dialog) button
+        uiProviderData.deleteGtfsDatabaseButton->setToolTip(
+                i18nc("@info:tooltip", "<title>Delete GTFS Database</title>"
+                    "<para>The GTFS database contains all data imported from the GTFS "
+                    "feed. If you delete the database now the GTFS feed needs to be "
+                    "imported again to make this service provider usable again.</para>"
+                    "<para>By deleting the database %1 disk space get freed.</para>",
+                KGlobal::locale()->formatByteSize(feedSizeInBytes) ) );
+        if ( !importFinished ||
+             !options.testFlag(ServiceProviderDataWidget::ShowDeleteGtfsDatabaseButton) )
+        {
+            uiProviderData.lblOperations->hide();
+            uiProviderData.deleteGtfsDatabaseButton->hide();
+        }
+
+        uiProviderData.serviceProviderName->setText(data["name"].toString() );
+        uiProviderData.version->setText( i18nc("@info/plain", "Version %1",
+                data["version"].toString()) );
+        uiProviderData.url->setUrl( data["url"].toString() );
+        uiProviderData.url->setText( QString("<a href='%1'>%1</a>").arg(
+                data["url"].toString()) );
+
+        uiProviderData.fileName->setUrl( data["fileName"].toString() );
+        uiProviderData.fileName->setText( QString("<a href='%1'>%1</a>").arg(
+                data["fileName"].toString()) );
+
+        QString scriptFileName = data["scriptFileName"].toString();
+        if ( scriptFileName.isEmpty() ) {
+            uiProviderData.lblScriptFileName->setVisible( false );
+            uiProviderData.scriptFileName->setVisible( false );
+        } else {
+            uiProviderData.lblScriptFileName->setVisible( true );
+            uiProviderData.scriptFileName->setVisible( true );
+            uiProviderData.scriptFileName->setUrl( scriptFileName );
+            uiProviderData.scriptFileName->setText( QString("<a href='%1'>%1</a>")
+                    .arg(scriptFileName) );
+        }
+
+        if ( data["email"].toString().isEmpty() ) {
+            uiProviderData.author->setText( data["author"].toString() );
+        } else {
+            uiProviderData.author->setText( QString("<a href='mailto:%2'>%1</a> (%3)")
+                    .arg(data["author"].toString())
+                    .arg(data["email"].toString())
+                    .arg(data["shortAuthor"].toString()) );
+            uiProviderData.author->setToolTip( i18nc("@info",
+                    "Write an email to <email address='%2'>%1</email> (%3)",
+                    data["author"].toString(),
+                    data["email"].toString(),
+                    data["shortAuthor"].toString()) );
+        }
+        uiProviderData.description->setText( data["description"].toString() );
+        uiProviderData.features->setText( data["featureNames"].toStringList().join(", ") );
+
+        QStringList changelogEntries = data["changelog"].toStringList();
+        if ( changelogEntries.isEmpty() ) {
+            uiProviderData.lblChangelog->hide();
+            uiProviderData.changelog->hide();
+        } else {
+            QString changelog("<ul style='margin-left:-20;'>");
+            foreach ( const QString &entry, changelogEntries ) {
+                int pos = entry.indexOf(':');
+                if ( pos == -1 ) {
+                    changelog.append( QString("<li>%1</li>").arg(entry) );
+                } else {
+                    QString e = entry;
+                    changelog.append( QString("<li><span style='font-style: italic;'>%1</li>")
+                            .arg(e.insert(pos + 1, QLatin1String("</span>"))) );
+                }
+            }
+            changelog.append( QLatin1String("</ul>") );
+            uiProviderData.changelog->setHtml( changelog );
+        }
+    };
+
+    QString providerFileName() const {
+        return uiProviderData.fileName->url();
     };
 
     Ui::providerData uiProviderData;
-    QVariantHash serviceProviderData;
-    ServiceProviderDataDialog::Options options;
+    QString providerId;
+    ServiceProviderDataWidget::Options options;
+    bool importFinished;
+    qint64 feedSizeInBytes;
 };
 
-ServiceProviderDataDialog::ServiceProviderDataDialog( const QVariantHash &serviceProviderData, const QIcon &icon,
-        ServiceProviderDataDialog::Options options, QWidget* parent )
-        : KDialog(parent), d_ptr(new ServiceProviderDataDialogPrivate(serviceProviderData, options))
+ServiceProviderDataWidget::ServiceProviderDataWidget( const QString &providerId,
+        ServiceProviderDataWidget::Options options, QWidget *parent )
+        : QWidget(parent),
+          d_ptr(new ServiceProviderDataWidgetPrivate(providerId, options, this))
 {
+    Plasma::DataEngineManager::self()->loadEngine( "publictransport" );
+    Plasma::DataEngineManager::self()->loadEngine( "favicons" );
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine( "publictransport" );
+    engine->connectSource( "ServiceProvider " + providerId, this );
+}
 
-    QWidget *widget = new QWidget;
-    d_ptr->uiProviderData.setupUi( widget );
+ServiceProviderDataWidget::~ServiceProviderDataWidget()
+{
+    delete d_ptr;
+    Plasma::DataEngineManager::self()->unloadEngine( "publictransport" );
+    Plasma::DataEngineManager::self()->unloadEngine( "favicons" );
+}
+
+void ServiceProviderDataWidget::dataUpdated( const QString &sourceName,
+                                             const Plasma::DataEngine::Data &data )
+{
+    Q_D( ServiceProviderDataWidget );
+    if ( sourceName.startsWith(QLatin1String("ServiceProvider ")) ) {
+        d->update( data );
+
+        // Request favicon
+        Plasma::DataEngine *favIconEngine = Plasma::DataEngineManager::self()->engine( "favicons" );
+        if ( favIconEngine ) {
+            QString favIconSource = data["url"].toString();
+            favIconEngine->connectSource( favIconSource, this );
+        }
+    } else {
+        // Favicon of a service provider arrived
+        QPixmap favicon( QPixmap::fromImage( data["Icon"].value<QImage>() ) );
+        if ( favicon.isNull() ) {
+            // No favicon found for sourceName;
+            favicon = QPixmap( 16, 16 );
+            favicon.fill( Qt::transparent );
+        }
+
+        d->updateIcon( KIcon(favicon) );
+    }
+}
+
+bool ServiceProviderDataWidget::isImportFinished() const
+{
+    Q_D( const ServiceProviderDataWidget );
+    return d->importFinished;
+}
+
+class ServiceProviderDataDialogPrivate {
+public:
+    ServiceProviderDataDialogPrivate() : widget(0) {};
+    ServiceProviderDataWidget *widget;
+};
+
+ServiceProviderDataDialog::ServiceProviderDataDialog( const QString &providerId,
+        ServiceProviderDataDialog::Options options, QWidget *parent )
+        : KDialog(parent), d_ptr(new ServiceProviderDataDialogPrivate())
+{
+    Q_D( ServiceProviderDataDialog );
+
+    d->widget = new ServiceProviderDataWidget(
+            providerId, ServiceProviderDataWidget::NoOption, this );
 
     setModal( true );
     setButtons( KDialog::Ok );
-    setMainWidget( widget );
+    setMainWidget( d->widget );
     setWindowTitle( i18nc("@title:window", "Service Provider Information") );
     setWindowIcon( KIcon("help-about") );
 
-    KDialog::ButtonCodes buttonCodes = KDialog::Ok;
+    ButtonCodes buttonCodes = Ok;
     if ( options.testFlag(ShowOpenInTimetableMateButton) ) {
-        buttonCodes |= KDialog::User1; // Add "Open in TimetableMate..." button
+        buttonCodes |= User1; // Add "Open in TimetableMate..." button
     }
-    QString feedUrl = serviceProviderData["feedUrl"].toString();
-    qint64 feedSizeInBytes = 0;
-    if ( feedUrl.isEmpty() ) {
-        d_ptr->uiProviderData.lblGtfsFeed->hide();
-        d_ptr->uiProviderData.gtfsFeed->hide();
-    } else {
-        // Is a GTFS provider
-        feedSizeInBytes = serviceProviderData["gtfsDatabaseSize"].toInt();
-        d_ptr->uiProviderData.lblGtfsFeed->show();
-        d_ptr->uiProviderData.gtfsFeed->show();
-        if ( feedSizeInBytes <= 0 ) {
-            d_ptr->uiProviderData.gtfsFeed->setText( i18nc("@info:label",
-                    "<a href='%1'>%1</a>,<nl/>not imported", feedUrl) );
-        } else {
-            d_ptr->uiProviderData.gtfsFeed->setText( i18nc("@info:label",
-                    "<a href='%1'>%1</a>,<nl/>%2 disk space used",
-                    feedUrl, KGlobal::locale()->formatByteSize(feedSizeInBytes)) );
-            buttonCodes |= KDialog::User2; // Add "Delete GTFS database" button
-        }
+    if ( d->widget->isImportFinished() && options.testFlag(ShowDeleteGtfsDatabaseButton) ) {
+        buttonCodes |= User2; // Add "Delete GTFS database" button
     }
 
     setButtons( buttonCodes );
 
     if ( options.testFlag(ShowOpenInTimetableMateButton) ) {
-        setButtonIcon( KDialog::User1, KIcon("document-open") );
-        setButtonText( KDialog::User1, i18nc("@action:button", "Open in TimetableMate...") );
+        setButtonIcon( User1, KIcon("document-open") );
+        setButtonText( User1, i18nc("@action:button", "Open in TimetableMate...") );
     }
 
-    if ( feedSizeInBytes > 0 ) {
-        setButtonIcon( KDialog::User2, KIcon("edit-delete") );
-        setButtonText( KDialog::User2, i18nc("@action:button", "Delete GTFS Database") );
-        setButtonToolTip( KDialog::User2, i18nc("@info:tooltip",
-                "<title>Delete GTFS Database</title>"
-                "<para>The GTFS database contains all data imported from the GTFS feed. "
-                "If you delete the database now the GTFS feed needs to be imported again to make "
-                "this service provider usable again.</para>"
-                "<para>By deleting the database %1 disk space get freed.</para>",
-                KGlobal::locale()->formatByteSize(feedSizeInBytes) ) );
+    if ( buttonCodes.testFlag(User2) ) {
+        KPushButton *button = d->widget->d_ptr->uiProviderData.deleteGtfsDatabaseButton;
+        setButtonIcon( User2, KIcon(button->icon()) );
+        setButtonText( User2, button->text() );
+        setButtonToolTip( User2, button->toolTip() );
     }
 
-    d_ptr->uiProviderData.icon->setPixmap( icon.pixmap( 32 ) );
-    d_ptr->uiProviderData.serviceProviderName->setText(serviceProviderData["name"].toString() );
-    d_ptr->uiProviderData.version->setText( i18nc("@info/plain", "Version %1",
-            serviceProviderData["version"].toString()) );
-    d_ptr->uiProviderData.url->setUrl( serviceProviderData["url"].toString() );
-    d_ptr->uiProviderData.url->setText( QString("<a href='%1'>%1</a>").arg(
-            serviceProviderData["url"].toString()) );
-
-    d_ptr->uiProviderData.fileName->setUrl( serviceProviderData["fileName"].toString() );
-    d_ptr->uiProviderData.fileName->setText( QString("<a href='%1'>%1</a>").arg(
-            serviceProviderData["fileName"].toString()) );
-
-    QString scriptFileName = serviceProviderData["scriptFileName"].toString();
-    if ( scriptFileName.isEmpty() ) {
-        d_ptr->uiProviderData.lblScriptFileName->setVisible( false );
-        d_ptr->uiProviderData.scriptFileName->setVisible( false );
-    } else {
-        d_ptr->uiProviderData.lblScriptFileName->setVisible( true );
-        d_ptr->uiProviderData.scriptFileName->setVisible( true );
-        d_ptr->uiProviderData.scriptFileName->setUrl( scriptFileName );
-        d_ptr->uiProviderData.scriptFileName->setText( QString("<a href='%1'>%1</a>")
-                .arg(scriptFileName) );
-    }
-
-    if ( serviceProviderData["email"].toString().isEmpty() ) {
-        d_ptr->uiProviderData.author->setText( serviceProviderData["author"].toString() );
-    } else {
-        d_ptr->uiProviderData.author->setText( QString("<a href='mailto:%2'>%1</a> (%3)")
-                .arg(serviceProviderData["author"].toString())
-                .arg(serviceProviderData["email"].toString())
-                .arg(serviceProviderData["shortAuthor"].toString()) );
-        d_ptr->uiProviderData.author->setToolTip( i18nc("@info",
-                "Write an email to <email address='%2'>%1</email> (%3)",
-                serviceProviderData["author"].toString(),
-                serviceProviderData["email"].toString(),
-                serviceProviderData["shortAuthor"].toString()) );
-    }
-    d_ptr->uiProviderData.description->setText( serviceProviderData["description"].toString() );
-    d_ptr->uiProviderData.features->setText( serviceProviderData["featureNames"].toStringList().join(", ") );
-
-    QStringList changelogEntries = serviceProviderData["changelog"].toStringList();
-    if ( changelogEntries.isEmpty() ) {
-        d_ptr->uiProviderData.lblChangelog->hide();
-        d_ptr->uiProviderData.changelog->hide();
-    } else {
-        QString changelog("<ul style='margin-left:-20;'>");
-        foreach ( const QString &entry, changelogEntries ) {
-            int pos = entry.indexOf(':');
-            if ( pos == -1 ) {
-                changelog.append( QString("<li>%1</li>").arg(entry) );
-            } else {
-                QString e = entry;
-                changelog.append( QString("<li><span style='font-style: italic;'>%1</li>")
-                        .arg(e.insert(pos + 1, QLatin1String("</span>"))) );
-            }
-        }
-        changelog.append( QLatin1String("</ul>") );
-        d_ptr->uiProviderData.changelog->setHtml( changelog );
-    }
+    connect( d->widget, SIGNAL(gtfsDatabaseDeleted()),
+             this, SLOT(gtfsDatabaseDeletionFinished()) );
 }
 
 ServiceProviderDataDialog::~ServiceProviderDataDialog()
@@ -173,14 +267,21 @@ ServiceProviderDataDialog::~ServiceProviderDataDialog()
     delete d_ptr;
 }
 
+ServiceProviderDataWidget *ServiceProviderDataDialog::providerDataWidget() const
+{
+    Q_D( const ServiceProviderDataDialog );
+    return d->widget;
+}
+
 void ServiceProviderDataDialog::slotButtonClicked( int button )
 {
+    Q_D( ServiceProviderDataDialog );
     switch ( button ) {
-    case KDialog::User1:
+    case User1:
         openInTimetableMate();
         break;
-    case KDialog::User2:
-        deleteGtfsDatabase();
+    case User2:
+        d->widget->deleteGtfsDatabase();
         break;
     default:
         KDialog::slotButtonClicked( button );
@@ -193,37 +294,38 @@ void ServiceProviderDataDialog::openInTimetableMate()
     Q_D( ServiceProviderDataDialog );
     QString error;
     int result = KToolInvocation::startServiceByDesktopName( "timetablemate",
-            d->serviceProviderData["fileName"].toString(), &error );
+            d->widget->d_ptr->providerFileName(), &error );
     if ( result != 0 ) {
         KMessageBox::error( this, i18nc("@info",
                 "TimetableMate couldn't be started, error message was: '%1'", error) );
     }
 }
 
-void ServiceProviderDataDialog::deleteGtfsDatabase()
+void ServiceProviderDataWidget::deleteGtfsDatabase()
 {
-    Q_D( ServiceProviderDataDialog );
+    Q_D( ServiceProviderDataWidget );
 
-    qint64 feedSizeInBytes = d->serviceProviderData["gtfsDatabaseSize"].toInt();
     if ( KMessageBox::warningContinueCancel(this, i18nc("@info",
             "<title>Delete GTFS database</title>"
             "<para>Do you really want to delete the GTFS database? You will need to import the "
             "GTFS feed again to use this service provider again.</para>"
             "<para>By deleting the database %1 disk space get freed.</para>",
-            KGlobal::locale()->formatByteSize(feedSizeInBytes))) == KMessageBox::Continue )
+            KGlobal::locale()->formatByteSize(d->feedSizeInBytes))) == KMessageBox::Continue )
     {
-        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("Publictransport");
+        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
         Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
         KConfigGroup op = gtfsService->operationDescription("deleteGtfsDatabase");
-        op.writeEntry( "serviceProviderId", d->serviceProviderData["id"] );
+        op.writeEntry( "serviceProviderId", d->providerId );
         Plasma::ServiceJob *deleteJob = gtfsService->startOperationCall( op );
+        kDebug() << gtfsService << "call deleteGtfsDatabase" << deleteJob;
         connect( deleteJob, SIGNAL(result(KJob*)), this, SLOT(deletionFinished(KJob*)) );
         connect( deleteJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
     }
 }
 
-void ServiceProviderDataDialog::deletionFinished( KJob *job )
+void ServiceProviderDataWidget::deletionFinished( KJob *job )
 {
+    Q_D( ServiceProviderDataWidget );
     if ( job->error() != 0 ) {
         KMessageBox::information( this, i18nc("@info", "Deleting the GTFS database failed") );
     } else {
@@ -231,6 +333,10 @@ void ServiceProviderDataDialog::deletionFinished( KJob *job )
         emit gtfsDatabaseDeleted();
     }
 
+    d->uiProviderData.deleteGtfsDatabaseButton->setEnabled( false );
+}
+
+void ServiceProviderDataDialog::gtfsDatabaseDeletionFinished() {
     // Disable "Delete GTFS database" button
     enableButton( KDialog::User2, false );
 }

@@ -91,14 +91,12 @@ SettingsUiManager::SettingsUiManager( const Settings &settings,
 
     // Setup model for the service provider combobox
     m_modelServiceProvider = new ServiceProviderModel( this );
-    m_modelServiceProvider->syncWithDataEngine( m_publicTransportEngine, m_favIconEngine );
 
     // Setup model for the location combobox
     m_modelLocations = new LocationModel( this );
-    m_modelLocations->syncWithDataEngine( m_publicTransportEngine );
 
     // Setup stop widgets
-    m_stopListWidget = new StopListWidget( m_ui.stopList, settings.stops(),
+    m_stopListWidget = new StopListWidget( m_ui.stopList, m_modelServiceProvider, settings.stops(),
                                            StopSettingsDialog::ExtendedStopSelection,
                                            ServiceProviderDataDialog::DefaultOptions,
                                            &m_filters );

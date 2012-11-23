@@ -21,6 +21,7 @@
 #include "global.h"
 #include "enums.h"
 #include <Plasma/DataEngine>
+#include <Plasma/DataEngineManager>
 #include <KStandardDirs>
 
 /** @brief Namespace for the publictransport helper library. */
@@ -154,43 +155,54 @@ public:
 LocationModel::LocationModel( QObject* parent )
         : QAbstractListModel( parent ), d_ptr(new LocationModelPrivate())
 {
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->loadEngine( "publictransport" );
+    engine->connectSource( "Locations", this );
 }
 
 LocationModel::~LocationModel()
 {
     delete d_ptr;
+    Plasma::DataEngineManager::self()->unloadEngine( "publictransport" );
 }
 
-void LocationModel::syncWithDataEngine( Plasma::DataEngine* publicTransportEngine )
+void LocationModel::dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data )
 {
     Q_D( LocationModel );
+kDebug() << sourceName;
+    // Remove old items
+    if ( !d->items.isEmpty() ) {
+        beginRemoveRows( QModelIndex(), 0, d->items.count() - 1 );
+        d->items.clear();
+        endRemoveRows();
+    }
 
     // Get locations
-    Plasma::DataEngine::Data locationData = publicTransportEngine->query( "Locations" );
-    QStringList uniqueCountries = locationData.keys();
+    QStringList uniqueCountries = data.keys();
     QStringList countries;
 
 //     TODO: Give ServiceProviderModel or ..Data as parameter?
     // Get a list with the location of each service provider
     // (locations can be contained multiple times)
-    Plasma::DataEngine::Data serviceProviderData = publicTransportEngine->query( "ServiceProviders" );
+    QList< LocationItem* > newLocations;
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine( "publictransport" );
+    Plasma::DataEngine::Data serviceProviderData = engine->query( "ServiceProviders" );
     for ( Plasma::DataEngine::Data::const_iterator it = serviceProviderData.constBegin();
-                it != serviceProviderData.constEnd(); ++it ) {
+          it != serviceProviderData.constEnd(); ++it )
+    {
         countries << serviceProviderData.value( it.key() ).toHash()[ "country" ].toString();
     }
 
     // Create location items
     foreach( const QString &country, uniqueCountries ) {
-        d->items << new LocationItem( country, countries.count( country ),
-                                     locationData[country].toHash()["description"].toString() );
+        newLocations << new LocationItem( country, countries.count( country ),
+                                      data[country].toHash()["description"].toString() );
     }
 
     // Append item to show all service providers
-    d->items << new LocationItem( "showAll", countries.count() );
+    newLocations << new LocationItem( "showAll", countries.count() );
 
     // Get erroneous service providers (TODO: Get error messages)
-    QVariantHash erroneousProviders =
-            publicTransportEngine->query( "ErroneousServiceProviders" )["names"].toHash();
+    QVariantHash erroneousProviders = engine->query("ErroneousServiceProviders")["names"].toHash();
     if ( !erroneousProviders.isEmpty() ) {
         QStringList errorLines;
         for ( QVariantHash::ConstIterator it = erroneousProviders.constBegin();
@@ -199,11 +211,15 @@ void LocationModel::syncWithDataEngine( Plasma::DataEngine* publicTransportEngin
             errorLines << QString( "<b>%1</b>: %2" ).arg( it.key() ).arg( it.value().toString() );
         }
 
-        d->items << new LocationItem( "erroneous", erroneousProviders.count(),
-                                      errorLines.join( ",<br-wrap>" ) );
+        newLocations << new LocationItem( "erroneous", erroneousProviders.count(),
+                                          errorLines.join( ",<br-wrap>" ) );
     }
 
-    qSort( d->items.begin(), d->items.end(), locationGreaterThan );
+    // Append new providers sorted to the end of the provider list
+    qSort( newLocations.begin(), newLocations.end(), locationGreaterThan );
+    beginInsertRows( QModelIndex(), d->items.count(), d->items.count() + newLocations.count() - 1 );
+    d->items << newLocations;
+    endInsertRows();
 }
 
 QVariant LocationModel::data( const QModelIndex& index, int role ) const
@@ -291,6 +307,19 @@ QModelIndex LocationModel::indexOfLocation( const QString& countryCode )
 
     // Location for given country code not found
     return QModelIndex();
+}
+
+LocationItem *LocationModel::itemFromLocation( const QString &countryCode )
+{
+    Q_D( const LocationModel );
+    foreach ( LocationItem *item, d->items ) {
+        if ( item->countryCode() == countryCode ) {
+            return item;
+        }
+    }
+
+    // Location for given country code not found
+    return 0;
 }
 
 } // namespace Timetable

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>378</width>
-    <height>354</height>
+    <height>409</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -115,12 +115,9 @@
      <property name="text">
       <string notr="true">Author</string>
      </property>
-     <property name="openExternalLinks">
-      <bool>true</bool>
-     </property>
     </widget>
    </item>
-   <item row="8" column="0">
+   <item row="10" column="0">
     <widget class="QLabel" name="lblFileName">
      <property name="text">
       <string>Source XML:</string>
@@ -130,7 +127,7 @@
      </property>
     </widget>
    </item>
-   <item row="8" column="1">
+   <item row="10" column="1">
     <widget class="KUrlLabel" name="fileName">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -149,7 +146,7 @@
      </property>
     </widget>
    </item>
-   <item row="10" column="0">
+   <item row="12" column="0">
     <widget class="QLabel" name="lblScriptFileName">
      <property name="text">
       <string>Parser script:</string>
@@ -159,7 +156,7 @@
      </property>
     </widget>
    </item>
-   <item row="10" column="1">
+   <item row="12" column="1">
     <widget class="KUrlLabel" name="scriptFileName">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -178,7 +175,7 @@
      </property>
     </widget>
    </item>
-   <item row="11" column="0">
+   <item row="13" column="0">
     <widget class="QLabel" name="lblGtfsFeed">
      <property name="text">
       <string>GTFS feed:</string>
@@ -188,7 +185,7 @@
      </property>
     </widget>
    </item>
-   <item row="11" column="1">
+   <item row="13" column="1">
     <widget class="QLabel" name="gtfsFeed">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -204,7 +201,7 @@
      </property>
     </widget>
    </item>
-   <item row="12" column="0">
+   <item row="14" column="0">
     <widget class="QLabel" name="lblFeatures">
      <property name="text">
       <string>Features:</string>
@@ -214,7 +211,7 @@
      </property>
     </widget>
    </item>
-   <item row="12" column="1">
+   <item row="14" column="1">
     <widget class="QLabel" name="features">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -233,7 +230,7 @@
      </property>
     </widget>
    </item>
-   <item row="13" column="0">
+   <item row="15" column="0">
     <widget class="QLabel" name="lblDescription">
      <property name="text">
       <string>Description:</string>
@@ -243,7 +240,7 @@
      </property>
     </widget>
    </item>
-   <item row="13" column="1">
+   <item row="15" column="1">
     <widget class="KTextBrowser" name="description">
      <property name="html">
       <string notr="true">&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
@@ -260,7 +257,7 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="14" column="0">
+   <item row="16" column="0">
     <widget class="QLabel" name="lblChangelog">
      <property name="text">
       <string>Changelog:</string>
@@ -270,7 +267,7 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
-   <item row="14" column="1">
+   <item row="16" column="1">
     <widget class="KTextBrowser" name="changelog">
      <property name="sizePolicy">
       <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
@@ -299,6 +296,74 @@ p, li { white-space: pre-wrap; }
      </property>
     </widget>
    </item>
+   <item row="17" column="0">
+    <widget class="QLabel" name="lblOperations">
+     <property name="text">
+      <string>Operations:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
+     </property>
+    </widget>
+   </item>
+   <item row="17" column="1">
+    <widget class="KPushButton" name="deleteGtfsDatabaseButton">
+     <property name="text">
+      <string comment="@action:button">Delete GTFS Database</string>
+     </property>
+     <property name="icon">
+      <iconset theme="edit-delete">
+       <normaloff/>
+      </iconset>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="0">
+    <widget class="QLabel" name="lblType">
+     <property name="text">
+      <string>Type:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="1">
+    <widget class="QLabel" name="type">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string notr="true">Type</string>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="0">
+    <widget class="QLabel" name="lblState">
+     <property name="text">
+      <string>Status:</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+     </property>
+    </widget>
+   </item>
+   <item row="8" column="1">
+    <widget class="QLabel" name="state">
+     <property name="sizePolicy">
+      <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+       <horstretch>0</horstretch>
+       <verstretch>0</verstretch>
+      </sizepolicy>
+     </property>
+     <property name="text">
+      <string notr="true">Status</string>
+     </property>
+    </widget>
+   </item>
   </layout>
  </widget>
  <customwidgets>
@@ -311,6 +376,11 @@ p, li { white-space: pre-wrap; }
    <class>KUrlLabel</class>
    <extends>QLabel</extends>
    <header>kurllabel.h</header>
+  </customwidget>
+  <customwidget>
+   <class>KPushButton</class>
+   <extends>QPushButton</extends>
+   <header>kpushbutton.h</header>
   </customwidget>
  </customwidgets>
  <resources/>

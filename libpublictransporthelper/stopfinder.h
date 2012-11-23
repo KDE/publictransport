@@ -97,10 +97,8 @@ public:
         KeepWhenFinished
     };
 
-    StopFinder( Mode mode, Plasma::DataEngine *publicTransportEngine,
-                Plasma::DataEngine *osmEngine, Plasma::DataEngine *geolocationEngine,
-                int resultLimit = 25, DeletionPolicy deletionPolicy = DeleteWhenFinished,
-                QObject* parent = 0 );
+    StopFinder( Mode mode, int resultLimit = 25,
+                DeletionPolicy deletionPolicy = DeleteWhenFinished, QObject* parent = 0 );
     virtual ~StopFinder();
 
     Mode mode() const;

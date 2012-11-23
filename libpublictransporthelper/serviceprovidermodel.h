@@ -88,6 +88,8 @@ public:
      **/
     void setIcon( const KIcon &icon );
 
+    void setData( const QVariantHash &data );
+
 protected:
     ServiceProviderItemPrivate* const d_ptr;
 
@@ -99,7 +101,8 @@ private:
 /**
  * @brief A model containing service providers.
  *
- * You can just use @ref syncWithDataEngine to fill the model with data from the "publictransport"
+ * It automatically connects to the "ServiceProviders" data source of the "publictransport" engine
+ * and will stay up to date. Plasma::DataEngineManager gets used to get a pointer to the
  * data engine.
  *
  * @note removeRow(s) doesn't work, this model should be handled read-only.
@@ -140,22 +143,18 @@ public:
     **/
     virtual int rowCount(const QModelIndex& parent = QModelIndex()) const;
 
-    /**
-     * @brief Queries the data engine for service providers and fills itself with items.
-     *
-     * @param publicTransportEngine A pointer to the "publictransport" data engine.
-     *
-     * @param favIconEngine A pointer to the "favicons" data engine. Use 0 to not use it.
-     **/
-    void syncWithDataEngine( Plasma::DataEngine *publicTransportEngine,
-                             Plasma::DataEngine *favIconEngine = 0 );
-
     /** @brief Gets QModelIndex of the item with the given @p serviceProviderId. */
     QModelIndex indexOfServiceProvider( const QString &serviceProviderId );
 
+    /** @brief Gets QModelIndex of the given @p item. */
+    QModelIndex indexFromItem( ServiceProviderItem *item );
+
+    /** @brief Get the ServiceProviderItem from the given @p serviceProviderId. */
+    ServiceProviderItem *itemFromServiceProvider( const QString &serviceProviderId );
+
 protected Q_SLOTS:
     /** @brief The data from the favicons data engine was updated. */
-    void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data );
+    void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
 protected:
     ServiceProviderModelPrivate* const d_ptr;

@@ -30,57 +30,53 @@
 
 // KDE includes
 #include <KDialog> // Base class
+#include <Plasma/DataEngine>
 
+class ServiceProviderData;
 namespace Plasma {
-class DataEngine;
+    class DataEngine;
 }
-
 class KJob;
+
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
 
-class ServiceProviderDataDialogPrivate;
+class ServiceProviderDataDialog;
+class ServiceProviderDataWidgetPrivate;
 
 /**
  * @brief This dialog shows information about a service provider (plugin).
+ * @see ServiceProviderDataDialog
  **/
-class PUBLICTRANSPORTHELPER_EXPORT ServiceProviderDataDialog : public KDialog
+class PUBLICTRANSPORTHELPER_EXPORT ServiceProviderDataWidget : public QWidget
 {
     Q_OBJECT
+    friend ServiceProviderDataDialog;
 
 public:
     /**
-     * @brief Options for the provider data dialog.
+     * @brief Options for the provider data widget.
      **/
     enum Option {
         NoOption = 0x0000, /**< Don't use any option. */
-        ShowOpenInTimetableMateButton = 0x0001, /**< Show a button to open the provider plugin
-                * sources in TimetableMate, a little IDE to edit PublicTransport engine service
-                * provider plugins. */
-        DefaultOptions = ShowOpenInTimetableMateButton /**< Default options. */
+        ShowDeleteGtfsDatabaseButton = 0x0001, /**< Show a button to delete the Gtfs database. */
+        DefaultOptions = ShowDeleteGtfsDatabaseButton /**< Default options. */
     };
     Q_DECLARE_FLAGS(Options, Option)
 
     /**
-     * @brief Create a dialog, that shows information about a service provider (plugin).
+     * @brief Create a widget, that shows information about a service provider (plugin).
      *
-     * @param serviceProviderData The data object for the service provider from the
-     *   publictransport data engine. You can get it by querying for eg.
-     *   "ServiceProvider <em>id</em>" (id replaced by the service provider ID).
-     * @param icon The icon to show for the service provider. You can use the favicon of the
-     *   service providers home page from the <em>favicons</em> data engine. The <em>"url"</em>
-     *   key of the data object for the service provider from the publictransport data engine
-     *   contains an URL, that should give you a favicon, if one is available for the service
-     *   provider.
-     *
-     * @param options Options for the provider data dialog.
-     * @param parent The parent widget of the dialog.
+     * @param providerId The ID of the service provider plugin to show information for.
+     * @param options Options for the provider data widget.
+     * @param parent The parent widget of the widget.
      **/
-    ServiceProviderDataDialog( const QVariantHash& serviceProviderData, const QIcon& icon,
-                        ServiceProviderDataDialog::Options options = DefaultOptions,
-                        QWidget* parent = 0 );
+    ServiceProviderDataWidget( const QString &providerId, Options options = DefaultOptions,
+                               QWidget *parent = 0 );
 
-    virtual ~ServiceProviderDataDialog();
+    virtual ~ServiceProviderDataWidget();
+
+    bool isImportFinished() const;
 
 Q_SIGNALS:
     /**
@@ -92,10 +88,8 @@ Q_SIGNALS:
     void gtfsDatabaseDeleted();
 
 protected Q_SLOTS:
-    /**
-     * @brief The button to open the service provider in TimetableMate was clicked.
-     **/
-    void openInTimetableMate();
+    /** @brief The data from the favicons data engine was updated. */
+    void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
     /**
      * @brief The button to delete the GTFS database has been clicked.
@@ -106,6 +100,69 @@ protected Q_SLOTS:
      * @brief Deletion of the GTFS database has finished.
      **/
     void deletionFinished( KJob *job );
+
+protected:
+    ServiceProviderDataWidgetPrivate* const d_ptr;
+
+private:
+    Q_DECLARE_PRIVATE( ServiceProviderDataWidget )
+    Q_DISABLE_COPY( ServiceProviderDataWidget )
+};
+Q_DECLARE_OPERATORS_FOR_FLAGS(ServiceProviderDataWidget::Options)
+
+class ServiceProviderDataDialogPrivate;
+
+/**
+ * @brief This dialog shows information about a service provider (plugin).
+ * @see ServiceProviderDataWidget The main widget of this dialog.
+ **/
+class PUBLICTRANSPORTHELPER_EXPORT ServiceProviderDataDialog : public KDialog
+{
+    Q_OBJECT
+    friend ServiceProviderDataWidget;
+
+public:
+    /**
+     * @brief Options for the provider data dialog.
+     **/
+    enum Option {
+        NoOption = 0x0000, /**< Don't use any option. */
+        ShowOpenInTimetableMateButton = 0x0001, /**< Show a button to open the provider plugin
+                * sources in TimetableMate, a little IDE to edit PublicTransport engine service
+                * provider plugins. */
+        ShowDeleteGtfsDatabaseButton  = 0x0002, /**< Show a button to delete the Gtfs database. */
+        DefaultOptions = ShowOpenInTimetableMateButton | ShowDeleteGtfsDatabaseButton
+                /**< Default options. */
+    };
+    Q_DECLARE_FLAGS(Options, Option)
+
+    /**
+     * @brief Create a dialog, that shows information about a service provider (plugin).
+     *
+     * @param providerId The ID of the service provider plugin to show information for.
+     * @param options Options for the provider data dialog.
+     * @param parent The parent widget of the dialog.
+     **/
+    ServiceProviderDataDialog( const QString &providerId, Options options = DefaultOptions,
+                               QWidget *parent = 0 );
+
+    virtual ~ServiceProviderDataDialog();
+
+    /**
+     * @brief Get the used ServiceProviderDataWidget.
+     **/
+    ServiceProviderDataWidget *providerDataWidget() const;
+
+protected Q_SLOTS:
+    /**
+     * @brief The button to open the service provider in TimetableMate was clicked.
+     **/
+    void openInTimetableMate();
+
+    /**
+     * @brief Deletion of the GTFS database has finished.
+     **/
+    void gtfsDatabaseDeletionFinished();
 
     /**
      * @brief The @p button of this dialog was clicked.

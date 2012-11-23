@@ -28,9 +28,9 @@
 #include "filter.h"
 
 // KDE+Plasma includes
-#include <Plasma/DataEngineManager>
 #include <KLineEdit>
 #include <KPushButton>
+#include <Plasma/DataEngineManager>
 
 // Qt includes
 #include <QHBoxLayout>
@@ -47,29 +47,25 @@ class StopWidgetPrivate
     Q_DECLARE_PUBLIC( StopWidget )
 
 public:
-    StopWidgetPrivate( StopWidget *q,
+    StopWidgetPrivate( StopWidget *q, ServiceProviderModel *providerModel,
         const StopSettings& _stopSettings, FilterSettingsList *_filterConfigurations,
         StopSettingsDialog::Options _stopSettingsDialogOptions,
         ServiceProviderDataDialog::Options _providerDataDialogOptions,
         QList<int> _settings, int _stopIndex,
         StopSettingsWidgetFactory::Pointer _factory )
-        : newlyAdded(_stopSettings.stops().isEmpty()),
-        stopSettings(_stopSettings), filterConfigurations(_filterConfigurations),
-        stop(0), provider(0),
-        stopSettingsDialogOptions(_stopSettingsDialogOptions),
-        providerDataDialogOptions(_providerDataDialogOptions),
-        settings(_settings), stopIndex(_stopIndex), factory(_factory), q_ptr(q)
+        : newlyAdded(_stopSettings.stops().isEmpty()), stopSettings(_stopSettings),
+          filterConfigurations(_filterConfigurations), stop(0), provider(0),
+          providerModel(providerModel ? providerModel : new ServiceProviderModel(q)),
+          stopSettingsDialogOptions(_stopSettingsDialogOptions),
+          providerDataDialogOptions(_providerDataDialogOptions),
+          settings(_settings), stopIndex(_stopIndex), factory(_factory), q_ptr(q)
     {
         // Load data engines
-        dataEngineManager = Plasma::DataEngineManager::self();
-        publicTransportEngine = dataEngineManager->loadEngine("publictransport");
-        geolocationEngine = dataEngineManager->loadEngine("geolocation");
-        osmEngine = dataEngineManager->loadEngine("openstreetmap");
-
-        // Create service provider model
-        modelServiceProviders = new ServiceProviderModel( q );
-        modelServiceProviders->syncWithDataEngine( publicTransportEngine,
-                dataEngineManager->loadEngine("favicons") );
+        Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
+        manager->loadEngine("publictransport");
+        manager->loadEngine("geolocation");
+        manager->loadEngine("openstreetmap");
+        manager->loadEngine("favicons");
 
         // Create layout
         QFormLayout *infoLayout = new QFormLayout;
@@ -95,20 +91,41 @@ public:
         QHBoxLayout *mainLayout = new QHBoxLayout( q );
         mainLayout->addLayout( infoLayout );
         mainLayout->addWidget( change );
+
+        // Get notified when the provider model changes to update the provider label if needed
+        q->connect( providerModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+                    q, SLOT(providerModelChanged(QModelIndex,QModelIndex)) );
     };
 
     ~StopWidgetPrivate() {
-        if ( dataEngineManager ) {
-            dataEngineManager->unloadEngine("publictransport");
-            dataEngineManager->unloadEngine("geolocation");
-            dataEngineManager->unloadEngine("openstreetmap");
-            dataEngineManager->unloadEngine("favicons");
-        }
+        Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
+        manager->unloadEngine("publictransport");
+        manager->unloadEngine("geolocation");
+        manager->unloadEngine("openstreetmap");
+        manager->unloadEngine("favicons");
     };
 
-    void updateStopLabel( int stopCount = 1 ) {
+    inline QString providerId() const { return stopSettings[ServiceProviderSetting].toString(); };
+
+    void updateStopLabel() {
+        const int stopCount = stopSettings.stopList().count();
         stopLabel->setText( i18ncp("@info Label for the read only text label containing the "
                                    "stop name(s)", "Stop:", "Stops:", qMax(1, stopCount)) );
+    };
+
+    void updateProviderLabel() {
+        const QString id = providerId();
+        QModelIndex index = providerModel->indexOfServiceProvider( id );
+        if ( !index.isValid() ) {
+            if ( !id.isEmpty() ) {
+                // Provider with the providerId not found but the ID is valid
+                kWarning() << "Didn't find service provider" << id;
+            }
+            provider->setText( i18nc("@info/plain", "<warning>Provider <emphasis>%1</emphasis> "
+                                     "not found!</warning>", id) );
+        } else {
+            provider->setText( index.data().toString() );
+        }
     };
 
     bool newlyAdded;
@@ -117,12 +134,7 @@ public:
     QLabel *stopLabel;
     QLabel *stop;
     QLabel *provider;
-    ServiceProviderModel *modelServiceProviders; // Model of service providers
-
-    Plasma::DataEngineManager *dataEngineManager;
-    Plasma::DataEngine *publicTransportEngine;
-    Plasma::DataEngine *osmEngine;
-    Plasma::DataEngine *geolocationEngine;
+    ServiceProviderModel *providerModel; // Model of service providers
 
     StopSettingsDialog::Options stopSettingsDialogOptions;
     ServiceProviderDataDialog::Options providerDataDialogOptions;
@@ -134,13 +146,15 @@ protected:
     StopWidget *q_ptr;
 };
 
-StopWidget::StopWidget( QWidget* parent, const StopSettings& stopSettings,
-        StopSettingsDialog::Options stopSettingsDialogOptions,
+StopWidget::StopWidget( QWidget* parent, ServiceProviderModel *providerModel,
+        const StopSettings& stopSettings, StopSettingsDialog::Options stopSettingsDialogOptions,
         ServiceProviderDataDialog::Options providerDataDialogOptions,
         FilterSettingsList *filterConfigurations, QList<int> settings, int stopIndex,
         StopSettingsWidgetFactory::Pointer factory )
-        : QWidget(parent), d_ptr(new StopWidgetPrivate(this, stopSettings, filterConfigurations,
-          stopSettingsDialogOptions, providerDataDialogOptions, settings, stopIndex, factory))
+        : QWidget(parent),
+          d_ptr(new StopWidgetPrivate(this, providerModel, stopSettings, filterConfigurations,
+                                      stopSettingsDialogOptions, providerDataDialogOptions,
+                                      settings, stopIndex, factory))
 {
     setStopSettings( stopSettings ); // TODO move setStopSettings to private class
 }
@@ -183,18 +197,6 @@ void StopWidget::setStopSettings( const StopSettings& stopSettings )
             : i18nc("@info Shown in a read-only widget (StopWidget) with a city "
                     "(%1: stop name(s), %2: city)", "%1 in %2",
                     stopSettings.stops().join( ",<nl/>" ), stopSettings[CitySetting].toString()) );
-    d->updateStopLabel( stopSettings.stopList().count() );
-
-    QModelIndex index = d->modelServiceProviders->indexOfServiceProvider(
-            stopSettings[ServiceProviderSetting].toString() );
-    if ( !index.isValid() ) {
-        if ( !stopSettings[ServiceProviderSetting].toString().isEmpty() ) {
-            kDebug() << "Didn't find service provider" << stopSettings[ServiceProviderSetting];
-        }
-        d->provider->setText( "-" );
-    } else {
-        d->provider->setText( index.data().toString() );
-    }
 
     // Copy filter configurations from StopSettings
     if ( stopSettings.hasSetting(FilterConfigurationSetting) && d->filterConfigurations ) {
@@ -203,6 +205,19 @@ void StopWidget::setStopSettings( const StopSettings& stopSettings )
 
     d->stopSettings = stopSettings;
     d->newlyAdded = false;
+
+    d->updateStopLabel();
+    d->updateProviderLabel();
+}
+
+void StopWidget::providerModelChanged( const QModelIndex &topLeft, const QModelIndex &bottomRight )
+{
+    Q_D( StopWidget );
+    const QModelIndex index = d->providerModel->indexOfServiceProvider( d->providerId() );
+    if ( topLeft == index || (index.row() > topLeft.row() && index.row() <= bottomRight.row()) ) {
+        // The provider has changed in the model
+        d->updateProviderLabel();
+    }
 }
 
 void StopWidget::addButton( QToolButton* button )
@@ -281,20 +296,22 @@ class StopListWidgetPrivate
     Q_DECLARE_PUBLIC( StopListWidget )
 
 public:
-    StopListWidgetPrivate( StopListWidget *q,
+    StopListWidgetPrivate( StopListWidget *q, ServiceProviderModel *providerModel,
         FilterSettingsList *_filterConfigurations,
         StopSettingsDialog::Options _stopSettingsDialogOptions,
         ServiceProviderDataDialog::Options _providerInfoDialogOptions,
         QList<int> _settings, StopSettingsWidgetFactory::Pointer _factory )
-        : filterConfigurations(_filterConfigurations),
-        stopSettingsDialogOptions(_stopSettingsDialogOptions),
-        providerDataDialogOptions(_providerInfoDialogOptions),
-        settings(_settings), factory(_factory), q_ptr(q)
+        : providerModel(providerModel ? providerModel : new ServiceProviderModel(q)),
+          filterConfigurations(_filterConfigurations),
+          stopSettingsDialogOptions(_stopSettingsDialogOptions),
+          providerDataDialogOptions(_providerInfoDialogOptions),
+          settings(_settings), factory(_factory), q_ptr(q)
     {
         currentStopIndex = -1;
         newStopSettingsBehaviour = StopListWidget::OpenDialogIfNoStopsGiven;
     };
 
+    ServiceProviderModel *providerModel;
     FilterSettingsList *filterConfigurations;
     int currentStopIndex;
     StopSettingsDialog::Options stopSettingsDialogOptions;
@@ -307,14 +324,15 @@ protected:
     StopListWidget *q_ptr;
 };
 
-StopListWidget::StopListWidget( QWidget* parent, const StopSettingsList& stopSettingsList,
+StopListWidget::StopListWidget( QWidget* parent, ServiceProviderModel *providerModel,
+        const StopSettingsList& stopSettingsList,
         StopSettingsDialog::Options stopSettingsDialogOptions,
         ServiceProviderDataDialog::Options providerInfoDialogOptions,
         FilterSettingsList *filterConfigurations, QList<int> settings,
         StopSettingsWidgetFactory::Pointer factory )
         : AbstractDynamicWidgetContainer(parent, RemoveButtonsBesideWidgets,
                                          AddButtonAfterLastWidget, ShowSeparators),
-        d_ptr(new StopListWidgetPrivate(this, filterConfigurations,
+        d_ptr(new StopListWidgetPrivate(this, providerModel, filterConfigurations,
               stopSettingsDialogOptions, providerInfoDialogOptions, settings, factory))
 {
     addButton()->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
@@ -465,7 +483,7 @@ QWidget* StopListWidget::createNewWidget()
 QWidget* StopListWidget::createNewWidget( const StopSettings &stopSettings )
 {
     Q_D( StopListWidget );
-    StopWidget *stopWidget = new StopWidget( this, stopSettings,
+    StopWidget *stopWidget = new StopWidget( this, d->providerModel, stopSettings,
             d->stopSettingsDialogOptions, d->providerDataDialogOptions,
             d->filterConfigurations, d->settings, -1, d->factory );
     connect( stopWidget, SIGNAL(remove()), this, SLOT(removeLastWidget()) );

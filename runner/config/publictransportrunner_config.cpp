@@ -54,9 +54,7 @@ PublicTransportRunnerConfig::PublicTransportRunnerConfig( QWidget* parent, const
     m_favIconEngine = m_manager->loadEngine( "favicons" );
 
     m_modelLocations = new LocationModel( this );
-    m_modelLocations->syncWithDataEngine( m_publicTransportEngine );
     m_modelServiceProviders = new ServiceProviderModel( this );
-    m_modelServiceProviders->syncWithDataEngine( m_publicTransportEngine, m_favIconEngine );
 
     connect( m_ui.btnChangeStop, SIGNAL(clicked()),
              this, SLOT(changeStopClicked()) );

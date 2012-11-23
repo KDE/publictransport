@@ -29,10 +29,7 @@
 
 #include <QModelIndex>
 #include <KIcon>
-
-namespace Plasma {
-    class DataEngine;
-}
+#include <Plasma/DataEngine>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
@@ -108,8 +105,9 @@ private:
  * @brief A model containing locations with supported providers in the data engine.
  *
  * There are different location types, a list of them can be seen in @ref LocationItem::ItemType.
- * You can just use @ref syncWithDataEngine to fill the model with data from the "publictransport"
- * data engine.
+ * This model automatically connects to the "Locations" data source of the "publictransport" engine
+ * and will stay up to date. Plasma::DataEngineManager gets used to get a pointer to the data
+ * engine.
  *
  * @note removeRow(s) doesn't work, this model should be handled read-only.
  *
@@ -117,13 +115,15 @@ private:
  **/
 class PUBLICTRANSPORTHELPER_EXPORT LocationModel : public QAbstractListModel
 {
+    Q_OBJECT
+
 public:
     /**
      * @brief Creates a new location model.
      *
      * @param parent The parent of this model. Defaults to 0.
      **/
-    explicit LocationModel(QObject* parent = 0);
+    explicit LocationModel( QObject* parent = 0 );
 
     /**
      * @brief Destructor.
@@ -159,16 +159,14 @@ public:
      **/
     virtual Qt::ItemFlags flags( const QModelIndex& index ) const;
 
-    /**
-     * @brief Queries the data engine for supported locations and fills itself with items.
-     *
-     * @param publicTransportEngine A pointer to the "publictransport" data engine.
-     **/
-    void syncWithDataEngine( Plasma::DataEngine *publicTransportEngine );
-
     /** @brief Gets QModelIndex of the item with the given @p countryCode. */
     QModelIndex indexOfLocation( const QString &countryCode );
 
+    LocationItem *itemFromLocation( const QString &countryCode );
+
+protected Q_SLOTS:
+    /** @brief The data from the data engine was updated. */
+    void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
 
 protected:
     LocationModelPrivate* const d_ptr;
