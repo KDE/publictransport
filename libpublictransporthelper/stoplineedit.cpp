@@ -726,8 +726,10 @@ void StopLineEdit::askToImportGtfsFeed()
 {
     Q_D( StopLineEdit );
 
-    if ( d->state == StopLineEditPrivate::AskingToImportGtfsFeed ) {
-        // Was already asking
+    if ( d->state == StopLineEditPrivate::AskingToImportGtfsFeed ||
+         d->providerType != QLatin1String("GTFS") )
+    {
+        // Is already asking or is not a GTFS provider
         return;
     }
 
@@ -754,8 +756,10 @@ void StopLineEdit::showGtfsFeedImportProgress()
 {
     Q_D( StopLineEdit );
 
-    if ( d->state == StopLineEditPrivate::WaitingForImport ) {
-        // Was already showing import progress
+    if ( d->state == StopLineEditPrivate::WaitingForImport ||
+         d->providerType != QLatin1String("GTFS") )
+    {
+        // Is already showing import progress or is not a GTFS provider
         return;
     }
 

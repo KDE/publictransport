@@ -51,7 +51,8 @@ public:
     }
 
     void update( const Plasma::DataEngine::Data &data ) {
-        uiProviderData.type->setText( data["type"].toString() );
+        providerType = data["type"].toString();
+        uiProviderData.type->setText( providerType );
 
         state = data["state"].toString();
         stateData = data["stateData"].toHash();
@@ -62,7 +63,9 @@ public:
             uiProviderData.lblGtfsFeed->hide();
             uiProviderData.gtfsFeed->hide();
             uiProviderData.importGtfsFeedButton->hide();
+            uiProviderData.updateGtfsDatabaseButton->hide();
             uiProviderData.deleteGtfsDatabaseButton->hide();
+            uiProviderData.progressBar->hide();
         } else {
             // Is a GTFS provider
             const QString feedUrl = data["feedUrl"].toString();
@@ -82,6 +85,13 @@ public:
                 uiProviderData.gtfsFeed->setText(
                         i18nc("@info:label", "<a href='%1'>%1</a>", feedUrl) );
             }
+
+            if ( state == QLatin1String("importing_gtfs_feed") ) {
+                uiProviderData.progressBar->setValue( stateData["progress"].toInt() );
+                uiProviderData.progressBar->show();
+            } else {
+                uiProviderData.progressBar->hide();
+            }
         }
 
         // Set the tooltip for the "Delete GTFS Database" button also if it gets hidden,
@@ -93,7 +103,7 @@ public:
                     "imported again to make this service provider usable again.</para>"
                     "<para>By deleting the database %1 disk space get freed.</para>",
                 KGlobal::locale()->formatByteSize(feedSizeInBytes) ) );
-        if ( !options.testFlag(ServiceProviderDataWidget::ShowDeleteGtfsDatabaseButton) ) {
+        if ( !options.testFlag(ServiceProviderDataWidget::ShowDatabaseControlButtons) ) {
             uiProviderData.lblOperations->hide();
             uiProviderData.importGtfsFeedButton->hide();
             uiProviderData.updateGtfsDatabaseButton->hide();
@@ -170,6 +180,7 @@ public:
     Ui::providerData uiProviderData;
     QString providerId;
     ServiceProviderDataWidget::Options options;
+    QString providerType;
     QString state;
     QVariantHash stateData;
     qint64 feedSizeInBytes;
@@ -233,6 +244,12 @@ void ServiceProviderDataWidget::dataUpdated( const QString &sourceName,
     }
 }
 
+QString ServiceProviderDataWidget::providerType() const
+{
+    Q_D( const ServiceProviderDataWidget );
+    return d->providerType;
+}
+
 QString ServiceProviderDataWidget::providerState() const
 {
     Q_D( const ServiceProviderDataWidget );
@@ -253,6 +270,12 @@ public:
 
     void updateDialogButtons()
     {
+        if ( widget->providerType() != QLatin1String("GTFS") ) {
+            q->showButton( KDialog::User2, false );
+            q->showButton( KDialog::User3, false );
+            return;
+        }
+
         if ( q->button(KDialog::User2) ) {
             KPushButton *button;
             if ( widget->providerState() == QLatin1String("gtfs_feed_import_pending") ) {
@@ -269,6 +292,7 @@ public:
             q->setButtonIcon( KDialog::User2, KIcon( button->icon()) );
             q->setButtonText( KDialog::User2, button->text() );
             q->setButtonToolTip( KDialog::User2, button->toolTip() );
+            q->showButton( KDialog::User2, true );
         }
 
         if ( q->button(KDialog::User3) ) {
@@ -305,7 +329,7 @@ ServiceProviderDataDialog::ServiceProviderDataDialog( const QString &providerId,
     if ( options.testFlag(ShowOpenInTimetableMateButton) ) {
         buttonCodes |= User1; // Add "Open in TimetableMate..." button
     }
-    if ( options.testFlag(ShowDeleteGtfsDatabaseButton) ) {
+    if ( options.testFlag(ShowDatabaseControlButtons) ) {
         buttonCodes |= User2; // Add delete/import button
         buttonCodes |= User3; // Add update button
     }

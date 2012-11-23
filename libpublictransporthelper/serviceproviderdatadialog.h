@@ -61,8 +61,9 @@ public:
      **/
     enum Option {
         NoOption = 0x0000, /**< Don't use any option. */
-        ShowDeleteGtfsDatabaseButton = 0x0001, /**< Show a button to delete the Gtfs database. */
-        DefaultOptions = ShowDeleteGtfsDatabaseButton /**< Default options. */
+        ShowDatabaseControlButtons = 0x0001, /**< Show buttons to import/update/delete
+                * the GTFS database. */
+        DefaultOptions = ShowDatabaseControlButtons /**< Default options. */
     };
     Q_DECLARE_FLAGS(Options, Option)
 
@@ -77,6 +78,9 @@ public:
                                QWidget *parent = 0 );
 
     virtual ~ServiceProviderDataWidget();
+
+    /** @brief Get the last received type of the provider. */
+    QString providerType() const;
 
     /** @brief Get the last received state of the provider. */
     QString providerState() const;
@@ -132,8 +136,9 @@ public:
         ShowOpenInTimetableMateButton = 0x0001, /**< Show a button to open the provider plugin
                 * sources in TimetableMate, a little IDE to edit PublicTransport engine service
                 * provider plugins. */
-        ShowDeleteGtfsDatabaseButton  = 0x0002, /**< Show a button to delete the Gtfs database. */
-        DefaultOptions = ShowOpenInTimetableMateButton | ShowDeleteGtfsDatabaseButton
+        ShowDatabaseControlButtons  = 0x0002, /**< Show buttons to import/update/delete
+                * the GTFS database. */
+        DefaultOptions = ShowOpenInTimetableMateButton | ShowDatabaseControlButtons
                 /**< Default options. */
     };
     Q_DECLARE_FLAGS(Options, Option)
