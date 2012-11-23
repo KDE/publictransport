@@ -136,7 +136,6 @@ bool PublicTransportEngine::tryToStartGtfsFeedImportJob( Plasma::ServiceJob *job
     // Store the state in the cache
     QSharedPointer< KConfig > cache = ServiceProviderGlobal::cache();
     KConfigGroup group = cache->group( providerId );
-    kDebug() << "Write state" << state;
     group.writeEntry( "state", state );
     KConfigGroup stateGroup = group.group( "stateData" );
     for ( QVariantHash::ConstIterator it = stateData.constBegin();
@@ -1087,7 +1086,6 @@ void PublicTransportEngine::serviceProviderDirChanged( const QString &path )
 void PublicTransportEngine::deleteProvider( const QString &providerId )
 {
     // Clear all cached data
-    kDebug() << "Delete provider" << providerId;
     const QStringList cachedSources = m_dataSources.keys();
     foreach( const QString &cachedSource, cachedSources ) {
         const QString currentProviderId = providerIdFromSourceName( cachedSource );
@@ -1837,19 +1835,6 @@ void PublicTransportEngine::errorParsing( ServiceProvider *provider,
     setData( sourceName, "error", true );
     setData( sourceName, "errorCode", errorCode );
     setData( sourceName, "errorMessage", errorMessage );
-    setData( sourceName, "updated", QDateTime::currentDateTime() );
-}
-
-void PublicTransportEngine::progress( ServiceProvider *provider, qreal progress,
-        const QString &jobDescription, const QUrl &requestUrl, const AbstractRequest *request )
-{
-    const QString sourceName = request->sourceName();
-    setData( sourceName, "serviceProvider", provider->id() );
-    setData( sourceName, "progress", progress );
-    setData( sourceName, "jobDescription", jobDescription );
-    setData( sourceName, "requestUrl", requestUrl );
-    setData( sourceName, "parseMode", request->parseModeName() );
-    setData( sourceName, "receivedData", "nothing" );
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 }
 

@@ -733,8 +733,6 @@ void StopLineEdit::askToImportGtfsFeed()
         return;
     }
 
-    kDebug() << "ASK";
-
     d->state = StopLineEditPrivate::AskingToImportGtfsFeed;
     // Add a button to start the import
     d->addButtons( StopLineEditPrivate::StartButton );
@@ -762,8 +760,6 @@ void StopLineEdit::showGtfsFeedImportProgress()
         // Was already showing import progress
         return;
     }
-
-    kDebug() << "IMPORTING...";
 
     d->state = StopLineEditPrivate::WaitingForImport;
     d->addButtons( StopLineEditPrivate::StopButton | StopLineEditPrivate::PauseButton );

@@ -357,9 +357,6 @@ protected slots:
     void errorParsing( ServiceProvider *provider, ErrorCode errorCode, const QString &errorMessage,
             const QUrl &requestUrl, const AbstractRequest *request );
 
-    void progress( ServiceProvider *provider, qreal progress, const QString &jobDescription,
-            const QUrl &requestUrl, const AbstractRequest *request );
-
     /**
      * @brief A global or local directory with service provider XML files was changed.
      *

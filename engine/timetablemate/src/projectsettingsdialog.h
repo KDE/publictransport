@@ -88,6 +88,7 @@ signals:
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** A new script file has been created. */
     void scriptAdded( const QString &scriptFile );
+
     /** The used script file has changed. */
     void scriptFileChanged( const QString &scriptFile );
 #endif
