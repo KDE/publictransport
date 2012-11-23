@@ -131,7 +131,7 @@ void AbstractGtfsDatabaseJob::tryToWork()
         return;
     }
 
-    if ( !canImportGtfsFeed() ) {
+    if ( isAccessingGtfsDatabase() && !canImportGtfsFeed() ) {
         // Cannot start another GTFS database accessing job
         kDebug() << "Import is already running";
         setError( GtfsErrorFeedImportAlreadyRunning );

@@ -46,21 +46,34 @@ class QNetworkReply;
  * or setResult() from work(), which can cause problems in start().
  *
  * Before work() is called, it gets tested if the provider ID is valid (ie. there is a provider
- * with the given ID) and no other GTFS database job is currently running. When the job is finished
- * you can use the canAccessGtfsDatabase property to check if the work() was called to access the
- * database.
+ * with the given ID) and no other GTFS database job is currently running or
+ * isAccessingGtfsDatabase() returns @c false. When the job is finished you can use the
+ * canAccessGtfsDatabase property to check if work() was called to access the database.
  **/
 class AbstractGtfsDatabaseJob : public Plasma::ServiceJob {
     Q_OBJECT
     Q_PROPERTY( QString serviceProviderId READ serviceProviderId )
     Q_PROPERTY( bool canAccessGtfsDatabase READ canAccessGtfsDatabase )
+    Q_PROPERTY( bool isAccessingGtfsDatabase READ isAccessingGtfsDatabase )
 
 public:
     AbstractGtfsDatabaseJob( const QString &destination, const QString &operation,
                              const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
     virtual QString serviceProviderId() const = 0;
 
-    bool canAccessGtfsDatabase() const { return m_canAccessGtfsDatabase; };
+    /**
+     * @brief Whether or not the data engine has allowed access to the GTFS database for this job.
+     * If isAccessingGtfsDatabase() returns @c false, this function also returns @c false.
+     **/
+    bool canAccessGtfsDatabase() const {
+        return isAccessingGtfsDatabase() ? m_canAccessGtfsDatabase : false;
+    };
+
+    /**
+     * @brief Whether or not this job needs access to the GTFS database.
+     * Overwrite and return @c false if the derived job does not need database access.
+     **/
+    virtual bool isAccessingGtfsDatabase() const { return true; };
 
     /** @brief Overwritten to call tryToWork() from the event loop. */
     virtual void start();
@@ -110,6 +123,14 @@ public:
     void setOnlyGetInformation( bool onlyGetInformation ) {
         m_onlyGetInformation = onlyGetInformation;
     };
+
+    /**
+     * @brief Whether or not this job needs access to the GTFS database.
+     * If this job stops after GTFS feed information was retrieved, it does not need access to
+     * the database. This is the case when setOnlyGetInformation() was called with @c true and
+     * this function will then return @c false.
+     **/
+    virtual bool isAccessingGtfsDatabase() const { return !m_onlyGetInformation; };
 
 signals:
     void logChanged();

@@ -121,7 +121,16 @@ bool PublicTransportEngine::tryToStartGtfsFeedImportJob( Plasma::ServiceJob *job
     stateData[ "gtfsDatabasePath" ] = databasePath;
     stateData[ "gtfsDatabaseSize" ] = 0;
     stateData[ "progress" ] = 0;
-    const QString state = "importing_gtfs_feed";
+
+    // The "updateGtfsFeed" operation can run in the background
+    QString state;
+    if ( job->operationName() == QLatin1String("importGtfsFeed") ) {
+        state = "importing_gtfs_feed";
+    } else if ( job->operationName() == QLatin1String("deleteGtfsDatabase") ) {
+        state = "gtfs_feed_import_pending";
+    } else { // "updateGtfsFeed", "updateGtfsFeedInfo"
+        state = "ready";
+    }
     dataSource->setProviderState( providerId, state, stateData );
 
     // Store the state in the cache
