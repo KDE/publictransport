@@ -27,7 +27,6 @@
 #include "serviceproviderglobal.h"
 #include "global.h"
 #include "request.h"
-#include "config.h"
 #include "timetableservice.h"
 #include "datasource.h"
 
@@ -103,6 +102,7 @@ ProvidersDataSource *PublicTransportEngine::providersDataSource() const
     return dynamic_cast< ProvidersDataSource* >( m_dataSources[name] );
 }
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
 bool PublicTransportEngine::tryToStartGtfsFeedImportJob( Plasma::ServiceJob *job )
 {
     Q_ASSERT( job );
@@ -211,6 +211,7 @@ void PublicTransportEngine::gtfsImportJobPercent( KJob *job, ulong percent )
     dataSource->setProviderStateData( providerId, stateData );
     publishData( dataSource, providerId );
 }
+#endif // BUILD_PROVIDER_TYPE_GTFS
 
 PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantList& args )
         : Plasma::DataEngine( parent, args ),

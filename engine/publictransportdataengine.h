@@ -25,6 +25,7 @@
 #define PUBLICTRANSPORTDATAENGINE_HEADER
 
 // Own includes
+#include "config.h"
 #include "enums.h"
 #include "departureinfo.h"
 
@@ -210,6 +211,7 @@ public:
     QString updateProviderState( const QString &providerId, QVariantHash *stateData,
                                  const QString &providerType, bool readFromCache = true );
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     /**
      * @brief Try to start a GTFS service @p job that accesses the GTFS database.
      * @return @c True, if the @p job can be started, @c false otherwise. If there already is a
@@ -217,6 +219,7 @@ public:
      *   started and this function returns @c false.
      **/
     Q_INVOKABLE bool tryToStartGtfsFeedImportJob( Plasma::ServiceJob *job );
+#endif // BUILD_PROVIDER_TYPE_GTFS
 
     /**
      * @brief The default time offset from now for the first departure/arrival/journey in results.
@@ -244,12 +247,6 @@ public slots:
     /** @brief Request additional timetable data for item @p updateItem in @p sourceName. */
     void requestAdditionalData( const QString &sourceName, int updateItem );
 
-    /** @brief Received a message from a @p job of the GTFS service. */
-    void gtfsImportJobInfoMessage( KJob *job, const QString &plain, const QString &rich );
-
-    /** @brief A @p job of the GTFS service notifies it's progress. */
-    void gtfsImportJobPercent( KJob *job, ulong percent );
-
 protected slots:
     void slotSourceRemoved( const QString &name );
     void networkStateChanged( uint state );
@@ -257,8 +254,16 @@ protected slots:
     void forceUpdate();
     void updateTimeout();
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     /** @brief A @p job of the GTFS service has finished. */
     void gtfsServiceJobFinished( Plasma::ServiceJob *job );
+
+    /** @brief Received a message from a @p job of the GTFS service. */
+    void gtfsImportJobInfoMessage( KJob *job, const QString &plain, const QString &rich );
+
+    /** @brief A @p job of the GTFS service notifies it's progress. */
+    void gtfsImportJobPercent( KJob *job, ulong percent );
+#endif // BUILD_PROVIDER_TYPE_GTFS
 
     /**
      * @brief A list of departures was received.

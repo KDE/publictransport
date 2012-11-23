@@ -3982,9 +3982,9 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
 
 Project::GtfsDatabaseState Project::gtfsDatabaseState() const
 {
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
-#ifdef BUILD_PROVIDER_TYPE_GTFS
     return d->gtfsDatabaseState;
 #else
     return InitializingGtfsDatabase;
@@ -3993,9 +3993,9 @@ Project::GtfsDatabaseState Project::gtfsDatabaseState() const
 
 QString Project::gtfsDatabaseErrorString() const
 {
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
-#ifdef BUILD_PROVIDER_TYPE_GTFS
     return d->gtfsDatabaseErrorString;
 #else
     return QString();
@@ -4004,9 +4004,9 @@ QString Project::gtfsDatabaseErrorString() const
 
 int Project::gtfsFeedImportProgress() const
 {
+#ifdef BUILD_PROVIDER_TYPE_GTFS
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
-#ifdef BUILD_PROVIDER_TYPE_GTFS
     return d->gtfsFeedImportProgress;
 #else
     return 0;
@@ -4015,8 +4015,8 @@ int Project::gtfsFeedImportProgress() const
 
 QString Project::gtfsFeedImportInfoMessage() const
 {
-    Q_D( const Project );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    Q_D( const Project );
     QMutexLocker locker( d->mutex );
     return d->gtfsFeedImportInfoMessage;
 #else
@@ -4026,30 +4026,30 @@ QString Project::gtfsFeedImportInfoMessage() const
 
 QDateTime Project::gtfsFeedLastModified() const
 {
-    Q_D( const Project );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    Q_D( const Project );
     QMutexLocker locker( d->mutex );
     return d->gtfsFeedModifiedTime;
 #else
-    return 0;
+    return QDateTime();
 #endif
 }
 
 QDateTime Project::gtfsDatabaseLastModified() const
 {
-    Q_D( const Project );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    Q_D( const Project );
     QMutexLocker locker( d->mutex );
     return d->gtfsDatabaseModifiedTime;
 #else
-    return 0;
+    return QDateTime();
 #endif
 }
 
 quint64 Project::gtfsFeedSize() const
 {
-    Q_D( const Project );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    Q_D( const Project );
     QMutexLocker locker( d->mutex );
     return d->gtfsFeedSize;
 #else
@@ -4059,8 +4059,8 @@ quint64 Project::gtfsFeedSize() const
 
 QString Project::gtfsFeedSizeString() const
 {
-    Q_D( const Project );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    Q_D( const Project );
     QMutexLocker locker( d->mutex );
     return KGlobal::locale()->formatByteSize( d->gtfsFeedSize );
 #else
@@ -4070,8 +4070,8 @@ QString Project::gtfsFeedSizeString() const
 
 quint64 Project::gtfsDatabaseSize() const
 {
-    Q_D( const Project );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    Q_D( const Project );
     QMutexLocker locker( d->mutex );
     return d->gtfsDatabaseSize;
 #else
@@ -4081,8 +4081,8 @@ quint64 Project::gtfsDatabaseSize() const
 
 QString Project::gtfsDatabaseSizeString() const
 {
-    Q_D( const Project );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    Q_D( const Project );
     QMutexLocker locker( d->mutex );
     return KGlobal::locale()->formatByteSize( d->gtfsDatabaseSize );
 #else
@@ -4092,8 +4092,8 @@ QString Project::gtfsDatabaseSizeString() const
 
 QString Project::gtfsDatabasePath() const
 {
-    Q_D( const Project );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    Q_D( const Project );
     QMutexLocker locker( d->mutex );
     return GtfsDatabase::databasePath( d->data()->id() );
 #else
@@ -4101,9 +4101,9 @@ QString Project::gtfsDatabasePath() const
 #endif
 }
 
+#ifdef BUILD_PROVIDER_TYPE_GTFS
 void Project::importGtfsFeed()
 {
-#ifdef BUILD_PROVIDER_TYPE_GTFS
     Q_D( Project );
     if ( d->provider->type() != Enums::GtfsProvider ) {
         return;
@@ -4127,12 +4127,10 @@ void Project::importGtfsFeed()
     connect( importJob, SIGNAL(infoMessage(KJob*,QString,QString)),
              this, SLOT(gtfsDatabaseImportInfoMessage(KJob*,QString,QString)) );
     connect( importJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
-#endif
 }
 
 void Project::updateGtfsDatabase()
 {
-#ifdef BUILD_PROVIDER_TYPE_GTFS
     Q_D( Project );
     if ( d->provider->type() != Enums::GtfsProvider ) {
         return;
@@ -4156,12 +4154,10 @@ void Project::updateGtfsDatabase()
     connect( importJob, SIGNAL(infoMessage(KJob*,QString,QString)),
              this, SLOT(gtfsDatabaseImportInfoMessage(KJob*,QString,QString)) );
     connect( importJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
-#endif
 }
 
 void Project::deleteGtfsDatabase()
 {
-#ifdef BUILD_PROVIDER_TYPE_GTFS
     Q_D( Project );
     if ( d->provider->type() != Enums::GtfsProvider ) {
         return;
@@ -4191,10 +4187,8 @@ void Project::deleteGtfsDatabase()
         Plasma::ServiceJob *deleteJob = gtfsService->startOperationCall( op );
         connect( deleteJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
     }
-#endif
 }
 
-#ifdef BUILD_PROVIDER_TYPE_GTFS
 void Project::updateGtfsDatabaseState()
 {
     Q_D( Project );
