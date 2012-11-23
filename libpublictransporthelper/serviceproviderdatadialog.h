@@ -79,13 +79,8 @@ public:
     bool isImportFinished() const;
 
 Q_SIGNALS:
-    /**
-     * @brief The GTFS database for the service provider was deleted manually.
-     *
-     * A warning message box was shown, the user clicked "Continue" and the deletion job has
-     * finished.
-     **/
-    void gtfsDatabaseDeleted();
+    /** @brief The state of the provider has changed in the data engine. */
+    void providerStateChanged( const QString &state, const QVariantHash &stateData );
 
 protected Q_SLOTS:
     /** @brief The data from the favicons data engine was updated. */
@@ -163,6 +158,12 @@ protected Q_SLOTS:
      * @brief Deletion of the GTFS database has finished.
      **/
     void gtfsDatabaseDeletionFinished();
+
+    /**
+     * @brief The state of the provider has changed in the data engine.
+     * Notified by the contained ServiceProviderDataWidget.
+     **/
+    void providerStateChanged( const QString &state, const QVariantHash &stateData );
 
     /**
      * @brief The @p button of this dialog was clicked.

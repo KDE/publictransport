@@ -1192,8 +1192,6 @@ void StopSettingsDialog::clickedServiceProviderInfo()
     const QString providerId = index.data( ServiceProviderIdRole ).toString();
     ServiceProviderDataDialog *infoDialog = new ServiceProviderDataDialog( providerId,
             d->providerDataDialogOptions, this );
-    connect( infoDialog->providerDataWidget(), SIGNAL(gtfsDatabaseDeleted()),
-             d->stopList, SLOT(updateToDataEngineState()) );
     infoDialog->show();
 }
 

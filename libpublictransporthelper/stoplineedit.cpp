@@ -284,13 +284,6 @@ StopLineEdit::~StopLineEdit()
     delete d_ptr;
 }
 
-void StopLineEdit::updateToDataEngineState()
-{
-    Q_D( StopLineEdit );
-    // Resets the state to Ready and checks the data engines state for the current service provider
-    setServiceProvider( d->serviceProvider );
-}
-
 #ifdef MARBLE_FOUND
 void StopLineEdit::popupHidden()
 {
@@ -588,21 +581,12 @@ void StopLineEdit::mouseReleaseEvent( QMouseEvent *ev )
             {
                 // Cancel button released, cancel the import
                 if ( !cancelImport() ) {
-                    kDebug() << "Could not cancel the import job";
+                    kWarning() << "Could not cancel the import job";
                     return;
-                }
-                d->state = StopLineEditPrivate::Error;
-                d->errorString = i18nc("@info/plain", "Import cancelled by user");
-                if ( toolTip() == d->questionToolTip ) {
-                    // Clear tooltip, if the question was still set as tooltip
-                    setToolTip( QString() );
                 }
                 d->question.clear();
                 d->questionToolTip.clear();
                 update();
-
-                // Go back to AskingToImportGtfsFeed state after showing the error for 5 seconds
-                QTimer::singleShot( 5000, this, SLOT(askToImportGtfsFeed()) );
                 return;
             } else if ( d->importJob && (d->state == StopLineEditPrivate::WaitingForImport ||
                         d->state == StopLineEditPrivate::Pause) &&
@@ -937,13 +921,6 @@ void StopLineEditList::setServiceProvider(const QString& serviceProvider)
 {
     foreach ( DynamicWidget *dynamicWidget, dynamicWidgets() ) {
         dynamicWidget->contentWidget<StopLineEdit*>()->setServiceProvider( serviceProvider );
-    }
-}
-
-void StopLineEditList::updateToDataEngineState()
-{
-    foreach ( DynamicWidget *dynamicWidget, dynamicWidgets() ) {
-        dynamicWidget->contentWidget<StopLineEdit*>()->updateToDataEngineState();
     }
 }
 

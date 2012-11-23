@@ -113,21 +113,8 @@ public:
     /** @brief Gets the city that is used for stop name suggestions. */
     QString city() const;
 
-public Q_SLOTS:
-    /**
-     * @brief Updates the state of this StopLineEdit, eg. after a database was deleted.
-     *
-     * This slot should be called eg. after deleting a GTFS database using the Public Transport
-     * service.
-     * If data is available (eg. GTFS database completely imported) this StopLineEdit becomes
-     * editable when calling this function. If no data is available an error string or a question
-     * if data import should be started gets shown. A start button gets shown to start the import,
-     * progress gets visualized in this StopLineEdit and can be suspended/resumed.
-     **/
-    void updateToDataEngineState();
-
 protected Q_SLOTS:
-    /** @brief Stop suggestion data arrived from the data engine. */
+    /** @brief Stop suggestion data or provider (state) data arrived from the data engine. */
     void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data &data );
 
     /** @brief The stop name was edited. */
@@ -221,15 +208,6 @@ public:
      * @param city The new city to be used for stop name suggestions.
      **/
     void setCity( const QString &city );
-
-public Q_SLOTS:
-    /**
-     * @brief Updates the state of the contained StopLineEdits, eg. after a database was deleted.
-     *
-     * This slot simply calls @ref StopLineEdit::updateToDataEngineState for all contained
-     * StopLineEdits.
-     **/
-    void updateToDataEngineState();
 };
 
 } // namespace PublicTransport
