@@ -139,14 +139,11 @@ protected Q_SLOTS:
     /** @brief The GTFS feed import has finished. */
     void importFinished( KJob *job );
 
-    /** @brief The GTFS feed import has progressed. */
-    void importProgress( KJob *job, ulong percent );
+    /** @brief Ask if the GTFS feed import should be started, show a start button. */
+    void askToImportGtfsFeed();
 
-    /** @brief Info message from the GTFS feed import job. */
-    void importInfoMessage( KJob *job, const QString &plain, const QString &rich = QString() );
-
-    /** @brief Ask if timetable data import should be started, show a start button. */
-    void askToImportTimetableData();
+    /** @brief Show the progress of a running GTFS feed import, show pause/stop buttons. */
+    void showGtfsFeedImportProgress();
 
 #ifdef MARBLE_FOUND
     /** @brief Called, when the map popup gets hidden. */

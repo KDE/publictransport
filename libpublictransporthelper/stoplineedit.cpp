@@ -40,6 +40,7 @@
 #include <QStyleOption>
 #include <QMouseEvent>
 #include <QTimer>
+#include <qmath.h>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
@@ -107,11 +108,10 @@ public:
             : importJob(0), q_ptr(q)
     {
         state = Ready;
-        progress = 0.0;
+        progress = 0;
 
         // Load data engine
-        dataEngineManager = Plasma::DataEngineManager::self();
-        publicTransportEngine = dataEngineManager->loadEngine("publictransport");
+        Plasma::DataEngineManager::self()->loadEngine("publictransport");
 
         this->serviceProvider = serviceProvider;
     };
@@ -121,9 +121,7 @@ public:
 #ifdef MARBLE_FOUND
         delete mapPopup;
 #endif
-        if ( dataEngineManager ) {
-            dataEngineManager->unloadEngine("publictransport");
-        }
+        Plasma::DataEngineManager::self()->unloadEngine("publictransport");
     };
 
     /// Get the additional button at the given @p point. The index of the button gets stored in
@@ -226,8 +224,9 @@ public:
 
     void connectStopsSource( const QString &stopName ) {
         Q_Q( StopLineEdit );
+        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
         if ( !sourceName.isEmpty() ) {
-            publicTransportEngine->disconnectSource( sourceName, q );
+            engine->disconnectSource( sourceName, q );
         }
 
         state = StopLineEditPrivate::WaitingForStopSuggestions;
@@ -235,17 +234,15 @@ public:
         if ( !city.isEmpty() ) { // m_useSeparateCityValue ) {
             sourceName += QString("|city=%3").arg( city );
         }
-        publicTransportEngine->connectSource( sourceName, q );
+        engine->connectSource( sourceName, q );
     };
 
-    Plasma::DataEngineManager *dataEngineManager;
-    Plasma::DataEngine *publicTransportEngine;
     StopList stops;
     QString city;
     QString serviceProvider;
     QString providerType;
     State state;
-    qreal progress; // Progress of the data engine in processing a task (0.0 .. 1.0)
+    int progress; // Progress of the data engine in processing a task (0 .. 100)
     QString sourceName; // Source name used to request stop suggestions at the data engine
     QString errorString;
     QString question;
@@ -311,10 +308,14 @@ void StopLineEdit::stopClicked( const Stop &stop )
 void StopLineEdit::setServiceProvider( const QString& serviceProvider )
 {
     Q_D( StopLineEdit );
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    if ( !d->serviceProvider.isEmpty() ) {
+        engine->disconnectSource( "ServiceProvider " + d->serviceProvider, this );
+    }
     d->serviceProvider = serviceProvider;
     d->state = StopLineEditPrivate::Ready;
     if ( !d->sourceName.isEmpty() ) {
-        d->publicTransportEngine->disconnectSource( d->sourceName, this );
+        engine->disconnectSource( d->sourceName, this );
     }
 
 #ifdef MARBLE_FOUND
@@ -322,13 +323,21 @@ void StopLineEdit::setServiceProvider( const QString& serviceProvider )
 #endif
 
     const Plasma::DataEngine::Data providerData =
-            d->publicTransportEngine->query( "ServiceProvider " + d->serviceProvider );
+            engine->query( "ServiceProvider " + d->serviceProvider );
     d->providerType = providerData["type"].toString();
     setEnabled( true );
     setClearButtonShown( true ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
     setReadOnly( false );
     completionObject()->clear();
     edited( text() );
+
+    // Check and watch the provider state
+    if ( d->providerType == QLatin1String("GTFS") ) {
+        if ( providerData["state"] == QLatin1String("gtfs_feed_import_pending") ) {
+            askToImportGtfsFeed();
+        }
+        engine->connectSource( "ServiceProvider " + d->serviceProvider, this );
+    }
 }
 
 QString StopLineEdit::serviceProvider() const
@@ -343,7 +352,8 @@ void StopLineEdit::setCity( const QString& city )
     d->city = city;
     d->state = StopLineEditPrivate::Ready;
     if ( !d->sourceName.isEmpty() ) {
-        d->publicTransportEngine->disconnectSource( d->sourceName, this );
+        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+        engine->disconnectSource( d->sourceName, this );
     }
     setEnabled( true );
     setClearButtonShown( true ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
@@ -367,14 +377,15 @@ void StopLineEdit::importGtfsFeed()
     }
 
     kDebug() << "GTFS accessor whithout imported feed data, use service to import using the GTFS feed";
-    Plasma::Service *service = d->publicTransportEngine->serviceForSource("GTFS");
+    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::Service *service = engine->serviceForSource("GTFS");
     KConfigGroup op = service->operationDescription("importGtfsFeed");
     op.writeEntry( "serviceProviderId", d->serviceProvider );
 
     d->state = StopLineEditPrivate::WaitingForImport;
     d->addButtons( StopLineEditPrivate::StopButton | StopLineEditPrivate::PauseButton );
     d->updateButtonRects( contentsRect() );
-    d->progress = 0.0;
+    d->progress = 0;
     d->infoMessage.clear();
     setEnabled( true );
     setClearButtonShown( false ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
@@ -385,18 +396,6 @@ void StopLineEdit::importGtfsFeed()
 
     d->importJob = service->startOperationCall( op );
     connect( d->importJob, SIGNAL(finished(KJob*)), this, SLOT(importFinished(KJob*)) );
-    connect( d->importJob, SIGNAL(percent(KJob*,ulong)), this, SLOT(importProgress(KJob*,ulong)) );
-    connect( d->importJob, SIGNAL(infoMessage(KJob*,QString,QString)),
-             this, SLOT(importInfoMessage(KJob*,QString,QString)) );
-}
-
-void StopLineEdit::importInfoMessage( KJob *job, const QString &plain, const QString &rich )
-{
-    Q_UNUSED( job );
-    Q_UNUSED( rich );
-    Q_D( StopLineEdit );
-    d->infoMessage = plain;
-    update();
 }
 
 bool StopLineEdit::cancelImport()
@@ -461,10 +460,10 @@ void StopLineEdit::paintEvent( QPaintEvent *ev )
         option.initFrom( this );
         option.minimum = 0;
         option.maximum = 100;
-        option.progress = d->progress * 100;
+        option.progress = d->progress;
         option.text = d->infoMessage.isEmpty()
-                ? i18nc("@info/plain", "Loading GTFS feed... %1 %", d->progress * 100)
-                : QString("%1... %2 %").arg(d->infoMessage).arg(uint(d->progress * 100));
+                ? i18nc("@info/plain", "Loading GTFS feed... %1 %", d->progress)
+                : QString("%1... %2 %").arg(d->infoMessage).arg(d->progress);
         option.textAlignment = Qt::AlignCenter;
         option.textVisible = true;
         option.rect.setWidth( option.rect.width() - buttonsWidth );
@@ -603,7 +602,7 @@ void StopLineEdit::mouseReleaseEvent( QMouseEvent *ev )
                 update();
 
                 // Go back to AskingToImportGtfsFeed state after showing the error for 5 seconds
-                QTimer::singleShot( 5000, this, SLOT(askToImportTimetableData()) );
+                QTimer::singleShot( 5000, this, SLOT(askToImportGtfsFeed()) );
                 return;
             } else if ( d->importJob && (d->state == StopLineEditPrivate::WaitingForImport ||
                         d->state == StopLineEditPrivate::Pause) &&
@@ -625,7 +624,7 @@ void StopLineEdit::mouseReleaseEvent( QMouseEvent *ev )
                                       "used, when the GTFS feed for the current service provider "
                                       "currently gets imported.",
                                       "Importing the GTFS feed for stop suggestions, %1%% done. "
-                                      "Please wait.", int(d->progress * 100)) );
+                                      "Please wait.", d->progress) );
                 } else {
                     // Import job is not currently suspended, try to suspend it
                     if ( !d->importJob->suspend() ) {
@@ -639,7 +638,7 @@ void StopLineEdit::mouseReleaseEvent( QMouseEvent *ev )
                                       "used, when a currently running GTFS feed import job is "
                                       "suspended.",
                                       "Importing the GTFS feed for stop suggestions, "
-                                      "%1%% done (paused)", int(d->progress * 100)) );
+                                      "%1%% done (paused)", d->progress) );
                 }
 
                 update();
@@ -710,20 +709,6 @@ bool StopLineEdit::event( QEvent *ev )
     return KLineEdit::event( ev );
 }
 
-void StopLineEdit::importProgress( KJob *job, ulong percent )
-{
-    Q_UNUSED( job );
-    Q_D( StopLineEdit );
-    d->progress = percent / 100.0;
-    setToolTip( i18nc("@info:tooltip Tooltip for StopLineEdits, ie. shown in the "
-                      "stop settings dialog for stop name input. This tooltip is "
-                      "used, when the GTFS feed for the current service provider "
-                      "currently gets imported.",
-                      "Importing the GTFS feed for stop suggestions, %1%% done. Please wait.",
-                      percent) );
-    update();
-}
-
 void StopLineEdit::importFinished( KJob *job )
 {
     Q_D( StopLineEdit );
@@ -739,9 +724,16 @@ void StopLineEdit::importFinished( KJob *job )
     // TODO Re-request stop suggestions now?
 }
 
-void StopLineEdit::askToImportTimetableData()
+void StopLineEdit::askToImportGtfsFeed()
 {
     Q_D( StopLineEdit );
+
+    if ( d->state == StopLineEditPrivate::AskingToImportGtfsFeed ) {
+        // Was already asking
+        return;
+    }
+
+    kDebug() << "ASK";
 
     d->state = StopLineEditPrivate::AskingToImportGtfsFeed;
     // Add a button to start the import
@@ -762,9 +754,50 @@ void StopLineEdit::askToImportTimetableData()
     setReadOnly( true );
 }
 
+void StopLineEdit::showGtfsFeedImportProgress()
+{
+    Q_D( StopLineEdit );
+
+    if ( d->state == StopLineEditPrivate::WaitingForImport ) {
+        // Was already showing import progress
+        return;
+    }
+
+    kDebug() << "IMPORTING...";
+
+    d->state = StopLineEditPrivate::WaitingForImport;
+    d->addButtons( StopLineEditPrivate::StopButton | StopLineEditPrivate::PauseButton );
+    d->updateButtonRects( contentsRect() );
+    setClearButtonShown( false ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
+    setReadOnly( true );
+}
+
 void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data )
 {
     Q_D( StopLineEdit );
+
+    if ( sourceName == "ServiceProvider " + d->serviceProvider ) {
+        // The service provider state has changed
+        const QString state = data[ "state" ].toString();
+        if ( state == QLatin1String("ready") ) {
+            d->state = StopLineEditPrivate::Ready;
+            setClearButtonShown( true );
+            setReadOnly( false );
+        } else {
+            const QVariantHash stateData = data[ "stateData" ].toHash();
+            if ( state == QLatin1String("gtfs_feed_import_pending") ) {
+                askToImportGtfsFeed();
+            } else if ( state == QLatin1String("importing_gtfs_feed") ) {
+                showGtfsFeedImportProgress();
+
+                // Update the progress bar
+                d->progress = stateData["progress"].toInt();
+                d->infoMessage = stateData["statusMessage"].toString();
+                update();
+            }
+        }
+        return;
+    }
 
     if ( !sourceName.startsWith(QLatin1String("Stops")) || d->sourceName != sourceName ) {
         kDebug() << "Wrong (old) source" << sourceName;
@@ -775,32 +808,13 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
 
     // Check for a special error code ErrorNeedsImport
     if ( data["error"].toBool() && data["errorCode"].toInt() == 3 ) { // 3 -> ErrorNeedsImport
-        askToImportTimetableData();
+        askToImportGtfsFeed();
         return;
-    }
-
-    d->progress = data.contains("progress") ? data.value("progress").toReal() : -1.0;
-    if ( d->progress >= 0.0 && d->progress < 1.0 ) {
-        if ( d->state != StopLineEditPrivate::WaitingForImport ) {
-            d->state = StopLineEditPrivate::WaitingForImport;
-            d->addButtons( StopLineEditPrivate::StopButton | StopLineEditPrivate::PauseButton );
-            d->updateButtonRects( contentsRect() );
-            setClearButtonShown( false ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
-            setReadOnly( true );
-        }
-
-        // Update the progress bar
-        update();
-        return;
-    } else if ( qFuzzyCompare(d->progress, 1.0) || !isEnabled() ||
-                d->state == StopLineEditPrivate::WaitingForImport )
-    {
-        // The service just completed an import job
-        d->progress = 0.0;
     }
 
     if ( !d->sourceName.isEmpty() ) {
-        d->publicTransportEngine->disconnectSource( d->sourceName, this );
+        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+        engine->disconnectSource( d->sourceName, this );
         d->sourceName.clear();
     }
 
