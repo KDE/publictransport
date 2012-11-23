@@ -292,7 +292,7 @@ bool PublicTransportEngine::isProviderUsed( const QString &serviceProviderId )
           it != m_dataSources.constEnd(); ++it )
     {
         Q_ASSERT( *it );
-        TimetableDataSource *dataSource = qobject_cast< TimetableDataSource* >( *it );
+        TimetableDataSource *dataSource = dynamic_cast< TimetableDataSource* >( *it );
         if ( dataSource && dataSource->providerId() == serviceProviderId ) {
             return true;
         }
