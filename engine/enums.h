@@ -28,6 +28,7 @@
 #include <QDate>
 #include <QMetaType>
 #include <QMetaEnum>
+#include <kjob.h> // For KJob::UserDefinedError
 
 /** @brief Contains global information about a downloaded timetable that affects all items. */
 struct GlobalTimetableInfo {
@@ -50,9 +51,7 @@ struct GlobalTimetableInfo {
     QDate requestDate;
 };
 
-/**
- * @brief Error codes.
- **/
+/** @brief General error codes, published in data sources of the PublicTransport data engine. */
 enum ErrorCode {
     NoError = 0, /**< There were no error. */
 
@@ -61,6 +60,30 @@ enum ErrorCode {
     ErrorNeedsImport = 3 /**< An import step needs to be performed, before using the accessor.
             * This is currently only used for GTFS accessors, which need to import the GTFS feed
             * before being usable. */
+};
+
+/** @brief Error codes of the GTFS service. */
+enum GtfsServiceError {
+    NoGtfsError = KJob::NoError, /**< There was no error. */
+
+    GtfsErrorInvalidProviderId = KJob::UserDefinedError + 1, /**< A provider ID was sent to the
+            * GTFS service, for which no installed provider plugin sources were found. */
+    GtfsErrorWrongProviderType = KJob::UserDefinedError + 2, /**< A provider ID was sent to the
+            * GTFS service, which is associated with a provider plugin of a wrong type,
+            * ie. not a GTFS provider. */
+    GtfsErrorFeedImportAlreadyRunning = KJob::UserDefinedError + 3, /**< An operation of the GTFS
+            * service tried to start a GTFS feed import, but an import is already running
+            * for the provider. */
+    GtfsErrorFeedImportRequired = KJob::UserDefinedError + 4, /**< The "updateGtfsFeed" operation
+            * of the GTFS service will cancel with this error code, if the GTFS feed was not
+            * previously imported successfully. */
+    GtfsErrorWrongFeedFormat = KJob::UserDefinedError + 5, /**< The file at the GTFS feed URL has
+            * the wrong format, ie. not a zip file. */
+    GtfsErrorDownloadFailed = KJob::UserDefinedError + 6, /**< A GTFS feed download failed. */
+    GtfsErrorImportFailed = KJob::UserDefinedError + 7, /**< Failed to import the GTFS feed into
+            * the database, after it was successfully downloaded. */
+    GtfsErrorCannotDeleteDatabase = KJob::UserDefinedError + 8, /**< There was an error while
+            * trying to delete the GTFS database. */
 };
 
 class Enums : public QObject {

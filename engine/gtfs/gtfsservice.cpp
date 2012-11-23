@@ -29,30 +29,40 @@
 #include <KDebug>
 #include <KFileItem>
 #include <KIO/Job>
+#include <Plasma/DataEngine>
 #include <kjobtrackerinterface.h>
 
 // Qt includes
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QTimer>
 
 const qreal ImportGtfsToDatabaseJob::PROGRESS_PART_FOR_FEED_DOWNLOAD = 0.1;
 
+AbstractGtfsDatabaseJob::AbstractGtfsDatabaseJob( const QString &destination,
+        const QString &operation, const QMap< QString, QVariant > &parameters, QObject *parent )
+        : ServiceJob(destination, operation, parameters, parent)
+{
+    Q_ASSERT( qobject_cast<GtfsService*>(parent) );
+    Q_ASSERT( qobject_cast<Plasma::DataEngine*>(parent->parent()) );
+}
+
 ImportGtfsToDatabaseJob::ImportGtfsToDatabaseJob( const QString &destination,
         const QString &operation, const QMap< QString, QVariant > &parameters, QObject *parent )
-        : ServiceJob(destination, operation, parameters, parent),
+        : AbstractGtfsDatabaseJob(destination, operation, parameters, parent),
           m_state(Initializing), m_data(0), m_importer(0), m_onlyGetInformation(false)
 {
     setCapabilities( Suspendable | Killable );
 
     m_data = ServiceProviderDataReader::read( parameters["serviceProviderId"].toString() );
     if ( !m_data ) {
-        setError( -1 );
+        setError( GtfsErrorInvalidProviderId );
         setErrorText( i18nc("@info/plain", "Error while reading Provider XML.") );
         return;
     }
 
     if ( m_data->type() != Enums::GtfsProvider ) {
-        setError( -2 );
+        setError( GtfsErrorWrongProviderType );
         setErrorText( i18nc("@info/plain", "Not a GTFS provider") );
     }
 }
@@ -75,54 +85,145 @@ ImportGtfsToDatabaseJob::~ImportGtfsToDatabaseJob()
 
 DeleteGtfsDatabaseJob::DeleteGtfsDatabaseJob( const QString &destination,
         const QString &operation, const QMap< QString, QVariant > &parameters, QObject *parent )
-        : ServiceJob(destination, operation, parameters, parent)
+        : AbstractGtfsDatabaseJob(destination, operation, parameters, parent)
 {
     m_serviceProviderId = parameters["serviceProviderId"].toString();
 }
 
-void ImportGtfsToDatabaseJob::start()
+bool AbstractGtfsDatabaseJob::canImportGtfsFeed()
+{
+    GtfsService *service = qobject_cast< GtfsService* >( parent() );
+    Plasma::DataEngine *engine = qobject_cast< Plasma::DataEngine* >( service->parent() );
+    Q_ASSERT( engine );
+
+    // Get the QMetaObject of the engine
+    const QMetaObject *meta = engine->metaObject();
+
+    // Find the slot of the engine to start the request
+    const int slotIndex = meta->indexOfSlot( "tryToStartGtfsFeedImportJob(Plasma::ServiceJob*)" );
+    Q_ASSERT( slotIndex != -1 );
+
+    meta->method( slotIndex ).invoke( engine, Qt::DirectConnection,
+                                      Q_RETURN_ARG(bool, m_canAccessGtfsDatabase),
+                                      Q_ARG(const Plasma::ServiceJob*, this) );
+
+    // If an import is already running for the provider, the operation cannot be executed now,
+    // only updateGtfsFeedInfo can be executed while importing a GTFS feed
+    if ( !m_canAccessGtfsDatabase ) {
+        kWarning() << "The GTFS feed already gets imported";
+        return false;
+    }
+
+    return true;
+}
+
+void AbstractGtfsDatabaseJob::start()
+{
+    QTimer::singleShot( 0, this, SLOT(tryToWork()) );
+}
+
+void AbstractGtfsDatabaseJob::tryToWork()
+{
+    if ( error() != 0 ) {
+        kDebug() << error();
+        // Error found in constructor, eg. no provider with the given ID found or no GTFS provider
+        setResult( false );
+        return;
+    }
+
+    if ( !canImportGtfsFeed() ) {
+        // Cannot start another GTFS database accessing job
+        kDebug() << "Import is already running";
+        setError( GtfsErrorFeedImportAlreadyRunning );
+        setErrorText( i18nc("@info/plain", "The GTFS feed already gets imported.") );
+        setResult( false );
+        return;
+    }
+
+    // No problems, do the work now
+    work();
+}
+
+void ImportGtfsToDatabaseJob::work()
 {
     Q_ASSERT( m_data );
-    kDebug() << "Start import for" << m_data->id();
-//     downloadFeed(); // TODO Check datacache?
-    emit description( this, i18nc("@info", "Importing GTFS feed"),
-                      qMakePair(i18nc("@info/plain Label for GTFS service provider",
-                                      "Service Provider"), data()->name()),
-                      qMakePair(i18nc("@info/plain Label for GTFS feed source URLs", "Source"),
-                                m_data->feedUrl()) );
+
+    // Emit a description about what's done in this job
+    const QPair< QString, QString > field1 =
+            qMakePair( i18nc("@info/plain Label for GTFS service provider", "Service Provider"),
+                       data()->name() );
+    const QPair< QString, QString > field2 =
+            qMakePair( i18nc("@info/plain Label for GTFS feed source URLs", "Source"),
+                       m_data->feedUrl() );
+    if ( m_onlyGetInformation ) {
+        emit description( this, i18nc("@info", "Update GTFS feed info"), field1, field2 );
+    } else {
+        emit description( this, i18nc("@info", "Import GTFS feed"), field1, field2 );
+        kDebug() << "Start GTFS feed import for" << m_data->id();
+    }
+
+    // Start the job by first requesting GTFS feed information
     statFeed();
 }
 
-void UpdateGtfsToDatabaseJob::start()
+void UpdateGtfsToDatabaseJob::tryToWork()
 {
     const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
     KConfigGroup group = config.group( data()->id() );
     KConfigGroup gtfsGroup = group.group( "gtfs" );
     bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
     if ( !importFinished ) {
-        setError( -7 );
-        setErrorText( i18nc("@info/plain", "GTFS feed not imported. Please import it explicitly first.") );
-        emitResult();
+        setError( GtfsErrorFeedImportRequired );
+        setErrorText( i18nc("@info/plain", "GTFS feed not imported. "
+                            "Please import it explicitly first.") );
+        setResult( false );
     } else {
+        AbstractGtfsDatabaseJob::tryToWork();
+    }
+}
+
+void UpdateGtfsToDatabaseJob::work()
+{
+    const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+    KConfigGroup group = config.group( data()->id() );
+    KConfigGroup gtfsGroup = group.group( "gtfs" );
+    bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
+    if ( !importFinished ) {
+        setError( GtfsErrorFeedImportRequired );
+        setErrorText( i18nc("@info/plain", "GTFS feed not imported. "
+                            "Please import it explicitly first.") );
+        setResult( false );
+    } else {
+        // Emit a description about what's done in this job
         emit description( this, i18nc("@info", "Updating GTFS feed"),
                           qMakePair(i18nc("@info/plain Label for GTFS service provider",
                                           "Service Provider"), data()->name()),
                           qMakePair(i18nc("@info/plain Label for GTFS feed source URLs", "Source"),
                                     data()->feedUrl()) );
         setCapabilities( Suspendable | Killable );
-        ImportGtfsToDatabaseJob::start();
+
+        // Start the job by first requesting GTFS feed information
+        statFeed();
     }
 }
 
-void DeleteGtfsDatabaseJob::start()
+void DeleteGtfsDatabaseJob::work()
 {
+    // Close the database before deleting it,
+    // otherwise a newly created database won't get opened,
+    // because the already opened database connection gets used instead
+    GeneralTransitFeedDatabase::closeDatabase( m_serviceProviderId );
+
+    // Delete the database file
     const QString databasePath = GeneralTransitFeedDatabase::databasePath( m_serviceProviderId );
     if ( !QFile::remove(databasePath) ) {
-        setError( -1 );
-        setErrorText( i18nc("@info/plain", "The GTFS database could not be deleted.") );
         kDebug() << "Failed to delete GTFS database";
+        setError( GtfsErrorCannotDeleteDatabase );
+        setErrorText( i18nc("@info/plain", "The GTFS database could not be deleted.") );
+        setResult( false );
+        return;
     }
-    kDebug() << "Finished deleting GTFS database";
+    kDebug() << "Finished deleting GTFS database of" << m_serviceProviderId;
 
     // Update the accessor cache file to indicate that the GTFS feed needs to be imported again
     KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
@@ -130,7 +231,12 @@ void DeleteGtfsDatabaseJob::start()
     KConfigGroup gtfsGroup = group.group( "gtfs" );
     gtfsGroup.writeEntry( "feedImportFinished", false );
 
-    emitResult();
+    // Write to disk now, important for the data engine to get the correct state
+    // directly after this job has finished
+    gtfsGroup.sync();
+
+    // Finished successfully
+    setResult( true );
 }
 
 bool ImportGtfsToDatabaseJob::doKill()
@@ -167,11 +273,11 @@ void ImportGtfsToDatabaseJob::statFeed()
 
     if ( !m_data ) {
         // There was an error in the constructor, error already set
-        emitResult();
+        setResult( false );
         return;
     }
 
-    kDebug() << "************* STARTING STAT FOR *****" << m_data->id() << "*********";
+    kDebug() << "Request GTFS feed information for" << m_data->id();
     emit infoMessage( this, i18nc("@info/plain", "Checking GTFS feed source") );
     m_state = StatingFeed;
     QNetworkAccessManager *manager = new QNetworkAccessManager( this );
@@ -220,9 +326,9 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
         if ( mimeType && !mimeType->name().isEmpty() ) {
             if ( mimeType->name() != "application/zip" ) {
                 kDebug() << "Invalid mime type:" << reply->header(QNetworkRequest::ContentTypeHeader).toString();
-                setError( -3 );
+                setError( GtfsErrorWrongFeedFormat );
                 setErrorText( i18nc("@info/plain", "Wrong GTFS feed format: %1", mimeType->name()) ); // TODO
-                emitResult();
+                setResult( false );
                 return;
             }
         } else {
@@ -252,7 +358,7 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
         // Stop here for "updateGtfsFeedInfo" operation
         if ( m_onlyGetInformation ) {
             m_state = Ready;
-            emitResult();
+            setResult( importFinished );
             return;
         }
 
@@ -276,14 +382,14 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
         } else {
             // Newest version of the GTFS feed is already downloaded and completely imported
             m_state = Ready;
-            emitResult();
+            setResult( true );
         }
     } else {
         kDebug() << "GTFS feed not available: " << m_data->feedUrl() << reply->errorString();
         m_state = ErrorDownloadingFeed;
-        setError( -4 );
+        setError( GtfsErrorDownloadFailed );
         setErrorText( reply->errorString() ); // TODO
-        emitResult();
+        setResult( false );
     }
 
     reply->manager()->deleteLater();
@@ -322,7 +428,7 @@ void ImportGtfsToDatabaseJob::downloadFeed()
 //         KFileItem gtfsFeed( m_info->feedUrl(), QString(), S_IFREG | S_IFSOCK );
 //         kDebug() << "LAST MODIFIED:" << gtfsFeed.timeString( KFileItem::ModificationTime );
 
-        // Update accessor information cache
+        // Update provider cache
         KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
         KConfigGroup group = config.group( data()->id() );
         KConfigGroup gtfsGroup = group.group( "gtfs" );
@@ -345,9 +451,9 @@ void ImportGtfsToDatabaseJob::mimeType( KIO::Job *job, const QString &type )
 {
     if ( !type.endsWith(QLatin1String("zip")) && !type.endsWith(QLatin1String("zip-compressed")) ) {
         job->kill();
-        setError( -10 );
+        setError( GtfsErrorWrongFeedFormat );
         setErrorText( "GTFS feed in wrong format: " + type /*TODO i18nc("@info/plain", "")*/ );
-        emitResult();
+        setResult( false );
     }
 }
 
@@ -388,9 +494,9 @@ void ImportGtfsToDatabaseJob::feedReceived( KJob *job )
             kDebug() << "Could not remove the temporary GTFS feed file";
         }
 
-        setError( -5 );
+        setError( GtfsErrorDownloadFailed );
         setErrorText( job->errorString() ); // TODO
-        emitResult();
+        setResult( false );
         return;
     }
 
@@ -429,15 +535,25 @@ void ImportGtfsToDatabaseJob::importerProgress( qreal importerProgress,
 void ImportGtfsToDatabaseJob::importerFinished(
         GeneralTransitFeedImporter::State state, const QString &errorText )
 {
+    // Remove temporary file
+    if ( m_importer && !QFile::remove(m_importer->sourceFileName()) ) {
+        kWarning() << "Could not remove the temporary GTFS feed file";
+    }
+
+    // Update 'feedImportFinished' field in the cache
+    KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
+    KConfigGroup group = config.group( data()->id() );
+    KConfigGroup gtfsGroup = group.group( "gtfs" );
+    gtfsGroup.writeEntry( "feedImportFinished", state != GeneralTransitFeedImporter::FatalError );
+
+    // Write to disk now, important for the data engine to get the correct state
+    // directly after this job has finished
+    gtfsGroup.sync();
+
     // Emit progress with 1.0, ie. finsihed
     m_progress = 1.0;
     emitPercent( 1000, 1000 );
-    kDebug() << "FINISHED";
-
-    // Remove temporary file
-    if ( m_importer && !QFile::remove(m_importer->sourceFileName()) ) {
-        kDebug() << "Could not remove the temporary GTFS feed file";
-    }
+    kDebug() << "Finished" << state << errorText;
 
     // Ignore GeneralTransitFeedImporter::FinishedWithErrors
     if ( state == GeneralTransitFeedImporter::FatalError ) {
@@ -460,16 +576,17 @@ void ImportGtfsToDatabaseJob::importerFinished(
 
     if ( m_state == Ready ) {
         // Update accessor information cache
-        KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
-        KConfigGroup group = config.group( data()->id() );
-        KConfigGroup gtfsGroup = group.group( "gtfs" );
-        gtfsGroup.writeEntry( "feedImportFinished", true );
+        setResult( true );
     } else {
-        setError( -6 );
-        setErrorText( errorText ); // TODO
+        setError( GtfsErrorImportFailed );
+        setErrorText( errorText );
+        setResult( false );
     }
+}
 
-    emitResult();
+QString ImportGtfsToDatabaseJob::serviceProviderId() const
+{
+    return m_data ? m_data->id() : QString();
 }
 
 GtfsService::GtfsService( const QString &name, QObject *parent )
@@ -482,23 +599,24 @@ GtfsService::GtfsService( const QString &name, QObject *parent )
 Plasma::ServiceJob* GtfsService::createJob(
         const QString &operation, QMap< QString, QVariant > &parameters )
 {
+    // Check if a valid provider ID is available in the parameters
+    const QString providerId = parameters["serviceProviderId"].toString();
+    if ( providerId.isEmpty() ) {
+        kWarning() << "No 'serviceProviderId' parameter given to GTFS service operation";
+        return 0;
+    }
+
+    kDebug() << operation;
     if ( operation == QLatin1String("updateGtfsFeed") ) {
         UpdateGtfsToDatabaseJob *updateJob =
                 new UpdateGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
-        if ( !updateJob->data() ) {
-            kWarning() << "No 'serviceProviderId' given for updateGtfsFeed operation";
-            delete updateJob;
-            return 0;
-        }
+        // Track update jobs
+        KJobTrackerInterface *jobTracker = KIO::getJobTracker();
+        jobTracker->registerJob( updateJob );
         return updateJob;
     } else if ( operation == QLatin1String("importGtfsFeed") ) {
         ImportGtfsToDatabaseJob *importJob =
                 new ImportGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
-        if ( !importJob->data() ) {
-            kWarning() << "No 'serviceProviderId' given for importGtfsFeed operation";
-            delete importJob;
-            return 0;
-        }
         // Track import jobs
         KJobTrackerInterface *jobTracker = KIO::getJobTracker();
         jobTracker->registerJob( importJob );
@@ -506,20 +624,10 @@ Plasma::ServiceJob* GtfsService::createJob(
     } else if ( operation == QLatin1String("deleteGtfsDatabase") ) {
         DeleteGtfsDatabaseJob *deleteJob =
                 new DeleteGtfsDatabaseJob( "PublicTransport", operation, parameters, this );
-        if ( deleteJob->serviceProviderId().isEmpty() ) {
-            kWarning() << "No 'serviceProviderId' given for deleteGtfsDatabase operation";
-            delete deleteJob;
-            return 0;
-        }
         return deleteJob;
     } else if ( operation == QLatin1String("updateGtfsFeedInfo") ) {
         ImportGtfsToDatabaseJob *importJob =
                 new ImportGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
-        if ( !importJob->data() ) {
-            kWarning() << "No 'serviceProviderId' given for importGtfsFeed operation";
-            delete importJob;
-            return 0;
-        }
         importJob->setOnlyGetInformation( true );
         return importJob;
     } else {

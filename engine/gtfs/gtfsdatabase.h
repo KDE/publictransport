@@ -64,7 +64,7 @@ public:
     };
 
     /**
-     * @brief Initializes the database
+     * @brief Initialize the database.
      *
      * @param providerName The name of the provider for which a GTFS database should be opened.
      * @param errorText Gets set to a string explaining an error, if this returns false.
@@ -73,8 +73,13 @@ public:
      **/
     static bool initDatabase( const QString &providerName, QString *errorText );
 
+    /** @brief Close an initialized database. */
+    static inline void closeDatabase( const QString &providerName ) {
+        database( providerName ).close();
+    };
+
     /**
-     * @brief Creates all needed tables in the database, if they did not already exist.
+     * @brief Create all needed tables in the database, if they did not already exist.
      *
      * @param errorText Gets set to a string explaining an error, if this returns false.
      * @param database The database to use.
@@ -84,7 +89,7 @@ public:
     static bool createDatabaseTables( QString *errorText, QSqlDatabase database = QSqlDatabase() );
 
     /**
-     * @brief Gets the full path to the SQLite database file for the given @p providerName.
+     * @brief Get the full path to the SQLite database file for the given @p providerName.
      *
      * @param providerName The name of the provider for which the path to the database should be
      *   returned.
@@ -92,7 +97,7 @@ public:
     static QString databasePath( const QString &providerName );
 
     /**
-     * @brief Gets the target type in the database of the GTFS field with the given @p fieldName.
+     * @brief Get the target type in the database of the GTFS field with the given @p fieldName.
      *
      * @param fieldName The name of the GTFS field, which target type in the database should be
      *   returned.
@@ -100,7 +105,7 @@ public:
     static FieldType typeOfField( const QString &fieldName );
 
     /**
-     * @brief Converts the given source @p fieldValue to the given target @p type.
+     * @brief Convert the given source @p fieldValue to the given target @p type.
      *
      * @param fieldValue The source value from a GTFS feed file (CSV).
      * @param type The target type to convert @p fieldValue to.

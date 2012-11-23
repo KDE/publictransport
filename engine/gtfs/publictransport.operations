@@ -3,6 +3,7 @@
     "http://www.kde.org/standards/kcfg/1.0/kcfg.xsd">
 <kcfg>
     <group name="updateGtfsFeedInfo">
+        <!-- Stores the result in the KConfig provider data cache (size, last modified). -->
         <entry name="serviceProviderId" type="String">
             <label>The ID of the service provider, for whose GTFS feed information should be get, eg. "us_trimet".</label>
         </entry>

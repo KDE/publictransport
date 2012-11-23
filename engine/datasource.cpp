@@ -17,13 +17,18 @@
  *   51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+// Own includes
 #include "datasource.h"
+#include "serviceprovider.h"
 
+// KDE includes
 #include <KDebug>
+#include <KLocalizedString>
+
+// Qt includes
 #include <QTimer>
 
-DataSource::DataSource( const QString &dataSource, const QVariantHash &data )
-        : name(dataSource), data(data)
+DataSource::DataSource( const QString &dataSource ) : m_name(dataSource)
 {
 }
 
@@ -31,8 +36,19 @@ DataSource::~DataSource()
 {
 }
 
+ProvidersDataSource::ProvidersDataSource( const QString &dataSource,
+                                          const QHash<QString, ProviderData> &providerData )
+        : DataSource(dataSource), m_providerData(providerData)
+{
+}
+
+SimpleDataSource::SimpleDataSource( const QString &dataSource, const QVariantHash &data )
+        : DataSource(dataSource), m_data(data)
+{
+}
+
 TimetableDataSource::TimetableDataSource( const QString &dataSource, const QVariantHash &data )
-        : DataSource(dataSource, data), m_updateTimer(0), m_updateAdditionalDataDelayTimer(0)
+        : SimpleDataSource(dataSource, data), m_updateTimer(0), m_updateAdditionalDataDelayTimer(0)
 {
 }
 
@@ -40,6 +56,43 @@ TimetableDataSource::~TimetableDataSource()
 {
     delete m_updateTimer;
     delete m_updateAdditionalDataDelayTimer;
+}
+
+QString ProvidersDataSource::toStaticState( const QString &dynamicStateId )
+{
+    if ( dynamicStateId == QLatin1String("importing_gtfs_feed") ) {
+        return "gtfs_feed_import_pending";
+    } else {
+        return dynamicStateId;
+    }
+}
+
+ProvidersDataSource::ProviderData::ProviderData( const QVariantHash &data, const QString &_stateId,
+                                                 const QVariantHash &_stateData )
+        : dataWithoutState(data), stateId(ProvidersDataSource::toStaticState(_stateId)),
+          stateData(_stateData)
+{
+}
+
+QVariantHash ProvidersDataSource::ProviderData::data() const
+{
+    // Combine all provider data with state ID and state data
+    QVariantHash data = dataWithoutState;
+    data[ "state" ] = stateId;
+    data[ "stateData" ] = stateData;
+    return data;
+}
+
+QVariantHash ProvidersDataSource::data() const
+{
+    // Combine all provider data QVariantHash's into one
+    QVariantHash data;
+    for ( QHash<QString, ProviderData>::ConstIterator it = m_providerData.constBegin();
+          it != m_providerData.constEnd(); ++it )
+    {
+        data.insert( it.key(), it.value().data() );
+    }
+    return data;
 }
 
 void TimetableDataSource::addUsingDataSource( const QSharedPointer< AbstractRequest > &request,
@@ -82,19 +135,14 @@ bool TimetableDataSource::enoughDataAvailable( const QDateTime &dateTime, int co
 
 QString TimetableDataSource::timetableItemKey() const
 {
-    return data.contains("departures") ? "departures"
-            : (data.contains("arrivals") ? "arrivals"
-               : (data.contains("journeys") ? "journeys" : "stops"));
-}
-
-QVariantList TimetableDataSource::timetableItems() const
-{
-    return data[ timetableItemKey() ].toList();
+    return m_data.contains("departures") ? "departures"
+            : (m_data.contains("arrivals") ? "arrivals"
+               : (m_data.contains("journeys") ? "journeys" : "stops"));
 }
 
 void TimetableDataSource::setTimetableItems( const QVariantList &items )
 {
-    data[ timetableItemKey() ] = items;
+    m_data[ timetableItemKey() ] = items;
 }
 
 UpdateFlags TimetableDataSource::updateFlags() const

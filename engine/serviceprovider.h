@@ -352,18 +352,6 @@ signals:
     void errorParsing( ServiceProvider *provider, ErrorCode errorCode, const QString &errorString,
             const QUrl &requestUrl, const AbstractRequest *request );
 
-    /**
-     * @brief Reports progress of the provider plugin in performing an action.
-     *
-     * @param provider The provider plugin that emitted this signal.
-     * @param progress A value between 0 (just started) and 1 (completed) indicating progress.
-     * @param jobDescription A description of what is currently being done.
-     * @param requestUrl The URL to the document that gets downloaded/parsed.
-     * @param request Information about the request that produced the progress report.
-     **/
-    void progress( ServiceProvider *provider, qreal progress, const QString &jobDescription,
-            const QUrl &requestUrl, const AbstractRequest *request );
-
     void forceUpdate();
 
 protected:

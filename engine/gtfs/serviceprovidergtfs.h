@@ -31,6 +31,10 @@
     #include "gtfsrealtime.h"
 #endif
 
+namespace Plasma {
+    class Service;
+}
+
 class GtfsService;
 class QNetworkReply;
 class KTimeZone;
@@ -58,6 +62,14 @@ class ServiceProviderGtfs : public ServiceProvider
 {
     Q_OBJECT
 public:
+    /** @brief States of this class. */
+    enum State {
+        Initializing = 0, /**< Only used in the constructor as long as the state is unknown. */
+        Ready, /**< The provider is ready to use, ie. the GTFS feed was successfully imported. */
+        Error /**< There was an error that prevents the provider from being used, eg. the GTFS
+                * database does not exist or was deleted/corrupted. */
+    };
+
     /**
      * @brief Holds information about a public transport agency.
      *
@@ -85,6 +97,27 @@ public:
     static const int STOP_SUGGESTION_LIMIT = 100;
 
     /**
+     * @brief Update the GTFS database state for @p providerId in the cache and return the result.
+     *
+     * This function checks and updates the 'feedImportFinished' field in the 'gtfs' config group
+     * in the cache.
+     *
+     * @param providerId The ID of the GTFS provider for which the database state should be updated.
+     * @param cache A shared pointer to the provider cache. If an invalid pointer gets passed it
+     *   gets received using ServiceProviderGlobal::cache().
+     * @param stateData State data gets inserted here, at least a 'statusMessage'.
+     * @return The state of the provider. If the GTFS feed was successfully imported and the
+     *   database is valid the returned state is "ready", otherwise "gtfs_feed_import_pending".
+     **/
+    static QString updateGtfsDatabaseState( const QString &providerId,
+            const QSharedPointer< KConfig > &cache = QSharedPointer<KConfig>(),
+            QVariantHash *stateData = 0 );
+
+    /** @brief Checks if an updated GTFS feed is available for @p providerId. */
+    static bool isUpdateAvailable( const QString &providerId,
+            const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>() );
+
+    /**
      * @brief Constructs a new ServiceProviderGtfs object.
      *
      * You should use createProvider() to get an accessor for a given service provider ID.
@@ -93,7 +126,7 @@ public:
      * @param parent The parent QObject.
      **/
     explicit ServiceProviderGtfs( const ServiceProviderData *data, QObject *parent = 0,
-                                  const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
+            const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
 
     /** @brief Destructor. */
     virtual ~ServiceProviderGtfs();
@@ -105,9 +138,6 @@ public:
 
     /** @brief Returns the type of this provider, ie. GtfsProvider. */
     virtual Enums::ServiceProviderType type() const { return Enums::GtfsProvider; };
-
-    /** @brief Checks if there was an error. */
-    bool hasErrors( QString *errorMessage = 0 ) const;
 
     /** @brief Gets a list of features that this provider supports. */
     virtual QList<Enums::ProviderFeature> features() const;
@@ -141,9 +171,6 @@ protected slots:
     void realtimeAlertsReceived( KJob *job );
 #endif // BUILD_GTFS_REALTIME
 
-    void importFinished( KJob *job );
-    void importProgress( KJob *job, ulong percent );
-
 protected:
     void requestDeparturesOrArrivals( const DepartureRequest *request );
 
@@ -170,24 +197,14 @@ protected:
     /** @brief Run script provider specific tests. */
     virtual bool runTests( QString *errorMessage = 0 ) const;
 
-    /** @brief Updates the GTFS feed data using @ref PublicTransportService. */
-    void updateGtfsData();
+    /** @brief Updates the GTFS database using the GTFS service. */
+    void updateGtfsDatabase();
 
 #ifdef BUILD_GTFS_REALTIME
     /** @brief Updates the GTFS-realtime data, ie. delays and journey news. */
     void updateRealtimeData();
 #endif
 
-    /**
-     * @brief Returns true if the GTFS feed has been initially imported.
-     *
-     * This provider can only be used, if this function returns true. The GTFS feed needs to be
-     * completely imported once. Afterwards updates are done automatically in the background to
-     * update to new GTFS feed versions.
-     **/
-    bool isGtfsFeedImportFinished();
-
-    bool checkState( const AbstractRequest *request );
     bool checkForDiskIoErrorInDatabase( const QSqlError &error, const AbstractRequest *request );
 
     StopInfoList stopsFromQuery( QSqlQuery *query, const StopSuggestionRequest *request = 0 ) const;
@@ -201,17 +218,6 @@ protected:
     };
 
 private:
-    enum State {
-        Initializing = 0,
-        UpdatingGtfsFeed,
-        Ready,
-
-        ErrorDownloadingFeed = 10,
-        ErrorReadingFeed,
-        ErrorInDatabase,
-        ErrorNeedsFeedImport
-    };
-
     /** A value between 0.0 and 1.0 indicating the amount of the total progress for downloading. */
     static const qreal PROGRESS_PART_FOR_FEED_DOWNLOAD;
 
@@ -220,24 +226,19 @@ private:
      *
      * @see http://code.google.com/intl/en-US/transit/spec/transit_feed_specification.html#routes_txt___Field_Definitions
      **/
-    Enums::VehicleType vehicleTypeFromGtfsRouteType( int gtfsRouteType ) const;
+    static Enums::VehicleType vehicleTypeFromGtfsRouteType( int gtfsRouteType );
 
     QTime timeFromSecondsSinceMidnight( int secondsSinceMidnight, QDate *date = 0 ) const;
-
-    // errorState >= 10
-    QString errorMessageForErrorState( State errorState ) const;
 
     void loadAgencyInformation();
 
     State m_state; // Current state
     AgencyInformations m_agencyCache; // Cache contents of the "agency" DB table, usally small, eg. only one agency
-    GtfsService *m_service;
+    Plasma::Service *m_service;
 #ifdef BUILD_GTFS_REALTIME
     GtfsRealtimeTripUpdates *m_tripUpdates;
     GtfsRealtimeAlerts *m_alerts;
 #endif
-    QHash< QString, AbstractRequest* > m_waitingRequests; // Sources waiting for import to finish
-    qreal m_progress;
 };
 
 #endif // Multiple inclusion guard

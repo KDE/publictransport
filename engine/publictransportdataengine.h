@@ -39,15 +39,16 @@ class ArrivalRequest;
 class JourneyRequest;
 class AdditionalDataRequest;
 
-struct DataSource;
-struct TimetableDataSource;
+class DataSource;
+class TimetableDataSource;
+class ProvidersDataSource;
 class ServiceProvider;
 class ServiceProviderData;
 class DepartureInfo;
 class JourneyInfo;
 class StopInfo;
-class QTimer;
-class QFileSystemWatcher;
+
+class KJob;
 
 class QTimer;
 class QFileSystemWatcher;
@@ -204,6 +205,20 @@ public:
                                        QString *errorMessage = 0 );
 
     /**
+     * @brief Get a hash with information about the current GTFS feed import state.
+     **/
+    QString updateProviderState( const QString &providerId, QVariantHash *stateData,
+                                 const QString &providerType, bool readFromCache = true );
+
+    /**
+     * @brief Try to start a GTFS service @p job that accesses the GTFS database.
+     * @return @c True, if the @p job can be started, @c false otherwise. If there already is a
+     *   running GTFS service @p job that accesses the GTFS database no other such jobs can be
+     *   started and this function returns @c false.
+     **/
+    Q_INVOKABLE bool tryToStartGtfsFeedImportJob( Plasma::ServiceJob *job );
+
+    /**
      * @brief The default time offset from now for the first departure/arrival/journey in results.
      *
      * This is used if no time was specified in the source name with the parameter @c time,
@@ -220,13 +235,20 @@ signals:
      *
      * @param newData The new contents (including additional data) in the data source for the item.
      * @param success Whether or not the additional data job was successful.
-     * @param errorMessage Contains an error message if @p success is false.
+     * @param errorMessage Contains an error message if @p success is @c false.
      **/
     void additionalDataRequestFinished( const QVariantHash &newData, bool success = true,
                                         const QString &errorMessage = QString() );
 
 public slots:
+    /** @brief Request additional timetable data for item @p updateItem in @p sourceName. */
     void requestAdditionalData( const QString &sourceName, int updateItem );
+
+    /** @brief Received a message from a @p job of the GTFS service. */
+    void gtfsImportJobInfoMessage( KJob *job, const QString &plain, const QString &rich );
+
+    /** @brief A @p job of the GTFS service notifies it's progress. */
+    void gtfsImportJobPercent( KJob *job, ulong percent );
 
 protected slots:
     void slotSourceRemoved( const QString &name );
@@ -234,6 +256,9 @@ protected slots:
 
     void forceUpdate();
     void updateTimeout();
+
+    /** @brief A @p job of the GTFS service has finished. */
+    void gtfsServiceJobFinished( Plasma::ServiceJob *job );
 
     /**
      * @brief A list of departures was received.
@@ -371,7 +396,7 @@ protected:
      * @brief This function gets called when a new data source gets requested.
      *
      * @param name The name of the requested data source.
-     * @return True, if the data source could be updated successfully. False, otherwise.
+     * @return @c True, if the data source could be updated successfully. @c False, otherwise.
      **/
     bool sourceRequestEvent( const QString &name );
 
@@ -386,7 +411,7 @@ protected:
      * updateLocationSource().
      *
      * @param name The name of the data source to be updated.
-     * @return True, if the data source could be updated successfully. False, otherwise.
+     * @return @c True, if the data source could be updated successfully. @c False, otherwise.
      **/
     bool updateSourceEvent( const QString &name );
 
@@ -396,8 +421,7 @@ protected:
      * @brief Updates the ServiceProviders data source.
      *
      * The data source contains information about all available service providers.
-     *
-     * @return True, if the data source could be updated successfully. False, otherwise.
+     * @return @c True, if the data source could be updated successfully. @c False, otherwise.
      **/
     bool updateServiceProviderSource();
 
@@ -411,7 +435,7 @@ protected:
      * @param name The name of the data source. It starts with the ServiceProvider keyword and is
      *   followed by a service provider ID or a location, ie "ServiceProvider de" or
      *   "ServiceProvider de_db".
-     * @return True, if the data source could be updated successfully. False, otherwise.
+     * @return @c True, if the data source could be updated successfully. @c False, otherwise.
      **/
     bool updateServiceProviderForCountrySource( const SourceRequestData &sourceData );
 
@@ -420,7 +444,7 @@ protected:
      *
      * The data source contains information about all erroneous service providers.
      *
-     * @return True, if the data source could be updated successfully. False, otherwise.
+     * @return @c True, if the data source could be updated successfully. @c False, otherwise.
      **/
     bool updateErroneousServiceProviderSource();
 
@@ -430,7 +454,7 @@ protected:
      * Locations with available service providers are determined by checking the list of valid
      * accessors for the countries they support.
      *
-     * @return True, if the data source could be updated successfully. False, otherwise.
+     * @return @c True, if the data source could be updated successfully. @c False, otherwise.
      **/
     bool updateLocationSource();
 
@@ -445,18 +469,18 @@ protected:
      *
      * Data may arrive asynchronously depending on the used accessor.
      *
-     * @return True, if the data source could be updated successfully. False, otherwise.
+     * @return @c True, if the data source could be updated successfully. @c False, otherwise.
      **/
     bool updateTimetableDataSource( const SourceRequestData &data );
 
-    /** @brief Fill the VehicleTypes data source */
+    /** @brief Fill the VehicleTypes data source. */
     void initVehicleTypesSource();
 
     /**
      * @brief Wheather or not the data source with the given @p name is up to date.
      *
      * @param nonAmbiguousName The (non ambiguous) name of the source to be checked.
-     * @return True, if the data source is up to date. False, otherwise.
+     * @return @c True, if the data source is up to date. @c False, otherwise.
      * @see disambiguateSourceName()
      **/
     bool isSourceUpToDate( const QString &nonAmbiguousName,
@@ -477,7 +501,8 @@ protected:
     virtual Plasma::Service* serviceForSource( const QString &name );
 
     bool testServiceProvider( const QString &providerId, QVariantHash *providerData,
-                              QString *errorMessage );
+                              QString *errorMessage,
+                              const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>() );
 
     bool request( const SourceRequestData &data );
     inline bool request( const QString &sourceName ) {
@@ -488,7 +513,7 @@ private:
     QDateTime sourceUpdateTime( TimetableDataSource *dataSource,
                                 UpdateFlags updateFlags = DefaultUpdateFlags );
 
-    /** Handler for departureListReceived() (@p isDepartureData true) and arrivalListReceived() */
+    /** Handler for departureListReceived() (@p isDepartureData @c true) and arrivalListReceived() */
     void timetableDataReceived( ServiceProvider *provider,
             const QUrl &requestUrl, const DepartureInfoList &items,
             const GlobalTimetableInfo &globalInfo,
@@ -518,10 +543,39 @@ private:
      **/
     QVariantHash locations();
 
-    ProviderPointer providerFromId( const QString &serviceProviderId, bool *newlyCreated = 0 );
+    ProviderPointer providerFromId( const QString &providerId, bool *newlyCreated = 0 );
+
+    void deleteProvider( const QString &providerId );
+
+    /** @brief Publish the data of @p dataSource under it's data source name. */
+    void publishData( DataSource *dataSource, const QString &changedProviderId = QString() );
+
+    /**
+     * @brief Get a pointer to the ProvidersDataSource object of service provider data source(s).
+     * The ProvidersDataSource objects provides data for the "ServiceProviders" and
+     * "ServiceProvider [providerId]" data source(s).
+     **/
+    ProvidersDataSource *providersDataSource() const;
 
     /** @brief Checks if the provider with the given ID is used by a connected source. */
     bool isProviderUsed( const QString &serviceProviderId );
+
+    /**
+     * @brief Get an error code for the given @p stateId.
+     *
+     * The returned error code gets published in data sources if the provider state is not "ready"
+     * and the provider cannot be used.
+     **/
+    static ErrorCode errorCodeFromState( const QString &stateId );
+
+    /**
+     * @brief Whether or not the state data with @p stateDataKey should be written to the cache.
+     *
+     * Dynamic state data gets invalid when the engine gets destroyed. Therefore they should not
+     * be written to the provider cache. For example a 'progress' field is useless in the cache,
+     * since the operation needs to be restarted if it was aborted, eg. because of a crash.
+     **/
+    static bool isStateDataCached( const QString &stateDataKey );
 
     /**
      * @brief Remove all ambiguous parts from @p sourceName and make it lower case.
@@ -639,19 +693,20 @@ You might need to run kbuildsycoca4 in order to get the .desktop file recognized
 /** @page pageUsage Usage
 
 @par Sections
-<ul><li>@ref usage_serviceproviders_sec </li>
-<ul><li>@ref usage_vehicletypes_sec </li>
+<ul><li>@ref usage_introduction_sec </li>
+    <li>@ref usage_serviceproviders_sec </li>
+    <li>@ref usage_vehicletypes_sec </li>
     <li>@ref usage_departures_sec </li>
-    <ul><li>@ref usage_departures_datastructure_sec </li></ul>
+        <ul><li>@ref usage_departures_datastructure_sec </li></ul>
     <li>@ref usage_journeys_sec </li>
-    <ul><li>@ref usage_journeys_datastructure_sec </li></ul>
+        <ul><li>@ref usage_journeys_datastructure_sec </li></ul>
     <li>@ref usage_stopList_sec </li>
-    <ul><li>@ref usage_stopList_datastructure_sec </li></ul>
+        <ul><li>@ref usage_stopList_datastructure_sec </li></ul>
     <li>@ref usage_service_sec </li>
-    <ul><li>@ref usage_service_manual_update </li>
-        <li>@ref usage_service_additional_data </li>
-        <li>@ref usage_service_later_items </li>
-    </ul>
+        <ul><li>@ref usage_service_manual_update </li>
+            <li>@ref usage_service_additional_data </li>
+            <li>@ref usage_service_later_items </li>
+        </ul>
 </ul>
 
 <br />
@@ -701,9 +756,9 @@ enum VehicleType {
 
 <br />
 @section usage_serviceproviders_sec Receiving a List of Available Service Providers
-You can view this data source in <em>plasmaengineexplorer</em>, it's name is
-<em>"ServiceProviders"</em>, but you can also use <em>"ServiceProvider ID"</em> with the ID of a
-service provider to get information only for that service provider.
+You can view this data source in @em plasmaengineexplorer, it's name is
+@em "ServiceProviders", but you can also use <em>"ServiceProvider [providerId]"</em> with the ID
+of a service provider to get information only for that service provider.
 For each available service provider the data source contains a key with the display name of the
 service provider. These keys point to the service provider information, stored as a QHash with
 the following keys:
@@ -717,8 +772,6 @@ service provider information.</td> </tr>
 "GTFS", "Scripted" or "Invalid".</td></tr>
 <tr><td><i>feedUrl</i></td> <td>QString</td> <td><em>(only for type "GTFS")</em> The url to the
 (latest) GTFS feed.</td></tr>
-<tr><td><i>gtfsDatabaseSize</i></td> <td>qint64</td> <td><em>(only for type "GTFS")</em>
-The size in bytes of the GTFS database.</td></tr>
 <tr><td><i>scriptFileName</i></td> <td>QString</td> <td><em>(only for type "Scripted")</em>
 The file name of the script used to parse documents from the service provider, if any.</td></tr>
 <tr><td><i>url</i></td> <td>QString</td>
@@ -733,7 +786,7 @@ designed for.</td></tr>
 <tr><td><i>credit</i></td> <td>QString</td>
 <td>The ones who run the service provider (companies).</td></tr>
 <tr><td><i>useSeparateCityValue</i></td> <td>bool</td> <td>Wheather or not the service provider
-needs a separate city value. If this is true, you need to specify a "city" parameter in data
+needs a separate city value. If this is @c true, you need to specify a "city" parameter in data
 source names for @ref usage_departures_sec and @ref usage_journeys_sec .</td></tr>
 <tr><td><i>onlyUseCitiesInList</i></td> <td>bool</td> <td>Wheather or not the service provider
 only accepts cities that are in the "cities" list.</td></tr>
@@ -748,11 +801,35 @@ service provider plugin.</td></tr>
 <td>A description of the service provider.</td></tr>
 <tr><td><i>version</i></td> <td>QString</td>
 <td>The version of the service provider plugin.</td></tr>
+
 <tr><td><i>error</i></td> <td>bool</td> <td>Whether or not the provider plugin has errors.
-If this is true, the other fields are not available, instead a field <em>"errorMessage"</em>
-is available explaining the error.</td></tr>
+If this is @c true, the other fields are not available, instead a field @em errorMessage
+is available explaining the error. If this if @c false, the provider did not encounter any errors.
+But the provider may still not be ready to use, if the @em state field contains a state string
+other than @em "ready". If no @em state field is available, the provider can also be considered
+to be ready.</td></tr>
+
 <tr><td><i>errorMessage</i></td> <td>QString</td> <td>A string explaining the error,
-only available if <em>"error"</em> is true.</td></tr>
+only available if @em error is @c true. </td></tr>
+
+<tr><td><i>state</i></td> <td>QString</td>
+<td>A string to identify different provider states. Currently these states are available:
+@em "ready" (the provider is ready to use), @em "gtfs_import_pending" (a GTFS
+provider is waiting for the GTFS feed to get imported), @em "importing_gtfs_feed" (a GTFS
+provider currently downloads and imports it's GTFS feed).<br />
+A provider can only be used to query for departures/arrivals, etc. if it's state is @em "ready"
+and @em error is @c false.
+</td></tr>
+
+<tr><td><i>stateData</i></td> <td>QVariantHash</td> <td>Contains more information about the
+current provider state in a QVariantHash. At least a @em statusMessage field is contained,
+with a human readable string explaining the current state. There may also be a
+@em statusMessageRich field with a formatted version of @em statusMessage.
+Depending on the @em state additional fields may be available. For example with the
+@em "importing_gtfs_feed" state a field @em progress is available.
+GTFS providers that are @em "ready" also offer these fields as state data:
+@em gtfsDatabasePath (the path to the GTFS database file), @em gtfsDatabaseSize
+(the size in bytes of the GTFS database).</td></tr>
 </table>
 <br />
 Here is an example of how to get service provider information for all available
@@ -768,6 +845,7 @@ foreach( QString serviceProviderName, data.keys() )
     QString country = serviceProviderData["country"].toString();
     QStringList features = serviceProviderData["features"].toStringList();
     bool useSeparateCityValue = serviceProviderData["useSeparateCityValue"].toBool();
+    QString state = serviceProviderData["state"].toString();
 }
 @endcode
 
@@ -778,7 +856,7 @@ provider with the given ID.
 <br />
 @section usage_vehicletypes_sec Receiving Information About Available Vehicle Types
 Information about all available vehicle types can be retrieved from the data source
-<em>"VehicleTypes"</em>. It stores vehicle type information by vehicle type ID, which matches
+@em "VehicleTypes". It stores vehicle type information by vehicle type ID, which matches
 the values of the Enums::VehicleType (engine) and PublicTransport::VehicleType
 (libpublictransporthelper) enumerations. The information stored in this data source can also be
 retrieved from PublicTransport::VehicleType using libpublictransporthelper, ie. the static
@@ -818,8 +896,8 @@ space (" "), then the ID of the service provider to use, e.g. "de_db" for db.de,
 for germany ("Deutsche Bahn"). The following parameters are separated by "|" and start with the
 parameter name followed by "=" and the value. The sorting of the additional parameters doesn't
 matter. The parameter <i>stop</i> is needed and can be the stop name or the stop ID. If the service
-provider has useSeparateCityValue set to true (see @ref usage_serviceproviders_sec), the parameter
-<i>city</i> is also needed (otherwise it is ignored).
+provider has useSeparateCityValue set to @c true (see @ref usage_serviceproviders_sec), the
+parameter <i>city</i> is also needed (otherwise it is ignored).
 You can leave the service provider ID away, the data engine then uses the default service provider
 for the users country.<br />
 The following parameters are allowed:<br />
@@ -894,9 +972,9 @@ public slots:
 The data received from the data engine always contains these keys:<br />
 <table>
 <tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
-<tr><td><i>errorMessage</i></td> <td>QString</td> <td>(only if <em>error</em> is true),
+<tr><td><i>errorMessage</i></td> <td>QString</td> <td>(only if @em error is @c true),
 an error message string.</td></tr>
-<tr><td><i>errorCode</i></td> <td>int</td> <td>(only if <em>error</em> is true), an error code.
+<tr><td><i>errorCode</i></td> <td>int</td> <td>(only if @em error is @c true), an error code.
     Error code 1 means, that there was a problem downloading a source file.
     Error code 2 means, that parsing a source file failed.
     Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
@@ -968,7 +1046,7 @@ for db.de, a service provider for germany ("Deutsche Bahn").
 The following parameters are separated by "|" and start with the parameter name followed by "=".
 The sorting of the additional parameters doesn't matter. The parameters <i>originStop</i> and
 <i>targetStop</i> are needed and can be the stop names or the stop IDs. If the service provider
-has useSeparateCityValue set to true (see @ref usage_serviceproviders_sec), the parameter
+has useSeparateCityValue set to @c true (see @ref usage_serviceproviders_sec), the parameter
 <i>city</i> is also needed (otherwise it is ignored).<br />
 The following parameters are allowed:<br />
 <table>
@@ -1038,9 +1116,9 @@ public slots:
 The data received from the data engine always contains these keys:<br />
 <table>
 <tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
-<tr><td><i>errorMessage</i></td> <td>QString</td> <td>(only if <em>error</em> is true),
+<tr><td><i>errorMessage</i></td> <td>QString</td> <td>(only if @em error is @c true),
 an error message string.</td></tr>
-<tr><td><i>errorCode</i></td> <td>int</td> <td>(only if <em>error</em> is true), an error code.
+<tr><td><i>errorCode</i></td> <td>int</td> <td>(only if @em error is @c true), an error code.
     Error code 1 means, that there was a problem downloading a source file.
     Error code 2 means, that parsing a source file failed.
     Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
@@ -1161,9 +1239,9 @@ void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &dat
 The data received from the data engine contains these keys:<br />
 <table>
 <tr><td><i>error</i></td> <td>bool</td> <td>True, if an error occurred while parsing.</td></tr>
-<tr><td><i>errorMessage</i></td> <td>QString</td> <td>(only if <em>error</em> is true),
+<tr><td><i>errorMessage</i></td> <td>QString</td> <td>(only if @em error is @c true),
 an error message string.</td></tr>
-<tr><td><i>errorCode</i></td> <td>int</td> <td>(only if <em>error</em> is true), an error code.
+<tr><td><i>errorCode</i></td> <td>int</td> <td>(only if @em error is @c true), an error code.
     Error code 1 means, that there was a problem downloading a source file.
     Error code 2 means, that parsing a source file failed.
     Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
@@ -1197,8 +1275,8 @@ timetable data source. The service offers some operations on timetable data sour
 to change it's contents, ie. update or extend it with new data.
 
 @subsection usage_service_manual_update Manual updates
-Manual updates can be requested for timetable data sources using the @b "requestUpdate" operation.
-They may be rejected if the last update was not long enough ago (see the @em "minManualUpdateTime"
+Manual updates can be requested for timetable data sources using the @b requestUpdate operation.
+They may be rejected if the last update was not long enough ago (see the @em minManualUpdateTime
 field of the data source). Manual updates are allowed more often than automatic updates.
 Does not need any parameters.
 The following code example shows how to use the service to request a manual update:
@@ -1275,7 +1353,7 @@ The filename of the XML file starts with the country code or "international"/"un
 by "_" and a short name for the service provider, e.g. "de_db.pts", "ch_sbb.pts", "sk_atlas.pts",
 "international_flightstats.pts". The base file name (without extension) is the service provider ID.
 <br />
-There is also a nice tool called <em>TimetableMate</em>. It's a little IDE to create service
+There is also a nice tool called @em TimetableMate. It's a little IDE to create service
 provider plugins for the PublicTransport data engine. The GUI is similiar to the GUI of KDevelop,
 it also has docks for projects, breakpoints, backtraces, variables, a console, script output and
 so on. TimetableMate also shows a nice dashboard for the service provider plugin projects. It
@@ -1394,8 +1472,8 @@ will not be available.</td></tr>
 <tr><td style="color:#007700;">
 <b>\<entry\> </b></td><td style="color:#00bb00;">\<changelog\> </td> <td>(Optional)</td>
 <td>Contains a changelog entry for this service provider plugin. The entry description is read
-from the contents of the \<entry\> tag. Attributes <em>"version"</em> (the plugin version where
-this change was applied) and <em>"engineVersion"</em> (the version of the publictransport
+from the contents of the \<entry\> tag. Attributes @em version (the plugin version where
+this change was applied) and @em engineVersion (the version of the publictransport
 data engine this plugin was first released with) can be added.</td></tr>
 
 <tr><td style="color:#880088;">

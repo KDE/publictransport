@@ -39,6 +39,54 @@ class ServiceProviderData;
 class QNetworkReply;
 
 /**
+ * @brief Base class for jobs that access the GTFS database.
+ *
+ * Subclasses should overwrite work() instead of start(). The default implementation of start()
+ * calls work() from the event loop if the job can be started. Therefore you can call emitResult()
+ * or setResult() from work(), which can cause problems in start().
+ *
+ * Before work() is called, it gets tested if the provider ID is valid (ie. there is a provider
+ * with the given ID) and no other GTFS database job is currently running. When the job is finished
+ * you can use the canAccessGtfsDatabase property to check if the work() was called to access the
+ * database.
+ **/
+class AbstractGtfsDatabaseJob : public Plasma::ServiceJob {
+    Q_OBJECT
+    Q_PROPERTY( QString serviceProviderId READ serviceProviderId )
+    Q_PROPERTY( bool canAccessGtfsDatabase READ canAccessGtfsDatabase )
+
+public:
+    AbstractGtfsDatabaseJob( const QString &destination, const QString &operation,
+                             const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
+    virtual QString serviceProviderId() const = 0;
+
+    bool canAccessGtfsDatabase() const { return m_canAccessGtfsDatabase; };
+
+    /** @brief Overwritten to call tryToWork() from the event loop. */
+    virtual void start();
+
+protected slots:
+    /**
+     * @brief Calls work() if the job can be started.
+     * If there are errors, eg. an invalid provider ID or if a GTFS feed import is already running
+     * work() is not called and an error gets set. To test if an import job is running
+     * canImportGtfsFeed() get called, which calls the tryToStartGtfsFeedImportJob() function
+     * of the PublicTransport data engine.
+     * Overwrite to test for other errors before asking the data engine if the job can be started.
+     **/
+    virtual void tryToWork();
+
+protected:
+    /** @brief Should be overwritten instead of start(). */
+    virtual void work() = 0;
+
+    bool canImportGtfsFeed();
+
+private:
+    bool m_canAccessGtfsDatabase;
+};
+
+/**
  * @brief Imports a GTFS feed into a database.
  *
  * This is also the base class of @ref UpdateGtfsToDatabaseJob, which does produce an error if it
@@ -48,7 +96,7 @@ class QNetworkReply;
  * time. Progress gets reported using the Plasma::ServiceJob API, just like this job supports
  * suspend/resume and kill.
  **/
-class ImportGtfsToDatabaseJob : public Plasma::ServiceJob {
+class ImportGtfsToDatabaseJob : public AbstractGtfsDatabaseJob {
     Q_OBJECT
 
 public:
@@ -56,10 +104,8 @@ public:
                              const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
     virtual ~ImportGtfsToDatabaseJob();
 
-    /** @brief Starts the GTFS feed download and import. */
-    virtual void start();
-
     inline const ServiceProviderData *data() const { return m_data; };
+    virtual QString serviceProviderId() const;
 
     void setOnlyGetInformation( bool onlyGetInformation ) {
         m_onlyGetInformation = onlyGetInformation;
@@ -81,6 +127,7 @@ protected slots:
     void logMessage( const QString &message );
 
 protected:
+    virtual void work();
     void statFeed();
     void downloadFeed();
 
@@ -120,7 +167,8 @@ private:
  * @brief Updates an already imported GTFS feed if there is a new version.
  *
  * The base class of this class is @ref ImportGtfsToDatabaseJob. This class changes it's behaviour
- * by producing an error if it gets used without an initial import of the GTFS feed.
+ * by producing an error if it gets used without an initial import of the GTFS feed
+ * (error code GtfsFeedNotImported).
  *
  * Depending on the size of the GTFS feed, reading and importing it into the database can take some
  * time. Progress gets reported using the Plasma::ServiceJob API, just like this job supports
@@ -133,53 +181,54 @@ public:
     UpdateGtfsToDatabaseJob( const QString &destination, const QString &operation,
                              const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
 
+protected slots:
     /**
-     * @brief Starts the GTFS feed update or produces an error if there was no initial import.
-     *
-     * The error that gets produced, if the GTFS feed was never completely imported, has the error
-     * code -7.
-     **/
-    virtual void start();
+     * @brief Overwritten to test if the GTFS feed was imported.
+     * This test needs to be done before calling canImportGtfsFeed(), otherwise the data engine
+     * will set the provider state to "importing_gtfs_feed", although this updating import job
+     * will not be run. */
+    virtual void tryToWork();
+
+protected:
+    virtual void work();
 };
 
 /**
  * @brief Deletes a GTFS database for a specific service provider.
  **/
-class DeleteGtfsDatabaseJob : public Plasma::ServiceJob {
+class DeleteGtfsDatabaseJob : public AbstractGtfsDatabaseJob {
     Q_OBJECT
 
 public:
     DeleteGtfsDatabaseJob( const QString &destination, const QString &operation,
                            const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
 
-    /**
-     * @brief Starts the GTFS database deletion or produces an error if there was no database.
-     **/
-    virtual void start();
+    virtual QString serviceProviderId() const { return m_serviceProviderId; };
 
-    QString serviceProviderId() const { return m_serviceProviderId; };
+protected:
+    virtual void work();
 
 private:
     QString m_serviceProviderId;
 };
 
 /**
- * @brief A service for the Public Transport data engine, which can import/update GTFS feeds.
+ * @brief A service to control GTFS feed import/update and GTFS database deletion.
  *
- * This service has an operation "UpdateGtfsFeed", which only updates already imported GTFS feeds
+ * This service has an operation "updateGtfsFeed", which only updates already imported GTFS feeds
  * if there is a new version (job @ref UpdateGtfsToDatabaseJob). This operation gets called by
- * the GTFS accessor @ref TimetableAccessorGeneralTransitFeed to make sure the GTFS data is up to
- * date. To import a new GTFS feed for the first time the operation "ImportGtfsFeed" should be
- * used (job @ref ImportGtfsToDatabaseJob). That operation does @em not get called automatically
- * by the GTFS accessor. This is because importing GTFS feeds can require quite a lot disk space
- * and importing can take some time.
+ * the GTFS provider @ref ServiceProviderGtfs to make sure the GTFS data is up to date. To import
+ * a new GTFS feed for the first time the operation "importGtfsFeed" should be used (job
+ * @ref ImportGtfsToDatabaseJob). That operation does @em not get called automatically by the
+ * GTFS provider. This is because importing GTFS feeds can require quite a lot disk space and
+ * importing can take some time.
  *
- * If there is no imported data every request to the accessor (using the data engine) results in
- * an error with the error code 3 (see the field "errorCode" in the data returned from the data
- * engine). The user should then be asked to import a new GTFS feed and then the "ImportGtfsFeed"
- * operation should be called.
+ * If there is no imported data every request to the provider (using the data engine) results in
+ * an error with the error code GtfsErrorFeedImportRequired (see the field "errorCode" in the data
+ * returned from the data engine). The user should then be asked to import a new GTFS feed and
+ * then the "importGtfsFeed" operation should be called.
  *
- * To call the "ImportGtfsFeed" operation from a Plasma::Applet, code like this can be used:
+ * To call the "importGtfsFeed" operation from a Plasma::Applet, code like this can be used:
  * @code
     Plasma::Service *service = engine("publictransport")->serviceForSource( "GTFS" );
     KConfigGroup op = service->operationDescription("importGtfsFeed");
@@ -193,10 +242,10 @@ private:
  * To delete a GTFS database for a service provider use the "DeleteGtfsDatabase" operation (job
  * @ref DeleteGtfsDatabaseJob). You can query the size of the GTFS database for a given service
  * provider by using the "ServiceProvider <em>\<ID\></em>" data source of the Public Transport
- * data engine. Replace <em>\<ID\></em> with the ID of the service provider. For GTFS accessors
- * the returned data object contains a field "gtfsDatabaseSize" and contains the database size
- * in bytes. The database sizes should be shown to the user, because they may be quite big, eg.
- * ~300MB.
+ * data engine. Replace <em>\<ID\></em> with the ID of the service provider. For GTFS providers
+ * the returned data object contains a field "gtfsDatabaseSize" in the field "stateData" and
+ * contains the database size in bytes. The database sizes should be shown to the user, because
+ * they may be quite big, eg. ~300MB.
  **/
 class GtfsService : public Plasma::Service {
     Q_OBJECT
