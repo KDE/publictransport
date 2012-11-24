@@ -312,7 +312,6 @@ private:
         int maxCount;
     };
 
-    QVariantHash m_data;
     QHash< uint, TimetableData > m_additionalData;
     QTimer *m_updateTimer;
     QTimer *m_updateAdditionalDataDelayTimer;
