@@ -164,49 +164,8 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
 bool ServiceProviderGtfs::isTestResultUnchanged( const QString &providerId,
                                                  const QSharedPointer< KConfig > &cache )
 {
-    // Check if the GTFS feed was modified since the cache was last updated
-    const KConfigGroup group = cache->group( providerId );
-    if ( !group.hasGroup("gtfs") ) {
-        // Not a GTFS provider or modified time not stored yet
-        return true;
-    }
-
-    const KConfigGroup gtfsGroup = group.group( "gtfs" );
-    const KDateTime lastFeedModifiedTime = KDateTime::fromString(
-            gtfsGroup.readEntry("feedModifiedTime", QString()) );
-    const QString feedUrl = gtfsGroup.readEntry( "feedUrl", QString() );
-
-    QNetworkAccessManager *manager = new QNetworkAccessManager();
-    QNetworkRequest request( feedUrl );
-    QNetworkReply *reply = manager->head( request );
-    const QTime start = QTime::currentTime();
-
-    // Use an event loop to wait for execution of the request
-    const int networkTimeout = 1000;
-    QEventLoop eventLoop;
-    connect( reply, SIGNAL(finished()), &eventLoop, SLOT(quit()) );
-    QTimer::singleShot( networkTimeout, &eventLoop, SLOT(quit()) );
-    eventLoop.exec();
-
-    // Check if the timeout occured before the request finished
-    if ( reply->isRunning() ) {
-        kDebug() << "Destroyed or timeout while downloading head of" << feedUrl;
-        reply->abort();
-        reply->deleteLater();
-        manager->deleteLater();
-        return false;
-    }
-
-    const int time = start.msecsTo( QTime::currentTime() );
-    kDebug() << "Waited" << ( time / 1000.0 ) << "seconds for download of" << feedUrl;
-
-    // Read all data, decode it and give it to the script
-    const KDateTime feedModifiedTime = KDateTime::fromString(
-            reply->header(QNetworkRequest::LastModifiedHeader).toString() ).toUtc();
-    reply->deleteLater();
-    manager->deleteLater();
-
-    return feedModifiedTime == lastFeedModifiedTime;
+    // The test result changes when the GTFS feed was updated
+    return isUpdateAvailable( providerId, cache );
 }
 
 bool ServiceProviderGtfs::isTestResultUnchanged( const QSharedPointer<KConfig> &cache ) const
@@ -371,7 +330,7 @@ QList<Enums::ProviderFeature> ServiceProviderGtfs::features() const
     features << Enums::ProvidesDepartures << Enums::ProvidesArrivals
              << Enums::ProvidesStopSuggestions << Enums::ProvidesRouteInformation
              << Enums::ProvidesStopID << Enums::ProvidesStopGeoPosition;
-             // Enums::ProvidesMoreJourneys TODO
+             // Enums::ProvidesStopsByGeoPosition TODO
 #ifdef BUILD_GTFS_REALTIME
     if ( !m_data->realtimeAlertsUrl().isEmpty() ) {
         features << Enums::ProvidesNews;
@@ -451,7 +410,7 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
                      "AND (location_type IS NULL OR location_type=0)") )
     {
         // Check of the error is a "disk I/O error", ie. the database file may have been deleted
-        checkForDiskIoErrorInDatabase( query.lastError(), request );
+        checkForDiskIoError( query.lastError(), request );
 
         kDebug() << query.lastError();
         kDebug() << query.executedQuery();
@@ -467,7 +426,7 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
         if ( !ok ) {
             kDebug() << "No stop with the given name or id found (needs the exact name):"
                      << request->stop();
-            emit errorParsing( this, ErrorParsingFailed /*TODO*/,
+            emit requestFailed( this, ErrorParsingFailed /*TODO*/,
                     "No stop with the given name or id found (needs the exact name): "
                     + request->stop(),
                     QUrl(), request );
@@ -690,9 +649,9 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
     // The objects in departures are deleted in a connected slot in the data engine...
     const ArrivalRequest *arrivalRequest = dynamic_cast< const ArrivalRequest* >( request );
     if ( arrivalRequest ) {
-        emit arrivalListReceived( this, QUrl(), departures, GlobalTimetableInfo(), *arrivalRequest );
+        emit arrivalsReceived( this, QUrl(), departures, GlobalTimetableInfo(), *arrivalRequest );
     } else {
-        emit departureListReceived( this, QUrl(), departures, GlobalTimetableInfo(), *request );
+        emit departuresReceived( this, QUrl(), departures, GlobalTimetableInfo(), *request );
     }
 }
 
@@ -707,12 +666,12 @@ void ServiceProviderGtfs::requestStopSuggestions( const StopSuggestionRequest &r
          || !query.exec() )
     {
         // Check of the error is a "disk I/O error", ie. the database file may have been deleted
-        checkForDiskIoErrorInDatabase( query.lastError(), &request );
+        checkForDiskIoError( query.lastError(), &request );
         kDebug() << query.lastError();
         kDebug() << query.executedQuery();
         return;
     }
-    emit stopListReceived( this, QUrl(), stopsFromQuery(&query, &request), request );
+    emit stopsReceived( this, QUrl(), stopsFromQuery(&query, &request), request );
 }
 
 void ServiceProviderGtfs::requestStopsByGeoPosition( const StopsByGeoPositionRequest &request )
@@ -728,12 +687,12 @@ void ServiceProviderGtfs::requestStopsByGeoPosition( const StopsByGeoPositionReq
          || !query.exec() )
     {
         // Check of the error is a "disk I/O error", ie. the database file may have been deleted
-        checkForDiskIoErrorInDatabase( query.lastError(), &request );
+        checkForDiskIoError( query.lastError(), &request );
         kDebug() << query.lastError();
         kDebug() << query.executedQuery();
         return;
     }
-    emit stopListReceived( this, QUrl(), stopsFromQuery(&query, &request), request );
+    emit stopsReceived( this, QUrl(), stopsFromQuery(&query, &request), request );
 }
 
 StopInfoList ServiceProviderGtfs::stopsFromQuery( QSqlQuery *query,
@@ -789,7 +748,7 @@ StopInfoList ServiceProviderGtfs::stopsFromQuery( QSqlQuery *query,
     return stops;
 }
 
-bool ServiceProviderGtfs::checkForDiskIoErrorInDatabase( const QSqlError &error,
+bool ServiceProviderGtfs::checkForDiskIoError( const QSqlError &error,
                                                          const AbstractRequest *request )
 {
     Q_UNUSED( request );
@@ -800,7 +759,7 @@ bool ServiceProviderGtfs::checkForDiskIoErrorInDatabase( const QSqlError &error,
     if ( error.number() == 10 || error.number() == 1 ) {
         kWarning() << "Disk I/O error reported from database, reimport the GTFS feed"
                    << error.text();
-        emit errorParsing( this, ErrorParsingFailed,
+        emit requestFailed( this, ErrorParsingFailed,
                 i18nc("@info/plain", "The GTFS database is corrupted, please reimport "
                       "the GTFS feed"), QUrl(), request );
 

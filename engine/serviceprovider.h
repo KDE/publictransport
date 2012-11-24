@@ -107,7 +107,7 @@ public:
     static ServiceProvider *createInvalidProvider( QObject *parent = 0 );
 
     /**
-     * @brief Whether or not a cached test result is unchanged.
+     * @brief Whether or not the cached test result is unchanged.
      *
      * Derived classes should override this function to indicate when test results might have
      * changed, eg. because an additionally needed file has been modified. If true gets returned
@@ -128,11 +128,19 @@ public:
     /** @brief Get the ID of this service provider. */
     QString id() const;
 
+    /** @brief Get the type of this provider. */
     Enums::ServiceProviderType type() const;
 
     /** @brief Whether or not the source XML file was modified since the cache was last updated. */
     bool isSourceFileModified( const QSharedPointer<KConfig> &cache ) const;
 
+    /**
+     * @brief Get the minimum seconds to wait between two data-fetches from the service provider.
+     *
+     * The default implementation simply takes the value from ServiceProviderData::minFetchWait().
+     * @param updateFlags Flags to take into consideration when calculating the result, eg. whether
+     *   or not the result gets used for a manual data source update.
+     **/
     virtual int minFetchWait( UpdateFlags updateFlags = DefaultUpdateFlags ) const;
 
     /** @brief Get the date and time when new data should be fetched from the service provider. */
@@ -153,8 +161,10 @@ public:
     /** @brief A list of cities for which the service providers returns results. */
     QStringList cities() const;
 
+    /** @brief Get a credit string to be shown with the timetable data. */
     QString credit() const;
 
+    /** @brief Get a pointer to the ServiceProviderData object for this provider. */
     const ServiceProviderData *data() const { return m_data; };
 
     /**
@@ -167,47 +177,54 @@ public:
     void request( AbstractRequest *request );
 
     /**
-     * @brief Requests a list of departures.
+     * @brief Request departures as described in @p request.
      *
-     * When the departure list is completely received @ref departureListReceived gets emitted.
+     * When the departures are completely received departuresReceived() gets emitted.
      * The default implementation does nothing.
      * @param request Information about the departure request.
      **/
     virtual void requestDepartures( const DepartureRequest &request );
 
     /**
-     * @brief Requests a list of arrivals.
+     * @brief Request arrivals as described in @p request.
      *
-     * When the arrival list is completely received @ref departureListReceived gets emitted.
+     * When the arrivals are completely received arrivalsReceived() gets emitted.
      * The default implementation does nothing.
      * @param request Information about the arrival request.
      **/
     virtual void requestArrivals( const ArrivalRequest &request );
 
     /**
-     * @brief Requests a list of journeys.
+     * @brief Request journeys as described in @p request.
      *
-     * When the journey list is completely received @ref journeyListReceived() gets emitted.
+     * When the journeys are completely received journeysReceived() gets emitted.
      * The default implementation does nothing.
      * @param request Information about the journey request.
      **/
     virtual void requestJourneys( const JourneyRequest &request );
 
     /**
-     * @brief Requests a list of stop suggestions.
+     * @brief Request stop suggestions as described in @p request.
      *
-     * When the stop list is completely received @ref stopListReceived gets emitted.
+     * When the stop suggestions are completely received stopsReceived() gets emitted.
      * The default implementation does nothing.
      * @param request Information about the stop suggestion request.
      **/
     virtual void requestStopSuggestions( const StopSuggestionRequest &request );
 
+    /**
+     * @brief Request stops by geo position as described in @p request.
+     *
+     * When the stops are completely received stopsReceived() gets emitted.
+     * The default implementation does nothing.
+     * @param request Information about the stops by geo position request.
+     **/
     virtual void requestStopsByGeoPosition( const StopsByGeoPositionRequest &request );
 
     /**
-     * @brief Requests additional data for a valid timetable item in the engine.
+     * @brief Request additional data for a valid timetable item in the engine.
      *
-     * When the additional data is completely received @ref additionalDataReceived gets emitted.
+     * When the additional data is completely received additionalDataReceived() gets emitted.
      * The default implementation does nothing.
      * @param request Information about the additional data request.
      **/
@@ -275,54 +292,54 @@ protected:
 
 signals:
     /**
-     * @brief Emitted when a new departure list has been received and parsed.
+     * @brief Emitted when a new departure list has been received.
      *
-     * @param provider The provider that was used to download and parse the departures.
+     * @param provider The provider that was used to get the departures.
      * @param requestUrl The url used to request the information.
      * @param departures A list of departures that were received.
      * @param request Information about the request for the just received departure list.
      * @see ServiceProvider::useSeperateCityValue()
      **/
-    void departureListReceived( ServiceProvider *provider, const QUrl &requestUrl,
+    void departuresReceived( ServiceProvider *provider, const QUrl &requestUrl,
             const DepartureInfoList &departures, const GlobalTimetableInfo &globalInfo,
             const DepartureRequest &request );
 
     /**
-     * @brief Emitted when a new arrival list has been received and parsed.
+     * @brief Emitted when a new arrival list has been received.
      *
-     * @param provider The provider that was used to download and parse the arrivals.
+     * @param provider The provider that was used to get the arrivals.
      * @param requestUrl The url used to request the information.
      * @param arrivals A list of arrivals that were received.
      * @param request Information about the request for the just received arrival list.
      * @see ServiceProvider::useSeperateCityValue()
      **/
-    void arrivalListReceived( ServiceProvider *provider, const QUrl &requestUrl,
+    void arrivalsReceived( ServiceProvider *provider, const QUrl &requestUrl,
             const ArrivalInfoList &arrivals, const GlobalTimetableInfo &globalInfo,
             const ArrivalRequest &request );
 
     /**
-     * @brief Emitted when a new journey list has been received and parsed.
+     * @brief Emitted when a new journey list has been received.
      *
-     * @param provider The provider that was used to download and parse the journeys.
+     * @param provider The provider that was used to get the journeys.
      * @param requestUrl The url used to request the information.
      * @param journeys A list of journeys that were received.
      * @param request Information about the request for the just received journey list.
      * @see ServiceProvider::useSeperateCityValue()
      **/
-    void journeyListReceived( ServiceProvider *provider, const QUrl &requestUrl,
+    void journeysReceived( ServiceProvider *provider, const QUrl &requestUrl,
             const JourneyInfoList &journeys, const GlobalTimetableInfo &globalInfo,
             const JourneyRequest &request );
 
     /**
-     * @brief Emitted when a list of stop names has been received and parsed.
+     * @brief Emitted when a list of stops has been received.
      *
-     * @param provider The provider that was used to download and parse the stops.
+     * @param provider The provider that was used to get the stops.
      * @param requestUrl The url used to request the information.
      * @param stops A pointer to a list of @ref StopInfo objects.
      * @param request Information about the request for the just received stop list.
      * @see ServiceProvider::useSeperateCityValue()
      **/
-    void stopListReceived( ServiceProvider *provider, const QUrl &requestUrl,
+    void stopsReceived( ServiceProvider *provider, const QUrl &requestUrl,
             const StopInfoList &stops, const StopSuggestionRequest &request );
 
     /**
@@ -349,7 +366,7 @@ signals:
      * @param request Information about the request that resulted in the error.
      * @see ServiceProvider::useSeperateCityValue()
      **/
-    void errorParsing( ServiceProvider *provider, ErrorCode errorCode, const QString &errorString,
+    void requestFailed( ServiceProvider *provider, ErrorCode errorCode, const QString &errorString,
             const QUrl &requestUrl, const AbstractRequest *request );
 
     void forceUpdate();

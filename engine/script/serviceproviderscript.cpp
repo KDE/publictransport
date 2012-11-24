@@ -401,7 +401,7 @@ void ServiceProviderScript::departuresReady( const QList<TimetableData> &data,
 //     TODO use hints
     if ( data.isEmpty() ) {
         kDebug() << "The script didn't find any departures" << request.sourceName();
-        emit errorParsing( this, ErrorParsingFailed,
+        emit requestFailed( this, ErrorParsingFailed,
                            i18n("Error while parsing the departure document."), url, &request );
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
@@ -414,7 +414,7 @@ void ServiceProviderScript::departuresReady( const QList<TimetableData> &data,
             departures << info.dynamicCast<DepartureInfo>();
         }
 
-        emit departureListReceived( this, url, departures, globalInfo, request );
+        emit departuresReceived( this, url, departures, globalInfo, request );
         if ( couldNeedForcedUpdate ) {
             emit forceUpdate();
         }
@@ -429,7 +429,7 @@ void ServiceProviderScript::arrivalsReady( const QList< TimetableData > &data,
 //     TODO use hints
     if ( data.isEmpty() ) {
         kDebug() << "The script didn't find any arrivals" << request.sourceName();
-        emit errorParsing( this, ErrorParsingFailed,
+        emit requestFailed( this, ErrorParsingFailed,
                            i18n("Error while parsing the arrival document."), url, &request );
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
@@ -442,7 +442,7 @@ void ServiceProviderScript::arrivalsReady( const QList< TimetableData > &data,
             arrivals << info.dynamicCast<ArrivalInfo>();
         }
 
-        emit arrivalListReceived( this, url, arrivals, globalInfo, request );
+        emit arrivalsReceived( this, url, arrivals, globalInfo, request );
         if ( couldNeedForcedUpdate ) {
             emit forceUpdate();
         }
@@ -458,7 +458,7 @@ void ServiceProviderScript::journeysReady( const QList<TimetableData> &data,
 //     TODO use hints
     if ( data.isEmpty() ) {
         kDebug() << "The script didn't find any journeys" << request.sourceName();
-        emit errorParsing( this, ErrorParsingFailed,
+        emit requestFailed( this, ErrorParsingFailed,
                            i18n("Error while parsing the journey document."), url, &request );
     } else {
         // Create PublicTransportInfo objects for new data and combine with already published data
@@ -472,7 +472,7 @@ void ServiceProviderScript::journeysReady( const QList<TimetableData> &data,
             journeys << info.dynamicCast<JourneyInfo>();
         }
 
-        emit journeyListReceived( this, url, journeys, globalInfo, request );
+        emit journeysReceived( this, url, journeys, globalInfo, request );
     }
 }
 
@@ -497,7 +497,7 @@ void ServiceProviderScript::stopSuggestionsReady( const QList<TimetableData> &da
         stops << info.dynamicCast<StopInfo>();
     }
 
-    emit stopListReceived( this, url, stops, request );
+    emit stopsReceived( this, url, stops, request );
 }
 
 void ServiceProviderScript::additionDataReady( const TimetableData &data,
@@ -511,7 +511,7 @@ void ServiceProviderScript::additionDataReady( const TimetableData &data,
     Q_UNUSED( couldNeedForcedUpdate );
     if ( data.isEmpty() ) {
         kDebug() << "The script didn't find any new data" << request.sourceName();
-        emit errorParsing( this, ErrorParsingFailed,
+        emit requestFailed( this, ErrorParsingFailed,
                            i18nc("@info/plain", "No additional data found."),
                            url, &request );
     } else {
@@ -553,7 +553,7 @@ void ServiceProviderScript::jobFailed( ThreadWeaver::Job* job )
     ScriptJob *scriptJob = qobject_cast< ScriptJob* >( job );
     Q_ASSERT( scriptJob );
 
-    emit errorParsing( this, ErrorParsingFailed, scriptJob->errorString(),
+    emit requestFailed( this, ErrorParsingFailed, scriptJob->errorString(),
                        scriptJob->lastDownloadUrl(), scriptJob->request() );
 }
 
@@ -649,7 +649,7 @@ void ServiceProviderScript::import( const QString &import, QScriptEngine *engine
 
 int ServiceProviderScript::minFetchWait( UpdateFlags updateFlags ) const
 {
-    // If an update was requested wait minimally one minute,
+    // If an update was requested manually wait minimally one minute,
     // otherwise wait minimally 15 minutes between automatic updates
     return qMax( updateFlags.testFlag(UpdateWasRequestedManually) ? 60 : 15 * 60,
                  ServiceProvider::minFetchWait() );

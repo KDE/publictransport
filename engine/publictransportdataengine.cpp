@@ -530,18 +530,18 @@ PublicTransportEngine::ProviderPointer PublicTransportEngine::providerFromId(
         }
 
         // Connect provider, when it was created successfully
-        connect( provider, SIGNAL(departureListReceived(ServiceProvider*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)),
-                 this, SLOT(departureListReceived(ServiceProvider*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)) );
-        connect( provider, SIGNAL(arrivalListReceived(ServiceProvider*,QUrl,ArrivalInfoList,GlobalTimetableInfo,ArrivalRequest)),
-                 this, SLOT(arrivalListReceived(ServiceProvider*,QUrl,ArrivalInfoList,GlobalTimetableInfo,ArrivalRequest)) );
-        connect( provider, SIGNAL(journeyListReceived(ServiceProvider*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequest)),
-                 this, SLOT(journeyListReceived(ServiceProvider*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequest)) );
-        connect( provider, SIGNAL(stopListReceived(ServiceProvider*,QUrl,StopInfoList,StopSuggestionRequest)),
-                 this, SLOT(stopListReceived(ServiceProvider*,QUrl,StopInfoList,StopSuggestionRequest)) );
+        connect( provider, SIGNAL(departuresReceived(ServiceProvider*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)),
+                 this, SLOT(departuresReceived(ServiceProvider*,QUrl,DepartureInfoList,GlobalTimetableInfo,DepartureRequest)) );
+        connect( provider, SIGNAL(arrivalsReceived(ServiceProvider*,QUrl,ArrivalInfoList,GlobalTimetableInfo,ArrivalRequest)),
+                 this, SLOT(arrivalsReceived(ServiceProvider*,QUrl,ArrivalInfoList,GlobalTimetableInfo,ArrivalRequest)) );
+        connect( provider, SIGNAL(journeysReceived(ServiceProvider*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequest)),
+                 this, SLOT(journeysReceived(ServiceProvider*,QUrl,JourneyInfoList,GlobalTimetableInfo,JourneyRequest)) );
+        connect( provider, SIGNAL(stopsReceived(ServiceProvider*,QUrl,StopInfoList,StopSuggestionRequest)),
+                 this, SLOT(stopsReceived(ServiceProvider*,QUrl,StopInfoList,StopSuggestionRequest)) );
         connect( provider, SIGNAL(additionalDataReceived(ServiceProvider*,QUrl,TimetableData,AdditionalDataRequest)),
                  this, SLOT(additionalDataReceived(ServiceProvider*,QUrl,TimetableData,AdditionalDataRequest)) );
-        connect( provider, SIGNAL(errorParsing(ServiceProvider*,ErrorCode,QString,QUrl,const AbstractRequest*)),
-                 this, SLOT(errorParsing(ServiceProvider*,ErrorCode,QString,QUrl,const AbstractRequest*)) );
+        connect( provider, SIGNAL(requestFailed(ServiceProvider*,ErrorCode,QString,QUrl,const AbstractRequest*)),
+                 this, SLOT(requestFailed(ServiceProvider*,ErrorCode,QString,QUrl,const AbstractRequest*)) );
 
         // Create a ProviderPointer for the created provider and
         // add it to the list of currently used providers
@@ -1688,7 +1688,7 @@ void PublicTransportEngine::updateDataSourcesWithNewAdditionData()
     }
 }
 
-void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
+void PublicTransportEngine::departuresReceived( ServiceProvider *provider,
         const QUrl &requestUrl, const DepartureInfoList &departures,
         const GlobalTimetableInfo &globalInfo, const DepartureRequest &request,
         bool deleteDepartureInfos )
@@ -1697,7 +1697,7 @@ void PublicTransportEngine::departureListReceived( ServiceProvider *provider,
                            deleteDepartureInfos, true );
 }
 
-void PublicTransportEngine::arrivalListReceived( ServiceProvider *provider, const QUrl &requestUrl,
+void PublicTransportEngine::arrivalsReceived( ServiceProvider *provider, const QUrl &requestUrl,
         const ArrivalInfoList &arrivals, const GlobalTimetableInfo &globalInfo,
         const ArrivalRequest &request, bool deleteDepartureInfos )
 {
@@ -1705,7 +1705,7 @@ void PublicTransportEngine::arrivalListReceived( ServiceProvider *provider, cons
                            deleteDepartureInfos, false );
 }
 
-void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
+void PublicTransportEngine::journeysReceived( ServiceProvider* provider,
         const QUrl &requestUrl, const JourneyInfoList &journeys,
         const GlobalTimetableInfo &globalInfo,
         const JourneyRequest &request,
@@ -1780,7 +1780,7 @@ void PublicTransportEngine::journeyListReceived( ServiceProvider* provider,
     m_dataSources[ nonAmbiguousName ] = dataSource;
 }
 
-void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
+void PublicTransportEngine::stopsReceived( ServiceProvider *provider,
         const QUrl &requestUrl, const StopInfoList &stops,
         const StopSuggestionRequest &request, bool deleteStopInfos )
 {
@@ -1816,7 +1816,7 @@ void PublicTransportEngine::stopListReceived( ServiceProvider *provider,
 //     }
 }
 
-void PublicTransportEngine::errorParsing( ServiceProvider *provider,
+void PublicTransportEngine::requestFailed( ServiceProvider *provider,
         ErrorCode errorCode, const QString &errorMessage,
         const QUrl &requestUrl, const AbstractRequest *request )
 {

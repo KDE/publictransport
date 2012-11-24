@@ -34,7 +34,7 @@
 /**
  * @brief Stores information about a request to the publictransport data engine.
  *
- * All values other than @p sourceName can be derived (parsed) from it.
+ * All values other than @p sourceName can be derived (parsed) from the source name.
  **/
 class AbstractRequest {
 public:

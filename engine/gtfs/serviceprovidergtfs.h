@@ -43,10 +43,10 @@ class KTimeZone;
  * @brief This class uses a database similiar to the GTFS structure to access public transport data.
  *
  * To fill the GTFS database with data from a GeneralTransitFeedSpecification feed (zip file)
- * GtfsImporter is used by PublicTransportService. This service has an operation
- * "updateGtfsDatabase", which gets called by this class. That operation only updates already
- * imported GTFS feeds if there is a new version. To import a new GTFS feed for the first time the
- * operation "importGtfsFeed" should be used. That operation does @em not get called by this class.
+ * GtfsImporter is used by the GTFS service. This service has an operation "updateGtfsDatabase",
+ * which gets called by this class. That operation only updates already imported GTFS feeds if
+ * there is a new version. To import a new GTFS feed for the first time the operation
+ * "importGtfsFeed" should be used. That operation does @em not get called by this class.
  * This is because importing GTFS feeds can require quite a lot disk space and importing can take
  * some time. The user should be asked to import a new GTFS feed.
  *
@@ -131,9 +131,26 @@ public:
     /** @brief Destructor. */
     virtual ~ServiceProviderGtfs();
 
+    /**
+     * @brief Whether or not the cached test result for @p providerId is unchanged.
+     *
+     * This function tests if an updated GTFS feed is available.
+     * @param providerId The provider to check.
+     * @param cache A shared pointer to the cache.
+     * @see isUpdateAvailable()
+     * @see runTests()
+     **/
     static bool isTestResultUnchanged( const QString &providerId,
                                        const QSharedPointer<KConfig> &cache );
 
+    /**
+     * @brief Whether or not the cached test result is unchanged.
+     *
+     * This function tests if an updated GTFS feed is available.
+     * @param cache A shared pointer to the cache.
+     * @see isUpdateAvailable()
+     * @see runTests()
+     **/
     virtual bool isTestResultUnchanged( const QSharedPointer<KConfig> &cache ) const;
 
     /** @brief Returns the type of this provider, ie. GtfsProvider. */
@@ -142,6 +159,10 @@ public:
     /** @brief Gets a list of features that this provider supports. */
     virtual QList<Enums::ProviderFeature> features() const;
 
+    /**
+     * @brief Get the minimum seconds to wait between two data-fetches from the service provider.
+     * Limits the result to minimally one minute.
+     **/
     virtual int minFetchWait( UpdateFlags updateFlags = DefaultUpdateFlags ) const;
 
 #ifdef BUILD_GTFS_REALTIME
@@ -205,8 +226,10 @@ protected:
     void updateRealtimeData();
 #endif
 
-    bool checkForDiskIoErrorInDatabase( const QSqlError &error, const AbstractRequest *request );
+    /** @brief Check @p error for IO errors, emit requestFailed() on failure. */
+    bool checkForDiskIoError( const QSqlError &error, const AbstractRequest *request );
 
+    /** @brief Get a list of stops from a successfully executed @p query. */
     StopInfoList stopsFromQuery( QSqlQuery *query, const StopSuggestionRequest *request = 0 ) const;
 
     /**

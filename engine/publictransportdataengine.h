@@ -266,9 +266,9 @@ protected slots:
 #endif // BUILD_PROVIDER_TYPE_GTFS
 
     /**
-     * @brief A list of departures was received.
+     * @brief Departures were received.
      *
-     * @param provider The provider that was used to download and parse the departures.
+     * @param provider The provider that was used to get the departures.
      * @param requestUrl The url used to request the information.
      * @param departures A list of departures that were received.
      * @param globalInfo Global information that affects all departures.
@@ -276,16 +276,16 @@ protected slots:
      *
      * @see ServiceProvider::useSeparateCityValue()
      **/
-    void departureListReceived( ServiceProvider *provider,
+    void departuresReceived( ServiceProvider *provider,
             const QUrl &requestUrl, const DepartureInfoList &departures,
             const GlobalTimetableInfo &globalInfo,
             const DepartureRequest &request,
             bool deleteDepartureInfos = true );
 
     /**
-     * @brief A list of arrivals was received.
+     * @brief Arrivals were received.
      *
-     * @param provider The provider that was used to download and parse the arrivals.
+     * @param provider The provider that was used to get the arrivals.
      * @param requestUrl The url used to request the information.
      * @param arrivals A list of arrivals that were received.
      * @param globalInfo Global information that affects all arrivals.
@@ -293,16 +293,16 @@ protected slots:
      *
      * @see ServiceProvider::useSeparateCityValue()
      **/
-    void arrivalListReceived( ServiceProvider *provider,
+    void arrivalsReceived( ServiceProvider *provider,
             const QUrl &requestUrl, const ArrivalInfoList &arrivals,
             const GlobalTimetableInfo &globalInfo,
             const ArrivalRequest &request,
             bool deleteDepartureInfos = true );
 
     /**
-     * @brief A list of journeys was received.
+     * @brief Journeys were received.
      *
-     * @param provider The provider that was used to download and parse the journeys.
+     * @param provider The provider that was used to get the journeys.
      * @param requestUrl The url used to request the information.
      * @param journeys A list of journeys that were received.
      * @param globalInfo Global information that affects all journeys.
@@ -310,34 +310,34 @@ protected slots:
      *
      * @see ServiceProvider::useSeparateCityValue()
      **/
-    void journeyListReceived( ServiceProvider *provider,
+    void journeysReceived( ServiceProvider *provider,
             const QUrl &requestUrl, const JourneyInfoList &journeys,
             const GlobalTimetableInfo &globalInfo,
             const JourneyRequest &request,
             bool deleteJourneyInfos = true );
 
     /**
-     * @brief A list of stop suggestions was received.
+     * @brief Stop suggestions were received.
      *
-     * @param provider The service provider that was used to download and parse the stops.
+     * @param provider The service provider that was used to get the stops.
      * @param requestUrl The url used to request the information.
-     * @param stops A pointer to a list of @ref StopInfo objects.
+     * @param stops A list of stops that were received.
      * @param request Information about the request for the here received @p stops.
      *
      * @see ServiceProvider::useSeparateCityValue()
      **/
-    void stopListReceived( ServiceProvider *provider,
+    void stopsReceived( ServiceProvider *provider,
             const QUrl &requestUrl, const StopInfoList &stops,
             const StopSuggestionRequest &request,
             bool deleteStopInfos = true );
 
-    /** TODO
-     * @brief A list of stop suggestions was received.
+    /**
+     * @brief Additional data was received.
      *
-     * @param provider The service provider that was used to download and parse the stops.
+     * @param provider The service provider that was used to get additional data.
      * @param requestUrl The url used to request the information.
-     * @param stops A pointer to a list of @ref StopInfo objects. TODO
-     * @param request Information about the request for the here received @p stops.
+     * @param data The additional data that was receceived.
+     * @param request Information about the request for the here received @p data.
      *
      * @see ServiceProvider::useSeparateCityValue()
      **/
@@ -345,13 +345,10 @@ protected slots:
             const QUrl &requestUrl, const TimetableData &data,
             const AdditionalDataRequest &request );
 
-    void updateDataSourcesWithNewAdditionData();
-
     /**
-     * @brief An error was received.
+     * @brief A request has failed.
      *
-     * @param provider The provider that was used to download and parse information
-     *   from the service provider.
+     * @param provider The provider that was used to get data from the service provider.
      * @param errorCode The error code or NoError if there was no error.
      * @param errorString If @p errorCode isn't NoError this contains a description of the error.
      * @param requestUrl The url used to request the information.
@@ -359,8 +356,16 @@ protected slots:
      *
      * @see ServiceProvider::useSeparateCityValue()
      **/
-    void errorParsing( ServiceProvider *provider, ErrorCode errorCode, const QString &errorMessage,
+    void requestFailed( ServiceProvider *provider, ErrorCode errorCode, const QString &errorMessage,
             const QUrl &requestUrl, const AbstractRequest *request );
+
+    /**
+     * @brief Update data sources which have new additional data available.
+     *
+     * This slot gets used to combine too many data source updates in short time
+     * into a single update.
+     **/
+    void updateDataSourcesWithNewAdditionData();
 
     /**
      * @brief A global or local directory with service provider XML files was changed.
@@ -488,6 +493,13 @@ protected:
     bool isSourceUpToDate( const QString &nonAmbiguousName,
                            UpdateFlags updateFlags = DefaultUpdateFlags );
 
+    /**
+     * @brief Get the minimum number of seconds until the next update of @p sourceName.
+     *
+     * Whether or not the time until the next automatic or manual update should be calculated
+     * is defined by @p updateFlags.
+     * This function gets used by secsUntilUpdate() and minSecsUntilUpdate().
+     **/
     int getSecsUntilUpdate( const QString &sourceName, QString *errorMessage = 0,
                             UpdateFlags updateFlags = DefaultUpdateFlags );
 
@@ -502,6 +514,18 @@ protected:
      **/
     virtual Plasma::Service* serviceForSource( const QString &name );
 
+    /**
+     * @brief Test @p providerId for errors.
+     *
+     * @param providerId The ID of the provider to test.
+     * @param providerData A pointer to a QVariantHash into which provider data gets inserted,
+     *   ie. the data that gets used for "ServiceProvider [providerId]" data sources.
+     * @param errorMessage A pointer to a QString which gets set to an error message
+     *   if @c false gets returned.
+     * @param cache A shared pointer to the provider cache. If an invalid pointer is given it
+     *   gets created using ServiceProviderGlobal::cache().
+     * @return @c True, if the service provider is valid, @c false otherwise.
+     **/
     bool testServiceProvider( const QString &providerId, QVariantHash *providerData,
                               QString *errorMessage,
                               const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>() );
@@ -515,7 +539,7 @@ private:
     QDateTime sourceUpdateTime( TimetableDataSource *dataSource,
                                 UpdateFlags updateFlags = DefaultUpdateFlags );
 
-    /** Handler for departureListReceived() (@p isDepartureData @c true) and arrivalListReceived() */
+    /** Handler for departuresReceived() (@p isDepartureData @c true) and arrivalsReceived() */
     void timetableDataReceived( ServiceProvider *provider,
             const QUrl &requestUrl, const DepartureInfoList &items,
             const GlobalTimetableInfo &globalInfo,
@@ -545,8 +569,19 @@ private:
      **/
     QVariantHash locations();
 
+    /**
+     * @brief Get a pointer to the provider with the given @p providerId.
+     *
+     * If the provider to get is in use it does not need to be created.
+     * @param providerId The ID of the provider to get.
+     * @param newlyCreated If not 0 this gets set to @p true if the provider was newly created
+     *   and @p false if it was already created.
+     * @return A pointer to the provider with the given @p providerId or an invalid pointer
+     *   if the provider could not be found or it's state is not "ready".
+     **/
     ProviderPointer providerFromId( const QString &providerId, bool *newlyCreated = 0 );
 
+    /** @brief Delete the provider with the given @p providerId and clears all cached data. */
     void deleteProvider( const QString &providerId );
 
     /** @brief Publish the data of @p dataSource under it's data source name. */

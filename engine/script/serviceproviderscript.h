@@ -68,9 +68,10 @@ class ServiceProviderScript : public ServiceProvider {
 public:
     /** @brief States of the script, used for loading the script only when needed. */
     enum ScriptState {
-        WaitingForScriptUsage = 0x00,
-        ScriptLoaded = 0x01,
-        ScriptHasErrors = 0x02
+        WaitingForScriptUsage = 0x00, /**< The script was not loaded,
+                * because it was not needed yet. */
+        ScriptLoaded = 0x01, /**< The script has been loaded. */
+        ScriptHasErrors = 0x02 /**< The script has errors. */
     };
 
 public:
@@ -108,9 +109,24 @@ public:
     /** @brief Destructor. */
     virtual ~ServiceProviderScript();
 
+    /**
+     * @brief Whether or not the cached test result for @p providerId is unchanged.
+     *
+     * This function tests if the script file or included script files have been modified.
+     * @param providerId The provider to check.
+     * @param cache A shared pointer to the cache.
+     * @see runTests()
+     **/
     static bool isTestResultUnchanged( const QString &providerId,
                                        const QSharedPointer<KConfig> &cache );
 
+    /**
+     * @brief Whether or not the cached test result is unchanged.
+     *
+     * This function tests if the script file or included script files have been modified.
+     * @param cache A shared pointer to the cache.
+     * @see runTests()
+     **/
     virtual bool isTestResultUnchanged( const QSharedPointer<KConfig> &cache ) const;
 
     /** @brief Whether or not the script has been successfully loaded. */
@@ -119,76 +135,118 @@ public:
     /** @brief Whether or not the script has errors. */
     bool hasScriptErrors() const { return m_scriptState == ScriptHasErrors; };
 
-    QString errorMessage() const { return m_errorMessage; };
-
     /** @brief Gets a list of features that this service provider supports through a script. */
     virtual QList<Enums::ProviderFeature> features() const;
 
     /**
-     * @brief Requests a list of departures.
-     * When the departure/arrival list is completely received @ref departureListReceived is emitted.
+     * @brief Request departures as described in @p request.
+     * When the departures are completely received departuresReceived() gets emitted.
      **/
     virtual void requestDepartures( const DepartureRequest &request );
 
     /**
-     * @brief Requests a list of arrivals.
-     * When the arrival list is completely received @ref departureListReceived is emitted.
+     * @brief Request arrivals as described in @p request.
+     * When the arrivals are completely received arrivalsReceived() gets emitted.
      **/
     virtual void requestArrivals( const ArrivalRequest &request );
 
+    /**
+     * @brief Request journeys as described in @p request.
+     * When the journeys are completely received journeysReceived() gets emitted.
+     **/
     virtual void requestJourneys( const JourneyRequest &request );
 
+    /**
+     * @brief Request stop suggestions as described in @p request.
+     * When the stop suggestions are completely received stopsReceived() gets emitted.
+     **/
     virtual void requestStopSuggestions( const StopSuggestionRequest &request );
 
+    /**
+     * @brief Request stops by geo position as described in @p request.
+     * When the stops are completely received stopsReceived() gets emitted.
+     **/
     virtual void requestStopsByGeoPosition(
             const StopsByGeoPositionRequest &request );
 
+    /**
+     * @brief Requests additional data as described in @p request.
+     * When the additional data is completely received additionDataReceived() gets emitted.
+     **/
     virtual void requestAdditionalData( const AdditionalDataRequest &request );
 
-    /** @brief Request more items for a data source. */
+    /**
+     * @brief Request more items for a data source as described in @p moreItemsRequest.
+     **/
     virtual void requestMoreItems( const MoreItemsRequest &moreItemsRequest );
 
+    /**
+     * @brief Get the minimum seconds to wait between two data-fetches from the service provider.
+     *
+     * For manual updates the result is minimally one minute, for automatic updates 15 minutes.
+     * @param updateFlags Flags to take into consideration when calculating the result, eg. whether
+     *   or not the result gets used for a manual data source update.
+     **/
     virtual int minFetchWait( UpdateFlags updateFlags = DefaultUpdateFlags ) const;
 
 protected slots:
+    /** @brief Departure @p data is ready, emits departuresReceived(). */
     void departuresReady( const QList<TimetableData> &data,
                           ResultObject::Features features, ResultObject::Hints hints,
                           const QString &url, const GlobalTimetableInfo &globalInfo,
                           const DepartureRequest &request, bool couldNeedForcedUpdate = false );
 
+    /** @brief Arrival @p data is ready, emits arrivalsReceived(). */
     void arrivalsReady( const QList<TimetableData> &data,
                         ResultObject::Features features, ResultObject::Hints hints,
                         const QString &url, const GlobalTimetableInfo &globalInfo,
                         const ArrivalRequest &request, bool couldNeedForcedUpdate = false );
 
+    /** @brief Journey @p data is ready, emits journeysReceived(). */
     void journeysReady( const QList<TimetableData> &data, ResultObject::Features features,
                         ResultObject::Hints hints, const QString &url,
                         const GlobalTimetableInfo &globalInfo,
                         const JourneyRequest &request, bool couldNeedForcedUpdate = false );
 
+    /** @brief Stop suggestion @p data is ready, emits stopsReceived(). */
     void stopSuggestionsReady( const QList<TimetableData> &data, ResultObject::Features features,
                                ResultObject::Hints hints, const QString &url,
                                const GlobalTimetableInfo &globalInfo,
                                const StopSuggestionRequest &request,
                                bool couldNeedForcedUpdate = false );
 
+    /** @brief Additional @p data is ready, emits additionalDataReceived(). */
     void additionDataReady( const TimetableData &data,
                             ResultObject::Features features, ResultObject::Hints hints,
                             const QString &url, const GlobalTimetableInfo &globalInfo,
                             const AdditionalDataRequest &request,
                             bool couldNeedForcedUpdate = false );
 
+    /** @brief A @p job was started. */
     void jobStarted( ThreadWeaver::Job *job );
+
+    /** @brief A @p job was done. */
     void jobDone( ThreadWeaver::Job *job );
+
+    /** @brief A @p job failed. */
     void jobFailed( ThreadWeaver::Job *job );
 
 protected:
+    /** @brief Load the script file. */
     bool lazyLoadScript();
+
+    /**
+     * @brief Get a list of features supported by this provider.
+     *
+     * Uses @p cache to store the result. If the cached result is still valid, ie. the used script
+     * file(s) haven't changed, the feature list from the @p cache gets returned as is.
+     **/
     QList<Enums::ProviderFeature> readScriptFeatures( const QSharedPointer<KConfig> &cache );
 
     /** @brief Run script provider specific tests. */
     virtual bool runTests( QString *errorMessage = 0 ) const;
 
+    /** @brief Enqueue @p job in the job queue. */
     void enqueue( ScriptJob *job );
 
 private:
@@ -203,7 +261,6 @@ private:
 
     ScriptData m_scriptData;
     QSharedPointer< Storage > m_scriptStorage;
-    QString m_errorMessage;
 };
 
 #endif // Multiple inclusion guard

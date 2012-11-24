@@ -29,12 +29,14 @@
 class KConfig;
 class KConfigGroup;
 
-/** @brief Provides global data/functions for service providers. */
+/** @brief Provides static functions for service providers. */
 class ServiceProviderGlobal {
 public:
+    /** @brief Options for the provider type name. */
     enum ProviderTypeNameOptions {
-        ProviderTypeNameWithoutUnsupportedHint,
-        AppendHintForUnsupportedProviderTypes
+        ProviderTypeNameWithoutUnsupportedHint, /**< Only use the provider type name. */
+        AppendHintForUnsupportedProviderTypes /**< Append a hint to the provider type name
+                * if the engine was build without support for that provider type. */
     };
 
     /**
@@ -86,6 +88,14 @@ public:
     static QString defaultProviderForLocation( const QString &location,
                                                const QStringList &dirs = QStringList() );
 
+    /**
+     * @brief Whether or not the provider source file (.pts) was modified.
+     *
+     * @param providerId The ID of the provider to test for modifications.
+     * @param cache A shared pointer to the provider cache, see cache().
+     * @return @c True, if the provider source file was modified since the last provider test
+     *   for @p providerId, @c false otherwise.
+     **/
     static bool isSourceFileModified( const QString &providerId,
                                       const QSharedPointer<KConfig> &cache );
 
