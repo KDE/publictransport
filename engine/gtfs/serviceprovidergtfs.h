@@ -44,11 +44,11 @@ class KTimeZone;
  *
  * To fill the GTFS database with data from a GeneralTransitFeedSpecification feed (zip file)
  * GtfsImporter is used by PublicTransportService. This service has an operation
- * "UpdateGtfsFeed", which gets called by this class. That operation only updates already imported
- * GTFS feeds if there is a new version. To import a new GTFS feed for the first time the operation
- * "ImportGtfsFeed" should be used. That operation does @em not get called by this class. This is
- * because importing GTFS feeds can require quite a lot disk space and importing can take some
- * time. The user should be asked to import a new GTFS feed.
+ * "updateGtfsDatabase", which gets called by this class. That operation only updates already
+ * imported GTFS feeds if there is a new version. To import a new GTFS feed for the first time the
+ * operation "importGtfsFeed" should be used. That operation does @em not get called by this class.
+ * This is because importing GTFS feeds can require quite a lot disk space and importing can take
+ * some time. The user should be asked to import a new GTFS feed.
  *
  * This class immediately emits the ...Received() signal in the associated request...() functions,
  * because making timetable data available is very fast using the GTFS database. Requesting data

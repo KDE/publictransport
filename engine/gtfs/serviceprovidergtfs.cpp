@@ -244,7 +244,7 @@ void ServiceProviderGtfs::updateGtfsDatabase()
     Plasma::DataEngine *engine = qobject_cast< Plasma::DataEngine* >( parent() );
     Q_ASSERT( engine );
     m_service = engine->serviceForSource( "GTFS" );
-    KConfigGroup op = m_service->operationDescription("updateGtfsFeed");
+    KConfigGroup op = m_service->operationDescription("updateGtfsDatabase");
     op.writeEntry( "serviceProviderId", m_data->id() );
     m_service->startOperationCall( op );
 }

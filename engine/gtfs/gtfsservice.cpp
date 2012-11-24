@@ -606,8 +606,7 @@ Plasma::ServiceJob* GtfsService::createJob(
         return 0;
     }
 
-    kDebug() << operation;
-    if ( operation == QLatin1String("updateGtfsFeed") ) {
+    if ( operation == QLatin1String("updateGtfsDatabase") ) {
         UpdateGtfsToDatabaseJob *updateJob =
                 new UpdateGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
         // Track update jobs

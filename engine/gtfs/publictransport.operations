@@ -8,9 +8,9 @@
             <label>The ID of the service provider, for whose GTFS feed information should be get, eg. "us_trimet".</label>
         </entry>
     </group>
-    <group name="updateGtfsFeed">
+    <group name="updateGtfsDatabase">
         <entry name="serviceProviderId" type="String">
-            <label>The ID of the service provider, which GTFS feed should be updated, eg. "us_trimet".</label>
+            <label>The ID of the service provider, which GTFS database should be updated, eg. "us_trimet".</label>
         </entry>
     </group>
     <group name="importGtfsFeed">

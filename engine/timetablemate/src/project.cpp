@@ -4145,15 +4145,15 @@ void Project::updateGtfsDatabase()
     d->setGtfsDatabaseState( GtfsDatabaseImportRunning );
     Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
     Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
-    KConfigGroup op = gtfsService->operationDescription("updateGtfsFeed");
+    KConfigGroup op = gtfsService->operationDescription("updateGtfsDatabase");
     op.writeEntry( "serviceProviderId", d->data()->id() );
-    Plasma::ServiceJob *importJob = gtfsService->startOperationCall( op );
-    connect( importJob, SIGNAL(result(KJob*)), this, SLOT(gtfsDatabaseImportFinished(KJob*)) );
-    connect( importJob, SIGNAL(percent(KJob*,ulong)),
+    Plasma::ServiceJob *updateJob = gtfsService->startOperationCall( op );
+    connect( updateJob, SIGNAL(result(KJob*)), this, SLOT(gtfsDatabaseImportFinished(KJob*)) );
+    connect( updateJob, SIGNAL(percent(KJob*,ulong)),
              this, SLOT(gtfsDatabaseImportProgress(KJob*,ulong)) );
-    connect( importJob, SIGNAL(infoMessage(KJob*,QString,QString)),
+    connect( updateJob, SIGNAL(infoMessage(KJob*,QString,QString)),
              this, SLOT(gtfsDatabaseImportInfoMessage(KJob*,QString,QString)) );
-    connect( importJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
+    connect( updateJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
 }
 
 void Project::deleteGtfsDatabase()

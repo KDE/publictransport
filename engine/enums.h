@@ -74,9 +74,9 @@ enum GtfsServiceError {
     GtfsErrorFeedImportAlreadyRunning = KJob::UserDefinedError + 3, /**< An operation of the GTFS
             * service tried to start a GTFS feed import, but an import is already running
             * for the provider. */
-    GtfsErrorFeedImportRequired = KJob::UserDefinedError + 4, /**< The "updateGtfsFeed" operation
-            * of the GTFS service will cancel with this error code, if the GTFS feed was not
-            * previously imported successfully. */
+    GtfsErrorFeedImportRequired = KJob::UserDefinedError + 4, /**< The "updateGtfsDatabase"
+            * operation of the GTFS service will cancel with this error code, if the GTFS feed
+            * was not previously imported successfully. */
     GtfsErrorWrongFeedFormat = KJob::UserDefinedError + 5, /**< The file at the GTFS feed URL has
             * the wrong format, ie. not a zip file. */
     GtfsErrorDownloadFailed = KJob::UserDefinedError + 6, /**< A GTFS feed download failed. */

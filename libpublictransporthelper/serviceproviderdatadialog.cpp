@@ -446,7 +446,7 @@ void ServiceProviderDataWidget::updateGtfsDatabase()
 
     Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
     Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
-    KConfigGroup op = gtfsService->operationDescription("updateGtfsFeed");
+    KConfigGroup op = gtfsService->operationDescription("updateGtfsDatabase");
     op.writeEntry( "serviceProviderId", d->providerId );
     Plasma::ServiceJob *updateJob = gtfsService->startOperationCall( op );
     connect( updateJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );

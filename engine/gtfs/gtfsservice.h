@@ -236,7 +236,7 @@ private:
 /**
  * @brief A service to control GTFS feed import/update and GTFS database deletion.
  *
- * This service has an operation "updateGtfsFeed", which only updates already imported GTFS feeds
+ * This service has an operation "updateGtfsDatabse", which only updates already imported GTFS feeds
  * if there is a new version (job @ref UpdateGtfsToDatabaseJob). This operation gets called by
  * the GTFS provider @ref ServiceProviderGtfs to make sure the GTFS data is up to date. To import
  * a new GTFS feed for the first time the operation "importGtfsFeed" should be used (job
@@ -278,8 +278,8 @@ protected:
     /**
      * @brief Creates a new job for the given @p operation with the given @p parameters.
      *
-     * @param operation The operation to create a job for. Currently supported are
-     *   "UpdateGtfsFeed", "ImportGtfsFeed" and "DeleteGtfsDatabase".
+     * @param operation The operation to create a job for. Currently available are
+     *   "importGtfsFeed", "updateGtfsDatabase", "deleteGtfsDatabase" and "updateGtfsFeedInfo".
      * @param parameters Parameters for the operation.
      * @return A pointer to the newly created job or 0 if the @p operation is unsupported.
      **/
