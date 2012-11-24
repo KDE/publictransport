@@ -13,6 +13,9 @@ var __hafas_journeys = function(hafas) {
         options: { format: HafasPrivate.BinaryFormat },
 
         get: function( values, options ) {
+            HafasPrivate.checkValues( values,
+                    {required: {originStop: 'string', targetStop: 'string'}},
+                    {optional: {maxCount: 'number', dataType: 'string'}} );
             var options = HafasPrivate.prepareOptions( options, processor.options, hafas.options );
             var url = processor.url( values, options );
             var userUrl = processor.userUrl( values, options );

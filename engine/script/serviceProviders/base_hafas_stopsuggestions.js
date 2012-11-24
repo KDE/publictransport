@@ -48,6 +48,10 @@ var __hafas_stopsuggestions = function(hafas) {
         *   or Hafas.getStopSuggestionsByGeoPositionUrl().
         **/
         get: function( values, options ) {
+            HafasPrivate.checkValues( values,
+                    {optional: {stop: 'string', maxCount: 'number',
+                                longitude: 'number', latitude: 'number',
+                                distance: 'number'}} );
             var byGeoPosition = values.stop == undefined &&
                     values.longitude != undefined && values.latitude != undefined;
             var options = HafasPrivate.prepareOptions( HafasPrivate.extend(options, processor.options),

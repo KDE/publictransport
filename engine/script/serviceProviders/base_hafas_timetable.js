@@ -30,6 +30,9 @@ var __hafas_timetable = function(hafas) {
         * @param {Object} [options] Options to be passed to Hafas.timetable.url().
         **/
         get: function( values, options ) {
+            HafasPrivate.checkValues( values,
+                    {required: {stop: 'string'},
+                     optional: {dateTime: 'object', maxCount: 'number'}} );
             var options = HafasPrivate.prepareOptions( options,
 		    processor.options, hafas.options );
             var url = processor.url( values, options );
@@ -480,9 +483,11 @@ var __hafas_timetable = function(hafas) {
             *   keyed by Enums.TimetableInformation.
             **/
             getWithoutAdd: function( values, options ) {
+                HafasPrivate.checkValues( values,
+                        {required: {stop: 'string', dateTime: 'object',
+                                    transportLine: 'string'}} );
                 var options = HafasPrivate.prepareOptions( options,
                         processor.additionalData.options, hafas.options );
-
                 var routeDataUrl = typeof(values.routeDataUrl) == 'string'
                         ? values.routeDataUrl : "";
                 if ( routeDataUrl.length == 0 ) {

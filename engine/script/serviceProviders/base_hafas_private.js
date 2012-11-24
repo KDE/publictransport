@@ -150,6 +150,29 @@ var HafasPrivate = {
         }
         return options;
     },
+    checkValues: function( values, options ) {
+        for ( value in options.required ) {
+            var requiredType = options.required[value];
+            var valueType = typeof( values[value] );
+            if ( valueType == undefined ) {
+                throw Error("No '" + value + "' value given");
+            }
+            if ( valueType != requiredType ) {
+                throw Error("Value '" + value + "' is not of type " +
+                             requiredType + ", but " + valueType);
+            }
+        }
+
+        // Optional values can be undefined
+        for ( value in options.optional ) {
+            var optionalType = options.optional[value];
+            var valueType = typeof( values[value] );
+            if ( valueType != undefined && valueType != optionalType ) {
+                throw Error("Value '" + value + "' is not of type " +
+                             optionalType + ", but " + valueType);
+            }
+        }
+    },
     getUrl: function( options, query ) {
         query = options.encodeUrlQuery ? QUrl.toPercentEncoding(query).toString() + "" : query;
         return options.baseUrl + "/" + options.binDir + "/" +
