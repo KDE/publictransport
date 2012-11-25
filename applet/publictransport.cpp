@@ -635,7 +635,7 @@ void PublicTransportApplet::handleDataError( const QString& /*sourceName*/,
                 }
             }
         } else if ( checkNetworkStatus() ) {
-            if ( d->currentServiceProviderData()["type"] == QLatin1String("GTFS") ) {
+            if ( d->currentProviderData["type"] == QLatin1String("GTFS") ) {
                 d->timetable->setNoItemsText( i18nc("@info/plain",
                         "There was an error:<nl/><message>%1</message><nl/><nl/>"
                         "The GTFS feed database may need to be updated. Please wait.", error) );
@@ -667,10 +667,24 @@ void PublicTransportApplet::processStopSuggestions( const QString &/*sourceName*
     }
 }
 
-void PublicTransportApplet::dataUpdated( const QString& sourceName,
-                                   const Plasma::DataEngine::Data& data )
+void PublicTransportApplet::dataUpdated( const QString &sourceName,
+                                         const Plasma::DataEngine::Data &data )
 {
     Q_D( PublicTransportApplet );
+    if ( sourceName.startsWith(QLatin1String("ServiceProvider ")) ) {
+        const QString providerId = d->settings.currentStop().get<QString>(ServiceProviderSetting);
+        if ( data["id"].toString() != providerId ) {
+            // Provider data for wrong provider received, maybe after changing the provider
+            kWarning() << "Data for wrong provider" << data["id"].toString()
+                       << "instaed of" << providerId;
+            return;
+        }
+
+        // The currently used provider has changed
+        d->providerDataUpdated( data );
+        return;
+    }
+
     if ( data.isEmpty() || (!d->currentSources.contains(sourceName)
                             && sourceName != d->currentJourneySource) ) {
         // Source isn't used anymore
@@ -2040,7 +2054,7 @@ void PublicTransportApplet::configureJourneySearches()
     journeySearchList->setModel( model );
 
     QLabel *label = new QLabel( i18nc("@label:listbox", "Favorite and recent journey searches "
-                                      "for '%1':", d->currentServiceProviderData()["name"].toString()),
+                                      "for '%1':", d->currentProviderData["name"].toString()),
                                 dialog->mainWidget() );
     label->setWordWrap( true );
     label->setBuddy( journeySearchList );

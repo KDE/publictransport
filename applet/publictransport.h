@@ -119,6 +119,12 @@ signals:
     /** @brief Emitted when the settings have changed. */
     void settingsChanged();
 
+    /** @brief Emitted when updated provider data has the state "ready". */
+    void providerReady();
+
+    /** @brief Emitted when updated provider data does @em not have the state "ready". */
+    void providerNotReady();
+
     /** @brief Emitted when an intermediate departure list gets requested for @p stopName. */
     void intermediateDepartureListRequested( const QString &stopName );
 

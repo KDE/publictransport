@@ -92,9 +92,6 @@ void PublicTransportAppletPrivate::onSettingsChanged( const Settings &_settings,
     // Copy new settings
     settings = _settings;
 
-    QVariantHash serviceProviderData = currentServiceProviderData();
-    currentServiceProviderFeatures = serviceProviderData.isEmpty()
-            ? QStringList() : serviceProviderData["features"].toStringList();
     emit q->configNeedsSaving();
     emit q->settingsChanged();
 
@@ -302,26 +299,30 @@ void PublicTransportAppletPrivate::onServiceProviderSettingsChanged()
         // Configuration is valid
         q->setConfigurationRequired( false );
 
-        // Only use the default target state (journey search) if journeys
-        // are supported by the used service provider. Otherwise go to the
-        // alternative target state (journeys not supported).
-        const bool journeysSupported = currentServiceProviderFeatures.contains( "ProvidesJourneys" );
-        QAbstractState *target = journeysSupported
-                                 ? states["journeySearch"] : states["journeysUnsupportedView"];
-        journeySearchTransition1->setTargetState( target );
-        journeySearchTransition2->setTargetState( target );
-        journeySearchTransition3->setTargetState( target );
+        // Connect to the "ServiceProvider [providerId]" source if not done already
+        // to get provider data and to get notified on changes
+        const QString previousProviderId = currentProviderData["id"].toString();
+        const QString providerId = settings.currentStop().get< QString >( ServiceProviderSetting );
+        if ( providerId != previousProviderId ) {
+            // First disable everything that depends on provider features,
+            // enable it when the provider data arrives and the required features are enabled
+            q->action( "journeys" )->setEnabled( false );
+            titleWidget->setJourneysSupported( false );
 
-        q->action( "journeys" )->setEnabled( journeysSupported );
-        titleWidget->setJourneysSupported( journeysSupported );
+            // Clear old provider data
+            currentProviderData.clear();
+            currentServiceProviderFeatures.clear();
 
-        // Check if arrivals are currently shown but not supported by the new provider
-        if ( !currentServiceProviderFeatures.contains("ProvidesArrivals", Qt::CaseInsensitive) &&
-             settings.departureArrivalListType() == ArrivalList )
-        {
-            Settings newSettings = settings;
-            newSettings.setDepartureArrivalListType( DepartureList );
-            q->setSettings( newSettings );
+            // Disconnect previous provider data source if any and connect new one
+            Plasma::DataEngine *engine = q->dataEngine( "publictransport" );
+            if ( !previousProviderId.isEmpty() ) {
+                engine->disconnectSource( "ServiceProvider " + previousProviderId, q );
+            }
+            engine->connectSource( "ServiceProvider " + providerId, q );
+        } else {
+            // Call providerDataUpdated() manually to enable provider feature dependend actions,
+            // the data source is already connected
+            providerDataUpdated( currentProviderData );
         }
 
         // Reconnect with new settings
@@ -336,6 +337,55 @@ void PublicTransportAppletPrivate::onServiceProviderSettingsChanged()
         q->action( "journeys" )->setEnabled( false );
         titleWidget->setJourneysSupported( false );
     }
+}
+
+void PublicTransportAppletPrivate::providerDataUpdated( const QVariantHash &data )
+{
+    Q_Q( PublicTransportApplet );
+    currentProviderData = data;
+    currentServiceProviderFeatures = data["features"].toStringList();
+
+    // Only use the default target state (journey search) if journeys
+    // are supported by the used service provider. Otherwise go to the
+    // alternative target state (journeys not supported).
+    const bool journeysSupported = currentServiceProviderFeatures.contains( "ProvidesJourneys" );
+    QAbstractState *target = journeysSupported
+                                ? states["journeySearch"] : states["journeysUnsupportedView"];
+    journeySearchTransition1->setTargetState( target );
+    journeySearchTransition2->setTargetState( target );
+    journeySearchTransition3->setTargetState( target );
+
+    q->action( "journeys" )->setEnabled( journeysSupported );
+    titleWidget->setJourneysSupported( journeysSupported );
+
+    // Check if arrivals are currently shown but not supported by the new provider
+    if ( !currentServiceProviderFeatures.contains("ProvidesArrivals", Qt::CaseInsensitive) &&
+         settings.departureArrivalListType() == ArrivalList )
+    {
+        Settings newSettings = settings;
+        newSettings.setDepartureArrivalListType( DepartureList );
+        q->setSettings( newSettings );
+    }
+
+    // Check provider state
+    const QString state = data[ "state" ].toString();
+    if ( state == QLatin1String("ready") ) {
+        // Provider is ready to use
+        const bool hadProviderError = isStateActive("providerError");
+        q->emit providerReady();
+
+        if ( hadProviderError ) {
+            reconnectSource();
+        }
+    } else {
+        // provider is not ready, eg. needs to import a GTFS feed first
+        q->emit providerNotReady();
+        clearDepartures();
+        clearJourneys();
+    }
+
+    // Show error message in the departure/arrival view, if any
+    onDepartureDataStateChanged();
 }
 
 void PublicTransportAppletPrivate::onResized()
@@ -827,9 +877,9 @@ void PublicTransportAppletPrivate::reconnectSource()
     disconnectSources();
 
     // Get a list of stops (or stop IDs if available) which results are currently shown
-    StopSettings curStopSettings = settings.currentStop();
-    QStringList stops = curStopSettings.stops();
-    QStringList stopIDs = curStopSettings.stopIDs();
+    StopSettings stopSettings = settings.currentStop();
+    QStringList stops = stopSettings.stops();
+    QStringList stopIDs = stopSettings.stopIDs();
     if ( stopIDs.isEmpty() ) {
         if ( stops.isEmpty() ) {
             // Currently no stops configured
@@ -840,37 +890,52 @@ void PublicTransportAppletPrivate::reconnectSource()
 
     // Build source names for each (combined) stop for the publictransport data engine
     kDebug() << "Connect" << settings.currentStopIndex() << stops;
+    const QString providerId = stopSettings.get< QString >( ServiceProviderSetting );
+    const QString city = stopSettings.get< QString >( CitySetting );
+    const FirstDepartureConfigMode firstDepartureMode = static_cast< FirstDepartureConfigMode >(
+                stopSettings.get<int>(FirstDepartureConfigModeSetting) );
     QStringList sources;
     stopIndexToSourceName.clear();
     for( int i = 0; i < stops.count(); ++i ) {
         QString stopValue = stopIDs[i].isEmpty() ? stops[i] : stopIDs[i];
         QString currentSource = QString( "%4 %1|stop=%2|maxCount=%3" )
-                .arg( settings.currentStop().get<QString>(ServiceProviderSetting) )
-                .arg( stopValue ).arg( settings.maximalNumberOfDepartures() )
+                .arg( providerId ).arg( stopValue ).arg( settings.maximalNumberOfDepartures() )
                 .arg( settings.departureArrivalListType() == ArrivalList
                         ? "Arrivals" : "Departures" );
-        if ( static_cast<FirstDepartureConfigMode>( curStopSettings.get<int>(
-                    FirstDepartureConfigModeSetting ) ) == RelativeToCurrentTime ) {
+        switch ( firstDepartureMode ) {
+        case RelativeToCurrentTime:
             currentSource += QString( "|timeOffset=%1" ).arg(
-                                 curStopSettings.get<int>( TimeOffsetOfFirstDepartureSetting ) );
-        } else {
+                                 stopSettings.get<int>(TimeOffsetOfFirstDepartureSetting) );
+            break;
+        case AtCustomTime:
             currentSource += QString( "|time=%1" ).arg(
-                                 curStopSettings.get<QTime>( TimeOfFirstDepartureSetting ).toString( "hh:mm" ) );
+                                 stopSettings.get<QTime>(TimeOfFirstDepartureSetting).toString("hh:mm") );
+            break;
+        default:
+            kWarning() << "Unknown FirstDepartureConfigMode" << firstDepartureMode;
+            break;
         }
-        if ( !curStopSettings.get<QString>( CitySetting ).isEmpty() ) {
-            currentSource += QString( "|city=%1" ).arg( curStopSettings.get<QString>( CitySetting ) );
+        if ( !city.isEmpty() ) {
+            currentSource += QString( "|city=%1" ).arg( city );
         }
 
         stopIndexToSourceName[ i ] = currentSource;
         sources << currentSource;
     }
 
+    // Notify that new departure/arrival data gets requested now
     emit q->requestedNewDepartureData();
 
-    foreach( const QString & currentSource, sources ) {
+    // Connect all data sources, normally this is only one source for departures/arrivals
+    // from one stop, but departures/arrivals from multiple stops can be displayed combined
+    // in the applet, to do so for each stop one data source gets connected
+    foreach( const QString &currentSource, sources ) {
         currentSources << currentSource;
-        // TODO Remove "auto update" setting, the data engine pushes new data when available
-        // and now additionaly updates timetable data periodically
+
+        // Do not connect with a polling interval, because this would cause updates to be received
+        // later, ie. when the interval has finished. Instead let the data engine push new data
+        // when available and let it decide itself when to update timetable data for connected
+        // sources. Manual updates are possible through the timetable service.
         q->dataEngine( "publictransport" )->connectSource( currentSource, q );
     }
 }
@@ -1007,7 +1072,7 @@ void PublicTransportAppletPrivate::updateDepartureListIcon()
 QString PublicTransportAppletPrivate::courtesyToolTip() const
 {
     // Get courtesy information for the current service provider from the data engine
-    QVariantHash data = currentServiceProviderData();
+    QVariantHash data = currentProviderData;
     QString credit, url;
     if ( !data.isEmpty() ) {
         credit = data["credit"].toString();
@@ -1025,7 +1090,7 @@ QString PublicTransportAppletPrivate::courtesyToolTip() const
 QString PublicTransportAppletPrivate::infoText()
 {
     // Get information about the current service provider from the data engine
-    const QVariantHash data = currentServiceProviderData();
+    const QVariantHash data = currentProviderData;
     const QString shortUrl = data.isEmpty() ? "-" : data["shortUrl"].toString();
     const QString url = data.isEmpty() ? "-" : data["url"].toString();
     QString sLastUpdate = lastSourceUpdate.toString( "hh:mm" );
@@ -1171,7 +1236,20 @@ void PublicTransportAppletPrivate::onDepartureDataStateChanged()
     QString noItemsText;
     bool busy = false;
 
-    if ( isStateActive("departureDataWaiting") ) {
+    if ( isStateActive("providerError") ) {
+        // The used provider has an error or is not ready
+        if ( currentProviderData["error"].toBool() ) {
+            noItemsText = currentProviderData["errorMessage"].toString();
+        } else if ( currentProviderData["state"].toString() != QLatin1String("ready") ) {
+            noItemsText = currentProviderData["stateData"].toHash()
+                    .value("statusMessage").toString();
+        } else {
+            // Unknown error, use the same string like for the departureDataInvalid state
+            noItemsText = settings.departureArrivalListType() == ArrivalList
+                    ? i18nc("@info/plain", "No arrivals due to an error.")
+                    : i18nc("@info/plain", "No departures due to an error.");
+        }
+    } else if ( isStateActive("departureDataWaiting") ) {
         if ( settings.departureArrivalListType() == ArrivalList ) {
             noItemsText = i18nc("@info/plain", "Waiting for arrivals...");
         } else {

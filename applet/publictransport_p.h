@@ -145,6 +145,9 @@ public: // Other functions
     /** @brief Generates tooltip data and registers this applet at plasma's TooltipManager. */
     void createTooltip();
 
+    /** @brief Updated provider @p data was received from the data engine. */
+    void providerDataUpdated( const QVariantHash &data );
+
     /** @brief Fills the departure data model with the given @p departures.
      *
      * This will stop if the maximum departure count is reached or if all @p departures
@@ -179,12 +182,6 @@ public: // Other functions
 
     /** @brief Disconnects a currently connected journey data source. */
     void disconnectJourneySource();
-
-    /** @brief Requests information about the currently used service provider. */
-    QVariantHash currentServiceProviderData() const {
-        const StopSettings currentStopSettings = settings.currentStop();
-        return serviceProviderData( currentStopSettings.get<QString>( ServiceProviderSetting ) );
-    };
 
     /** @brief Disconnects a currently connected journey data source and connects
      *   a new source using the current configuration.
@@ -263,13 +260,6 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         q->connect( popupIcon, SIGNAL(currentDepartureIndexChanged(qreal)),
                     q, SLOT(updatePopupIcon()) );
 
-        // Get list of features of the currently used service provider, if any
-        if( !settings.stops().isEmpty() ) {
-            const QVariantHash serviceProviderData = currentServiceProviderData();
-            currentServiceProviderFeatures = serviceProviderData.isEmpty()
-                                            ? QStringList() : serviceProviderData["features"].toStringList();
-        }
-
         // Setup models and widgets
         setupModels();
         setupWidgets();
@@ -318,11 +308,13 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
 
         // Create parallel main state and sub group states
         QState *mainStateGroup = new QState( QState::ParallelStates, stateMachine );
+        QState *providerStateGroup = new QState( mainStateGroup );
         QState *viewStateGroup = new QState( mainStateGroup );
         QState *departureDataStateGroup = new QState( mainStateGroup );
         QState *journeyDataStateGroup = new QState( mainStateGroup );
         QState *networkStateGroup = new QState( mainStateGroup );
         states.insert( "mainStateGroup", mainStateGroup );
+        states.insert( "providerStateGroup", providerStateGroup );
         states.insert( "viewStateGroup", viewStateGroup );
         states.insert( "departureDataStateGroup", departureDataStateGroup );
         states.insert( "journeyDataStateGroup", journeyDataStateGroup );
@@ -355,6 +347,13 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
                                              ? departureState : arrivalState );
         QHistoryState *lastDepartureListState = new QHistoryState( departureViewState );
         lastDepartureListState->setDefaultState( departureState );
+
+        // Create provider states
+        QState *providerReadyState = new QState( providerStateGroup );
+        QState *providerErrorState = new QState( providerStateGroup );
+        providerStateGroup->setInitialState( providerReadyState ); // TODO TEST
+        states.insert( "providerReady", providerReadyState );
+        states.insert( "providerError", providerErrorState );
 
         // Create departure data states
         QState *departureDataWaitingState = new QState( departureDataStateGroup );
@@ -458,6 +457,9 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
             titleWidget, SIGNAL(closeIconClicked()), lastDepartureListState );
         journeyViewState->addTransition(
             q->action("backToDepartures"), SIGNAL(triggered()), lastDepartureListState );
+
+        providerReadyState->addTransition( q, SIGNAL(providerNotReady()), providerErrorState );
+        providerErrorState->addTransition( q, SIGNAL(providerReady()), providerReadyState );
 
         departureDataWaitingState->addTransition(
             q, SIGNAL(validDepartureDataReceived()), departureDataValidState );
@@ -626,12 +628,6 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         modelJourneys->clear(); // Clear data to be displayed
     };
 
-    /** @brief Requests information about the service provider with the given @p id. */
-    inline QVariantHash serviceProviderData( const QString &id ) const{
-        Q_Q( const PublicTransportApplet );
-        return q->dataEngine( "publictransport" )->query( QString("ServiceProvider %1").arg(id) );
-    };
-
 protected:
     QGraphicsWidget *graphicsWidget, *mainGraphicsWidget;
     GraphicsPixmapWidget *oldItem;
@@ -671,6 +667,7 @@ protected:
 
     Settings settings; // Current applet settings.
     int originalStopIndex; // Index of the stop before showing an intermediate list via context menu.
+    QVariantHash currentProviderData; // The last received provider data, including it's current state
     QStringList currentServiceProviderFeatures;
 
     QPersistentModelIndex clickedItemIndex; // Index of the clicked item in departure view
