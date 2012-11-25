@@ -38,7 +38,7 @@ DataSource::~DataSource()
 
 ProvidersDataSource::ProvidersDataSource( const QString &dataSource,
                                           const QHash<QString, ProviderData> &providerData )
-        : DataSource(dataSource), m_providerData(providerData)
+        : DataSource(dataSource), m_providerDirectoryWasChanged(false), m_providerData(providerData)
 {
 }
 
@@ -178,4 +178,65 @@ void TimetableDataSource::setUpdateAdditionalDataDelayTimer( QTimer *timer )
 QSharedPointer< AbstractRequest > TimetableDataSource::request( const QString &sourceName ) const
 {
     return m_dataSources[ sourceName ].request;
+}
+
+void ProvidersDataSource::addProvider( const QString &providerId,
+                                       const ProvidersDataSource::ProviderData &providerData )
+{
+    if ( mayProviderBeNewlyChanged(providerId) ) {
+        // Provider data available and not marked as changed alraedy
+        if ( m_providerData[providerId].data() != providerData.data() ) {
+            // The provider data has changed
+            m_changedProviders << providerId;
+        }
+    }
+
+    m_providerData.insert( providerId, providerData );
+}
+
+void ProvidersDataSource::removeProvider( const QString &providerId )
+{
+    m_changedProviders << providerId;
+    m_providerData.remove( providerId );
+}
+
+QVariantHash ProvidersDataSource::providerData( const QString &providerId ) const
+{
+    return m_providerData.value( providerId ).data();
+}
+
+QString ProvidersDataSource::providerState( const QString &providerId ) const
+{
+    return m_providerData.value( providerId ).stateId;
+}
+
+QVariantHash ProvidersDataSource::providerStateData( const QString &providerId ) const
+{
+    return m_providerData.value( providerId ).stateData;
+}
+
+void ProvidersDataSource::setProviderState( const QString &providerId, const QString &stateId )
+{
+    if ( mayProviderBeNewlyChanged(providerId) ) {
+        // Provider data available and not marked as changed alraedy
+        ProviderData providerData = m_providerData[ providerId ];
+        if ( providerData.stateId != stateId ) {
+            m_changedProviders << providerId;
+        }
+    }
+
+    m_providerData[ providerId ].stateId = stateId;
+}
+
+void ProvidersDataSource::setProviderStateData( const QString &providerId, const QVariantHash &stateData )
+{
+    if ( mayProviderBeNewlyChanged(providerId) ) {
+        // Provider data available and not marked as changed alraedy
+        ProviderData providerData = m_providerData[ providerId ];
+        if ( providerData.stateData != stateData ) {
+            m_changedProviders << providerId;
+        }
+    }
+
+    m_providerData[ providerId ].stateData = stateData;
 }

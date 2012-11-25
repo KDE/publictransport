@@ -72,21 +72,25 @@ Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
     return 0;
 }
 
-void PublicTransportEngine::publishData( DataSource *dataSource, const QString &changedProviderId )
+void PublicTransportEngine::publishData( DataSource *dataSource )
 {
     Q_ASSERT( dataSource );
     setData( dataSource->name(), dataSource->data() );
 
-    if ( !changedProviderId.isEmpty() ) {
-        ProvidersDataSource *providersDataSource = dynamic_cast< ProvidersDataSource* >( dataSource );
-        if ( providersDataSource ) {
-            // Update "ServiceProvider <id>" sources, which are also contained in the
-            // DataSource object for the "ServiceProviders" data source
-            QStringList sources = Plasma::DataEngine::sources();
+    ProvidersDataSource *providersSource = dynamic_cast< ProvidersDataSource* >( dataSource );
+    if ( providersSource ) {
+        // Update "ServiceProvider <id>" sources, which are also contained in the
+        // DataSource object for the "ServiceProviders" data source.
+        // Check which data sources of changed providers of that type are connected
+        QStringList sources = Plasma::DataEngine::sources();
+        const QStringList changedProviders = providersSource->takeChangedProviders();
+        foreach ( const QString changedProviderId, changedProviders ) {
             const QString providerSource =
                     sourceTypeKeyword(ServiceProviderSource) + ' ' + changedProviderId;
             if ( sources.contains(providerSource) ) {
-                setData( providerSource, providersDataSource->providerData(changedProviderId) );
+                // Found a data source for the current changed provider, clear it and set new data
+                removeAllData( providerSource );
+                setData( providerSource, providersSource->providerData(changedProviderId) );
             }
         }
     }
@@ -146,7 +150,7 @@ bool PublicTransportEngine::tryToStartGtfsFeedImportJob( Plasma::ServiceJob *job
         }
     }
 
-    publishData( dataSource, providerId );
+    publishData( dataSource );
 
     // Connect to messages of the job to update the provider state
     connect( job, SIGNAL(infoMessage(KJob*,QString,QString)),
@@ -181,7 +185,7 @@ void PublicTransportEngine::gtfsServiceJobFinished( Plasma::ServiceJob *job )
     ProvidersDataSource *dataSource = providersDataSource();
     dataSource->setProviderState( providerId, state, stateData );
 
-    publishData( dataSource, providerId );
+    publishData( dataSource );
 }
 
 void PublicTransportEngine::gtfsImportJobInfoMessage( KJob *job, const QString &plain,
@@ -198,7 +202,7 @@ void PublicTransportEngine::gtfsImportJobInfoMessage( KJob *job, const QString &
         stateData[ "statusMessageRich" ] = rich;
     }
     dataSource->setProviderStateData( providerId, stateData );
-    publishData( dataSource, providerId );
+    publishData( dataSource );
 }
 
 void PublicTransportEngine::gtfsImportJobPercent( KJob *job, ulong percent )
@@ -209,7 +213,7 @@ void PublicTransportEngine::gtfsImportJobPercent( KJob *job, ulong percent )
     QVariantHash stateData = dataSource->providerStateData( providerId );
     stateData[ "progress" ] = int( percent );
     dataSource->setProviderStateData( providerId, stateData );
-    publishData( dataSource, providerId );
+    publishData( dataSource );
 }
 #endif // BUILD_PROVIDER_TYPE_GTFS
 
@@ -587,6 +591,7 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const SourceR
         setData( data.name, "stateData", stateData );
         setData( data.name, "error", false );
     } else {
+        setData( data.name, "id", providerId );
         setData( data.name, "error", true );
         setData( data.name, "errorMessage", errorMessage );
     }
@@ -597,8 +602,9 @@ bool PublicTransportEngine::updateServiceProviderSource()
 {
     const QString name = sourceTypeKeyword( ServiceProvidersSource );
     QVariantHash data;
-    if ( m_dataSources.contains(name) ) {
-        data = m_dataSources[ name ]->data();
+    ProvidersDataSource *providersSource = providersDataSource();
+    if ( providersSource && !providersSource->providerDirectoryWasChanged() ) {
+        data = providersSource->data();
     } else {
         if ( !m_fileSystemWatcher ) {
             const QStringList directories = KGlobal::dirs()->findDirs( "data",
@@ -616,7 +622,10 @@ bool PublicTransportEngine::updateServiceProviderSource()
 
         // Create ProvidersDataSource object
         // for "ServiceProviders" and "ServiceProvider <providerId>" data sources
-        ProvidersDataSource *providersSource = new ProvidersDataSource( name );
+        if ( !providersSource ) {
+            providersSource = new ProvidersDataSource( name );
+        }
+
         QStringList loadedProviders;
         m_erroneousProviders.clear();
         QSharedPointer<KConfig> cache = ServiceProviderGlobal::cache();
@@ -629,9 +638,19 @@ bool PublicTransportEngine::updateServiceProviderSource()
                 const QString state = updateProviderState( providerId, &stateData,
                                                            providerData["type"].toString() );
 
+                providerData["error"] = false;
                 providersSource->addProvider( providerId,
                         ProvidersDataSource::ProviderData(providerData, state, stateData) );
                 loadedProviders << providerId;
+            } else {
+                // Invalid provider, clear old data and only set id and error fields
+                providerData.clear();
+                providerData["id"] = providerId;
+                providerData["error"] = true;
+                providerData["errorMessage"] = errorMessage;
+
+                providersSource->addProvider( providerId,
+                        ProvidersDataSource::ProviderData(providerData, "error", QVariantHash()) );
             }
         }
 
@@ -649,7 +668,8 @@ bool PublicTransportEngine::updateServiceProviderSource()
 
     // Remove all old data, some service providers may have been updated and are now erroneous
     removeAllData( name );
-    setData( name, data );
+    publishData( providersSource );
+
     return true;
 }
 
@@ -1107,8 +1127,14 @@ void PublicTransportEngine::reloadChangedProviders()
     delete m_providerUpdateDelayTimer;
     m_providerUpdateDelayTimer = 0;
 
-    // Remove cached service providers / locations source
-    delete m_dataSources.take( sourceTypeKeyword(ServiceProvidersSource) );
+    // Notify the providers data source about the changed provider directory.
+    // Do not remove it here, so that it can track which providers have changed
+    ProvidersDataSource *providersSource = providersDataSource();
+    if ( providersSource ) {
+        providersSource->setProviderDirectoryWasChanged();
+    }
+
+    // Remove cached locations source to have it updated
     delete m_dataSources.take( sourceTypeKeyword(LocationsSource) );
 
     // Clear all cached data (use the new provider to parse the data again)

@@ -159,47 +159,61 @@ public:
     static QString toStaticState( const QString &dynamicStateId );
 
     /** @brief Add a provider with the given @p providerId and @p providerData. */
-    void addProvider( const QString &providerId, const ProviderData &providerData ) {
-        m_providerData.insert( providerId, providerData );
-    };
+    void addProvider( const QString &providerId, const ProviderData &providerData );
 
     /** @brief Remove the provider with the given @p providerId. */
-    void removeProvider( const QString &providerId ) {
-        m_providerData.remove( providerId );
-    };
+    void removeProvider( const QString &providerId );
 
     /** @brief Get all provider data, ie. the data for the "ServiceProviders" data source. */
     virtual QVariantHash data() const;
 
     /** @brief Get data for the provider with the given @p providerId. */
-    QVariantHash providerData( const QString &providerId ) const {
-        return m_providerData.value(providerId).data();
-    };
+    QVariantHash providerData( const QString &providerId ) const;
 
     /** @brief Get the current state of the provider with the given @p providerId. */
-    QString providerState( const QString &providerId ) const {
-        return m_providerData.value(providerId).stateId;
-    };
+    QString providerState( const QString &providerId ) const;
 
     /** @brief Get state data of the provider with the given @p providerId. */
-    QVariantHash providerStateData( const QString &providerId ) const {
-        return m_providerData.value(providerId).stateData;
-    };
+    QVariantHash providerStateData( const QString &providerId ) const;
 
     /** @brief Set the state of the provider with the given @p providerId to @p stateId. */
-    void setProviderState( const QString &providerId, const QString &stateId,
-                           const QVariantHash &stateData = QVariantHash() )
-    {
-        m_providerData[ providerId ].stateId = stateId;
-        m_providerData[ providerId ].stateData = stateData;
-    };
+    void setProviderState( const QString &providerId, const QString &stateId );
 
     /** @brief Set the state data of the provider with the given @p providerId to @p stateData. */
-    void setProviderStateData( const QString &providerId, const QVariantHash &stateData ) {
-        m_providerData[ providerId ].stateData = stateData;
+    void setProviderStateData( const QString &providerId, const QVariantHash &stateData );
+
+    /** @brief Set @p stateId and @p stateData for the provider with the given @p providerId. */
+    inline void setProviderState( const QString &providerId, const QString &stateId,
+                                  const QVariantHash &stateData )
+    {
+        setProviderState( providerId, stateId );
+        setProviderStateData( providerId, stateData );
     };
 
+    /**
+     * @brief Get a list of providers that have changed since this function was last called.
+     * This function also resets providerDirectoryWasChanged() to @p false.
+     **/
+    QStringList takeChangedProviders() {
+        const QStringList changedProviders = m_changedProviders;
+        m_changedProviders.clear();
+        m_providerDirectoryWasChanged = false;
+        return changedProviders;
+    };
+
+    /** @brief Check if the provider directory was changed and takeChangedProviders() was not called. */
+    bool providerDirectoryWasChanged() const { return m_providerDirectoryWasChanged; };
+
+    /** @brief Called when the provider plugin installation directory was changed. */
+    void setProviderDirectoryWasChanged() { m_providerDirectoryWasChanged = true; };
+
 private:
+    bool mayProviderBeNewlyChanged( const QString &providerId ) const {
+        return !m_changedProviders.contains(providerId) && m_providerData.contains(providerId);
+    };
+
+    bool m_providerDirectoryWasChanged;
+    QStringList m_changedProviders;
     QHash< QString, ProviderData > m_providerData;
 };
 

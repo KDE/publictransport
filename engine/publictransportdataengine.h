@@ -585,7 +585,7 @@ private:
     void deleteProvider( const QString &providerId );
 
     /** @brief Publish the data of @p dataSource under it's data source name. */
-    void publishData( DataSource *dataSource, const QString &changedProviderId = QString() );
+    void publishData( DataSource *dataSource );
 
     /**
      * @brief Get a pointer to the ProvidersDataSource object of service provider data source(s).
@@ -840,11 +840,11 @@ service provider plugin.</td></tr>
 <td>The version of the service provider plugin.</td></tr>
 
 <tr><td><i>error</i></td> <td>bool</td> <td>Whether or not the provider plugin has errors.
-If this is @c true, the other fields are not available, instead a field @em errorMessage
-is available explaining the error. If this if @c false, the provider did not encounter any errors.
-But the provider may still not be ready to use, if the @em state field contains a state string
-other than @em "ready". If no @em state field is available, the provider can also be considered
-to be ready.</td></tr>
+If this is @c true, the other fields except @em id are not available, instead a field
+@em errorMessage is available explaining the error. If this if @c false, the provider did not
+encounter any errors. But the provider may still not be ready to use, if the @em state field
+contains a state string other than @em "ready". If no @em state field is available, the provider
+can also be considered to be ready.</td></tr>
 
 <tr><td><i>errorMessage</i></td> <td>QString</td> <td>A string explaining the error,
 only available if @em error is @c true. </td></tr>
