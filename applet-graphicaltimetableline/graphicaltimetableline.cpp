@@ -168,7 +168,7 @@ void GraphicalTimetableLine::init()
     }
 
     if ( !configurationRequired() ) {
-        m_sourceName = QString("Departures %1|stop=%2|timeOffset=0")
+        m_sourceName = QString("Departures %1|stop=%2|timeoffset=0")
                     .arg(m_stopSettings.get<QString>(ServiceProviderSetting))
                     .arg(m_stopSettings.stop(0).nameOrId());
         dataEngine("publictransport")->connectSource( m_sourceName,
@@ -234,7 +234,7 @@ void GraphicalTimetableLine::configAccepted()
 
     if ( !configurationRequired() ) {
         m_animate = false;
-        m_sourceName = QString("Departures %1|stop=%2|timeOffset=0")
+        m_sourceName = QString("Departures %1|stop=%2|timeoffset=0")
                     .arg(m_stopSettings.get<QString>(ServiceProviderSetting))
                     .arg(m_stopSettings.stops(StopSettings::UseStopIdIfAvailable).first());
         dataEngine("publictransport")->connectSource( m_sourceName,

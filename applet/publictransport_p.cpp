@@ -898,13 +898,13 @@ void PublicTransportAppletPrivate::reconnectSource()
     stopIndexToSourceName.clear();
     for( int i = 0; i < stops.count(); ++i ) {
         QString stopValue = stopIDs[i].isEmpty() ? stops[i] : stopIDs[i];
-        QString currentSource = QString( "%4 %1|stop=%2|maxCount=%3" )
+        QString currentSource = QString( "%4 %1|stop=%2|maxcount=%3" )
                 .arg( providerId ).arg( stopValue ).arg( settings.maximalNumberOfDepartures() )
                 .arg( settings.departureArrivalListType() == ArrivalList
                         ? "Arrivals" : "Departures" );
         switch ( firstDepartureMode ) {
         case RelativeToCurrentTime:
-            currentSource += QString( "|timeOffset=%1" ).arg(
+            currentSource += QString( "|timeoffset=%1" ).arg(
                                  stopSettings.get<int>(TimeOffsetOfFirstDepartureSetting) );
             break;
         case AtCustomTime:
@@ -994,8 +994,8 @@ void PublicTransportAppletPrivate::reconnectJourneySource( const QString &target
                                .arg( _targetStopName );
     } else {
         currentJourneySource = QString( stopIsTarget
-                                        ? "%5 %1|originStop=%2|targetStop=%3|datetime=%4"
-                                        : "%5 %1|originStop=%3|targetStop=%2|datetime=%4" )
+                                        ? "%5 %1|originstop=%2|targetstop=%3|datetime=%4"
+                                        : "%5 %1|originstop=%3|targetstop=%2|datetime=%4" )
                                .arg( settings.currentStop().get<QString>(ServiceProviderSetting) )
                                .arg( settings.currentStop().stop(0).nameOrId() )
                                .arg( _targetStopName )

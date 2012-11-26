@@ -71,7 +71,7 @@ void Flights::init()
     setConfigurationRequired( m_airport.isEmpty(), i18n("Please select an airport") );
     if ( !m_airport.isEmpty() ) {
         dataEngine("publictransport")->connectSource(
-                QString("Departures international_flightstats|stop=%1|timeOffset=0").arg(m_airport), this,
+                QString("Departures international_flightstats|stop=%1|timeoffset=0").arg(m_airport), this,
                 60000, Plasma::AlignToMinute );
     }
 }

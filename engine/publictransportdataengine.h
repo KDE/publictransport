@@ -139,13 +139,18 @@ public:
     /** @brief Get ParseDocumentMode associated with the given @p sourceType. */
     static ParseDocumentMode parseModeFromSourceType( SourceType sourceType );
 
-    /** @brief Get the SourceType associated with the given @p sourceName. */
+    /**
+     * @brief Get the SourceType associated with the given @p sourceName.
+     * This matches case sensitive, otherwise there can be multiple data sources with the
+     * same data but only different case in their names.
+     **/
     static SourceType sourceTypeFromName( const QString &sourceName );
 
     /** @brief Whether or not data sources of @p sourceType request data from a server. */
     static bool isDataRequestingSourceType( SourceType sourceType ) {
         return static_cast< int >( sourceType ) >= 10; };
 
+    /** @brief Get the ID of the provider used for the source with the given @p sourceName. */
     static QString providerIdFromSourceName( const QString &sourceName );
 
     /** @brief Reimplemented to add some always visible default sources. */
@@ -225,7 +230,7 @@ public:
      * @brief The default time offset from now for the first departure/arrival/journey in results.
      *
      * This is used if no time was specified in the source name with the parameter @c time,
-     * @c dateTime or @c timeOffset.
+     * @c datetime or @c timeoffset.
      **/
     static const int DEFAULT_TIME_OFFSET;
 
@@ -626,6 +631,9 @@ private:
      **/
     static QString disambiguateSourceName( const QString &sourceName );
 
+    /** @brief If @p providerId is empty return the default provider for the users country. */
+    static QString fixProviderId( const QString &providerId );
+
     inline static uint hashForDeparture( const QVariantHash &departure ) {
         return hashForDeparture( departure[Enums::toString(Enums::DepartureDateTime)].toDateTime(),
                 static_cast<Enums::VehicleType>(departure[Enums::toString(Enums::TypeOfVehicle)].toInt()),
@@ -757,6 +765,13 @@ stop suggestions (@ref usage_stopList_sec).<br />
 The engine provides services for all timetable data sources (departures, journeys, ...). It offers
 operations to manually request updates, request earlier/later timetable items or to request
 additional data for specific timetable items (@ref usage_service_sec).<br />
+@note Since version 0.11 the engine will only match data source names with correct case, ie.
+"serviceproViders" will not work any longer, but "ServiceProviders" will. All parameter names in
+data source names need to be completely lower case. This is to prevent ambiguities, each variant
+would get it's own data source object in the data engine, duplicating the data. To update a data
+source all connected source name variants would need to be updated. Only accepting source names
+case sensitive makes it much easier for the engine. The only thing left that can make two identic
+data sources ambiguous is their parameter order, which gets handled using disambiguateSourceName().
 <br />
 The following enumeration can be used in your applet if you don't want to use
 libpublictransporthelper which exports this enumaration as @ref PublicTransport::VehicleType.
@@ -937,12 +952,13 @@ provider has useSeparateCityValue set to @c true (see @ref usage_serviceprovider
 parameter <i>city</i> is also needed (otherwise it is ignored).
 You can leave the service provider ID away, the data engine then uses the default service provider
 for the users country.<br />
+@note All parameter names need to be completely lower case.
 The following parameters are allowed:<br />
 <table>
 <tr><td><i>stop</i></td> <td>The name or ID of the stop to get departures/arrivals for.</td></tr>
 <tr><td><i>city</i></td> <td>The city to get departures/arrivals for, if needed.</td></tr>
-<tr><td><i>maxCount</i></td> <td>The maximum departure/arrival count to get.</td></tr>
-<tr><td><i>timeOffset</i></td> <td>The offset in minutes from now for the first departure /
+<tr><td><i>maxcount</i></td> <td>The maximum departure/arrival count to get.</td></tr>
+<tr><td><i>timeoffset</i></td> <td>The offset in minutes from now for the first departure /
 arrival to get.</td></tr>
 <tr><td><i>time</i></td> <td>The time of the first departure/arrival to get ("hh:mm"). This uses
 the current date. To use another date use 'datetime'.</td></tr>
@@ -955,7 +971,7 @@ QDateTime::toString()).</td></tr>
 <b>"Departures de_db|stop=Pappelstraße, Bremen"</b><br />
 Gets departures for the stop "Pappelstraße, Bremen" using the service provider db.de.<br /><br />
 
-<b>"Arrivals de_db|stop=Leipzig|timeOffset=5|maxCount=99"</b><br />
+<b>"Arrivals de_db|stop=Leipzig|timeoffset=5|maxcount=99"</b><br />
 Gets arrivals for the stop "Leipzig" using db.de, the first possible arrival is in five minutes
 from now, the maximum arrival count is 99.<br /><br />
 
@@ -963,7 +979,7 @@ from now, the maximum arrival count is 99.<br /><br />
 Gets departures for the stop "Frankfurt (Main) Speyerer Straße" using rmv.de, the first possible
 departure is at eight o'clock.<br /><br />
 
-<b>"Departures de_rmv|stop=3000019|maxCount=20|timeOffset=1"</b><br />
+<b>"Departures de_rmv|stop=3000019|maxcount=20|timeoffset=1"</b><br />
 Gets departures for the stop with the ID "3000019", the first possible departure is in one minute
 from now, the maximum departure count is 20.<br /><br />
 
@@ -1081,17 +1097,18 @@ source (much like the data source for departures / arrivals). The data source na
 "Journeys". Next comes a space (" "), then the ID of the service provider to use, e.g. "de_db"
 for db.de, a service provider for germany ("Deutsche Bahn").
 The following parameters are separated by "|" and start with the parameter name followed by "=".
-The sorting of the additional parameters doesn't matter. The parameters <i>originStop</i> and
-<i>targetStop</i> are needed and can be the stop names or the stop IDs. If the service provider
+The sorting of the additional parameters doesn't matter. The parameters <i>originstop</i> and
+<i>targetstop</i> are needed and can be the stop names or the stop IDs. If the service provider
 has useSeparateCityValue set to @c true (see @ref usage_serviceproviders_sec), the parameter
 <i>city</i> is also needed (otherwise it is ignored).<br />
+@note All parameter names need to be completely lower case.
 The following parameters are allowed:<br />
 <table>
-<tr><td><i>originStop</i></td> <td>The name or ID of the origin stop.</td></tr>
-<tr><td><i>targetStop</i></td> <td>The name or ID of the target stop.</td></tr>
+<tr><td><i>originstop</i></td> <td>The name or ID of the origin stop.</td></tr>
+<tr><td><i>targetstop</i></td> <td>The name or ID of the target stop.</td></tr>
 <tr><td><i>city</i></td> <td>The city to get journeys for, if needed.</td></tr>
-<tr><td><i>maxCount</i></td> <td>The maximum journey count to get.</td></tr>
-<tr><td><i>timeOffset</i></td>
+<tr><td><i>maxcount</i></td> <td>The maximum journey count to get.</td></tr>
+<tr><td><i>timeoffset</i></td>
 <td>The offset in minutes from now for the first journey to get.</td></tr>
 <tr><td><i>time</i></td> <td>The time for the first journey to get (in format "hh:mm").</td></tr>
 <tr><td><i>datetime</i></td> <td>The date and time for the first journey to get
@@ -1100,11 +1117,11 @@ The following parameters are allowed:<br />
 <br />
 
 <b>Examples:</b><br />
-<b>"Journeys de_db|originStop=Pappelstraße, Bremen|targetStop=Kirchweg, Bremen"</b><br />
+<b>"Journeys de_db|originstop=Pappelstraße, Bremen|targetstop=Kirchweg, Bremen"</b><br />
 Gets journeys from stop "Pappelstraße, Bremen" to stop "Kirchweg, Bremen"
 using the service provider db.de.<br /><br />
 
-<b>"Journeys de_db|originStop=Leipzig|targetStop=Hannover|timeOffset=5|maxCount=99"</b><br />
+<b>"Journeys de_db|originstop=Leipzig|targetstop=Hannover|timeoffset=5|maxCount=99"</b><br />
 Gets journeys from stop "Leipzig" to stop "Hannover" using db.de, the first
 possible journey departs in five minutes from now, the maximum journey count is 99.<br /><br />
 
@@ -1115,7 +1132,7 @@ class Applet : public Plasma::Applet {
 public:
     Applet(QObject *parent, const QVariantList &args) : AppletWithState(parent, args) {
         dataEngine("publictransport")->connectSource(
-                "Journeys de_db|originStop=Pappelstraße, Bremen|targetStop=Kirchweg, Bremen",
+                "Journeys de_db|originstop=Pappelstraße, Bremen|targetstop=Kirchweg, Bremen",
                 this, 60 * 1000 );
     };
 

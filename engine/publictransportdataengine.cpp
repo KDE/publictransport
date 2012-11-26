@@ -334,7 +334,7 @@ void PublicTransportEngine::slotSourceRemoved( const QString &sourceName )
 
         // If a provider was used by the source, remove the provider if it is not used in another source
         if ( dataSource->data().contains("serviceProvider") ) {
-            const QString providerId = dataSource->value("serviceProvider").toString().toLower();
+            const QString providerId = dataSource->value("serviceProvider").toString();
             if ( !providerId.isEmpty() && !isProviderUsed(providerId) ) {
                 m_providers.remove( providerId );
             }
@@ -907,7 +907,7 @@ QString PublicTransportEngine::providerIdFromSourceName( const QString &sourceNa
     }
 
     const int endPos = sourceName.indexOf( '|', pos + 1 );
-    return sourceName.mid( pos + 1, endPos - pos - 1 ).trimmed();
+    return fixProviderId( sourceName.mid(pos + 1, endPos - pos - 1).trimmed() );
 }
 
 ParseDocumentMode PublicTransportEngine::parseModeFromSourceType(
@@ -1059,16 +1059,37 @@ void PublicTransportEngine::forceUpdate()
     forceImmediateUpdateOfAllVisualizations();
 }
 
+QString PublicTransportEngine::fixProviderId( const QString &providerId )
+{
+    if ( !providerId.isEmpty() ) {
+        return providerId;
+    }
+
+    // No service provider ID given, use the default one for the users country
+    const QString country = KGlobal::locale()->country();
+
+    // Try to find the XML filename of the default accessor for [country]
+    const QString filePath = ServiceProviderGlobal::defaultProviderForLocation( country );
+    if ( filePath.isEmpty() ) {
+        return 0;
+    }
+
+    // Extract service provider ID from filename
+    const QString defaultProviderId = ServiceProviderGlobal::idFromFileName( filePath );
+    kDebug() << "No service provider ID given, using the default one for country"
+             << country << "which is" << defaultProviderId;
+    return defaultProviderId;
+}
+
 QString PublicTransportEngine::disambiguateSourceName( const QString &sourceName )
 {
-    QString ret = sourceName.toLower();
-
-    // Remove maxCount argument
-    ret.remove( QRegExp("(maxCount=[^\\|]+)") );
+    // Remove maxcount argument
+    QString ret = sourceName;
+    ret.remove( QRegExp("(maxcount=[^\\|]+)") );
 
     // Round time parameter values to 15 minutes precision
     QRegExp rx( "(time=[^\\|]+|datetime=[^\\|]+)" );
-    if ( rx.indexIn(ret) != -1 ) {
+    if ( rx.indexIn( ret ) != -1 ) {
         // Get the time value
         const QString timeParameter = rx.cap( 1 );
         QDateTime time;
@@ -1085,6 +1106,63 @@ QString PublicTransportEngine::disambiguateSourceName( const QString &sourceName
 
         // Replace old time parameter with a new one
         ret.replace( rx.pos(), rx.matchedLength(), QLatin1String("datetime=") + time.toString() );
+    }
+
+    // Read parameters to reorder them afterwards
+    const SourceType type = sourceTypeFromName( ret );
+    const QString typeKeyword = sourceTypeKeyword( type );
+    const QStringList parameterPairs = ret.mid( typeKeyword.length() )
+            .trimmed().split( '|', QString::SkipEmptyParts );
+    QString defaultParameter;
+    QHash< QString, QString > parameters;
+    for ( int i = 0; i < parameterPairs.length(); ++i ) {
+        const QString parameter = parameterPairs.at( i ).trimmed();
+        const int pos = parameter.indexOf( '=' );
+        if ( pos == -1 ) {
+            // No parameter name given, this is the default parameter, eg. the provider ID
+            defaultParameter = fixProviderId( parameter );
+        } else {
+            // Only add parameters with non-empty parameter name and value,
+            // make parameter value lower case (eg. stop names)
+            const QString parameterName = parameter.left( pos );
+            const QString parameterValue = parameter.mid( pos + 1 ).trimmed();
+            if ( !parameterName.isEmpty() && !parameterValue.isEmpty() ) {
+                parameters[ parameterName ] = parameterValue.toLower();
+            }
+        }
+    }
+
+    // Build non-ambiguous source name with standardized parameter order
+    ret = typeKeyword + ' ' + defaultParameter;
+    if ( parameters.contains(QLatin1String("city")) ) {
+        ret += "|city=" + parameters["city"];
+    }
+    if ( parameters.contains(QLatin1String("stop")) ) {
+        ret += "|stop=" + parameters["stop"];
+    }
+    if ( parameters.contains(QLatin1String("originstop")) ) {
+        ret += "|originstop=" + parameters["originstop"];
+    }
+    if ( parameters.contains(QLatin1String("targetstop")) ) {
+        ret += "|targetstop=" + parameters["targetstop"];
+    }
+    if ( parameters.contains(QLatin1String("timeoffset")) ) {
+        ret += "|timeoffset=" + parameters["timeoffset"];
+    }
+    if ( parameters.contains(QLatin1String("time")) ) {
+        ret += "|time=" + parameters["time"];
+    }
+    if ( parameters.contains(QLatin1String("datetime")) ) {
+        ret += "|datetime=" + parameters["datetime"];
+    }
+    if ( parameters.contains(QLatin1String("maxcount")) ) {
+        ret += "|maxcount=" + parameters["maxcount"];
+    }
+    if ( parameters.contains(QLatin1String("longitude")) ) {
+        ret += "|longitude=" + parameters["longitude"];
+    }
+    if ( parameters.contains(QLatin1String("latitude")) ) {
+        ret += "|latitude=" + parameters["latitude"];
     }
     return ret;
 }
@@ -1196,28 +1274,29 @@ const QLatin1String PublicTransportEngine::sourceTypeKeyword( SourceType sourceT
 PublicTransportEngine::SourceType PublicTransportEngine::sourceTypeFromName(
         const QString &sourceName )
 {
-    if ( sourceName.startsWith(sourceTypeKeyword(ServiceProviderSource) + ' ', Qt::CaseInsensitive) ) {
+    // Get type of the source, do not match case insensitive, otherwise there can be multiple
+    // sources with the same data but only different case
+    if ( sourceName.startsWith(sourceTypeKeyword(ServiceProviderSource) + ' ') ) {
         return ServiceProviderSource;
-    } else if ( sourceName.compare(sourceTypeKeyword(ServiceProvidersSource), Qt::CaseInsensitive) == 0 ) {
+    } else if ( sourceName.compare(sourceTypeKeyword(ServiceProvidersSource)) == 0 ) {
         return ServiceProvidersSource;
-    } else if ( sourceName.compare(sourceTypeKeyword(ErroneousServiceProvidersSource),
-                                   Qt::CaseInsensitive) == 0 ) {
+    } else if ( sourceName.compare(sourceTypeKeyword(ErroneousServiceProvidersSource)) == 0 ) {
         return ErroneousServiceProvidersSource;
-    } else if ( sourceName.compare(sourceTypeKeyword(LocationsSource), Qt::CaseInsensitive) == 0 ) {
+    } else if ( sourceName.compare(sourceTypeKeyword(LocationsSource)) == 0 ) {
         return LocationsSource;
-    } else if ( sourceName.compare(sourceTypeKeyword(VehicleTypesSource), Qt::CaseInsensitive) == 0 ) {
+    } else if ( sourceName.compare(sourceTypeKeyword(VehicleTypesSource)) == 0 ) {
         return VehicleTypesSource;
-    } else if ( sourceName.startsWith(sourceTypeKeyword(DeparturesSource), Qt::CaseInsensitive) ) {
+    } else if ( sourceName.startsWith(sourceTypeKeyword(DeparturesSource)) ) {
         return DeparturesSource;
-    } else if ( sourceName.startsWith(sourceTypeKeyword(ArrivalsSource), Qt::CaseInsensitive) ) {
+    } else if ( sourceName.startsWith(sourceTypeKeyword(ArrivalsSource)) ) {
         return ArrivalsSource;
-    } else if ( sourceName.startsWith(sourceTypeKeyword(StopsSource), Qt::CaseInsensitive) ) {
+    } else if ( sourceName.startsWith(sourceTypeKeyword(StopsSource)) ) {
         return StopsSource;
-    } else if ( sourceName.startsWith(sourceTypeKeyword(JourneysDepSource), Qt::CaseInsensitive) ) {
+    } else if ( sourceName.startsWith(sourceTypeKeyword(JourneysDepSource)) ) {
         return JourneysDepSource;
-    } else if ( sourceName.startsWith(sourceTypeKeyword(JourneysArrSource), Qt::CaseInsensitive) ) {
+    } else if ( sourceName.startsWith(sourceTypeKeyword(JourneysArrSource)) ) {
         return JourneysArrSource;
-    } else if ( sourceName.startsWith(sourceTypeKeyword(JourneysSource), Qt::CaseInsensitive) ) {
+    } else if ( sourceName.startsWith(sourceTypeKeyword(JourneysSource)) ) {
         return JourneysSource;
     } else {
         return InvalidSourceName;
@@ -1245,7 +1324,7 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
             bool hasLongitude = false, hasLatitude = false;
             for ( int i = 0; i < parameters.length(); ++i ) {
                 const QString parameter = parameters.at( i ).trimmed();
-                const QString parameterName = parameter.left( parameter.indexOf('=') ).toLower();
+                const QString parameterName = parameter.left( parameter.indexOf('=') );
                 if ( parameterName == QLatin1String("longitude") ) {
                     hasLongitude = true;
                 } else if ( parameterName == QLatin1String("latitude") ) {
@@ -1281,7 +1360,7 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                 // No parameter name given, assume the service provider ID
                 defaultParameter = parameter;
             } else {
-                const QString parameterName = parameter.left( pos ).toLower();
+                const QString parameterName = parameter.left( pos );
                 const QString parameterValue = parameter.mid( pos + 1 ).trimmed();
                 if ( parameterValue.isEmpty() ) {
                     kWarning() << "Empty parameter value for parameter" << parameterName;
@@ -1363,6 +1442,10 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                 journeyRequest->setTargetStop( journeyRequest->stop() );
             }
         }
+
+        // The default parameter is the provider ID for data requesting sources,
+        // use the default provider for the users country if no ID is given
+        defaultParameter = PublicTransportEngine::fixProviderId( defaultParameter );
     } else {
         // Extract provider ID or country code, which follow after the source type keyword in name
         defaultParameter = name.mid( QString(sourceTypeKeyword(type)).length() ).trimmed();
@@ -1933,7 +2016,8 @@ bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
     }
 
     const SourceRequestData data( sourceName );
-    const ProviderPointer provider = providerFromId(  data.defaultParameter );
+    kDebug() << data.defaultParameter;
+    const ProviderPointer provider = providerFromId( data.defaultParameter );
     if ( provider.isNull() ) {
         // Service provider couldn't be created, should only happen after provider updates,
         // where the provider worked to get timetable items, but the new provider version

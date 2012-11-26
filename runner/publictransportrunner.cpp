@@ -383,7 +383,7 @@ void AsyncDataEngineUpdater::query( Plasma::DataEngine *engine,
             return;
         }
 
-        m_sourceName = QString( "Journeys %1|originStop=%2|targetStop=%3|maxCount=%4|datetime=%5" )
+        m_sourceName = QString( "Journeys %1|originstop=%2|targetstop=%3|maxcount=%4|datetime=%5" )
                        .arg( m_settings.serviceProviderID ).arg( stop ).arg( stop2 )
                        .arg( resultCount )
                        .arg( QDateTime::currentDateTime()
@@ -401,7 +401,7 @@ void AsyncDataEngineUpdater::query( Plasma::DataEngine *engine,
             type = "Departures";
         }
 
-        m_sourceName = QString( "%1 %2|stop=%3|maxCount=%4|timeoffset=%5" )
+        m_sourceName = QString( "%1 %2|stop=%3|maxcount=%4|timeoffset=%5" )
                        .arg( type ).arg( m_settings.serviceProviderID ).arg( stop )
                        .arg( resultCount ).arg( data.minutesUntilFirstResult );
     }
