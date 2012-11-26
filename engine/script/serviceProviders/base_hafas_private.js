@@ -154,7 +154,7 @@ var HafasPrivate = {
         for ( value in options.required ) {
             var requiredType = options.required[value];
             var valueType = typeof( values[value] );
-            if ( valueType == undefined ) {
+            if ( valueType == 'undefined' ) {
                 throw Error("No '" + value + "' value given");
             }
             if ( valueType != requiredType ) {
@@ -167,7 +167,7 @@ var HafasPrivate = {
         for ( value in options.optional ) {
             var optionalType = options.optional[value];
             var valueType = typeof( values[value] );
-            if ( valueType != undefined && valueType != optionalType ) {
+            if ( valueType != 'undefined' && valueType != optionalType ) {
                 throw Error("Value '" + value + "' is not of type " +
                              optionalType + ", but " + valueType);
             }
