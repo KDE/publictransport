@@ -53,6 +53,7 @@ const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
 Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
 {
 #ifdef BUILD_PROVIDER_TYPE_GTFS
+    // Return the GTFS service for "GTFS" or "gtfs" names
     if ( name.toLower() == QLatin1String("gtfs") ) {
         GtfsService *service = new GtfsService( name, this );
         service->setDestination( name );
@@ -62,6 +63,7 @@ Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
     }
 #endif
 
+    // If the name of a data requesting source is given, return the timetable service
     const SourceType type = sourceTypeFromName( name );
     if ( isDataRequestingSourceType(type) ) {
         TimetableService *service = new TimetableService( name, this );
@@ -69,6 +71,7 @@ Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
         return service;
     }
 
+    // No service for the given name found
     return 0;
 }
 
@@ -291,26 +294,27 @@ void PublicTransportEngine::networkStateChanged( uint state )
     }
 }
 
-bool PublicTransportEngine::isProviderUsed( const QString &serviceProviderId )
+bool PublicTransportEngine::isProviderUsed( const QString &providerId )
 {
-    for ( QStringList::ConstIterator it = m_runningSources.constBegin();
-          it != m_runningSources.constEnd(); ++it )
-    {
-        if ( it->contains(serviceProviderId) ) {
+    // Check if a request is currently running for the provider
+    foreach ( const QString &runningSource, m_runningSources ) {
+        if ( runningSource.contains(providerId) ) {
             return true;
         }
     }
 
+    // Check if a data source is connected that uses the provider
     for ( QHash< QString, DataSource* >::ConstIterator it = m_dataSources.constBegin();
           it != m_dataSources.constEnd(); ++it )
     {
         Q_ASSERT( *it );
         TimetableDataSource *dataSource = dynamic_cast< TimetableDataSource* >( *it );
-        if ( dataSource && dataSource->providerId() == serviceProviderId ) {
+        if ( dataSource && dataSource->providerId() == providerId ) {
             return true;
         }
     }
 
+    // The provider is not used any longer by the engine
     return false;
 }
 
@@ -318,6 +322,8 @@ void PublicTransportEngine::slotSourceRemoved( const QString &sourceName )
 {
     const QString nonAmbiguousName = disambiguateSourceName( sourceName );
     if ( m_dataSources.contains(nonAmbiguousName) ) {
+        // If this is a timetable data source, which might be associated with multiple
+        // ambiguous source names, check if this data source is still connected under other names
         TimetableDataSource *timetableDataSource =
                 dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
         if ( timetableDataSource ) {
@@ -328,19 +334,20 @@ void PublicTransportEngine::slotSourceRemoved( const QString &sourceName )
             }
         }
 
+        // If a provider was used by the source,
+        // remove the provider if it is not used by another source
         const DataSource *dataSource = m_dataSources.take( nonAmbiguousName );
         Q_ASSERT( dataSource );
-//      kDebug() << "Source" << sourceName << "removed, still cached data sources" << m_dataSources.count();
-
-        // If a provider was used by the source, remove the provider if it is not used in another source
         if ( dataSource->data().contains("serviceProvider") ) {
             const QString providerId = dataSource->value("serviceProvider").toString();
             if ( !providerId.isEmpty() && !isProviderUsed(providerId) ) {
+                // Remove provider from the list,
+                // if no other ProviderPointer to that provider exists, this deletes the provider
                 m_providers.remove( providerId );
             }
         }
 
-        // Data source is no longer used
+        // The data source is no longer used, delete it
         delete dataSource;
     }
 }
@@ -579,18 +586,22 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const SourceR
         providerId = defaultProvider;
     }
 
+    // Test if the provider is valid
     QVariantHash providerData;
     QString errorMessage;
     if ( testServiceProvider(providerId, &providerData, &errorMessage) ) {
+        // The provider is valid, update it's state
         QVariantHash stateData;
         const QString state = updateProviderState( providerId, &stateData,
                                                    providerData["type"].toString() );
 
+        // Publish all provider information and add "state", "stateData" and "error"
         setData( data.name, providerData );
         setData( data.name, "state", state );
         setData( data.name, "stateData", stateData );
         setData( data.name, "error", false );
     } else {
+        // The provider is erroneous, only return "id", "error" and "errorMessage"
         setData( data.name, "id", providerId );
         setData( data.name, "error", true );
         setData( data.name, "errorMessage", errorMessage );
@@ -1053,12 +1064,6 @@ void PublicTransportEngine::requestAdditionalData( const QString &sourceName, in
             routeDataUrl) );
 }
 
-void PublicTransportEngine::forceUpdate()
-{
-    kDebug() << "FORCE UPDATE -------------------------------------------------------------------";
-    forceImmediateUpdateOfAllVisualizations();
-}
-
 QString PublicTransportEngine::fixProviderId( const QString &providerId )
 {
     if ( !providerId.isEmpty() ) {
@@ -1089,7 +1094,7 @@ QString PublicTransportEngine::disambiguateSourceName( const QString &sourceName
 
     // Round time parameter values to 15 minutes precision
     QRegExp rx( "(time=[^\\|]+|datetime=[^\\|]+)" );
-    if ( rx.indexIn( ret ) != -1 ) {
+    if ( rx.indexIn(ret) != -1 ) {
         // Get the time value
         const QString timeParameter = rx.cap( 1 );
         QDateTime time;
@@ -1371,13 +1376,13 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                 } else if ( parameterName == QLatin1String("targetstop") ) {
                     JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
                     if ( !journeyRequest ) {
-                        kWarning() << "The \"targetStop\" parameter is only used for journey requests";
+                        kWarning() << "The 'targetstop' parameter is only used for journey requests";
                     }
                     journeyRequest->setTargetStop( parameterValue );
                 } else if ( parameterName == QLatin1String("originstop") ) {
                     JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
                     if ( !journeyRequest ) {
-                        kWarning() << "The \"originStop\" parameter is only used for journey requests";
+                        kWarning() << "The 'originstop' parameter is only used for journey requests";
                     }
                     journeyRequest->setStop( parameterValue );
                 } else if ( parameterName == QLatin1String("timeoffset") ) {
@@ -1395,7 +1400,7 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                     bool ok;
                     request->setMaxCount( parameterValue.toInt(&ok) );
                     if ( !ok ) {
-                        kWarning() << "Bad value for 'maxCount' in source name:" << parameterValue;
+                        kWarning() << "Bad value for 'maxcount' in source name:" << parameterValue;
                         request->setMaxCount( 20 );
                     }
                 } else if ( dynamic_cast<StopsByGeoPositionRequest*>(request) ) {
@@ -1487,7 +1492,8 @@ bool PublicTransportEngine::SourceRequestData::isValid() const
             if ( !journeyRequest || journeyRequest->stop().isEmpty() ||
                  journeyRequest->targetStop().isEmpty() )
             {
-                kWarning() << "Origin and/or target stop names are missing in data source name" << name;
+                kWarning() << "Origin and/or target stop names are missing in data source name"
+                           << name;
                 return false;
             }
         }
@@ -1498,22 +1504,24 @@ bool PublicTransportEngine::SourceRequestData::isValid() const
 
 bool PublicTransportEngine::sourceRequestEvent( const QString &name )
 {
-    if ( isDataRequestingSourceType(sourceTypeFromName(name)) ) {
-        setData( name, DataEngine::Data() ); // Create source, TODO: check if [name] is valid
+    // If name is associated with a data source that runs asynchronously,
+    // create the source first with empty data, gets updated once the request has finished
+    SourceRequestData data( name );
+    if ( data.isValid() && isDataRequestingSourceType(data.type) ) {
+        setData( name, DataEngine::Data() );
     }
 
-//     TODO call forceImmediateUpdateOfAllVisualizations() after the data is available
-    return requestOrUpdateSourceEvent( name );
+    return requestOrUpdateSourceEvent( data );
 }
 
 bool PublicTransportEngine::updateSourceEvent( const QString &name )
 {
-    return requestOrUpdateSourceEvent( name, true );
+    return requestOrUpdateSourceEvent( SourceRequestData(name), true );
 }
 
-bool PublicTransportEngine::requestOrUpdateSourceEvent( const QString &name, bool update )
+bool PublicTransportEngine::requestOrUpdateSourceEvent( const SourceRequestData &sourceData,
+                                                        bool update )
 {
-    SourceRequestData sourceData( name );
     if ( !sourceData.isValid() ) {
         return false;
     }
@@ -1545,7 +1553,7 @@ bool PublicTransportEngine::requestOrUpdateSourceEvent( const QString &name, boo
 
     case InvalidSourceName:
     default:
-        kDebug() << "Source name incorrect" << name;
+        kDebug() << "Source name incorrect" << sourceData.name;
         return false;
     }
 }
@@ -1672,18 +1680,14 @@ void PublicTransportEngine::updateTimeout()
 {
     // Find the timetable data source to which the timer belongs which timeout() signal was emitted
     QTimer *timer = qobject_cast< QTimer* >( sender() );
-    for ( QHash<QString,DataSource*>::ConstIterator it = m_dataSources.constBegin();
-          it != m_dataSources.constEnd(); ++it )
-    {
-        TimetableDataSource *dataSource = dynamic_cast< TimetableDataSource* >( *it );
-        if ( dataSource && dataSource->updateTimer() == timer ) {
-            // Found the timetable data source of the timer,
-            // requests updates for all connected sources (possibly multiple combined stops)
-            foreach ( const QString &sourceName, dataSource->usingDataSources() ) {
-                updateTimetableDataSource( SourceRequestData(sourceName) );
-            }
-            return;
+    TimetableDataSource *dataSource = dataSourceFromAdditionDataTimer( timer );
+    if ( dataSource ) {
+        // Found the timetable data source of the timer,
+        // requests updates for all connected sources (possibly multiple combined stops)
+        foreach ( const QString &sourceName, dataSource->usingDataSources() ) {
+            updateTimetableDataSource( SourceRequestData(sourceName) );
         }
+        return;
     }
 
     // No data source found that started the timer,

@@ -63,23 +63,27 @@ class PublicTransportEngine : public Plasma::DataEngine {
     Q_OBJECT
 
 public:
+    /** @brief A shared pointer to a ServiceProvider. */
     typedef QSharedPointer< ServiceProvider > ProviderPointer;
 
     /**
      * @brief The available types of sources of this data engine.
      *
-     * Source names can be associated with these types by the first word using souceTypeFromName.
-     * @see sourceTypeKeyword
-     * @see sourceTypeFromName
+     * Source names can be associated with these types by their first words using
+     * souceTypeFromName().
+     * @see sourceTypeKeyword()
+     * @see sourceTypeFromName()
      **/
     enum SourceType {
         InvalidSourceName = 0, /**< Returned by @ref sourceTypeFromName,
                 * if the source name is invalid. */
 
         // Data sources providing information about the engine, available providers
-        ServiceProviderSource = 1, /**< The source contains information about available
-                * service providers for a given country. See also @ref usage_serviceproviders_sec. */
-        ServiceProvidersSource = 2, /**< The source contains information about available
+        ServiceProviderSource = 1, /**< The source contains information about a specific
+                * service provider, identified by it's ID or a country code. If a country code
+                * is given, the default provider for that country gets used, if any.
+                * See also @ref usage_serviceproviders_sec. */
+        ServiceProvidersSource = 2, /**< The source contains information about all available
                 * service providers. See also @ref usage_serviceproviders_sec. */
         ErroneousServiceProvidersSource = 3, /**< The source contains a list of erroneous
                 * service providers. */
@@ -88,8 +92,8 @@ public:
         VehicleTypesSource = 5, /**< The source contains information about all available
                 * vehicle types. They are stored by integer keys, matching the values of
                 * the Enums::VehicleType (engine) and PublicTransport::VehicleType
-                * (libpublictransporthelper) enumerations. The information stored stored in
-                * this data source can also be retrieved from PublicTransport::VehicleType
+                * (libpublictransporthelper) enumerations. The information stored in this
+                * data source can also be retrieved from PublicTransport::VehicleType
                 * using libpublictransporthelper. See also @ref usage_vehicletypes_sec.  */
 
         // Data sources providing timetable data
@@ -108,7 +112,7 @@ public:
     };
 
     /** @brief Every data engine needs a constructor with these arguments. */
-    PublicTransportEngine( QObject* parent, const QVariantList& args );
+    PublicTransportEngine( QObject *parent, const QVariantList &args );
 
     /** @brief Destructor. */
     ~PublicTransportEngine();
@@ -155,6 +159,17 @@ public:
 
     /** @brief Reimplemented to add some always visible default sources. */
     virtual QStringList sources() const;
+
+    /**
+     * @brief Gets the service for the data source with the given @p name.
+     *
+     * The returned service can be used to start operations on the timetable data source.
+     * For example it has an operation to import GTFS feeds into a local database or to update
+     * or delete that database.
+     * @return A pointer to the created Plasma::Service or 0 if no service is available for @p name.
+     * @see PublicTransportService
+     **/
+    virtual Plasma::Service* serviceForSource( const QString &name );
 
     /**
      * @brief Get the number of seconds until the next automatic update of @p sourceName.
@@ -238,12 +253,12 @@ signals:
     /**
      * @brief Emitted when a request for additional data has been finished.
      *
-     * This signal gets used by the "timetable" service to get notified when a job has finsihed
+     * This signal gets used by the timetable service to get notified when a job has finsihed
      * and whether it was successful or not.
-     *
      * @param newData The new contents (including additional data) in the data source for the item.
      * @param success Whether or not the additional data job was successful.
      * @param errorMessage Contains an error message if @p success is @c false.
+     * @see usage_service_sec
      **/
     void additionalDataRequestFinished( const QVariantHash &newData, bool success = true,
                                         const QString &errorMessage = QString() );
@@ -253,10 +268,24 @@ public slots:
     void requestAdditionalData( const QString &sourceName, int updateItem );
 
 protected slots:
+    /**
+     * @brief Free resources for the data source with the given @p name where possible.
+     *
+     * Destroys the DataSource object associated with the data source, if the source is not also
+     * connected under other ambiguous names (for timetable data sources). If a ServiceProvider
+     * was used for the data source but not for any other source, it gets destroyed, too.
+     **/
     void slotSourceRemoved( const QString &name );
+
+    /**
+     * @brief The network state has changed, eg. was connected or disconnected.
+     *
+     * This slot is connected with the @c networkstatus module of @c kded through DBus.
+     * @p state The new network state.
+     **/
     void networkStateChanged( uint state );
 
-    void forceUpdate();
+    /** @brief The update timeout for a timetable data source was reached. */
     void updateTimeout();
 
 #ifdef BUILD_PROVIDER_TYPE_GTFS
@@ -266,7 +295,7 @@ protected slots:
     /** @brief Received a message from a @p job of the GTFS service. */
     void gtfsImportJobInfoMessage( KJob *job, const QString &plain, const QString &rich );
 
-    /** @brief A @p job of the GTFS service notifies it's progress. */
+    /** @brief A @p job of the GTFS service notifies it's progress in @p percent. */
     void gtfsImportJobPercent( KJob *job, ulong percent );
 #endif // BUILD_PROVIDER_TYPE_GTFS
 
@@ -275,7 +304,7 @@ protected slots:
      *
      * @param provider The provider that was used to get the departures.
      * @param requestUrl The url used to request the information.
-     * @param departures A list of departures that were received.
+     * @param departures The departures that were received.
      * @param globalInfo Global information that affects all departures.
      * @param request Information about the request for the here received @p departures.
      *
@@ -292,7 +321,7 @@ protected slots:
      *
      * @param provider The provider that was used to get the arrivals.
      * @param requestUrl The url used to request the information.
-     * @param arrivals A list of arrivals that were received.
+     * @param arrivals The arrivals that were received.
      * @param globalInfo Global information that affects all arrivals.
      * @param request Information about the request for the here received @p arrivals.
      *
@@ -309,7 +338,7 @@ protected slots:
      *
      * @param provider The provider that was used to get the journeys.
      * @param requestUrl The url used to request the information.
-     * @param journeys A list of journeys that were received.
+     * @param journeys The journeys that were received.
      * @param globalInfo Global information that affects all journeys.
      * @param request Information about the request for the here received @p journeys.
      *
@@ -326,7 +355,7 @@ protected slots:
      *
      * @param provider The service provider that was used to get the stops.
      * @param requestUrl The url used to request the information.
-     * @param stops A list of stops that were received.
+     * @param stops The stops that were received.
      * @param request Information about the request for the here received @p stops.
      *
      * @see ServiceProvider::useSeparateCityValue()
@@ -427,7 +456,14 @@ protected:
      **/
     bool updateSourceEvent( const QString &name );
 
-    bool requestOrUpdateSourceEvent( const QString &name, bool update = false );
+    /**
+     * @brief Implementation of sourceRequestEvent() and updateSourceEvent() (@p update @c true).
+     *
+     * Requesting and updating a source is done in (almost) the same way.
+     * @param data A SourceRequestData for the data source to be requested/updated.
+     * @param update @c True, if the data source should be updated. @c False, otherwise.
+     **/
+    bool requestOrUpdateSourceEvent( const SourceRequestData &data, bool update = false );
 
     /**
      * @brief Updates the ServiceProviders data source.
@@ -509,17 +545,6 @@ protected:
                             UpdateFlags updateFlags = DefaultUpdateFlags );
 
     /**
-     * @brief Gets the service for the data source with the given @p name.
-     *
-     * The returned service can be used to start operations on the timetable data source.
-     * For example it has an operation to import GTFS feeds into a local database or to update
-     * or delete that database.
-     * @return A pointer to the created Plasma::Service or 0 if no service is available for @p name.
-     * @see PublicTransportService
-     **/
-    virtual Plasma::Service* serviceForSource( const QString &name );
-
-    /**
      * @brief Test @p providerId for errors.
      *
      * @param providerId The ID of the provider to test.
@@ -535,16 +560,24 @@ protected:
                               QString *errorMessage,
                               const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>() );
 
+    /**
+     * @brief Request timetable data after checking the provider and the request.
+     *
+     * The request fails, if the requested provider is invalid, if an unsupported feature
+     * is needed to run the request or if a @c city parameter is missing but needed by the
+     * provider.
+     * @param data A SourceRequestData object for the data source name that triggered the request.
+     * @return @c True, if the request could be started successfully, @c false otherwise.
+     * @see ServiceProvider::request()
+     **/
     bool request( const SourceRequestData &data );
-    inline bool request( const QString &sourceName ) {
-        return request( SourceRequestData(sourceName) );
-    };
 
 private:
+    /** @brief Get the date and time for the next update of @p dataSource. */
     QDateTime sourceUpdateTime( TimetableDataSource *dataSource,
                                 UpdateFlags updateFlags = DefaultUpdateFlags );
 
-    /** Handler for departuresReceived() (@p isDepartureData @c true) and arrivalsReceived() */
+    /** @brief Handler for departuresReceived() (@p isDepartureData @c true) and arrivalsReceived() */
     void timetableDataReceived( ServiceProvider *provider,
             const QUrl &requestUrl, const DepartureInfoList &items,
             const GlobalTimetableInfo &globalInfo,
@@ -565,6 +598,7 @@ private:
     QVariantHash serviceProviderData( const ServiceProviderData &data,
                                       const ServiceProvider *provider = 0 );
 
+    /** @brief Overload, use if @p provider is @em not 0. */
     QVariantHash serviceProviderData( const ServiceProvider *provider );
 
     /**
@@ -599,8 +633,8 @@ private:
      **/
     ProvidersDataSource *providersDataSource() const;
 
-    /** @brief Checks if the provider with the given ID is used by a connected source. */
-    bool isProviderUsed( const QString &serviceProviderId );
+    /** @brief Checks if the provider with the given @p providerId is used by a connected source. */
+    bool isProviderUsed( const QString &providerId );
 
     /**
      * @brief Get an error code for the given @p stateId.
@@ -620,14 +654,17 @@ private:
     static bool isStateDataCached( const QString &stateDataKey );
 
     /**
-     * @brief Remove all ambiguous parts from @p sourceName and make it lower case.
+     * @brief Disambiguates the given @p sourceName.
      *
-     * TODO
+     * Date and time parameters get replaced by a @c datetime parameter, with the time rounded to
+     * 15 minutes to use one data source object for all sources that are less than 15 minutes apart
+     * from each other.
+     * Parameters get reordered to a standard order, so that data source names with only a
+     * different parameter order point to the same DataSource object. Parameter values get
+     * converted to lower case (eg. stop names).
      *
-     * Ambiguous parts are date and time parameters. Timetable items should be shared between
-     * data sources for the same stop, also if their date and/or time values differ.
-     * Without removing these parameters eg. departure data sources with a little different time
-     * values will not share it's departures and download them twice (at least the overlapping ones).
+     * Without doing this eg. departure data sources with only little different time values
+     * will @em not share their departures and download them twice.
      **/
     static QString disambiguateSourceName( const QString &sourceName );
 
@@ -676,7 +713,9 @@ private:
     static ServiceProvider *createProviderForData( const ServiceProviderData *data,
             QObject *parent = 0, const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
 
+    /** @brief Get the timetable data source that uses the given @p timer. */
     TimetableDataSource *dataSourceFromAdditionDataTimer( QTimer *timer ) const;
+
     bool enoughDataAvailable( DataSource *dataSource, const SourceRequestData &sourceData ) const;
 
     QHash< QString, ProviderPointer > m_providers; // Already loaded service providers by ID
