@@ -36,6 +36,29 @@ endif ( ENABLE_DEBUGGER_JOB_SYNCHRONIZATION )
 # Create debug_config.h from debug_config.h.in, ie. create #define's for each enabled variable from above
 configure_file( debug_config.h.in debug_config.h )
 
+# Generate completion data class files and HTML documentation from scripting.h.
+# Rerun when the source file (scripting.h) or the tool changes.
+# Put the generated class files into the binary directory
+# and the HTML documentation into the sources.
+add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.h
+                           ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/index.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/helper.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/network.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/networkrequest.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/resultobject.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/storage.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/enums.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/default.css
+    COMMAND ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator
+            --verbose
+            --out_completion ${CMAKE_CURRENT_BINARY_DIR}
+            --out_doc ${CMAKE_CURRENT_SOURCE_DIR}/../doc
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scripting.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../enums.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../publictransportdataengine.h
+            ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator )
+
 qt4_wrap_cpp( timetablemate_MOC_SRCS ../../enums.h )
 set( timetablemate_SRCS
    main.cpp
@@ -91,7 +114,7 @@ kde4_add_ui_files( timetablemate_SRCS timetablemateview_base.ui preferences.ui )
 kde4_add_kcfg_files( timetablemate_SRCS settings.kcfgc )
 kde4_add_executable( timetablemate ${timetablemate_SRCS} )
 
-add_dependencies( timetablemate publictransporthelper )
+add_dependencies( timetablemate publictransporthelper plasma_engine_publictransport )
 
 # Collect all needed libraries in LIBS
 set( LIBS ${KDE4_KDEUI_LIBS}
@@ -125,29 +148,6 @@ endif ( MARBLE_FOUND )
 target_link_libraries( timetablemate ${LIBS} )
 
 install( TARGETS timetablemate ${INSTALL_TARGETS_DEFAULT_ARGS} )
-
-# Generate completion data class files and HTML documentation from scripting.h.
-# Rerun when the source file (scripting.h) or the tool changes.
-# Put the generated class files into the binary directory
-# and the HTML documentation into the sources.
-add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.h
-                           ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/index.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/helper.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/network.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/networkrequest.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/resultobject.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/storage.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/enums.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/default.css
-    COMMAND ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator
-            --verbose
-            --out_completion ${CMAKE_CURRENT_BINARY_DIR}
-            --out_doc ${CMAKE_CURRENT_SOURCE_DIR}/../doc
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scripting.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/../../enums.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/../../publictransportdataengine.h
-            ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator )
 
 # Add unit tests
 if ( BUILD_TESTS )

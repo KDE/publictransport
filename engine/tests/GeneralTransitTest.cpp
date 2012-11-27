@@ -19,12 +19,14 @@
 
 #include "GeneralTransitTest.h"
 
-#include <QtTest/QTest>
 #include "gtfs/gtfsimporter.h"
+#include <KGlobal>
+#include <QtTest/QTest>
 
 void GeneralTransitTest::init()
 {
-
+    // Initialize for i18n
+    KGlobal::locale();
 }
 
 void GeneralTransitTest::cleanup()
@@ -44,8 +46,9 @@ void GeneralTransitTest::cleanupTestCase()
 
 void GeneralTransitTest::readGtfsDataTest()
 {
-    // Expects that the test is started from path engine/build/tests/
-    const QString fileName( "../../tests/sample-feed.zip" );
+    // Expects that the test is started from path build/engine/tests/,
+    // sample-feed.zip is in the source corresponding directory
+    const QString fileName( "../../../engine/tests/sample-feed.zip" );
 
     GtfsImporter importer( "sample_gtfs" );
     importer.startImport( fileName );

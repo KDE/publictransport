@@ -707,7 +707,7 @@ void PublicTransportHelperTest::stopSettingsDialogAddWidgetsLaterCustomFactoryTe
 
 void PublicTransportHelperTest::stopWidgetTest()
 {
-    StopWidget stopWidget( 0, m_stopSettings, StopSettingsDialog::DefaultOptions,
+    StopWidget stopWidget( 0, 0, m_stopSettings, StopSettingsDialog::DefaultOptions,
                            ServiceProviderDataDialog::DefaultOptions, &m_filterConfigurations );
 
 //     QSignalSpy changedSpy( &stopWidget, SIGNAL(changed(StopSettings)) );
@@ -753,7 +753,7 @@ void PublicTransportHelperTest::stopListWidgetTest()
 {
     StopSettingsList list;
     list << m_stopSettings;
-    StopListWidget stopListWidget( 0, list, StopSettingsDialog::DefaultOptions,
+    StopListWidget stopListWidget( 0, 0, list, StopSettingsDialog::DefaultOptions,
                                    ServiceProviderDataDialog::DefaultOptions, &m_filterConfigurations );
 
     QSignalSpy addedSpy( &stopListWidget, SIGNAL(added(QWidget*)) );
@@ -855,18 +855,12 @@ void PublicTransportHelperTest::stopListWidgetTest()
 void PublicTransportHelperTest::locationModelTest()
 {
     LocationModel model;
-    QCOMPARE( model.rowCount(), 0 );
-
-    Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
-    model.syncWithDataEngine( manager->loadEngine("publictransport") );
     QVERIFY( model.rowCount() > 0 );
 
     QModelIndex index = model.indexOfLocation("de");
     QVERIFY( index.isValid() );
 
     QCOMPARE( model.data(index, LocationCodeRole).toString(), QLatin1String("de") );
-
-    manager->unloadEngine("publictransport");
 }
 
 QTEST_MAIN(PublicTransportHelperTest)

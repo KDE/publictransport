@@ -31,7 +31,9 @@ add_executable( StopSuggestionsTest ${StopSuggestionsTest_SRCS} )
 add_test( StopSuggestionsTest StopSuggestionsTest )
 target_link_libraries( StopSuggestionsTest ${QT_QTTEST_LIBRARY} ${KDE4_PLASMA_LIBS} )
 
-set( DeparturesTest_SRCS DeparturesTest.cpp )
+qt4_wrap_cpp( engine_tests_MOC_SRCS ../enums.h )
+
+set( DeparturesTest_SRCS DeparturesTest.cpp ${engine_tests_MOC_SRCS}  )
 qt4_automoc( ${DeparturesTest_SRCS} )
 add_executable( DeparturesTest ${DeparturesTest_SRCS} )
 add_test( DeparturesTest DeparturesTest )
@@ -44,7 +46,7 @@ set( ScriptApiTest_SRCS
    ../serviceproviderglobal.cpp
    ../departureinfo.cpp
    ../script/scripting.cpp
-    ${publictransport_engine_MOC_SRCS} )
+    ${engine_tests_MOC_SRCS} )
 qt4_automoc( ${ScriptApiTest_SRCS} )
 add_executable( ScriptApiTest ${ScriptApiTest_SRCS} )
 add_test( ScriptApiTest ScriptApiTest )

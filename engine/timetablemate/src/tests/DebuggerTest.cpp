@@ -24,6 +24,7 @@
 #include <debugger/debuggerjobs.h>
 #include <project.h>
 #include <projectmodel.h>
+#include <tabs/webtab.h>
 #include <engine/serviceproviderdatareader.h>
 #include <request.h>
 #include <serviceproviderglobal.h>
@@ -31,6 +32,10 @@
 #include <QtTest/QTest>
 #include <QTimer>
 #include <QSignalSpy>
+#include <QWebView>
+#include <KGlobal>
+#include <KStandardDirs>
+#include <KWebView>
 
 void DebuggerTest::initTestCase()
 {
@@ -161,7 +166,7 @@ void DebuggerTest::projectTestsTest()
 
     // Call testProject() twice on each project at random times
     // to try to produce rare situations where the program may crash
-    const int time = 1700;
+    const int time = 2700;
     i = 0;
     QTimer::singleShot( 0, projects[i], SLOT(testProject()) );
     QTimer::singleShot( time, projects[i++], SLOT(testProject()) );
@@ -180,6 +185,9 @@ void DebuggerTest::projectTestsTest()
     loop.exec();
 
     // Wait until testing ends
+    QTimer timeout;
+    timeout.setInterval( 5000 ); // Wait 5 seconds for a project to finish it's tests
+    connect( &timeout, SIGNAL(timeout()), &loop, SLOT(quit()) );
     forever {
         // Get some information from the debuggers
         QString infoString;
@@ -199,7 +207,7 @@ void DebuggerTest::projectTestsTest()
                 infoString.append( "Ready " );
             }
         }
-        kDebug() << "State" << infoString;
+        kDebug() << "State " << infoString << timer.elapsed() << time;
 
         if ( timer.elapsed() > time ) {
             bool testsFinished = true;
@@ -210,8 +218,10 @@ void DebuggerTest::projectTestsTest()
 //                     disconnect( project, SIGNAL(testFinished(bool)), project, SLOT(testProject()) );
                 }
 
+                qApp->processEvents();
                 if ( project->isTestRunning() ) {
                     testsFinished = false;
+                    kDebug() << "Still running:" << project->data()->id();
                     break;
                 }
             }
@@ -220,7 +230,9 @@ void DebuggerTest::projectTestsTest()
             }
         }
 
+        timeout.start();
         loop.exec();
+        timeout.stop();
     }
 
     // Wait until all jobs are deleted

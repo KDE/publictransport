@@ -869,7 +869,7 @@ void ScriptApiTest::networkAsynchronousTest()
 
     // Wait for asynchronous download to finish
     QEventLoop loop( this );
-    connect( request, SIGNAL(finished(QByteArray,int,int)), &loop, SLOT(quit()) );
+    connect( request, SIGNAL(finished()), &loop, SLOT(quit()) );
     network.head( request ); // Use head() to save network bandwidth
     loop.exec();
 
@@ -899,7 +899,7 @@ void ScriptApiTest::networkAsynchronousAbortTest()
     // Start asynchronous download and wait for it to finish,
     // but directly abort the download
     QEventLoop loop( this );
-    connect( request, SIGNAL(finished(QByteArray,int,int)), &loop, SLOT(quit()) );
+    connect( request, SIGNAL(finished()), &loop, SLOT(quit()) );
     network.head( request ); // Use head() to save network bandwidth
     QTimer::singleShot( 50, request, SLOT(abort()) );
     loop.exec();
@@ -932,8 +932,8 @@ void ScriptApiTest::networkAsynchronousMultipleTest()
 
     // Start two asynchronous downloads and wait for both to finish
     QEventLoop loop(this);
-    connect( request1, SIGNAL(finished(QByteArray,int,int)), &loop, SLOT(quit()) );
-    connect( request2, SIGNAL(finished(QByteArray,int,int)), &loop, SLOT(quit()) );
+    connect( request1, SIGNAL(finished()), &loop, SLOT(quit()) );
+    connect( request2, SIGNAL(finished()), &loop, SLOT(quit()) );
     network.head( request1 ); // Use head() to save network bandwidth
     network.head( request2 );
 

@@ -46,6 +46,12 @@ public:
     Plasma::DataEngine::Data data;
 };
 
+/**
+ * @brief Test the "ServiceProviders" data source of the PublicTransport data engine.
+ *
+ * Tests for valid provider data.
+ * @warning The data engine needs to be installed first.
+ */
 class ServiceProvidersTest : public QObject
 {
     Q_OBJECT

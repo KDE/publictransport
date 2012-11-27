@@ -52,28 +52,25 @@ void StopSuggestionsTest::stopSuggestionTest_data()
 
     // 21 service provider plugins
     QTest::newRow("at_oebb") << "at_oebb" << QString() << "Wien" << true << true;
-//     QTest::newRow("be_brail") << "be_brail" << QString() << "Brüssel" << true << false;
-//     QTest::newRow("ch_sbb") << "ch_sbb" << QString() << "Bern" << true << false;
-//     QTest::newRow("cz_idnes") << "cz_idnes" << "Brno" << "Technolog" << false << false;
-//     QTest::newRow("de_bvg") << "de_bvg" << QString() << "Alexander" << false << false;
-//     QTest::newRow("de_db") << "de_db" << QString() << "Bremen Hbf" << true << true;
-//     QTest::newRow("de_dvb") << "de_dvb" << QString() << "Hauptbahnhof" << false << false;
-//     QTest::newRow("de_fahrplaner") << "de_fahrplaner" << QString() << "Bremen Hbf" << true << false;
-//     QTest::newRow("de_nasa") << "de_nasa" << QString() << "Kirkel" << false << false;
-//     QTest::newRow("de_rmv") << "de_rmv" << QString() << "Frankfurt" << false << false;
-// //     QTest::newRow("de_vvs") << "de_vvs" << "Stuttgart" << "Herren" << false << false; // Doesn't support stop suggestions
-//     QTest::newRow("dk_rejseplanen") << "dk_rejseplanen" << QString() << "Oslovej" << false << false;
+    QTest::newRow("be_brail") << "be_brail" << QString() << "Brüssel" << true << false;
+    QTest::newRow("ch_sbb") << "ch_sbb" << QString() << "Bern" << true << false;
+    QTest::newRow("cz_idnes") << "cz_idnes" << "Brno" << "Technolog" << false << false;
+    QTest::newRow("de_bvg") << "de_bvg" << QString() << "Alexander" << false << false;
+    QTest::newRow("de_db") << "de_db" << QString() << "Bremen Hbf" << true << true;
+    QTest::newRow("de_dvb") << "de_dvb" << QString() << "Hauptbahnhof" << false << false;
+    QTest::newRow("de_fahrplaner") << "de_fahrplaner" << QString() << "Bremen Hbf" << true << false;
+    QTest::newRow("de_nasa") << "de_nasa" << QString() << "Kirkel" << false << false;
+    QTest::newRow("de_rmv") << "de_rmv" << QString() << "Frankfurt" << false << false;
+//     QTest::newRow("de_vvs") << "de_vvs" << "Stuttgart" << "Herren" << false << false; // Doesn't support stop suggestions
+    QTest::newRow("dk_rejseplanen") << "dk_rejseplanen" << QString() << "Oslovej" << false << false;
 //     QTest::newRow("fr_gares") << "fr_gares" << QString() << "Lyon" << true << false;
-//     QTest::newRow("it_cup2000") << "it_cup2000" << QString() << "Roma" << false << false;
-//     QTest::newRow("it_orario") << "it_orario" << QString() << "Genova" << false << false;
-//     QTest::newRow("pl_pkp") << "pl_pkp" << "Brno" << "Warszawa" << false << false;
+    QTest::newRow("it_cup2000") << "it_cup2000" << QString() << "Roma" << false << false;
+    QTest::newRow("it_orario") << "it_orario" << QString() << "Genova" << false << false;
+    QTest::newRow("pl_pkp") << "pl_pkp" << "Brno" << "Warszawa" << false << false;
 //     QTest::newRow("sk_atlas") << "sk_atlas" << "bratislava" << "br" << true << false;
 //     QTest::newRow("sk_imhd") << "sk_imhd" << "bratislava" << "br" << false << false;
-//     QTest::newRow("us_septa") << "us_septa" << QString() << "Pennsyl" << true << false;
-//     QTest::newRow("international_flightstats") << "international_flightstats" << QString() << "Bremen" << true << false;
-    // 19 service provider plugins tested, not tested:
-    //   de_vvs (doesn't provide stop suggestions)
-    //   de_vrn (new departure urls are only for specific lines...),
+    QTest::newRow("us_septa") << "us_septa" << QString() << "Pennsyl" << true << false;
+    QTest::newRow("international_flightstats") << "international_flightstats" << QString() << "Bremen" << true << false;
 }
 
 void StopSuggestionsTest::stopSuggestionTest()
@@ -83,13 +80,6 @@ void StopSuggestionsTest::stopSuggestionTest()
     QFETCH(QString, stopName);
     QFETCH(bool, containsIDs);
     QFETCH(bool, containsWeights);
-
-    for ( int n = 0; n < 100; ++n ) {
-    QString serviceProvider = "de_db";
-    QString city;
-    QString stopName = "Bremen " + QString::number(n);
-    bool containsIDs = true;
-    bool containsWeights = true;
 
     // Connect source and wait until the dataUpdated slot gets called in testVisualization
     QString sourceName = QString("Stops %1|stop=%2").arg(serviceProvider).arg(stopName);
@@ -111,7 +101,7 @@ void StopSuggestionsTest::stopSuggestionTest()
 
     // Test main keys
     QVERIFY( !testVisualization.data["error"].toBool() );
-    QVERIFY( !testVisualization.data.contains("stops") );
+    QVERIFY( testVisualization.data.contains("stops") );
     QVERIFY( testVisualization.data["updated"].canConvert(QVariant::DateTime) );
 //     QVERIFY( !testVisualization.data["serviceProvider"].toString().isEmpty() ); TODO
 //     QVERIFY( !testVisualization.data["requestUrl"].toString().isEmpty() ); TODO
@@ -143,7 +133,6 @@ void StopSuggestionsTest::stopSuggestionTest()
 
     QVERIFY2( !testVisualization.data.isEmpty(),
               QString("No data for source name '%1' in 5 seconds").arg(sourceName).toLatin1().data() );
-    }
 }
 
 QTEST_MAIN(StopSuggestionsTest)

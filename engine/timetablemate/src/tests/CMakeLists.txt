@@ -30,8 +30,11 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
     target_link_libraries( JavaScriptParserTest
         ${QT_QTTEST_LIBRARY} ${QT_QTGUI_LIBRARY} ${KDE4_KDECORE_LIBS} )
 
+    # Needed to have javascriptcompletiongeneric.h/.cpp generated before building the test
+    add_dependencies( JavaScriptParserTest timetablemate plasma_engine_publictransport )
+
     # Run moc manually, alternatively add #include "moc_foo.cpp" to the end of the source files
-    qt4_wrap_cpp( timetablemate_MOC_SRCS
+    qt4_wrap_cpp( timetablemate_test_MOC_SRCS
         ../project.h
         ../projectmodel.h
         ../networkmonitormodel.h
@@ -39,14 +42,15 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
         ../javascriptmodel.h
         ../javascriptcompletionmodel.h
         ../changelogwidget.h
+        ../linkchecker.h
 
         ../debugger/debugger.h
         ../debugger/debuggeragent.h
         ../debugger/debuggerjobs.h
         ../debugger/timetabledatarequestjob.h
         ../debugger/backtracemodel.h
-        ../debugger/variablemodel.h
         ../debugger/breakpointmodel.h
+        ../debugger/variablemodel.h
 
         ../tabs/abstracttab.h
         ../tabs/projectsourcetab.h
@@ -55,6 +59,7 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
         ../tabs/dashboardtab.h
         ../tabs/plasmapreviewtab.h
         ../tabs/plasmapreview.h
+        ../tabs/gtfsdatabasetab.h
 
         ../../../serviceprovider.h
         ../../../serviceproviderdata.h
@@ -62,11 +67,10 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
         ../../../script/script_thread.h
         ../../../script/serviceproviderscript.h
 
-#         ${CMAKE_CURRENT_BINARY_DIR}/../../javascriptcompletiongeneric.h
-#         ${CMAKE_CURRENT_BINARY_DIR}/../javascriptcompletiongeneric.h
-#         ${CMAKE_CURRENT_BINARY_DIR}/../javascriptcompletiongeneric.cpp
-    )
+        ../../../enums.h
 
+        ${CMAKE_CURRENT_BINARY_DIR}/../javascriptcompletiongeneric.h
+    )
     set( DebuggerTest_SRCS
         DebuggerTest.cpp
 
@@ -82,6 +86,7 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
         ../javascriptparser.cpp
         ../projectsettingsdialog.cpp
         ../changelogwidget.cpp
+        ../linkchecker.cpp
         ../debugger/debugger.cpp
         ../debugger/debuggeragent.cpp
         ../debugger/variablemodel.cpp
@@ -98,6 +103,7 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
         ../tabs/webtab.cpp
         ../tabs/plasmapreviewtab.cpp
         ../tabs/plasmapreview.cpp
+        ../tabs/gtfsdatabasetab.cpp
 
         # Use files directly from the data engine
         ../../../global.cpp
@@ -114,10 +120,11 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
         ../../../script/scripting.cpp
         ../../../script/serviceproviderscript.cpp
 
+        ../../../gtfs/gtfsdatabase.cpp
+
         ${CMAKE_CURRENT_BINARY_DIR}/../javascriptcompletiongeneric.h
         ${CMAKE_CURRENT_BINARY_DIR}/../javascriptcompletiongeneric.cpp
-        ${engine_MOC_SRCS}
-        ${timetablemate_MOC_SRCS}
+        ${timetablemate_test_MOC_SRCS}
     )
     qt4_automoc( ${DebuggerTest_SRCS} )
 
@@ -127,16 +134,33 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
         ${KDE4_KDEWEBKIT_LIBS} # For the web main view tab
         ${KDE4_PLASMA_LIBS} # For the Plasma preview main view tab
         ${KDE4_THREADWEAVER_LIBS} # For the debugger and for includes from the engine
-        ${QT_QTSCRIPT_LIBRARY}
         ${QT_QTDECLARATIVE_LIBRARY} # For the dashboard main view tabs
-        ${MARBLE_LIBRARIES}
         kdeclarative # For KDeclarative, no ${KDE4_KDECLARATIVE_LIBS} available..
         publictransporthelper
         z # zlib
     )
 
+    if ( BUILD_PROVIDER_TYPE_SCRIPT )
+        set( LIBS ${LIBS} ${QT_QTSCRIPT_LIBRARY} )
+    endif ( BUILD_PROVIDER_TYPE_SCRIPT )
+
+    if ( BUILD_PROVIDER_TYPE_GTFS )
+        set( LIBS ${LIBS} ${QT_QTXML_LIBRARY} ${QT_QTSQL_LIBRARY} )
+        if ( BUILD_GTFS_REALTIME )
+            set( LIBS ${LIBS} pthread protobuf ) # pthread is needed for protobuf
+        endif ( BUILD_GTFS_REALTIME )
+    endif ( BUILD_PROVIDER_TYPE_GTFS )
+
+    if ( MARBLE_FOUND )
+        message( "     - Build with marble widgets (eg. LatLonEdit)" )
+        set ( LIBS ${LIBS} ${MARBLE_LIBRARIES} )
+    endif ( MARBLE_FOUND )
+
     add_executable( DebuggerTest ${DebuggerTest_SRCS} )
     add_test( DebuggerTest DebuggerTest )
     target_link_libraries( DebuggerTest ${LIBS} )
+
+    # Needed to have javascriptcompletiongeneric.h/.cpp generated before building the test
+    add_dependencies( DebuggerTest timetablemate plasma_engine_publictransport )
 
 endif ( BUILD_PROVIDER_TYPE_SCRIPT )

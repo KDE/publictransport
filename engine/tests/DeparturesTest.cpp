@@ -69,9 +69,6 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
         QVERIFY( departure.contains("Target") );
         QVERIFY( departure.contains("TransportLine") );
         QVERIFY( departure.contains("TypeOfVehicle") );
-        QVERIFY( departure.contains("VehicleName") );
-        QVERIFY( departure.contains("VehicleNamePlural") );
-        QVERIFY( departure.contains("VehicleIconName") );
     // 		QVERIFY( departureData.contains("journeyNews") ); // NOTE These values are only given if they are not empty
     // 		QVERIFY( departureData.contains("platform") );
     // 		QVERIFY( departureData.contains("operator") );
@@ -86,9 +83,6 @@ void testDepartureData( const TestVisualization &testVisualization, const QStrin
         QVERIFY( departure["Target"].canConvert(QVariant::String) );
         QVERIFY( departure["TransportLine"].canConvert(QVariant::String) );
         QVERIFY( departure["TypeOfVehicle"].canConvert(QVariant::Int) );
-        QVERIFY( departure["VehicleName"].canConvert(QVariant::String) );
-        QVERIFY( departure["VehicleNamePlural"].canConvert(QVariant::String) );
-        QVERIFY( departure["VehicleIconName"].canConvert(QVariant::String) );
         QVERIFY( departure["Delay"].canConvert(QVariant::Int) );
 //         QVERIFY( departure["RouteExactStops"].canConvert(QVariant::Int) );
         if ( departure.contains("JourneyNews") ) {
@@ -164,19 +158,16 @@ void DeparturesTest::departuresTest_data()
     QTest::newRow("de_fahrplaner") << "de_fahrplaner" << QString() << "Bremen Hbf";
     QTest::newRow("de_nasa") << "de_nasa" << QString() << "Kirkel Bahnhof";
     QTest::newRow("de_rmv") << "de_rmv" << QString() << "3000511"; // ID for "Frankfurt (Main) Zoo"
-    QTest::newRow("de_vvs") << "de_vvs" << "Stuttgart" << "Herrenberg";
+//     QTest::newRow("de_vvs") << "de_vvs" << "Stuttgart" << "Herrenberg";
     QTest::newRow("dk_rejseplanen") << "dk_rejseplanen" << QString() << "Oslovej / Ringvejen";
-    QTest::newRow("fr_gares") << "fr_gares" << QString() << "frlpd"; // Only takes stop IDs
+//     QTest::newRow("fr_gares") << "fr_gares" << QString() << "frlpd"; // Only takes stop IDs
     QTest::newRow("it_cup2000") << "it_cup2000" << QString() << "Roma - Bologna";
     QTest::newRow("it_orario") << "it_orario" << QString() << "Genova";
     QTest::newRow("pl_pkp") << "pl_pkp" << QString() << "Warszawa Centralna";
-    QTest::newRow("sk_atlas") << "sk_atlas" << "bratislava" << QString::fromUtf8("Bradáčova");
-    QTest::newRow("sk_imhd") << "sk_imhd" << "bratislava" << "Nobelova";
+//     QTest::newRow("sk_atlas") << "sk_atlas" << "bratislava" << QString::fromUtf8("Bradáčova");
+//     QTest::newRow("sk_imhd") << "sk_imhd" << "bratislava" << "Nobelova";
     QTest::newRow("us_septa") << "us_septa" << QString() << "Pennsylvania Park Av";
     QTest::newRow("international_flightstats") << "international_flightstats" << QString() << "BRE";
-    // 19 service provider plugins tested, not tested:
-    //   at_oebb (needs a script instead of only regexps),
-    //   de_vrn (new departure urls are only for specific lines...)
 }
 
 void DeparturesTest::departuresTest()
@@ -268,7 +259,7 @@ void DeparturesTest::departuresTimeOffsetTest()
     QFETCH(int, timeOffset);
 
     // Connect source and wait until the dataUpdated slot gets called in testVisualization
-    QString sourceName = QString("Departures %1|stop=%2|timeOffset=%3")
+    QString sourceName = QString("Departures %1|stop=%2|timeoffset=%3")
             .arg(serviceProvider).arg(stopName).arg(timeOffset);
     QEventLoop loop;
     TestVisualization testVisualization;
