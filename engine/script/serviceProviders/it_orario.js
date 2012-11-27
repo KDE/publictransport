@@ -14,7 +14,7 @@ function getTimetable( values ) {
 	    "&boardType=" + (values.dataType == "arrivals" ? "arr" : "dep") +
 	    "&date=" + helper.formatDateTime(values.dateTime, "dd.MM.yy") +
 	    "&disableEquivs=no" +
-	    "&maxJourneys=" + values.maxCount +
+	    "&maxJourneys=" + values.count +
 	    "&start=yes&productsFilter=111111111";
 
     var request = network.createRequest( url );

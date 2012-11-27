@@ -8,13 +8,13 @@ function features() {
              PublicTransport.ProvidesStopPosition,
              PublicTransport.ProvidesStopsByGeoPosition];
 }
-  
+
 function getTimetable( values ) {
     // Construct an URL from the given values
     // Cannot tell date or time nor can arrivals be requested
     var url = baseUrl + "stationboard" +
             "?station=" + values.stop + "!" + // TODO "&id=" + values.stopID
-            "&limit=" + values.maxCount;
+            "&limit=" + values.count;
 
     // Create and connect a NetworkRequest object for the URL
     var request = network.createRequest( url );
@@ -99,7 +99,7 @@ function getJourneys( values ) {
             "&date=" + helper.formatDateTime(values.dateTime, "yyyy-MM-dd") +
             "&time=" + helper.formatDateTime(values.dateTime, "hh:mm") +
             "&isArrivalTime=" + (values.dataType == "arrivals" ? "1" : "0") +
-            "&limit=" + Math.min(6, values.maxCount); // Can be 1-6
+            "&limit=" + Math.min(6, values.count); // Can be 1-6
 
     // Create a NetworkRequest object for the URL
     var request = network.createRequest( url );

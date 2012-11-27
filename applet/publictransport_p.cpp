@@ -898,7 +898,7 @@ void PublicTransportAppletPrivate::reconnectSource()
     stopIndexToSourceName.clear();
     for( int i = 0; i < stops.count(); ++i ) {
         QString stopValue = stopIDs[i].isEmpty() ? stops[i] : stopIDs[i];
-        QString currentSource = QString( "%4 %1|stop=%2|maxcount=%3" )
+        QString currentSource = QString( "%4 %1|stop=%2|count=%3" )
                 .arg( providerId ).arg( stopValue ).arg( settings.maximalNumberOfDepartures() )
                 .arg( settings.departureArrivalListType() == ArrivalList
                         ? "Arrivals" : "Departures" );

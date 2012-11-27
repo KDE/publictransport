@@ -49,7 +49,7 @@ var __hafas_stopsuggestions = function(hafas) {
         **/
         get: function( values, options ) {
             HafasPrivate.checkValues( values,
-                    {optional: {stop: 'string', maxCount: 'number',
+                    {optional: {stop: 'string', count: 'number',
                                 longitude: 'number', latitude: 'number',
                                 distance: 'number'}} );
             var byGeoPosition = values.stop == undefined &&
@@ -184,7 +184,7 @@ var __hafas_stopsuggestions = function(hafas) {
 
             var query = "performLocating=2" +
                 "&tpl=stop2json" +
-                "&look_maxno=" + (values.maxCount != undefined ? Math.min(values.maxCount, 999) : 200) +
+                "&look_maxno=" + (values.count != undefined ? Math.min(values.count, 999) : 200) +
                 "&look_maxdist=" + (values.distance != undefined ? values.distance : 500) + // maximal distance in meters
                 "&look_stopclass=11111111111111" + // All products
                 "&look_nv=deleteDoubles|yes" + //get_stopweight|yes" +

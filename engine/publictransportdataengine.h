@@ -996,7 +996,8 @@ The following parameters are allowed:<br />
 <table>
 <tr><td><i>stop</i></td> <td>The name or ID of the stop to get departures/arrivals for.</td></tr>
 <tr><td><i>city</i></td> <td>The city to get departures/arrivals for, if needed.</td></tr>
-<tr><td><i>maxcount</i></td> <td>The maximum departure/arrival count to get.</td></tr>
+<tr><td><i>count</i></td> <td>The number of departures/arrivals to get.
+ @note This is just a hint for the provider.</td></tr>
 <tr><td><i>timeoffset</i></td> <td>The offset in minutes from now for the first departure /
 arrival to get.</td></tr>
 <tr><td><i>time</i></td> <td>The time of the first departure/arrival to get ("hh:mm"). This uses
@@ -1010,7 +1011,7 @@ QDateTime::toString()).</td></tr>
 <b>"Departures de_db|stop=Pappelstraße, Bremen"</b><br />
 Gets departures for the stop "Pappelstraße, Bremen" using the service provider db.de.<br /><br />
 
-<b>"Arrivals de_db|stop=Leipzig|timeoffset=5|maxcount=99"</b><br />
+<b>"Arrivals de_db|stop=Leipzig|timeoffset=5|count=99"</b><br />
 Gets arrivals for the stop "Leipzig" using db.de, the first possible arrival is in five minutes
 from now, the maximum arrival count is 99.<br /><br />
 
@@ -1018,7 +1019,7 @@ from now, the maximum arrival count is 99.<br /><br />
 Gets departures for the stop "Frankfurt (Main) Speyerer Straße" using rmv.de, the first possible
 departure is at eight o'clock.<br /><br />
 
-<b>"Departures de_rmv|stop=3000019|maxcount=20|timeoffset=1"</b><br />
+<b>"Departures de_rmv|stop=3000019|count=20|timeoffset=1"</b><br />
 Gets departures for the stop with the ID "3000019", the first possible departure is in one minute
 from now, the maximum departure count is 20.<br /><br />
 
@@ -1146,7 +1147,8 @@ The following parameters are allowed:<br />
 <tr><td><i>originstop</i></td> <td>The name or ID of the origin stop.</td></tr>
 <tr><td><i>targetstop</i></td> <td>The name or ID of the target stop.</td></tr>
 <tr><td><i>city</i></td> <td>The city to get journeys for, if needed.</td></tr>
-<tr><td><i>maxcount</i></td> <td>The maximum journey count to get.</td></tr>
+<tr><td><i>count</i></td> <td>The number of journeys to get.
+ @note This is just a hint for the provider</td></tr>
 <tr><td><i>timeoffset</i></td>
 <td>The offset in minutes from now for the first journey to get.</td></tr>
 <tr><td><i>time</i></td> <td>The time for the first journey to get (in format "hh:mm").</td></tr>
@@ -1160,7 +1162,7 @@ The following parameters are allowed:<br />
 Gets journeys from stop "Pappelstraße, Bremen" to stop "Kirchweg, Bremen"
 using the service provider db.de.<br /><br />
 
-<b>"Journeys de_db|originstop=Leipzig|targetstop=Hannover|timeoffset=5|maxCount=99"</b><br />
+<b>"Journeys de_db|originstop=Leipzig|targetstop=Hannover|timeoffset=5|count=99"</b><br />
 Gets journeys from stop "Leipzig" to stop "Hannover" using db.de, the first
 possible journey departs in five minutes from now, the maximum journey count is 99.<br /><br />
 

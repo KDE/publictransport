@@ -15,7 +15,7 @@ var __hafas_journeys = function(hafas) {
         get: function( values, options ) {
             HafasPrivate.checkValues( values,
                     {required: {originStop: 'string', targetStop: 'string'}},
-                    {optional: {maxCount: 'number', dataType: 'string'}} );
+                    {optional: {count: 'number', dataType: 'string'}} );
             var options = HafasPrivate.prepareOptions( options, processor.options, hafas.options );
             var url = processor.url( values, options );
             var userUrl = processor.userUrl( values, options );
@@ -38,7 +38,7 @@ var __hafas_journeys = function(hafas) {
             postData += '<ReqT a="' + (values.dataType == "arrivals" ? '1' : '0') + '" ' +
                 'date="' + helper.formatDateTime(values.dateTime, "yyyy.MM.dd") + '" ' +
                 'time="' + helper.formatDateTime(values.dateTime, "hh:mm") + '" />';
-            postData += '<RFlags b="0" f="' + Math.max(6, values.maxCount) +
+            postData += '<RFlags b="0" f="' + Math.max(6, values.count) +
                 '" chExtension="0" sMode="N" />';
             postData += '</ConReq>';
             postData += '</ReqC>';

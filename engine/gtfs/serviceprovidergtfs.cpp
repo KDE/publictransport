@@ -491,7 +491,7 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
             "LIMIT %3" )
             .arg( stopId )
             .arg( time.hour() * 60 * 60 + time.minute() * 60 + time.second() )
-            .arg( request->maxCount() )
+            .arg( request->count() )
             .arg( request->parseMode() == ParseForArrivals ? '<' : '>' ) // For arrivals route_stops/route_times need stops before the home stop
             .arg( routeSeparator );
     if ( !query.prepare(queryString) || !query.exec() ) {

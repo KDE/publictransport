@@ -85,16 +85,16 @@ class AbstractTimetableItemRequest : public AbstractRequest {
 public:
     AbstractTimetableItemRequest( const QString &sourceName = QString(),
                                   ParseDocumentMode parseMode = ParseInvalid )
-            : AbstractRequest(sourceName, parseMode), m_maxCount(20) {};
+            : AbstractRequest(sourceName, parseMode), m_count(20) {};
     AbstractTimetableItemRequest( const QString &sourceName, const QString &stop,
-                                  const QDateTime &dateTime, int maxCount,
+                                  const QDateTime &dateTime, int count,
                                   const QString &city = QString(),
                                   ParseDocumentMode parseMode = ParseInvalid )
             : AbstractRequest(sourceName, parseMode),
-              m_dateTime(dateTime), m_stop(stop), m_maxCount(maxCount), m_city(city) {};
+              m_dateTime(dateTime), m_stop(stop), m_count(count), m_city(city) {};
     AbstractTimetableItemRequest( const AbstractTimetableItemRequest &other )
             : AbstractRequest(other), m_dateTime(other.m_dateTime), m_stop(other.m_stop),
-              m_maxCount(other.m_maxCount), m_city(other.m_city) {};
+              m_count(other.m_count), m_city(other.m_city) {};
 
     virtual ~AbstractTimetableItemRequest() {};
 
@@ -114,8 +114,11 @@ public:
     /** @brief The stop name of the request. */
     QString stop() const { return m_stop; };
 
-    /** @brief The maximum number of result items, eg. departures or stop suggestions. */
-    int maxCount() const { return m_maxCount; };
+    /**
+     * @brief The number of timetable items to request, eg. departures or stop suggestions.
+     * @note This is just a hint for the provider
+     **/
+    int count() const { return m_count; };
 
     /**
      * @brief The city to get stop suggestions for.
@@ -126,13 +129,13 @@ public:
     void setDateTime( const QDateTime &dateTime ) { m_dateTime = dateTime; };
     void setStop( const QString &stop ) { m_stop = stop; };
     void setCity( const QString &city ) { m_city = city; };
-    void setMaxCount( int maxCount ) { m_maxCount = maxCount; };
+    void setCount( int count ) { m_count = count; };
 
 protected:
     /** @brief The date and time to get results for. */
     QDateTime m_dateTime;
     QString m_stop;
-    int m_maxCount;
+    int m_count;
     QString m_city;
 };
 
@@ -142,9 +145,9 @@ public:
                            ParseDocumentMode parseMode = ParseForStopSuggestions )
         : AbstractTimetableItemRequest(sourceName, parseMode) {};
     StopSuggestionRequest( const QString &sourceName, const QString &stop,
-                           int maxCount, const QString &city = QString(),
+                           int count, const QString &city = QString(),
                            ParseDocumentMode parseMode = ParseForStopSuggestions )
-        : AbstractTimetableItemRequest(sourceName, stop, QDateTime(), maxCount, city, parseMode) {};
+        : AbstractTimetableItemRequest(sourceName, stop, QDateTime(), count, city, parseMode) {};
     StopSuggestionRequest( const StopSuggestionRequest &other )
         : AbstractTimetableItemRequest(other) {};
 
@@ -166,9 +169,9 @@ public:
             : StopSuggestionRequest(sourceName, parseMode),
               m_longitude(0.0), m_latitude(0.0), m_distance(5000) {};
     StopsByGeoPositionRequest( const QString &sourceName, qreal longitude, qreal latitude,
-                               int maxCount = 200, int distance = 5000,
+                               int count = 200, int distance = 5000,
                                ParseDocumentMode parseMode = ParseForStopSuggestions )
-            : StopSuggestionRequest(sourceName, QString(), maxCount, QString(), parseMode),
+            : StopSuggestionRequest(sourceName, QString(), count, QString(), parseMode),
               m_longitude(longitude), m_latitude(latitude), m_distance(distance) {};
     StopsByGeoPositionRequest( const StopsByGeoPositionRequest &request )
             : StopSuggestionRequest(request),
@@ -207,10 +210,10 @@ public:
                       ParseDocumentMode parseMode = ParseForDepartures )
         : AbstractTimetableItemRequest(sourceName, parseMode) {};
     DepartureRequest( const QString &sourceName, const QString &stop,
-                      const QDateTime &dateTime, int maxCount,
+                      const QDateTime &dateTime, int count,
                       const QString &city = QString(),
                       ParseDocumentMode parseMode = ParseForDepartures )
-        : AbstractTimetableItemRequest(sourceName, stop, dateTime, maxCount, city, parseMode) {};
+        : AbstractTimetableItemRequest(sourceName, stop, dateTime, count, city, parseMode) {};
     DepartureRequest( const DepartureRequest &info ) : AbstractTimetableItemRequest(info) {};
 
     virtual AbstractRequest *clone() const { return new DepartureRequest(*this); };
@@ -230,10 +233,10 @@ public:
                     ParseDocumentMode parseMode = ParseForArrivals )
         : DepartureRequest(sourceName, parseMode) {};
     ArrivalRequest( const QString &sourceName, const QString &stop,
-                    const QDateTime &dateTime, int maxCount,
+                    const QDateTime &dateTime, int count,
                     const QString &city = QString(),
                     ParseDocumentMode parseMode = ParseForArrivals )
-        : DepartureRequest(sourceName, stop, dateTime, maxCount, city, parseMode) {};
+        : DepartureRequest(sourceName, stop, dateTime, count, city, parseMode) {};
 
     virtual AbstractRequest *clone() const { return new ArrivalRequest(*this); };
     virtual QString argumentsString() const;
@@ -259,10 +262,10 @@ public:
     };
 
     JourneyRequest( const QString &sourceName, const QString &startStop,
-            const QString &targetStop, const QDateTime &dateTime, int maxCount,
+            const QString &targetStop, const QDateTime &dateTime, int count,
             const QString &urlToUse, const QString &city = QString(),
             ParseDocumentMode parseMode = ParseForJourneysByDepartureTime )
-        : AbstractTimetableItemRequest(sourceName, startStop, dateTime, maxCount, city, parseMode),
+        : AbstractTimetableItemRequest(sourceName, startStop, dateTime, count, city, parseMode),
           m_targetStop(targetStop), m_urlToUse(urlToUse), m_roundTrips(0)
     {
     };

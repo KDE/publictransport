@@ -253,7 +253,7 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
             "getTimetable( values )",
             i18nc("@info The description for the 'getTimetable' function",
                   "Requests and parses departure/arrival documents. The argument has the "
-                  "following properties: stop, dateTime (Date object), maxCount, dataType "
+                  "following properties: stop, dateTime (Date object), count, dataType "
                   "('departures' or 'arrivals'), city.<nl/>"
                   "This function is called by the data engine. Found departures/arrivals can be "
                   "handed over to the data engine like this:<nl/>"
@@ -306,7 +306,7 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
             i18nc("@info The description for the 'getJourneys' function",
                   "Requests and parses journey documents. The argument has the "
                   "following properties: originStop, targetStop, dateTime (Date object), "
-                  "maxCount, dataType, city.<nl/>"
+                  "count, dataType, city.<nl/>"
                   "This function is called by the data engine. Found journeys can "
                   "be handed over to the data engine like this:<nl/>"
                   "<icode>  // Add timetable data to the result set</icode><nl/>"
@@ -330,7 +330,7 @@ void JavaScriptCompletionModel::initGlobalFunctionCompletion() {
             "getStopSuggestions( values )",
             i18nc("@info The description for the 'getStopSuggestions' function",
                   "Requests and parses stop suggestion documents. The argument has the "
-                  "following properties: stop, maxCount, city.<nl/>"
+                  "following properties: stop, count, city.<nl/>"
                   "This function is called by the data engine. The parameter "
                   "contains the contents of the document body. Found stop data "
                   "can be handed over to the data engine like this:<nl/>"

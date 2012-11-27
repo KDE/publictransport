@@ -32,7 +32,7 @@ var __hafas_timetable = function(hafas) {
         get: function( values, options ) {
             HafasPrivate.checkValues( values,
                     {required: {stop: 'string'},
-                     optional: {dateTime: 'object', maxCount: 'number'}} );
+                     optional: {dateTime: 'object', count: 'number'}} );
             var options = HafasPrivate.prepareOptions( options,
 		    processor.options, hafas.options );
             var url = processor.url( values, options );
@@ -81,7 +81,7 @@ var __hafas_timetable = function(hafas) {
                 query += "&date=" + helper.formatDateTime(values.dateTime, options.urlDateFormat) +
                          "&time=" + helper.formatDateTime(values.dateTime, options.urlTimeFormat);
             }
-            query += "&maxJourneys=" + Math.max(20, values.maxCount == undefined ? 0 : values.maxCount) + // Maximum number of results
+            query += "&maxJourneys=" + Math.max(20, values.count == undefined ? 0 : values.count) + // Maximum number of results
                 "&disableEquivs=yes" + // Do not use nearby stations
                 (options.layout == undefined ? "" : ("&L=" + options.layout)) + // Specify the output layout
                 "&start=yes" + // Start the request instead of showing a form
@@ -525,7 +525,7 @@ var __hafas_timetable = function(hafas) {
                         // First get an URL to the mobile version of the departure board
                         // which contains traininfo.exe URLs
                         var urlValues = values;
-                        urlValues.maxCount = options.batchSize;
+                        urlValues.count = options.batchSize;
                         var url = processor.url( urlValues, options );
 
                         // Download and parse new data and add it to the old cached items

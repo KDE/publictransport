@@ -353,7 +353,7 @@ public:
         const qreal distance = qBound( 500, qCeil(2 * radius * angle), 20000 );
 
         // Connect data source
-        dataSource = QString("Stops %1|latitude=%2|longitude=%3|distance=%4|maxcount=999")
+        dataSource = QString("Stops %1|latitude=%2|longitude=%3|distance=%4|count=999")
                 .arg(serviceProvider)
                 .arg(viewBox.center().latitude(unit))
                 .arg(viewBox.center().longitude(unit))

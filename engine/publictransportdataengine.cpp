@@ -951,7 +951,7 @@ bool PublicTransportEngine::enoughDataAvailable( DataSource *dataSource,
     }
 
     AbstractTimetableItemRequest *request = sourceData.request;
-    return timetableDataSource->enoughDataAvailable( request->dateTime(), request->maxCount() );
+    return timetableDataSource->enoughDataAvailable( request->dateTime(), request->count() );
 }
 
 bool PublicTransportEngine::updateTimetableDataSource( const SourceRequestData &data )
@@ -964,7 +964,7 @@ bool PublicTransportEngine::updateTimetableDataSource( const SourceRequestData &
         TimetableDataSource *dataSource =
                 dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
         dataSource->addUsingDataSource( QSharedPointer<AbstractRequest>(data.request->clone()),
-                                        data.name, data.request->dateTime(), data.request->maxCount() );
+                                        data.name, data.request->dateTime(), data.request->count() );
         setData( data.name, dataSource->data() );
     } else if ( m_runningSources.contains(nonAmbiguousName) ) {
         // Source gets already processed
@@ -978,7 +978,7 @@ bool PublicTransportEngine::updateTimetableDataSource( const SourceRequestData &
                 : new TimetableDataSource(nonAmbiguousName);
         dataSource->clear();
         dataSource->addUsingDataSource( QSharedPointer<AbstractRequest>(data.request->clone()),
-                                        data.name, data.request->dateTime(), data.request->maxCount() );
+                                        data.name, data.request->dateTime(), data.request->count() );
         m_dataSources[ nonAmbiguousName ] = dataSource;
 
         // Start the request
@@ -1088,9 +1088,9 @@ QString PublicTransportEngine::fixProviderId( const QString &providerId )
 
 QString PublicTransportEngine::disambiguateSourceName( const QString &sourceName )
 {
-    // Remove maxcount argument
+    // Remove count argument
     QString ret = sourceName;
-    ret.remove( QRegExp("(maxcount=[^\\|]+)") );
+    ret.remove( QRegExp("(count=[^\\|]+)") );
 
     // Round time parameter values to 15 minutes precision
     QRegExp rx( "(time=[^\\|]+|datetime=[^\\|]+)" );
@@ -1160,8 +1160,8 @@ QString PublicTransportEngine::disambiguateSourceName( const QString &sourceName
     if ( parameters.contains(QLatin1String("datetime")) ) {
         ret += "|datetime=" + parameters["datetime"];
     }
-    if ( parameters.contains(QLatin1String("maxcount")) ) {
-        ret += "|maxcount=" + parameters["maxcount"];
+    if ( parameters.contains(QLatin1String("count")) ) {
+        ret += "|count=" + parameters["count"];
     }
     if ( parameters.contains(QLatin1String("longitude")) ) {
         ret += "|longitude=" + parameters["longitude"];
@@ -1396,12 +1396,12 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                     if ( !request->dateTime().isValid() ) {
                         request->setDateTime( QDateTime::fromString(parameterValue, Qt::ISODate) );
                     }
-                } else if ( parameterName == QLatin1String("maxcount") ) {
+                } else if ( parameterName == QLatin1String("count") ) {
                     bool ok;
-                    request->setMaxCount( parameterValue.toInt(&ok) );
+                    request->setCount( parameterValue.toInt(&ok) );
                     if ( !ok ) {
-                        kWarning() << "Bad value for 'maxcount' in source name:" << parameterValue;
-                        request->setMaxCount( 20 );
+                        kWarning() << "Bad value for 'count' in source name:" << parameterValue;
+                        request->setCount( 20 );
                     }
                 } else if ( dynamic_cast<StopsByGeoPositionRequest*>(request) ) {
                     StopsByGeoPositionRequest *stopRequest =

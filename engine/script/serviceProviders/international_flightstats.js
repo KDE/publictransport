@@ -103,7 +103,7 @@ function parseTimetable( html ) {
 
 function getStopSuggestions( values ) {
     var url = "http://www.flightstats.com/go/Suggest/airportSuggest.do" +
-            "?desiredResults=" + values.maxCount +
+            "?desiredResults=" + values.count +
             "&searchSubstring=" + values.stop;
     var document = network.getSynchronous( url );
     if ( network.lastDownloadAborted ) {

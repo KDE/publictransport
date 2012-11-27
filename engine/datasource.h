@@ -226,7 +226,7 @@ public:
     virtual ~TimetableDataSource();
 
     void addUsingDataSource( const QSharedPointer<AbstractRequest> &request,
-                             const QString &sourceName, const QDateTime &dateTime, int maxCount );
+                             const QString &sourceName, const QDateTime &dateTime, int count );
     void removeUsingDataSource( const QString &sourceName );
     int usageCount() const { return m_dataSources.count(); };
     QStringList usingDataSources() const { return m_dataSources.keys(); };
@@ -318,12 +318,12 @@ public:
 private:
     struct SourceData {
         SourceData( const QSharedPointer<AbstractRequest> &request = QSharedPointer<AbstractRequest>(),
-                    const QDateTime &dateTime = QDateTime(), int maxCount = 1 )
-                : request(request), dateTime(dateTime), maxCount(maxCount) {}
+                    const QDateTime &dateTime = QDateTime(), int count = 1 )
+                : request(request), dateTime(dateTime), count(count) {}
 
         QSharedPointer< AbstractRequest > request;
         QDateTime dateTime;
-        int maxCount;
+        int count;
     };
 
     QHash< uint, TimetableData > m_additionalData;

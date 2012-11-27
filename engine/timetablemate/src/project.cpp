@@ -218,7 +218,7 @@ public:
                     "            \"&boardType=\" + (values.dataType == \"arrivals\" ? \"arr\" : \"dep\") +\n"
                     "            \"&date=\" + helper.formatDateTime(values.dateTime, \"dd.MM.yy\") +\n"
                     "            \"&time=\" + helper.formatDateTime(values.dateTime, \"hh:mm\") +\n"
-                    "            \"&maxJourneys=\" + values.maxCount;\n"
+                    "            \"&maxJourneys=\" + values.count;\n"
                     "\n"
                     "    // Create a NetworkRequest object for the URL\n"
                     "    var request = network.createRequest( url );\n"

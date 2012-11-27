@@ -97,9 +97,9 @@ QVariantHash ProvidersDataSource::data() const
 
 void TimetableDataSource::addUsingDataSource( const QSharedPointer< AbstractRequest > &request,
                                               const QString &sourceName, const QDateTime &dateTime,
-                                              int maxCount )
+                                              int count )
 {
-    m_dataSources[ sourceName ] = SourceData( request, dateTime, maxCount );
+    m_dataSources[ sourceName ] = SourceData( request, dateTime, count );
 }
 
 void TimetableDataSource::removeUsingDataSource( const QString &sourceName )
