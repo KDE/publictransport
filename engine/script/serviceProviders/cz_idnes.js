@@ -17,7 +17,11 @@ function getTimetable( values ) {
     network.get( request );
 }
 
-function parseTimetable( html ) {
+function parseTimetable( html, hasError, errorString ) {
+    if ( hasError ) {
+        throw Error( errorString );
+    }
+
     if ( helper.findFirstHtmlTag(html, "a",
          {attributes: {"class": "selectobject", "title": "Input specification"},
           contentsRegExp: "The input is ambiguous, please specify it\."}).found )

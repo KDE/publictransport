@@ -94,7 +94,7 @@ void NetworkRequest::abort()
     m_mutex->unlockInline();
 
     emit aborted( timedOut );
-    emit finished();
+    emit finished( QByteArray(), true, i18nc("@info/plain", "The request was aborted") );
 }
 
 void NetworkRequest::slotReadyRead()
@@ -229,6 +229,8 @@ void NetworkRequest::slotFinished()
     if ( m_reply->url().isEmpty() ) {
         kWarning() << "Empty URL in QNetworkReply!";
     }
+    const bool hasError = m_reply->error() != QNetworkReply::NoError;
+    const QString errorString = m_reply->errorString();
     m_reply->deleteLater();
     m_reply = 0;
 
@@ -236,7 +238,7 @@ void NetworkRequest::slotFinished()
     const QByteArray data = m_data;
     m_mutex->unlockInline();
 
-    emit finished( data, statusCode, size );
+    emit finished( data, hasError, errorString, statusCode, size );
 }
 
 void NetworkRequest::started( QNetworkReply* reply, int timeout )
@@ -400,8 +402,8 @@ NetworkRequest* Network::createRequest( const QString& url, const QString &userU
     NetworkRequest::Ptr requestPtr( request );
     m_requests << requestPtr;
     connect( request, SIGNAL(started()), this, SLOT(slotRequestStarted()) );
-    connect( request, SIGNAL(finished(QByteArray,int,int)),
-             this, SLOT(slotRequestFinished(QByteArray,int,int)) );
+    connect( request, SIGNAL(finished(QByteArray,bool,QString,int,int)),
+             this, SLOT(slotRequestFinished(QByteArray,bool,QString,int,int)) );
     connect( request, SIGNAL(aborted()), this, SLOT(slotRequestAborted()) );
     connect( request, SIGNAL(redirected(QUrl)), this, SLOT(slotRequestRedirected(QUrl)) );
     return request;
@@ -430,7 +432,8 @@ void Network::slotRequestStarted()
     emit requestStarted( sharedRequest );
 }
 
-void Network::slotRequestFinished( const QByteArray &data, int statusCode, int size )
+void Network::slotRequestFinished( const QByteArray &data, bool error, const QString &errorString, 
+                                   int statusCode, int size )
 {
     NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
     NetworkRequest::Ptr sharedRequest = getSharedRequest( request );
@@ -446,7 +449,7 @@ void Network::slotRequestFinished( const QByteArray &data, int statusCode, int s
     m_finishedRequests << sharedRequest;
     m_mutex->unlockInline();
 
-    emit requestFinished( sharedRequest, data, timestamp, statusCode, size );
+    emit requestFinished( sharedRequest, data, error, errorString, timestamp, statusCode, size );
 
     if ( !hasRunningRequests() ) {
         emit allRequestsFinished();

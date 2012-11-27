@@ -39,7 +39,11 @@ function typeOfVehicleFromString( string ) {
     }
 }
 
-function parseTimetable( html ) {
+function parseTimetable( html, hasError, errorString ) {
+    if ( hasError ) {
+        throw Error( errorString );
+    }
+
     var returnValue = new Array;
     // Dates are set from today, not the requested date. They need to be adjusted by X days,
     // where X is the difference in days between today and the requested date.

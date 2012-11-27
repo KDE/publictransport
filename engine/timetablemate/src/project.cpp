@@ -234,7 +234,7 @@ public:
                     "\n"
                     "// This function is connected to the finished signal of network requests\n"
                     "// started in getTimetable()\n"
-                    "function parseTimetable( html ) {\n"
+                    "function parseTimetable( html, hasError, errorString ) {\n"
                     "    // TODO: Parse the contents of the received document and add results \n"
                     "    // using result.addData()\n"
                     "    // Use helper.findHtmlTags(), helper.findFirstHtmlTag() or \n"

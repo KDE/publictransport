@@ -104,6 +104,7 @@ protected slots:
                               int index, const QVariantMap& map );
 
     void requestFinished( const NetworkRequest::Ptr &request, const QByteArray &data = QByteArray(),
+                          bool error = false, const QString &errorString = QString(),
                           const QDateTime &timestamp = QDateTime(),
                           int statusCode = 200, int size = 0 );
     void synchronousRequestFinished( const QString &url, const QByteArray &data = QByteArray(),

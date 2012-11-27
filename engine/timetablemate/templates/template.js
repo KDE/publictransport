@@ -24,7 +24,11 @@ function getUrlForDetailedJourneyResults( html ) {
 
 // This function parses a given HTML document for timetable infos.
 // The infos are added to the result-array as shown below.
-function parseTimetable( html ) {
+function parseTimetable( html, hasError, errorString ) {
+    if ( hasError ) {
+        throw Error( errorString );
+    }
+
     // Add departure
     // A list of all available key-strings to use in the result-array is at
     //    /publictransport-data-engine-sources/enums.h.

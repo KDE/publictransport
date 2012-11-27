@@ -30,7 +30,10 @@ hafas.timetable.options.format = Hafas.HtmlMobileFormat;
 hafas.routeData.options.format = Hafas.HtmlMobileFormat;
 
 // Implement parser for departure/arrival data in mobile HTML format
-hafas.timetable.parser.parseHtmlMobile = function( html ) {
+hafas.timetable.parser.parseHtmlMobile = function( html, hasError, errorString ) {
+    if ( hasError ) {
+        throw Error( errorString );
+    }
     if ( html.length == 0 ) {
         throw Error("Received HTML document is empty");
     }

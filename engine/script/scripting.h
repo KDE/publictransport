@@ -450,11 +450,14 @@ Q_SIGNALS:
      * @brief Emitted when this request has finished.
      *
      * @param data The complete data downloaded for this request.
-     * @param statusCode The HTTP status code received.
+     * @param error @c True, if there was an error executing the request, @c false otherwise.
+     * @param errorString A human readable description of the error if @p error is @c true.
+     * @param statusCode The HTTP status code that was received or -1 if there was an error.
      * @param size The size in bytes of the received data.
      * @ingroup scripting
      **/
-    void finished( const QByteArray &data = QByteArray(), int statusCode = 200, int size = 0 );
+    void finished( const QByteArray &data = QByteArray(), bool error = false,
+                   const QString &errorString = QString(), int statusCode = -1, int size = 0 );
 
     /**
      * @brief Emitted when new data is available for this request.
@@ -701,6 +704,9 @@ Q_SIGNALS:
      * This signal is @em not emitted if the network gets accessed synchronously.
      * @param request The request that has finished.
      * @param data Received data decoded to a string.
+     * @param error @c True, if there was an error executing the request, @c false otherwise.
+     * @param errorString A human readable description of the error if @p error is @c true.
+     * @param timestamp The date and time on which the request was finished.
      * @param statusCode The HTTP status code received.
      * @param size The size in bytes of the received data.
      * @ingroup scripting
@@ -708,6 +714,7 @@ Q_SIGNALS:
      **/
     void requestFinished( const NetworkRequest::Ptr &request,
                           const QByteArray &data = QByteArray(),
+                          bool error = false, const QString &errorString = QString(),
                           const QDateTime &timestamp = QDateTime(),
                           int statusCode = 200, int size = 0 );
 
@@ -778,7 +785,8 @@ public Q_SLOTS:
 
 protected Q_SLOTS:
     void slotRequestStarted();
-    void slotRequestFinished( const QByteArray &data = QByteArray(), int statusCode = 200,
+    void slotRequestFinished( const QByteArray &data = QByteArray(), bool error = false,
+                              const QString &errorString = QString(), int statusCode = -1,
                               int size = 0 );
     void slotRequestAborted();
     void slotRequestRedirected( const QUrl &newUrl );

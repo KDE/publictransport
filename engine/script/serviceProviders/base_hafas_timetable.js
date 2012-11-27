@@ -102,9 +102,16 @@ var __hafas_timetable = function(hafas) {
             *
             * @param {String} xml Contents of a departures/arrivals document in XML format received from
             *   the HAFAS provider.
+            * @param {Boolean} hasError Whether or not there was an error executing
+            *   the network request.
+            * @param {String} errorString A human readable description of the error, if any.
             * @return {Boolean} True, if departures/arrivals were found, false otherwise.
             **/
-            parseXml: function( xml ) {
+            parseXml: function( xml, hasError, errorString ) {
+                if ( hasError ) {
+                    throw Error( errorString );
+                }
+
                 var options = HafasPrivate.prepareOptions( processor.options, hafas.options );
                 if ( !HafasPrivate.expectFormat(Hafas.XmlFormat, xml) ) {
                     if ( HafasPrivate.isHtml(xml) &&
@@ -213,11 +220,18 @@ var __hafas_timetable = function(hafas) {
             * Found departures/arrivals will be added to the "result" object.
             * @note The script extension "qt.xml" is needed.
             *
-            * @param {String} xml Contents of a departures/arrivals document in XML format received from
-            *   the HAFAS provider.
+            * @param {String} xml Contents of a departures/arrivals document in XML format 
+            *   received from the HAFAS provider.
+            * @param {Boolean} hasError Whether or not there was an error executing
+            *   the network request.
+            * @param {String} errorString A human readable description of the error, if any.
             * @return {Boolean} True, if departures/arrivals were found, false otherwise.
             **/
-            parseXmlResC: function( xml ) {
+            parseXmlResC: function( xml, hasError, errorString ) {
+                if ( hasError ) {
+                    throw Error( errorString );
+                }
+
                 if ( !HafasPrivate.expectFormat(Hafas.XmlFormat, xml) ) {
                     if ( HafasPrivate.isHtml(xml) ) {
                         return processor.parseHtml( xml );

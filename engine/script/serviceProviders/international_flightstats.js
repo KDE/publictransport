@@ -16,7 +16,11 @@ function getTimetable( values ) {
     network.get( request );
 }
 
-function parseTimetable( html ) {
+function parseTimetable( html, hasError, errorString ) {
+    if ( hasError ) {
+        throw Error( errorString );
+    }
+
     // Decode document
     html = helper.decode( html, "utf8" );
 

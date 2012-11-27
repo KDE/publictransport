@@ -117,7 +117,11 @@ var __hafas_stopsuggestions = function(hafas) {
             *   the HAFAS provider.
             * @return {Boolean} True, if stop suggestions were found, false otherwise.
             **/
-            parseJavaScript: function( js ) {
+            parseJavaScript: function( js, hasError, errorString ) {
+                if ( hasError ) {
+                    throw Error( errorString );
+                }
+
                 // First check format and cut away the JavaScript code (do not eval it)
                 if ( js.left(23).string() != "SLs.sls={\"suggestions\":" ||
                         js.right(23).string() != "};SLs.showSuggestion();" )
@@ -205,7 +209,11 @@ var __hafas_stopsuggestions = function(hafas) {
             *   the HAFAS provider.
             * @return {Boolean} True, if stop suggestions were found, false otherwise.
             **/
-            parseJavaScript: function( js ) {
+            parseJavaScript: function( js, hasError, errorString ) {
+                if ( hasError ) {
+                    throw Error( errorString );
+                }
+
                 if ( js.length < 2 ) {
                     throw Error("Hafas.stopSuggestions.parseGeoPosition(): " +
                             "Incorrect stop suggestions document received");

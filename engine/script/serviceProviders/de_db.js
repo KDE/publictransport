@@ -22,7 +22,10 @@ var getAdditionalData = hafas.timetable.additionalData.get;
 var getJourneys = hafas.journeys.get;
 
 // Needed to get route data URLs for additional data
-hafas.timetable.parser.parseHtmlMobile = function( html ) {
+hafas.timetable.parser.parseHtmlMobile = function( html, hasError, errorString ) {
+    if ( hasError ) {
+        throw Error( errorString );
+    }
     if ( html.length == 0 ) {
         throw Error("hafas.parseTimetableMobile(): Received HTML document is empty");
     }

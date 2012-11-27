@@ -17,7 +17,11 @@ function getTimetable( values ) {
     network.get( request );
 }
 
-function parseTimetable( json ) {
+function parseTimetable( json, hasError, errorString ) {
+    if ( hasError ) {
+        throw Error( errorString );
+    }
+
     // Initialize regular expressions (compile them only once)
     var departureRegExp = /\["([^"]*)","([^"]*)","([^"]*)"\]/ig;
 

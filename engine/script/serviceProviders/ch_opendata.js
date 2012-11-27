@@ -24,7 +24,11 @@ function getTimetable( values ) {
     network.get( request );
 }
 
-function parseTimetable( jsonDocument ) {
+function parseTimetable( jsonDocument, hasError, errorString ) {
+    if ( hasError ) {
+        throw Error( errorString );
+    }
+
     // Decode the received QByteArray and parse it's JSON content
     jsonDocument = helper.decode( jsonDocument );
     var json = JSON.parse( jsonDocument );

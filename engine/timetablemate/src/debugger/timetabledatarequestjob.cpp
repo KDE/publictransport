@@ -253,8 +253,8 @@ void CallScriptFunctionJob::connectScriptObjects( bool doConnect )
     QMutexLocker locker( m_mutex );
     if ( doConnect ) {
         // Connect to request finished signals to store the time spent for network requests
-        connect( m_objects.network.data(), SIGNAL(requestFinished(NetworkRequest::Ptr,QByteArray,QDateTime,int,int)),
-                 this, SLOT(requestFinished(NetworkRequest::Ptr,QByteArray,QDateTime,int,int)) );
+        connect( m_objects.network.data(), SIGNAL(requestFinished(NetworkRequest::Ptr,QByteArray,bool,QString,QDateTime,int,int)),
+                 this, SLOT(requestFinished(NetworkRequest::Ptr,QByteArray,bool,QString,QDateTime,int,int)) );
         connect( m_objects.network.data(), SIGNAL(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)),
                  this, SLOT(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)) );
 
@@ -270,8 +270,8 @@ void CallScriptFunctionJob::connectScriptObjects( bool doConnect )
         connect( m_agent, SIGNAL(stopped(QDateTime,bool,bool,int,QString,QStringList)),
                  this, SLOT(scriptStopped(QDateTime,bool,bool,int,QString,QStringList)) );
     } else {
-        disconnect( m_objects.network.data(), SIGNAL(requestFinished(NetworkRequest::Ptr,QByteArray,QDateTime,int,int)),
-                    this, SLOT(requestFinished(NetworkRequest::Ptr,QByteArray,QDateTime,int,int)) );
+        disconnect( m_objects.network.data(), SIGNAL(requestFinished(NetworkRequest::Ptr,QByteArray,bool,QString,QDateTime,int,int)),
+                    this, SLOT(requestFinished(NetworkRequest::Ptr,QByteArray,bool,QString,QDateTime,int,int)) );
         disconnect( m_objects.network.data(), SIGNAL(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)),
                     this, SLOT(synchronousRequestFinished(QString,QByteArray,bool,int,int,int)) );
         disconnect( m_objects.helper.data(), SIGNAL(messageReceived(QString,QScriptContextInfo,QString,Helper::ErrorSeverity)),
@@ -498,18 +498,27 @@ void CallScriptFunctionJob::invalidDataReceived( Enums::TimetableInformation inf
 }
 
 void CallScriptFunctionJob::requestFinished( const NetworkRequest::Ptr &request,
-                                             const QByteArray &data, const QDateTime &timestamp,
-                                             int statusCode, int size )
+                                             const QByteArray &data,
+                                             bool error, const QString &errorString,
+                                             const QDateTime &timestamp, int statusCode, int size )
 {
     Q_UNUSED( data );
     emit asynchronousRequestWaitFinished( timestamp, statusCode, size );
 
     QMutexLocker locker( m_mutex );
-    m_additionalMessages << TimetableDataRequestMessage(
-            i18nc("@info/plain", "Download finished (status %1): %2, <link>%3</link>",
-                  statusCode, KGlobal::locale()->formatByteSize(size), request->url()),
-            TimetableDataRequestMessage::Information, QString(), -1,
-            TimetableDataRequestMessage::OpenLink, request->url() );
+    if ( error ) {
+        m_additionalMessages << TimetableDataRequestMessage(
+                i18nc("@info/plain", "Download failed (<message>%1</message>): <link>%2</link>",
+                      errorString, request->url()),
+                TimetableDataRequestMessage::Information, QString(), -1,
+                TimetableDataRequestMessage::OpenLink, request->url() );
+    } else {
+        m_additionalMessages << TimetableDataRequestMessage(
+                i18nc("@info/plain", "Download finished (status %1): %2, <link>%3</link>",
+                      statusCode, KGlobal::locale()->formatByteSize(size), request->url()),
+                TimetableDataRequestMessage::Information, QString(), -1,
+                TimetableDataRequestMessage::OpenLink, request->url() );
+    }
 }
 
 void CallScriptFunctionJob::synchronousRequestFinished( const QString &url, const QByteArray &data,

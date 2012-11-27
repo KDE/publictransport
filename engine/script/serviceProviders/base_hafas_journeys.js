@@ -113,7 +113,11 @@ var __hafas_journeys = function(hafas) {
         },
 
         parser: new HafasPrivate.Parser({
-            parseBinary: function( data ) {
+            parseBinary: function( data, hasError, errorString ) {
+                if ( hasError ) {
+                    throw Error( errorString );
+                }
+
                 if ( data.isEmpty() ) {
                     throw Error("hafas.journeys.parser.parseBinary(): Empty data received");
                 }
@@ -794,7 +798,11 @@ var __hafas_journeys = function(hafas) {
                 buffer.close();
             },
 
-            parseXml: function( xml ) {
+            parseXml: function( xml, hasError, errorString ) {
+                if ( hasError ) {
+                    throw Error( errorString );
+                }
+
                 var options = prepareOptions( undefined, public.journeys.options );
                 if ( !expectFormat(_formats.XmlFormat, xml) ) {
                     if ( isHtml(xml) )
@@ -838,7 +846,11 @@ var __hafas_journeys = function(hafas) {
                 return true;
             },
 
-            parse: function( js ) { // TODO rename to parseJson() and add format JSON?
+            parse: function( js, hasError, errorString ) { // TODO rename to parseJson() and add format JSON?
+                if ( hasError ) {
+                    throw Error( errorString );
+                }
+
                 // First check format and cut away the JavaScript code (do not eval it)
                 var begin = /^\s*BAHN_MNB\.fm\s*=\s*/.exec( js );
                 var end = /;\s*BAHN_MNB\.Callback\(\);\s*$/.exec( js );
