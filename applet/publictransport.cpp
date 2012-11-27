@@ -91,9 +91,6 @@ void PublicTransportApplet::init()
         }
     }
 
-    // Check for network connectivity
-    checkNetworkStatus();
-
     // Set popup icon
     if ( isIconified() ) {
         updatePopupIcon();
@@ -113,51 +110,6 @@ void PublicTransportApplet::themeChanged()
 {
     Q_D( PublicTransportApplet );
     d->applyTheme();
-}
-
-bool PublicTransportApplet::checkNetworkStatus()
-{
-    QString status = queryNetworkStatus();
-    if ( status == QLatin1String("unavailable") ) {
-        emit networkConnectionLost();
-        return false;
-    } else if ( status == QLatin1String("configuring") ) {
-        emit networkIsConfiguring();
-        return false;
-    } else if ( status == QLatin1String("activated") /*&& m_currentMessage == MessageError TODO*/ ) {
-        emit networkIsActivated();
-        return false;
-    } else {
-        kDebug() << "Unknown network status or no error message was shown" << status;
-        return true;
-    }
-}
-
-QString PublicTransportApplet::queryNetworkStatus()
-{
-    const QStringList interfaces = dataEngine( "network" )->sources();
-    if ( interfaces.isEmpty() ) {
-        return "unknown";
-    }
-
-    // Check if there is an activated interface or at least one that's
-    // currently being configured
-    QString status = "unavailable";
-    foreach( const QString &iface, interfaces ) {
-        QString sStatus = dataEngine( "network" )->query( iface )["ConnectionStatus"].toString();
-        if ( sStatus.isEmpty() ) {
-            return "unknown";
-        }
-
-        if ( sStatus == QLatin1String("Activated") ) {
-            status = "activated";
-            break;
-        } else if ( sStatus == QLatin1String("Configuring") ) {
-            status = "configuring";
-        }
-    }
-
-    return status;
 }
 
 void PublicTransportApplet::setSettings( const QString& serviceProviderID, const QString& stopName )
@@ -187,16 +139,6 @@ void PublicTransportApplet::setSettings( const StopSettingsList& stops,
     settings.setStops( stops );
     settings.setFilters( filters );
     setSettings( settings );
-}
-
-void PublicTransportApplet::noItemsTextClicked()
-{
-    Q_D( const PublicTransportApplet );
-
-    // Update the timetable if an error message inside the tree view has been clicked
-    if ( !d->isStateActive("networkActivated") ) {
-        updateDataSource();
-    }
 }
 
 void PublicTransportApplet::setupActions()
@@ -623,28 +565,8 @@ void PublicTransportApplet::handleDataError( const QString& /*sourceName*/,
             setAssociatedApplicationUrlForDepartures();
         }
 
-        QString error = data["errorMessage"].toString();
-        if ( error.isEmpty() ) {
-            if ( d->isStateActive("networkActivated") ) {
-                if ( d->settings.departureArrivalListType() == DepartureList ) {
-                    setConfigurationRequired( true, i18nc("@info", "Error parsing "
-                            "departure information or currently no departures") );
-                } else {
-                    setConfigurationRequired( true, i18nc("@info", "Error parsing "
-                            "arrival information or currently no arrivals") );
-                }
-            }
-        } else if ( checkNetworkStatus() ) {
-            if ( d->currentProviderData["type"] == QLatin1String("GTFS") ) {
-                d->timetable->setNoItemsText( i18nc("@info/plain",
-                        "There was an error:<nl/><message>%1</message><nl/><nl/>"
-                        "The GTFS feed database may need to be updated. Please wait.", error) );
-            } else {
-                d->timetable->setNoItemsText( i18nc("@info/plain",
-                        "There was an error:<nl/><message>%1</message><nl/><nl/>"
-                        "The server may be temporarily unavailable.", error) );
-            }
-        }
+        d->timetable->setNoItemsText( i18nc("@info/plain",
+                "There was an error:<nl/><message>%1</message>", data["errorMessage"].toString()) );
     }
 }
 

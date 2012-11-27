@@ -312,13 +312,11 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         QState *viewStateGroup = new QState( mainStateGroup );
         QState *departureDataStateGroup = new QState( mainStateGroup );
         QState *journeyDataStateGroup = new QState( mainStateGroup );
-        QState *networkStateGroup = new QState( mainStateGroup );
         states.insert( "mainStateGroup", mainStateGroup );
         states.insert( "providerStateGroup", providerStateGroup );
         states.insert( "viewStateGroup", viewStateGroup );
         states.insert( "departureDataStateGroup", departureDataStateGroup );
         states.insert( "journeyDataStateGroup", journeyDataStateGroup );
-        states.insert( "networkStateGroup", networkStateGroup );
 
         // Create View states
         QState *actionButtonsState = new QState( viewStateGroup );
@@ -372,25 +370,6 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         states.insert( "journeyDataWaiting", journeyDataWaitingState );
         states.insert( "journeyDataValid", journeyDataValidState );
         states.insert( "journeyDataInvalid", journeyDataInvalidState );
-
-        // Create network states
-        QState *networkStatusUnknownState = new QState( networkStateGroup );
-        QState *networkConfiguringState = new QState( networkStateGroup );
-        QState *networkActivatedState = new QState( networkStateGroup );
-        QState *networkNotActivatedState = new QState( networkStateGroup );
-        networkStateGroup->setInitialState( networkStatusUnknownState );
-        states.insert( "networkStatusUnknown", networkStatusUnknownState );
-        states.insert( "networkConfiguring", networkConfiguringState );
-        states.insert( "networkActivated", networkActivatedState );
-        states.insert( "networkNotActivated", networkNotActivatedState );
-
-        // Set text to be displayed if no data is present when the network state changes
-        networkConfiguringState->assignProperty( timetable, "noItemsText",
-                i18nc("@info", "Network gets configured. Please wait...") );
-        networkNotActivatedState->assignProperty( timetable, "noItemsText",
-                i18nc("@info", "No network connection") );
-        networkActivatedState->assignProperty( timetable, "noItemsText",
-                                               i18nc("@info", "Network connection established") );
 
         // "Search Journeys..." action transitions to the journey search view (state "journeySearch").
         // If journeys aren't supported by the current service provider, a message gets displayed
@@ -478,19 +457,6 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
             q, SIGNAL(requestedNewJourneyData()), journeyDataWaitingState );
         journeyDataInvalidState->addTransition(
             q, SIGNAL(requestedNewJourneyData()), journeyDataWaitingState );
-
-        networkConfiguringState->addTransition(
-            q, SIGNAL(networkConnectionLost()), networkNotActivatedState );
-        networkActivatedState->addTransition(
-            q, SIGNAL(networkConnectionLost()), networkNotActivatedState );
-        networkActivatedState->addTransition(
-            q, SIGNAL(networkIsConfiguring()), networkConfiguringState );
-        networkNotActivatedState->addTransition(
-            q, SIGNAL(networkIsConfiguring()), networkConfiguringState );
-        networkConfiguringState->addTransition(
-            q, SIGNAL(networkIsActivated()), networkActivatedState );
-        networkNotActivatedState->addTransition(
-            q, SIGNAL(networkIsActivated()), networkActivatedState );
 
         q->connect( actionButtonsState, SIGNAL(entered()),
                     q, SLOT(showActionButtons()) );
