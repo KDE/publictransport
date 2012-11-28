@@ -1631,7 +1631,8 @@ const char* Storage::LIFETIME_ENTRYNAME_SUFFIX = "__expires__";
 class StoragePrivate {
 public:
     StoragePrivate( const QString &serviceProvider )
-            : readWriteLock(new QReadWriteLock), readWriteLockPersistent(new QReadWriteLock),
+            : readWriteLock(new QReadWriteLock(QReadWriteLock::Recursive)),
+              readWriteLockPersistent(new QReadWriteLock(QReadWriteLock::Recursive)),
               serviceProvider(serviceProvider), lastLifetimeCheck(0), config(0) {
     };
 
@@ -1725,7 +1726,7 @@ void Storage::clear()
 
 int Storage::lifetime( const QString& name )
 {
-    QWriteLocker locker( d->readWriteLockPersistent );
+    QReadLocker locker( d->readWriteLockPersistent );
     return lifetime( name, d->persistentGroup() );
 }
 
