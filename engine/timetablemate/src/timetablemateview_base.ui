@@ -15,7 +15,7 @@
   </property>
   <layout class="QVBoxLayout" name="verticalLayout">
    <item>
-    <widget class="QTabWidget" name="tabNotes">
+    <widget class="QTabWidget" name="tabWidget">
      <property name="currentIndex">
       <number>0</number>
      </property>
@@ -974,7 +974,7 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>tabNotes</tabstop>
+  <tabstop>tabWidget</tabstop>
   <tabstop>savePath</tabstop>
   <tabstop>name</tabstop>
   <tabstop>currentLanguage</tabstop>

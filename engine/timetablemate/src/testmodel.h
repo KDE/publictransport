@@ -129,6 +129,8 @@ public:
         ServiceProviderDataUrlTest,
         ServiceProviderDataShortUrlTest,
         ServiceProviderDataDescriptionTest,
+        ServiceProviderDataTimeZoneTest, /**< Tests if the time zone string is valid, ie.
+                * if the time zone exists. See KTimeZones::zones(). */
         ServiceProviderDataScriptFileNameTest,
         ServiceProviderDataGtfsFeedUrlTest, /**< Checks the GTFS feed URL for validity. */
         ServiceProviderDataGtfsRealtimeUpdatesUrlTest,

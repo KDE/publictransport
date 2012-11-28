@@ -888,6 +888,7 @@ bool TestModel::isTestApplicableTo( Test test, const ServiceProviderData *data,
     case ServiceProviderDataUrlTest:
     case ServiceProviderDataShortUrlTest:
     case ServiceProviderDataDescriptionTest:
+    case ServiceProviderDataTimeZoneTest:
         return true;
 
     case LoadScriptTest:
@@ -961,6 +962,7 @@ QList< TestModel::Test > TestModel::testsOfTestCase( TestModel::TestCase testCas
               << ServiceProviderDataAuthorNameTest << ServiceProviderDataShortAuthorNameTest
               << ServiceProviderDataEmailTest << ServiceProviderDataUrlTest
               << ServiceProviderDataShortUrlTest << ServiceProviderDataDescriptionTest
+              << ServiceProviderDataTimeZoneTest
               << ServiceProviderDataScriptFileNameTest << ServiceProviderDataGtfsFeedUrlTest
               << ServiceProviderDataGtfsRealtimeUpdatesUrlTest
               << ServiceProviderDataGtfsRealtimeAlertsTest;
@@ -992,6 +994,7 @@ TestModel::TestCase TestModel::testCaseOfTest( TestModel::Test test )
     case ServiceProviderDataUrlTest:
     case ServiceProviderDataShortUrlTest:
     case ServiceProviderDataDescriptionTest:
+    case ServiceProviderDataTimeZoneTest:
     case ServiceProviderDataScriptFileNameTest:
     case ServiceProviderDataGtfsFeedUrlTest:
     case ServiceProviderDataGtfsRealtimeUpdatesUrlTest:
@@ -1057,6 +1060,7 @@ QList< TestModel::Test > TestModel::testIsDependedOf( TestModel::Test test )
     case ServiceProviderDataUrlTest:
     case ServiceProviderDataShortUrlTest:
     case ServiceProviderDataDescriptionTest:
+    case ServiceProviderDataTimeZoneTest:
     case ServiceProviderDataScriptFileNameTest:
     case ServiceProviderDataGtfsFeedUrlTest:
     case ServiceProviderDataGtfsRealtimeUpdatesUrlTest:
@@ -1100,6 +1104,8 @@ QString TestModel::nameForTest( TestModel::Test test )
         return i18nc("@info/plain", "URL Test" );
     case ServiceProviderDataShortUrlTest:
         return i18nc("@info/plain", "Short URL Test" );
+    case ServiceProviderDataTimeZoneTest:
+        return i18nc("@info/plain", "Time Zone Test" );
     case ServiceProviderDataDescriptionTest:
         return i18nc("@info/plain", "Description Test" );
     case ServiceProviderDataScriptFileNameTest:
@@ -1177,6 +1183,8 @@ QString TestModel::descriptionForTest( TestModel::Test test )
         return i18nc("@info/plain", "Tests for a valid short version of URL" );
     case ServiceProviderDataDescriptionTest:
         return i18nc("@info/plain", "Tests for a valid description" );
+    case ServiceProviderDataTimeZoneTest:
+        return i18nc("@info/plain", "Tests for a valid or empty time zone" );
     case ServiceProviderDataScriptFileNameTest:
         return i18nc("@info/plain", "Tests for a valid script file" );
     case ServiceProviderDataGtfsFeedUrlTest:

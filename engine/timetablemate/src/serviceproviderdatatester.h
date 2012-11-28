@@ -73,6 +73,9 @@ public:
     static TestModel::TestState isGtfsRealtimeUrlValid( const QString &gtfsRealtimeUrl,
             QString *errorMessage = 0, QString *tooltip = 0,
             QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
+    static TestModel::TestState isTimeZoneValid( const QString &timeZone,
+            QString *errorMessage = 0, QString *tooltip = 0,
+            QList< TimetableDataRequestMessage > *childrenExplanations = 0 );
 };
 
 #endif // Multiple inclusion guard

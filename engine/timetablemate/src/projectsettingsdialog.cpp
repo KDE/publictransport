@@ -499,6 +499,18 @@ bool ProjectSettingsDialog::testWidget( QWidget *widget )
 
 void ProjectSettingsDialog::appendMessageWidgetAfter( QWidget *after, const QString &errorMessage )
 {
+    if ( !after || !after->isVisible() ) {
+        // The widget after which the error message should be shown is not visible,
+        // ie. it is not in the current tab, use the last widget of the current tab instead
+        QWidget *tab = ui_provider->tabWidget->currentWidget();
+        after = tab->layout()->itemAt( tab->layout()->count() - 1 )->widget();
+        if ( !after ) {
+            kWarning() << "Could not find last widget in current tab to show this error message:"
+                       << errorMessage;
+            return;
+        }
+    }
+
     QFormLayout *formLayout = qobject_cast< QFormLayout* >( after->parentWidget()->layout() );
     Q_ASSERT( formLayout );
 
@@ -891,7 +903,17 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *data,
     ui_provider->gtfsFeed->setText( data->feedUrl() );
     ui_provider->gtfsTripUpdates->setText( data->realtimeTripUpdateUrl() );
     ui_provider->gtfsAlerts->setText( data->realtimeAlertsUrl() );
-    ui_provider->timeZone->setSelected( data->timeZone(), true );
+
+    QString errorMessage;
+    if ( ServiceProviderDataTester::isTimeZoneValid(data->timeZone(), &errorMessage)
+         == TestModel::TestFinishedSuccessfully )
+    {
+        // Valid time zone name
+        ui_provider->timeZone->setSelected( data->timeZone(), true );
+    } else {
+        // No time zone with that name found
+        appendMessageWidgetAfter( ui_provider->timeZone, errorMessage );
+    }
 #endif
 
     ui_provider->savePath->setText( fileName );

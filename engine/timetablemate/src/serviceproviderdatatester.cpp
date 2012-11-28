@@ -31,6 +31,7 @@
 #include <KLocalizedString>
 #include <KDebug>
 #include <KUrl>
+#include <KSystemTimeZones>
 
 // Qt includes
 #include <QFile>
@@ -66,6 +67,8 @@ TestModel::TestState  ServiceProviderDataTester::runServiceProviderDataTest( Tes
     case TestModel::ServiceProviderDataGtfsRealtimeUpdatesUrlTest:
     case TestModel::ServiceProviderDataGtfsRealtimeAlertsTest:
         return isGtfsRealtimeUrlValid( text, errorMessage, tooltip, childrenExplanations );
+    case TestModel::ServiceProviderDataTimeZoneTest:
+        return isTimeZoneValid( text, errorMessage, tooltip, childrenExplanations );
 
     default:
         kWarning() << "Unknown test";
@@ -114,6 +117,8 @@ TestModel::TestState ServiceProviderDataTester::runServiceProviderDataTest( Test
                 ? data->realtimeTripUpdateUrl() : data->realtimeAlertsUrl();
         return isGtfsRealtimeUrlValid( url, errorMessage, tooltip, childrenExplanations );
     }
+    case TestModel::ServiceProviderDataTimeZoneTest:
+        return isTimeZoneValid( data->timeZone(), errorMessage, tooltip, childrenExplanations );
 
     default:
         kWarning() << "Unknown test";
@@ -454,4 +459,21 @@ TestModel::TestState ServiceProviderDataTester::isGtfsRealtimeUrlValid(
     }
 
     return TestModel::TestFinishedSuccessfully;
+}
+
+TestModel::TestState ServiceProviderDataTester::isTimeZoneValid( const QString &timeZone,
+        QString *errorMessage, QString *tooltip,
+        QList< TimetableDataRequestMessage > *childrenExplanations )
+{
+    Q_UNUSED( tooltip )
+    Q_UNUSED( childrenExplanations )
+    if ( timeZone.isEmpty() || KSystemTimeZones::zones().contains(timeZone) ) {
+        // Time zone is optional
+        return TestModel::TestFinishedSuccessfully;
+    }
+
+    if ( errorMessage ) {
+        *errorMessage = i18nc("@info/plain", "No such time zone found: %1", timeZone);
+    }
+    return TestModel::TestFinishedWithErrors;
 }
