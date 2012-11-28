@@ -161,12 +161,17 @@ public:
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     static QString scriptTemplateText( Project::ScriptTemplateType templateType
-                                       = Project::DefaultScriptTemplate )
+                                       = Project::DefaultScriptTemplate,
+                                       const ServiceProviderData *data = 0 )
     {
+        // Insert provider ID and author if available, otherwise insert template placeholders
+        const QString providerId = data && !data->id().isEmpty()
+                ? data->url() : "${Service Provider}";
+        const QString author = data && !data->author().isEmpty() ? data->author() : "${Author}";
         QString templateText = QString::fromUtf8(
-                "/** Service provider plugin for ${Service Provider}\n"
-                "  * © ${year}, ${Author} */\n"
-                "\n" );
+                "/** Service provider plugin for %1\n"
+                "  * © %2, %3 */\n"
+                "\n").arg(providerId).arg(QDate::currentDate().year()).arg(author);
 
         switch ( templateType ) {
         case Project::ScriptRubyTemplate:
@@ -201,13 +206,21 @@ public:
             break;
         case Project::ScriptQtScriptTemplate:
             templateText +=
-            // TODO
                     "\n// This function gets called to determine the features of the service provider\n"
-                    "function features() {\n" // TODO
-                    "    // Return a list of TimetableInformation values, that are used by this script.\n"
-                    "    // Required values like DepartureDateTime/DepartureTime or TypeOfVehicle\n"
-                    "    // are not needed here\n"
-                    "    return [ 'Arrivals', 'StopID', 'RouteStops' ];\n"
+                    "function features() {\n"
+                    "    // Return a list of ProviderFeature's, that are supported by this script.\n"
+                    "    // Some features like ProvidesDepartures are recognized automatically\n"
+                    "    // by implementing the associated script function\n"
+                    "    return [ PublicTransport.ProvidesArrivals,\n"
+                    "             PublicTransport.ProvidesDelays,\n"
+                    "             PublicTransport.ProvidesNews,\n"
+                    "             PublicTransport.ProvidesPlatform,\n"
+                    "             PublicTransport.ProvidesStopID,\n"
+                    "             PublicTransport.ProvidesStopGeoPosition,\n"
+                    "             PublicTransport.ProvidesStopsByGeoPosition,\n"
+                    "             PublicTransport.ProvidesPricing,\n"
+                    "             PublicTransport.ProvidesRouteInformation,\n"
+                    "             PublicTransport.ProvidesMoreJourneys ];\n"
                     "}\n"
                     "\n"
                     "// This function gets called when departures/arrivals are requested\n"
@@ -235,15 +248,25 @@ public:
                     "// This function is connected to the finished signal of network requests\n"
                     "// started in getTimetable()\n"
                     "function parseTimetable( html, hasError, errorString ) {\n"
-                    "    // TODO: Parse the contents of the received document and add results \n"
-                    "    // using result.addData()\n"
+                    "    if ( hasError ) {\n"
+                    "        // The network request failed,\n"
+                    "        // if the script has no other way to get the timetable data\n"
+                    "        // an error should be thrown like here:\n"
+                    "        throw Error( errorString );\n"
+                    "    }\n"
+                    "\n"
+                    "    // Decode the received document\n"
+                    "    html = helper.decode( html, \"utf8\" );\n"
+                    "\n"
+                    "    // TODO: Parse the contents of the document and add found timetable items\n"
+                    "    // to the result set using result.addData()\n"
                     "    // Use helper.findHtmlTags(), helper.findFirstHtmlTag() or \n"
                     "    // helper.findNamedHtmlTags() to parse HTML documents (see documentation)\n"
                     "    ${cursor}\n"
                     "}\n"
                     "\n"
                     "// This function gets called when stop suggestions are requested\n"
-                    "function getStopSuggestions( values  ) {\n"
+                    "function getStopSuggestions( values ) {\n"
                     "    // Construct an URL from the given values\n"
                     "    var url = \"http://www.page.com?stop=\" + values.stop;\n"
                     "\n"
@@ -252,6 +275,9 @@ public:
                     "\n"
                     "    // Check if the download was completed successfully\n"
                     "    if ( !network.lastDownloadAborted ) {\n"
+                    "        // Decode the received document\n"
+                    "        html = helper.decode( html, \"utf8\" );\n"
+                    "\n"
                     "        // TODO: Find all stop suggestions\n"
                     "        result.addData({ StopName: \"Test-Stop\",\n"
                     "                         StopID: \"123\",\n"
@@ -263,6 +289,102 @@ public:
                     "}\n"
                     "\n"
                     "// TODO: To parse journeys implement getJourneys()\n";
+            break;
+        case Project::ScriptQtScriptHafasTemplate:
+            templateText +=
+                    "\n// Include the base script for HAFAS providers\n"
+                    "include(\"base_hafas.js\");\n"
+                    "\n"
+                    "// Create instance of the Hafas class (from the base HAFAS script).\n"
+                    "// Some available options are shown below, but are commented, because they\n"
+                    "// are optional and use the default values. Uncomment and change the values\n"
+                    "// to use those options. See \"base_hafas.js\" for more information.\n"
+                    "var hafas = Hafas({\n"
+                    "    baseUrl: \"${Base URL}\", // The base HAFAS API URL excluding '/bin/...'\n"
+                    "//    binDir: \"bin\", // The relative path to add to baseUrl to get the \n"
+                    "            // binary API URL, \"bin\" is the default.\n"
+                    "//    programExtension: \"exe\", // The extension to add to HAFAS programs\n"
+                    "            // eg. 'stboard', \"exe\" is the default.'\n"
+                    "//    language: \"d\", // One character identifying the language to request,\n"
+                    "            // the default is 'd' for german, as most HAFAS providers are\n"
+                    "            // for germany. Use eg. 'e' for english, 's' for swedish, etc.\n"
+                    "//    urlDateFormat: \"dd.MM.yy\", // Format of dates in URLs,\n"
+                    "            // 'dd.MM.yy' is the default.'\n"
+                    "//    urlTimeFormat: \"hh:mm\", // Format of times in URLs,\n"
+                    "            // 'hh:mm' is the default.'\n"
+                    "//    xmlDateFormat: \"dd.MM.yy\", // Format of dates in received XML\n"
+                    "            // documents, 'dd.MM.yy' is the default.'\n"
+                    "//    xmlTimeFormat: \"hh:mm\", // Format of times in received XML documents,\n"
+                    "            // 'hh:mm' is the default.'\n"
+                    "//    format: Hafas.XmlFormat // Default format of received documents,\n"
+                    "            // this determines the parser function to use\n"
+                    "});\n"
+                    "\n"
+                    "// To remove a feature from eg. the departure/arrival processor, because the\n"
+                    "// provider does not support the required parts of the HAFAS API\n"
+                    "// use code like this:\n"
+                    "// hafas.timetable.removeFeature( PublicTransport.ProvidesArrivals );\n"
+                    "\n"
+                    "// This function gets called to determine the features of the service provider.\n"
+                    "// The features supported by the HAFAS base script can be concatenated like\n"
+                    "// shown below.\n"
+                    "function features() {\n"
+                    "    return hafas.stopSuggestions.features.concat(\n"
+                    "            hafas.timetable.features,\n"
+                    "            hafas.timetable.additionalData.features,\n"
+                    "            hafas.journeys.features );\n"
+                    "}\n"
+                    "\n"
+                    "// The script functions can directly use implementations from the base HAFAS\n"
+                    "// script. These get() functions will generate an URL, download it and then\n"
+                    "// parse the received document using the parser specified by the 'format'\n"
+                    "// option. The get() functions also accept an options argument, which will\n"
+                    "// overwrite global options given in the Hafas constructor.\n"
+                    "var getStopSuggestions = hafas.stopSuggestions.get;\n"
+                    "var getTimetable = hafas.timetable.get;\n"
+                    "var getAdditionalData = hafas.timetable.additionalData.get;\n"
+                    "var getJourneys = hafas.journeys.get;\n"
+                    "\n"
+                    "// The default format for additional timetable data, that can be downloaded\n"
+                    "// later is Hafas.HtmlMobileFormat (hafas.timetable.additionalData.format).\n"
+                    "// Uncomment the following line to change the format to eg. plain text:\n"
+                    "//   hafas.timetable.additionalData.format = Hafas.TextFormat;\n"
+                    "// You can implement a parser function for each available format, eg.\n"
+                    "// parseText() for TextFormat, parseXml() for XmlFormat, parseHtml() for \n"
+                    "// HtmlFormat, etc.\n"
+                    "// Standard formats like XML are supported by the base HAFAS script.\n"
+                    "// Add implementations of route data parser functions for non-standard formats\n"
+                    "// to hafas.routeData.parser. It gets used to parse the document at the found\n"
+                    "// RouteDataUrl.\n"
+                    "hafas.timetable.parser.parseHtmlMobile = function( html, hasError, errorString ) {\n"
+                    "    if ( hasError ) {\n"
+                    "        throw Error( errorString );\n"
+                    "    }\n"
+                    "    if ( html.length == 0 ) {\n"
+                    "        throw Error(\"parseTimetableMobile(): Received HTML document is empty\");\n"
+                    "    }\n"
+                    "\n"
+                    "    Decode the received document, TODO: Use correct encoding\n"
+                    "    html = helper.decode( html, \"latin1\" );\n"
+                    "\n"
+                    "    // Initialize return value\n"
+                    "    var departures = [];\n"
+                    "\n"
+                    "    // TODO: Implement code that parses the (mobile) HTML document,\n"
+                    "    // only the shown data needs to be added, but it must equal the data\n"
+                    "    // that was read from the XML HAFAS format, because the RouteDataUrl\n"
+                    "    // gets associated with the already received timetable item that matches\n"
+                    "    // the data found here:\n"
+                    "    var departure = { RouteDataUrl: \"traininfo.exe-URL\",\n"
+                    "                      TransportLine: \"Test-Line\",\n"
+                    "                      Target: \"Test-Target\",\n"
+                    "                      DepartureDateTime: new Date() };\n"
+                    "\n"
+                    "    departures.push( departure );\n"
+                    "    return departures;\n"
+                    "}\n"
+                    "\n";
+            break;
         default:
             break;
         }
@@ -938,7 +1060,7 @@ public:
         if ( templateInterface ) {
             // Insert a template with author information
             templateInterface->insertTemplateText( KTextEditor::Cursor(),
-                    scriptTemplateText(templateType), QMap<QString, QString>() );
+                    scriptTemplateText(templateType, data()), QMap<QString, QString>() );
         }
     };
 #endif
@@ -5095,9 +5217,10 @@ QIcon Project::scriptIcon() const
 }
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-QString Project::scriptTemplateText( ScriptTemplateType templateType )
+QString Project::scriptTemplateText( ScriptTemplateType templateType,
+                                     const ServiceProviderData *data )
 {
-    return ProjectPrivate::scriptTemplateText( templateType );
+    return ProjectPrivate::scriptTemplateText( templateType, data );
 }
 
 void Project::scriptAdded( const QString &fileName )
@@ -5563,7 +5686,7 @@ void Project::showSettingsDialog( QWidget *parent )
         if ( dialog->newScriptTemplateType() != Project::NoScriptTemplate ) {
             // A new script file was set in the dialog
             // Load the chosen template
-            setScriptText( Project::scriptTemplateText(dialog->newScriptTemplateType()) );
+            setScriptText( Project::scriptTemplateText(dialog->newScriptTemplateType(), d->data()) );
         }
 #endif
     }
@@ -5755,7 +5878,8 @@ Project::ScriptTemplateType Project::getScriptTemplateTypeInput( QWidget *parent
     bool ok;
     QStringList templates;
     parent = d->parentWidget( parent );
-    templates << i18nc("@info/plain", "Complete JavaScript Template")
+    templates << i18nc("@info/plain", "JavaScript Template")
+              << i18nc("@info/plain", "JavaScript HAFAS Template")
               << i18nc("@info/plain", "Simple Ruby Template")
               << i18nc("@info/plain", "Simple Python Template");
     const QString scriptType = KInputDialog::getItem(
@@ -5770,8 +5894,10 @@ Project::ScriptTemplateType Project::getScriptTemplateTypeInput( QWidget *parent
     if( selectedTemplate == 0 ) {
         return ScriptQtScriptTemplate;
     } else if( selectedTemplate == 1 ) {
-        return ScriptRubyTemplate;
+        return ScriptQtScriptHafasTemplate;
     } else if( selectedTemplate == 2 ) {
+        return ScriptRubyTemplate;
+    } else if( selectedTemplate == 3 ) {
         return ScriptPythonTemplate;
     } else {
         kWarning() << "Unexpected script type" << scriptType;

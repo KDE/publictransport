@@ -193,7 +193,7 @@ public:
         NoScriptTemplate = 0,
         ScriptQtScriptTemplate, /**< A template for script content written in QtScript. */
         ScriptQtScriptHafasTemplate, /**< A template for script content written in QtScript,
-                * using the base HAFAS script. */ // TODO
+                * using the base HAFAS script. */
         ScriptRubyTemplate, /**< A template for script content written in ruby. */
         ScriptPythonTemplate, /**< A template for script content written in python. */
 
@@ -773,7 +773,8 @@ public:
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     /** @brief Get the script template text for @p templateType. */
     Q_INVOKABLE static QString scriptTemplateText(
-            ScriptTemplateType templateType = DefaultScriptTemplate );
+            ScriptTemplateType templateType = DefaultScriptTemplate, 
+            const ServiceProviderData *data = 0 );
 #endif
 
     /**
