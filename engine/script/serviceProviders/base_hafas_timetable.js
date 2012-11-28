@@ -339,15 +339,26 @@ var __hafas_timetable = function(hafas) {
                     // <PassList> tag contains stops on the route of the line, inside <BasicStop> tags
                     var routeStopList = node.firstChildElement("PassList").elementsByTagName("BasicStop");
                     var routeStopCount = routeStopList.count();
+
+                    // Use date of the first timetable item for route times
                     for ( var r = 0; r < routeStopCount; ++r ) {
                         var routeStop = routeStopList.at( r );
 
                         departure.RouteStops.push(
                             helper.trim(routeStop.firstChildElement("Location").firstChildElement("Station")
                             .firstChildElement("HafasName").firstChildElement("Text").text()) );
-                        departure.RouteTimes.push( /*QTime::fromString(*/
-                            routeStop.firstChildElement("Arr").firstChildElement("Time").text()/*, "hh:mm" )*/
-                                );
+
+                        var timeString = routeStop.firstChildElement("Arr").firstChildElement("Time").text();
+                        var time = helper.matchTime( timeString, options.xmlTimeFormat  );
+                        if ( time.error ) {
+                            helper.error( "Hafas.timetable.parse(): Cannot parse time",
+                                        node.attributeNode("fpTime").nodeValue() );
+                            continue;
+                        }
+                        var routeDateTime = new Date();
+                        routeDateTime.setTime( dateTime.getTime() );
+                        routeDateTime.setHours( time.hour, time.minute, 0, 0 );
+                        departure.RouteTimes.push( routeDateTime );
                     }
 
                     // Other information is found in the <JourneyAttributeList> tag which contains
