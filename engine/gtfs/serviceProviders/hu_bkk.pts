@@ -1,11 +1,14 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
-
-<name lang="en">Budapest (BKK)</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<description>Accessor for Budapest, using the GTFS feed of Budapesti Kozelkedesi Kopont (BKK). No GTFS-realtime data available.</description>
-<credit>Route and arrival data provided by permission of BKK</credit>
-<url>http://www.bkk.hu</url>
-<feedUrl>http://www.bkk.hu/gtfs/budapest_gtfs.zip</feedUrl>
-
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.1" version="1.0" type="gtfs">
+    <name lang="en">Budapest (BKK)</name>
+    <description lang="en">Accessor for Budapest, using the GTFS feed of Budapesti Kozelkedesi Kopont (BKK). No GTFS-realtime data available.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.bkk.hu</url>
+    <shortUrl>www.bkk.hu</shortUrl>
+    <credit>Route and arrival data provided by permission of BKK</credit>
+    <feedUrl>http://www.bkk.hu/gtfs/budapest_gtfs.zip</feedUrl>
 </serviceProvider>

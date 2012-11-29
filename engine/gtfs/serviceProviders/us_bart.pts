@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<serviceProvider fileVersion="1.0" version="1.0" type="gtfs">
+<serviceProvider fileVersion="1.1" version="1.0" type="gtfs">
     <name lang="en">California, San Fransisco Bay Area (BART)</name>
     <description lang="en">Accessor for California, San Fransisco Bay Area, using the GTFS feed of Bay Area Rapid Transit (BART).</description>
     <author>

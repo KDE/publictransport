@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<serviceProvider fileVersion="1.0" version="1.0" type="script">
+<serviceProvider fileVersion="1.1" version="1.0" type="script">
     <name lang="en">Swiss Public Transport API</name>
     <description lang="en">Only departures for the current time, no arrivals.
 

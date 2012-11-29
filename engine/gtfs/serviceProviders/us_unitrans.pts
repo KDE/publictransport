@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
+<serviceProvider fileVersion="1.1" version="1.0" type="GTFS">
 
 <name lang="en">California, Davis (Unitrans)</name>
 <author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>

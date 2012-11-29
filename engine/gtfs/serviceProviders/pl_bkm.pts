@@ -1,11 +1,14 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
-
-<name lang="en">Białostocka Komunikacja Miejska</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<description>Accessor using the GTFS feed of Białostocka Komunikacja Miejska (BKM). No GTFS-realtime data available.</description>
-<credit>Route and arrival data provided by permission of BKM</credit>
-<url>http://www.komunikacja.bialystok.pl</url>
-<feedUrl>http://gtfs.s3.amazonaws.com/biaostocka-komunikacja-miejska_20110422_1123.zip</feedUrl>
-
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.1" version="1.0" type="gtfs">
+    <name lang="en">Białostocka Komunikacja Miejska</name>
+    <description lang="en">Accessor using the GTFS feed of Białostocka Komunikacja Miejska (BKM). No GTFS-realtime data available.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.komunikacja.bialystok.pl</url>
+    <shortUrl>www.komunikacja.bialystok.pl</shortUrl>
+    <credit>Route and arrival data provided by permission of BKM</credit>
+    <feedUrl>http://gtfs.s3.amazonaws.com/biaostocka-komunikacja-miejska_20110422_1123.zip</feedUrl>
 </serviceProvider>

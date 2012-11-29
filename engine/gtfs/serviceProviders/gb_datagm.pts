@@ -1,11 +1,14 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
-
-<name lang="en">Manchester (DataGM)</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<description>Accessor for Manchester, using the GTFS feed of Data Greater Manchester. No GTFS-realtime data available.</description>
-<credit>Route and arrival data provided by permission of DataGM</credit>
-<url>http:///www.datagm.org.uk</url>
-<feedUrl>http://dl.dropbox.com/u/1420387/gmpte_gtfs.zip</feedUrl>
-
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.1" version="1.0" type="gtfs">
+    <name lang="en">Manchester (DataGM)</name>
+    <description lang="en">Accessor for Manchester, using the GTFS feed of Data Greater Manchester. No GTFS-realtime data available.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.datagm.org.uk</url>
+    <shortUrl>datagm.org.uk</shortUrl>
+    <credit>Route and arrival data provided by permission of DataGM</credit>
+    <feedUrl>http://dl.dropbox.com/u/1420387/gmpte_gtfs.zip</feedUrl>
 </serviceProvider>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<serviceProvider fileVersion="1.0" version="2.0" type="script">
+<serviceProvider fileVersion="1.1" version="2.0" type="script">
     <name lang="en">Resrobot</name>
     <description lang="de">Dieser Service-Provider liefert Ergebnisse für alle Städte in Schweden.</description>
     <description lang="en">This service provider works for all cities in Sweden.</description>

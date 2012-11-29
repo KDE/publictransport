@@ -1,12 +1,17 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
-
-<name lang="en">Madrid (EMT)</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<description>Accessor for Madrid, using the GTFS feed of Empresa Municipal de Transportes (EMT). No GTFS-realtime data available.</description>
-<cities><city>Madrid</city></cities>
-<credit>Route and arrival data provided by permission of EMT</credit>
-<url>http://www.emtmadrid.es</url>
-<feedUrl>http://www.gtfs-data-exchange.com/agency/madrid-empresa-municipal-de-transportes/latest.zip</feedUrl>
-
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.1" version="1.0" type="gtfs">
+    <name lang="en">Madrid (EMT)</name>
+    <description lang="en">Accessor for Madrid, using the GTFS feed of Empresa Municipal de Transportes (EMT). No GTFS-realtime data available.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.emtmadrid.es</url>
+    <shortUrl>www.emtmadrid.es</shortUrl>
+    <credit>Route and arrival data provided by permission of EMT</credit>
+    <feedUrl>http://www.gtfs-data-exchange.com/agency/madrid-empresa-municipal-de-transportes/latest.zip</feedUrl>
+    <cities>
+        <city>Madrid</city>
+    </cities>
 </serviceProvider>

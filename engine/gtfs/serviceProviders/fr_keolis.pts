@@ -1,12 +1,17 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
-
-<name lang="en">Rennes (Keolis)</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<description>Accessor for Rennes, Bretagne, using the GTFS feed of Keolis Rennes. No GTFS-realtime data available.</description>
-<cities><city>Rennes</city></cities>
-<credit>Route and arrival data provided by permission of EMT</credit>
-<url>http://data.keolis-rennes.com</url>
-<feedUrl>http://www.gtfs-data-exchange.com/agency/keolis-rennes/latest.zip</feedUrl>
-
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.1" version="1.0" type="gtfs">
+    <name lang="en">Rennes (Keolis)</name>
+    <description lang="en">Accessor for Rennes, Bretagne, using the GTFS feed of Keolis Rennes. No GTFS-realtime data available.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://data.keolis-rennes.com</url>
+    <shortUrl>data.keolis-rennes.com</shortUrl>
+    <credit>Route and arrival data provided by permission of EMT</credit>
+    <feedUrl>http://www.gtfs-data-exchange.com/agency/keolis-rennes/latest.zip</feedUrl>
+    <cities>
+        <city>Rennes</city>
+    </cities>
 </serviceProvider>

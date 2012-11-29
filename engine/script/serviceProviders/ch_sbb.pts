@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<serviceProvider fileVersion="1.0" version="2.0" type="script">
+<serviceProvider fileVersion="1.1" version="2.0" type="script">
     <name lang="en">Schweizerische Bundesbahnen SBB</name>
     <description lang="en">This service provider works for cities in Switzerland and also for many cities in Europe. Cities in Switzerland include trams, buses, subways and interurban trains, while cities in other countries may only include trains.</description>
     <author>

@@ -1,19 +1,19 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.1" version="1.0" type="gtfs">
+    <name lang="en">Oregon, Portland (TriMet)</name>
+    <description lang="en">Accessor for the Oregon, Portland, using the GTFS feed of the Tri-County Metropolitan Transportation District of Oregon (TriMet).</description>
+    <notes>AF54F96674FEDBD00D1814CF is the application ID registered for PublicTransport, see http://developer.trimet.org/GTFS.shtml.
 
-<name lang="en">Oregon, Portland (TriMet)</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<description>Accessor for the Oregon, Portland, using the GTFS feed of the Tri-County Metropolitan Transportation District of Oregon (TriMet).</description>
-<url>http://www.trimet.org</url>
-<feedUrl>http://developer.trimet.org/schedule/gtfs.zip</feedUrl>
-
-<!-- AF54F96674FEDBD00D1814CF is the Application ID registered for PublicTransport -->
-<!-- See http://developer.trimet.org/GTFS.shtml -->
-<realtimeTripUpdateUrl>http://developer.trimet.org/ws/V1/TripUpdate/appID=AF54F96674FEDBD00D1814CF</realtimeTripUpdateUrl>
-<realtimeAlertsUrl>http://developer.trimet.org/ws/V1/FeedSpecAlerts/appID=AF54F96674FEDBD00D1814CF</realtimeAlertsUrl>
-
-<!-- This string needs to be shown, see: -->
-<!-- http://developer.trimet.org/terms_of_use.shtml, "5. WEB SERVICES API" -->
-<credit>Route and arrival data provided by permission of TriMet</credit>
-
+The credit string &quot;Route and arrival data provided by permission of TriMet&quot; needs to be shown with the timetable data, see: Terms Of Use (&quot;5. WEB SERVICES API&quot;).</notes>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.trimet.org</url>
+    <shortUrl>www.trimet.org</shortUrl>
+    <credit>Route and arrival data provided by permission of TriMet</credit>
+    <feedUrl>http://developer.trimet.org/schedule/gtfs.zip</feedUrl>
+    <realtimeTripUpdateUrl>http://developer.trimet.org/ws/V1/TripUpdate/appID=AF54F96674FEDBD00D1814CF</realtimeTripUpdateUrl>
+    <realtimeAlertsUrl>http://developer.trimet.org/ws/V1/FeedSpecAlerts/appID=AF54F96674FEDBD00D1814CF</realtimeAlertsUrl>
 </serviceProvider>

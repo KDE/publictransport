@@ -1,11 +1,14 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
-
-<name lang="en">USA (Amtrak)</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<description>Accessor for trains in the USA, using the GTFS feed of Amtrak, Inc. No GTFS-realtime data available.</description>
-<credit>Route and arrival data provided by permission of Amtrak</credit>
-<url>http://www.amtrak.com</url>
-<feedUrl>http://www.gtfs-data-exchange.com/agency/amtrak/latest.zip</feedUrl>
-
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.1" version="1.0" type="gtfs">
+    <name lang="en">USA (Amtrak)</name>
+    <description lang="en">Accessor for trains in the USA, using the GTFS feed of Amtrak, Inc. No GTFS-realtime data available.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.amtrak.com</url>
+    <shortUrl>www.amtrak.com</shortUrl>
+    <credit>Route and arrival data provided by permission of Amtrak</credit>
+    <feedUrl>http://www.gtfs-data-exchange.com/agency/amtrak/latest.zip</feedUrl>
 </serviceProvider>

@@ -1,11 +1,14 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
-
-<name lang="en">Couch USA</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<description>Accessor using the GTFS feed of Couch USA. No GTFS-realtime data available.</description>
-<credit>Route and arrival data provided by permission of Couch USA</credit>
-<url>http://www.coachusa.com</url>
-<feedUrl>http://www.gtfs-data-exchange.com/agency/coach-usa-short-line/latest.zip</feedUrl>
-
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.1" version="1.0" type="gtfs">
+    <name lang="en">Couch USA</name>
+    <description lang="en">Accessor using the GTFS feed of Couch USA. No GTFS-realtime data available.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.coachusa.com</url>
+    <shortUrl>www.coachusa.com</shortUrl>
+    <credit>Route and arrival data provided by permission of Couch USA</credit>
+    <feedUrl>http://www.gtfs-data-exchange.com/agency/coach-usa-short-line/latest.zip</feedUrl>
 </serviceProvider>

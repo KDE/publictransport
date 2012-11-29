@@ -1,13 +1,19 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
-
-<name lang="en">Wellington (MetLink)</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<useSeperateCityValue>false</useSeperateCityValue>
-<description>Accessor for Wellington, using the GTFS feed of MetLink. No GTFS-realtime data available.</description>
-<credit>Route and arrival data provided by permission of MetLink</credit>
-
-<url>http://www.metlink.org.nz</url>
-<feedUrl>http://www.metlink.org.nz/assets/Google_Transit/googletransit20110831.zip</feedUrl>
-
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.1" version="1.1" type="gtfs">
+    <name lang="en">Wellington (MetLink)</name>
+    <description lang="en">Accessor for Wellington, using the GTFS feed of MetLink. No GTFS-realtime data available.
+Warning: The official feed source is dead, the latest archived feed from gtfs-data-exchange.com/agency/metlink gets used.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.metlink.org.nz</url>
+    <shortUrl>www.metlink.org.nz</shortUrl>
+    <credit>Route and arrival data provided by permission of MetLink</credit>
+    <feedUrl>http://www.gtfs-data-exchange.com/agency/metlink/latest.zip</feedUrl>
+    <changelog>
+        <entry version="1.0">Updated feed URL</entry>
+        <entry version="1.0">Initial version</entry>
+    </changelog>
 </serviceProvider>

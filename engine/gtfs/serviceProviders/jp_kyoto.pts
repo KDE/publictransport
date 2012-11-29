@@ -1,11 +1,14 @@
-<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
-<serviceProvider fileVersion="1.0" version="1.0" type="GTFS">
-
-<name lang="en">Kyoto City Bus</name>
-<author> <fullname>Friedrich Pülz</fullname> <short>fpuelz</short> <email>fpuelz@gmx.de</email> </author>
-<description>Accessor using the GTFS feed of Kyoto City Bus. No GTFS-realtime data available.</description>
-<credit>Route and arrival data provided by permission of Kyoto City Bus</credit>
-<url>http://www.city.kyoto.lg.jp/kotsu/</url>
-<feedUrl>http://www.gtfs-data-exchange.com/agency/kyoto-city-bus/latest.zip</feedUrl>
-
+<?xml version="1.0" encoding="UTF-8"?>
+<serviceProvider fileVersion="1.1" version="1.0" type="gtfs">
+    <name lang="en">Kyoto City Bus</name>
+    <description lang="en">Accessor using the GTFS feed of Kyoto City Bus. No GTFS-realtime data available.</description>
+    <author>
+        <fullname>Friedrich Pülz</fullname>
+        <short>fpuelz</short>
+        <email>fpuelz@gmx.de</email>
+    </author>
+    <url>http://www.city.kyoto.lg.jp/kotsu/</url>
+    <shortUrl>www.city.kyoto.lg.jp</shortUrl>
+    <credit>Route and arrival data provided by permission of Kyoto City Bus</credit>
+    <feedUrl>http://www.gtfs-data-exchange.com/agency/kyoto-city-bus/latest.zip</feedUrl>
 </serviceProvider>
