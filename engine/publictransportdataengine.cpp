@@ -1680,19 +1680,19 @@ void PublicTransportEngine::updateTimeout()
 {
     // Find the timetable data source to which the timer belongs which timeout() signal was emitted
     QTimer *timer = qobject_cast< QTimer* >( sender() );
-    TimetableDataSource *dataSource = dataSourceFromAdditionDataTimer( timer );
-    if ( dataSource ) {
-        // Found the timetable data source of the timer,
-        // requests updates for all connected sources (possibly multiple combined stops)
-        foreach ( const QString &sourceName, dataSource->usingDataSources() ) {
-            updateTimetableDataSource( SourceRequestData(sourceName) );
-        }
+    TimetableDataSource *dataSource = dataSourceFromTimer( timer );
+    if ( !dataSource ) {
+        // No data source found that started the timer,
+        // should not happen the data source should have deleted the timer on destruction
+        kWarning() << "Timeout received from an unknown update timer";
         return;
     }
 
-    // No data source found that started the timer,
-    // should not happen the data source should have deleted the timer on destruction
-    kWarning() << "Timeout received from an unknown update timer";
+    // Found the timetable data source of the timer,
+    // requests updates for all connected sources (possibly multiple combined stops)
+    foreach ( const QString &sourceName, dataSource->usingDataSources() ) {
+        updateTimetableDataSource( SourceRequestData(sourceName) );
+    }
 }
 
 void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
@@ -1765,13 +1765,15 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     emit additionalDataRequestFinished( item, true );
 }
 
-TimetableDataSource *PublicTransportEngine::dataSourceFromAdditionDataTimer( QTimer *timer ) const
+TimetableDataSource *PublicTransportEngine::dataSourceFromTimer( QTimer *timer ) const
 {
     for ( QHash< QString, DataSource* >::ConstIterator it = m_dataSources.constBegin();
           it != m_dataSources.constEnd(); ++it )
     {
         TimetableDataSource *dataSource = dynamic_cast< TimetableDataSource* >( *it );
-        if ( dataSource && dataSource->updateAdditionalDataDelayTimer() == timer ) {
+        if ( dataSource && (dataSource->updateAdditionalDataDelayTimer() == timer ||
+                            dataSource->updateTimer() == timer) ) 
+        {
             return dataSource;
         }
     }
@@ -1784,7 +1786,7 @@ void PublicTransportEngine::updateDataSourcesWithNewAdditionData()
 {
     QTimer *updateDelayTimer = qobject_cast< QTimer* >( sender() );
     Q_ASSERT( updateDelayTimer );
-    TimetableDataSource *dataSource = dataSourceFromAdditionDataTimer( updateDelayTimer );
+    TimetableDataSource *dataSource = dataSourceFromTimer( updateDelayTimer );
     if ( !dataSource ) {
         kWarning() << "Data source was already removed";
         return;

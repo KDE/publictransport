@@ -714,7 +714,7 @@ private:
             QObject *parent = 0, const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
 
     /** @brief Get the timetable data source that uses the given @p timer. */
-    TimetableDataSource *dataSourceFromAdditionDataTimer( QTimer *timer ) const;
+    TimetableDataSource *dataSourceFromTimer( QTimer *timer ) const;
 
     bool enoughDataAvailable( DataSource *dataSource, const SourceRequestData &sourceData ) const;
 
