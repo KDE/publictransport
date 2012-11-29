@@ -860,6 +860,7 @@ public:
             }
         } else {
             kDebug() << "Service provider plugin is invalid" << reader.errorString() << fileName;
+            provider = ServiceProvider::createInvalidProvider( q );
             errorHappened( Project::ErrorWhileLoadingProject, reader.errorString() );
             insertProjectSourceTemplate();
             return false;
