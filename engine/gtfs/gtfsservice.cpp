@@ -144,10 +144,14 @@ void AbstractGtfsDatabaseJob::tryToWork()
     work();
 }
 
-void ImportGtfsToDatabaseJob::work()
+void ImportGtfsToDatabaseJob::registerAtJobTracker()
 {
-    Q_ASSERT( m_data );
+    KIO::getJobTracker()->registerJob( this );
+    emitDescription();
+}
 
+void ImportGtfsToDatabaseJob::emitDescription()
+{
     // Emit a description about what's done in this job
     const QPair< QString, QString > field1 =
             qMakePair( i18nc("@info/plain Label for GTFS service provider", "Service Provider"),
@@ -159,8 +163,23 @@ void ImportGtfsToDatabaseJob::work()
         emit description( this, i18nc("@info", "Update GTFS feed info"), field1, field2 );
     } else {
         emit description( this, i18nc("@info", "Import GTFS feed"), field1, field2 );
-        kDebug() << "Start GTFS feed import for" << m_data->id();
     }
+}
+
+void UpdateGtfsToDatabaseJob::emitDescription()
+{
+    emit description( this, i18nc("@info", "Updating GTFS feed"),
+                      qMakePair(i18nc("@info/plain Label for GTFS service provider",
+                                      "Service Provider"), data()->name()),
+                      qMakePair(i18nc("@info/plain Label for GTFS feed source URLs", 
+                                      "Source"), data()->feedUrl()) );
+}
+
+void ImportGtfsToDatabaseJob::work()
+{
+    Q_ASSERT( m_data );
+
+    emitDescription();
 
     // Start the job by first requesting GTFS feed information
     statFeed();
@@ -195,11 +214,7 @@ void UpdateGtfsToDatabaseJob::work()
         setResult( false );
     } else {
         // Emit a description about what's done in this job
-        emit description( this, i18nc("@info", "Updating GTFS feed"),
-                          qMakePair(i18nc("@info/plain Label for GTFS service provider",
-                                          "Service Provider"), data()->name()),
-                          qMakePair(i18nc("@info/plain Label for GTFS feed source URLs", "Source"),
-                                    data()->feedUrl()) );
+        emitDescription();
         setCapabilities( Suspendable | Killable );
 
         // Start the job by first requesting GTFS feed information
@@ -385,6 +400,9 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
             setResult( true );
         }
     } else {
+        // Track this job to show the error
+        registerAtJobTracker();
+
         kDebug() << "GTFS feed not available: " << m_data->feedUrl() << reply->errorString();
         m_state = ErrorDownloadingFeed;
         setError( GtfsErrorDownloadFailed );
@@ -414,6 +432,11 @@ void ImportGtfsToDatabaseJob::downloadFeed()
         return;
     }
 
+    // Track this job at least from now on,
+    // because the download/import can take some time
+    registerAtJobTracker();
+
+    kDebug() << "Start GTFS feed import for" << m_data->id();
     KTemporaryFile tmpFile;
     if ( tmpFile.open() ) {
         kDebug() << "Downloading GTFS feed from" << m_data->feedUrl() << "to" << tmpFile.fileName();
@@ -609,26 +632,22 @@ Plasma::ServiceJob* GtfsService::createJob(
     if ( operation == QLatin1String("updateGtfsDatabase") ) {
         UpdateGtfsToDatabaseJob *updateJob =
                 new UpdateGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
-        // Track update jobs
-        KJobTrackerInterface *jobTracker = KIO::getJobTracker();
-        jobTracker->registerJob( updateJob );
         return updateJob;
     } else if ( operation == QLatin1String("importGtfsFeed") ) {
         ImportGtfsToDatabaseJob *importJob =
                 new ImportGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
-        // Track import jobs
-        KJobTrackerInterface *jobTracker = KIO::getJobTracker();
-        jobTracker->registerJob( importJob );
+        // Directly register import jobs, ie. also show "Check Feed Source"
+        importJob->registerAtJobTracker();
         return importJob;
     } else if ( operation == QLatin1String("deleteGtfsDatabase") ) {
         DeleteGtfsDatabaseJob *deleteJob =
                 new DeleteGtfsDatabaseJob( "PublicTransport", operation, parameters, this );
         return deleteJob;
     } else if ( operation == QLatin1String("updateGtfsFeedInfo") ) {
-        ImportGtfsToDatabaseJob *importJob =
+        ImportGtfsToDatabaseJob *updateFeedInfoJob =
                 new ImportGtfsToDatabaseJob( "PublicTransport", operation, parameters, this );
-        importJob->setOnlyGetInformation( true );
-        return importJob;
+        updateFeedInfoJob->setOnlyGetInformation( true );
+        return updateFeedInfoJob;
     } else {
         kWarning() << "Operation" << operation << "not supported";
         return 0;

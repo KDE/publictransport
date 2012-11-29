@@ -117,6 +117,9 @@ public:
                              const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
     virtual ~ImportGtfsToDatabaseJob();
 
+    void registerAtJobTracker();
+    virtual void emitDescription();
+
     inline const ServiceProviderData *data() const { return m_data; };
     virtual QString serviceProviderId() const;
 
@@ -201,6 +204,8 @@ class UpdateGtfsToDatabaseJob : public ImportGtfsToDatabaseJob {
 public:
     UpdateGtfsToDatabaseJob( const QString &destination, const QString &operation,
                              const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
+
+    virtual void emitDescription();
 
 protected slots:
     /**
