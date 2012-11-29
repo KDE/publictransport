@@ -1683,8 +1683,9 @@ void TimetableMate::removeAllMessageWidgets()
 void TimetableMate::infoMessage( const QString &message, KMessageWidget::MessageType type,
                                  int timeout, QList<QAction*> actions )
 {
+    // Do not show messages from inactive projects, except for error messages
     Project *project = qobject_cast< Project* >( sender() );
-    if ( project && !project->isActiveProject() ) {
+    if ( project && !project->isActiveProject() && type != KMessageWidget::Error ) {
         return;
     }
 
@@ -1827,8 +1828,14 @@ Project *TimetableMate::openProject( const QString &filePath )
         return openedProject;
     }
 
+    // Create project and try to load it,
+    // before loading it connect to the info message signal for error messages while reading
     Project *project = new Project( m_projectModel->weaver(), this );
+    connect( project, SIGNAL(informationMessage(QString,KMessageWidget::MessageType,int,QList<QAction*>)),
+             this, SLOT(infoMessage(QString,KMessageWidget::MessageType,int,QList<QAction*>)) );
     project->loadProject( filePath );
+    disconnect( project, SIGNAL(informationMessage(QString,KMessageWidget::MessageType,int,QList<QAction*>)),
+                this, SLOT(infoMessage(QString,KMessageWidget::MessageType,int,QList<QAction*>)) );
     if ( project->state() == Project::ProjectSuccessfullyLoaded ) {
         if ( !project->filePath().isEmpty() ) {
             m_recentFilesAction->addUrl( project->filePath() );

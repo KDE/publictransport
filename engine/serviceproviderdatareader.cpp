@@ -99,7 +99,7 @@ ServiceProviderData *ServiceProviderDataReader::read( const QString &providerId,
 }
 
 ServiceProviderData *ServiceProviderDataReader::read( QIODevice *device, const QString &fileName,
-        ErrorAcceptance errorAcceptance, QObject *parent, QString *comments )
+        ErrorAcceptance errorAcceptance, QObject *parent, QString *comments, QString *errorMessage )
 {
     const QString serviceProvider = ServiceProviderGlobal::idFromFileName( fileName );
 
@@ -114,19 +114,38 @@ ServiceProviderData *ServiceProviderDataReader::read( QIODevice *device, const Q
         country = "international";
     }
 
-    return read( device, serviceProvider, fileName, country, errorAcceptance, parent, comments );
+    return read( device, serviceProvider, fileName, country,
+                 errorAcceptance, parent, comments, errorMessage );
+}
+
+bool ServiceProviderDataReader::handleError( const QString &errorMessage,
+                                             ErrorAcceptance errorAcceptance,
+                                             QString *errorMessageOutput )
+{
+    if ( errorMessageOutput ) {
+        *errorMessageOutput = errorMessage;
+    }
+    if ( errorAcceptance == OnlyReadCorrectFiles ) {
+        raiseError( errorMessage );
+        return false;
+    } else {
+        return true;
+    }
 }
 
 ServiceProviderData* ServiceProviderDataReader::read( QIODevice* device,
         const QString &serviceProvider, const QString &fileName, const QString &country,
-        ErrorAcceptance errorAcceptance, QObject *parent, QString *comments )
+        ErrorAcceptance errorAcceptance, QObject *parent, QString *comments, QString *errorMessage )
 {
     Q_ASSERT( device );
 
     bool closeAfterRead; // Only close after reading if it wasn't open before
     if ( (closeAfterRead = !device->isOpen()) && !device->open(QIODevice::ReadOnly) ) {
-        raiseError( "Couldn't read the file \"" + fileName + "\"." );
-        return 0;
+        if ( !handleError("Couldn't read the file \"" + fileName + "\".",
+                          errorAcceptance, errorMessage) ) 
+        {
+            return 0;
+        }
     }
     setDevice( device );
 
@@ -140,16 +159,27 @@ ServiceProviderData* ServiceProviderDataReader::read( QIODevice* device,
             }
         } else if ( isStartElement() ) {
             if ( name().compare("serviceProvider", Qt::CaseInsensitive) != 0 ) {
-                raiseError( QString("Wrong root element, should be <serviceProvider>, is <%1>.")
-                            .arg(name().toString()) );
-            } else if ( attributes().value("fileVersion") != QLatin1String("1.0") ) {
-                raiseError( "The file is not a public transport service provider plugin "
-                            "version 1.0 file." );
-            } else {
-                data = readProviderData( serviceProvider, fileName, country, errorAcceptance,
-                                         parent, comments );
-                break;
+                if ( !handleError(QString("Wrong root element for %1, should be <serviceProvider>, "
+                                  "is <%2>.").arg(serviceProvider, name().toString()),
+                                  errorAcceptance, errorMessage) )
+                {
+                    return 0;
+                }
+            } else if ( attributes().value("fileVersion") != QLatin1String("1.1") ) {
+                const QString message = QString("Service provider plugin format version '%1' "
+                        "specified by %2 is not supported. Currently only 1.1 is supported. "
+                        "Please make sure the plugin complies with that version and update the "
+                        "'fileVersion' attribute of the root <serviceProvider> tag.")
+                        .arg(attributes().value("fileVersion").toString(), serviceProvider);
+                if ( !handleError(message, errorAcceptance, errorMessage) )
+                {
+                    return 0;
+                }
             }
+
+            data = readProviderData( serviceProvider, fileName, country, errorAcceptance,
+                                     parent, comments, errorMessage );
+            break;
         }
     }
 
@@ -233,7 +263,7 @@ void ServiceProviderDataReader::addComments( QString *comments, const QString &n
 
 ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString &serviceProviderId,
         const QString &fileName, const QString &country, ErrorAcceptance errorAcceptance,
-        QObject *parent, QString *comments )
+        QObject *parent, QString *comments, QString *errorMessage )
 {
     const QString lang = KGlobal::locale()->country();
     QString langRead, url, shortUrl;
@@ -246,9 +276,13 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
         serviceProviderTypeString = attributes().value( QLatin1String("type") ).toString();
         serviceProviderType = ServiceProviderGlobal::typeFromString( serviceProviderTypeString );
         if ( serviceProviderType == Enums::InvalidProvider && errorAcceptance == OnlyReadCorrectFiles ) {
-            raiseError( QString("The service provider type %1 is invalid. "
-                                "Currently there are two values allowed: Script or GTFS.")
-                        .arg(serviceProviderTypeString) );
+            if ( !handleError(QString("The service provider type %1 used for %2 is invalid. "
+                              "Currently there are two values allowed: Script or GTFS.")
+                              .arg(serviceProviderTypeString, serviceProviderId),
+                              errorAcceptance, errorMessage) )
+            {
+                return 0;
+            }
             return 0;
         }
     } else {
@@ -345,12 +379,15 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
                 const QStringList extensions = attributes().value( QLatin1String("extensions") )
                         .toString().split( ',', QString::SkipEmptyParts );
                 const QString scriptFile = QFileInfo( fileName ).path() + '/' + readElementText();
-                if ( !QFile::exists(scriptFile) && errorAcceptance == OnlyReadCorrectFiles ) {
-                    raiseError( QString("The script file %1 referenced by the service provider "
-                                        "information XML named %2 wasn't found")
-                                .arg(scriptFile).arg(names["en"]) );
-                    delete serviceProviderData;
-                    return 0; // TODO
+                if ( !QFile::exists(scriptFile) ) {
+                    if ( !handleError(QString("The script file %1 referenced by the service "
+                                      "provider plugin %2 was not found")
+                                      .arg(scriptFile, serviceProviderId),
+                                      errorAcceptance, errorMessage) )
+                    {
+                        delete serviceProviderData;
+                        return 0;
+                    }
                 }
                 serviceProviderData->setScriptFile( scriptFile, extensions );
 #endif

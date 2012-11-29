@@ -411,11 +411,12 @@ public:
      * The "file version" names the used version of the PublicTransport engine plugin interface.
      * Currently only version 1.1 is supported.
      *
-     * @note Service provider plugins written for version 1.0 need to be updated. But that mostly
-     *   means adding a 'getTimetable()' function to download a timetable document and calling the
-     *   old 'parseTimetable()' function if the download is finished. The same can be done with
-     *   'getStopsuggestions()' and 'getJourneys()'. The return values now need to be JavaScript
-     *   objects containing properties named after the enumerables in TimetableInformation.
+     * @note Service provider plugin scripts written for version 1.0 need to be updated. But that
+     *   mostly means adding a 'getTimetable()' function to download a timetable document and
+     *   calling the old 'parseTimetable()' function when the download is finished. The same can be
+     *   done with 'getStopsuggestions()' and 'getJourneys()'. The return values now need to be
+     *   JavaScript objects containing properties named after the enumerables in 
+     *   TimetableInformation.
      *
      * @param fileFormatVersion The file format version of this service provider plugin.
      **/

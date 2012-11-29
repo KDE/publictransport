@@ -50,8 +50,8 @@ ServiceProviderData::ServiceProviderData( const Enums::ServiceProviderType& type
 {
     m_serviceProviderType = type;
     m_id = id;
-    m_version = "1.0";
-    m_fileFormatVersion = "1.1";
+    m_version = "1.0"; // Initial version of new provider plugins
+    m_fileFormatVersion = "1.1"; // Current version of the file structure of the .pts-file
     m_useSeparateCityValue = false;
     m_onlyUseCitiesInList = false;
     m_defaultVehicleType = Enums::UnknownVehicleType;
@@ -265,7 +265,9 @@ int ServiceProviderData::compareVersions( const QString &version1, const QString
             return 1; // No more version numbers in version2, but in version1, which is therefore bigger
         }
 
-        // pos1 and pos2 are both >= 0 here
+        // pos1 and pos2 are both >= 0 here,
+        // they are set behind the '.' after the just read version numbers,
+        // this makes the next iteration read the next version number
     }
 
     return 0;

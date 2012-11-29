@@ -263,7 +263,7 @@ QStringList PublicTransportEngine::sources() const
 void PublicTransportEngine::networkStateChanged( uint state )
 {
     if ( state != 4 ) {
-        // 4 => Connected
+        // 4 => Connected, see Solid::Networking::Status
         return;
     }
 
@@ -2200,6 +2200,13 @@ ServiceProvider *PublicTransportEngine::createProviderForData( const ServiceProv
     if ( !ServiceProviderGlobal::isProviderTypeAvailable(data->type()) ) {
         kWarning() << "Cannot create provider of type" << data->typeName() << "because the engine "
                       "has been built without support for that provider type";
+        return 0;
+    }
+
+    // Warn if the format of the provider plugin is unsupported
+    if ( data->fileFormatVersion() != QLatin1String("1.1") ) {
+        kWarning() << "The Provider" << data->id() << "was designed for an unsupported "
+                "provider plugin format version, update to version 1.1";
         return 0;
     }
 

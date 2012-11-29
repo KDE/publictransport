@@ -841,8 +841,10 @@ public:
         xmlComments.clear();
 
         ServiceProviderDataReader reader;
+        QString errorMessage;
         ServiceProviderData *readData = reader.read(
-                device, fileName, ServiceProviderDataReader::ReadErrorneousFiles, q, &xmlComments );
+                device, fileName, ServiceProviderDataReader::ReadErrorneousFiles,
+                q, &xmlComments, &errorMessage );
         if ( readData ) {
             Enums::ServiceProviderType oldType = provider ? provider->type() : Enums::InvalidProvider;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -857,6 +859,11 @@ public:
 
             if ( provider->type() != oldType ) {
                 q->emit providerTypeChanged( provider->type(), oldType );
+            }
+
+            if ( !errorMessage.isEmpty() ) {
+                kDebug() << "Service provider plugin has errors" << errorMessage << fileName;
+                errorHappened( Project::ErrorWhileLoadingProject, errorMessage );
             }
         } else {
             kDebug() << "Service provider plugin is invalid" << reader.errorString() << fileName;
@@ -1080,7 +1087,7 @@ public:
 
         kDebug() << "Error:" << error << errorString;
         state = Project::ProjectError;
-        q->emitInformationMessage( errorString, KMessageWidget::Error, 10000 );
+        q->emitInformationMessage( errorString, KMessageWidget::Error, -1 );
     };
 
     void connectTab( AbstractTab *tab )

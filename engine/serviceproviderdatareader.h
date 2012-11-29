@@ -105,17 +105,19 @@ public:
     ServiceProviderData* read( QIODevice *device, const QString &serviceProvider,
                                const QString &fileName, const QString &country,
                                ErrorAcceptance errorAcceptance = OnlyReadCorrectFiles,
-                               QObject *parent = 0, QString *comments = 0 );
+                               QObject *parent = 0, QString *comments = 0,
+                               QString *errorMessage = 0 );
 
     ServiceProviderData* read( QIODevice *device, const QString &fileName,
                                ErrorAcceptance errorAcceptance = OnlyReadCorrectFiles,
-                               QObject *parent = 0, QString *comments = 0 );
+                               QObject *parent = 0, QString *comments = 0,
+                               QString *errorMessage = 0 );
 
 private:
     void readUnknownElement( QString *comments = 0 );
     ServiceProviderData *readProviderData( const QString &serviceProvider,
             const QString &fileName, const QString &country, ErrorAcceptance errorAcceptance,
-            QObject *parent, QString *comments = 0 );
+            QObject *parent, QString *comments = 0, QString *errorMessage = 0 );
     QString readLocalizedTextElement( QString *lang );
     bool readBooleanElement();
     void readAuthor( QString *fullname, QString *shortName, QString *email, QString *comments = 0 );
@@ -129,6 +131,8 @@ private:
     inline void addComments( QString *comments, const QStringRef &newComments, bool newLine = true ) {
         addComments( comments, newComments.toString(), newLine );
     };
+    bool handleError( const QString &errorMessage, ErrorAcceptance errorAcceptance,
+                      QString *errorMessageOutput );
 };
 
 #endif // Multiple inclusion guard

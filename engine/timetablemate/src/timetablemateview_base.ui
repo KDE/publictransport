@@ -699,45 +699,7 @@
        <property name="fieldGrowthPolicy">
         <enum>QFormLayout::ExpandingFieldsGrow</enum>
        </property>
-       <item row="0" column="0">
-        <widget class="QLabel" name="lblFileVersion">
-         <property name="text">
-          <string>File Type &amp;Version:</string>
-         </property>
-         <property name="buddy">
-          <cstring>fileVersion</cstring>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="KLineEdit" name="fileVersion">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
-         </property>
-         <property name="toolTip">
-          <string comment="@info:tooltip">The version of the PublicTransport service provider plugin file type.&lt;nl/&gt;The PublicTransport data engine currently only accepts 1.0 as version</string>
-         </property>
-         <property name="inputMask">
-          <string/>
-         </property>
-         <property name="maxLength">
-          <number>64</number>
-         </property>
-         <property name="showClearButton" stdset="0">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="2" column="0" colspan="2">
-        <widget class="KSeparator" name="kseparator_2"/>
-       </item>
-       <item row="3" column="0">
+       <item row="1" column="0">
         <widget class="QLabel" name="lblDefaultVehicleType">
          <property name="text">
           <string>Default &amp;Vehicle Type:</string>
@@ -747,15 +709,15 @@
          </property>
         </widget>
        </item>
-       <item row="3" column="1">
+       <item row="1" column="1">
         <widget class="KComboBox" name="defaultVehicleType">
          <property name="toolTip">
           <string comment="@info:tooltip">The vehicle type to be used if it could not be determined from the parsed document.</string>
          </property>
         </widget>
        </item>
-       <item row="4" column="0">
-        <widget class="QLabel" name="lblRawStopSuggestionsUrl_2">
+       <item row="2" column="0">
+        <widget class="QLabel" name="lblMinFetchWait">
          <property name="text">
           <string>Min. Fetch &amp;Wait:</string>
          </property>
@@ -764,7 +726,7 @@
          </property>
         </widget>
        </item>
-       <item row="4" column="1">
+       <item row="2" column="1">
         <widget class="QSpinBox" name="minFetchWait">
          <property name="toolTip">
           <string comment="@info:tooltip">The minimum time in minutes to wait between fetches of the same URL.
@@ -790,10 +752,10 @@
          </property>
         </widget>
        </item>
-       <item row="5" column="0" colspan="2">
+       <item row="3" column="0" colspan="2">
         <widget class="KSeparator" name="kseparator"/>
        </item>
-       <item row="6" column="0">
+       <item row="4" column="0">
         <widget class="QLabel" name="lblUseCityValue">
          <property name="text">
           <string>&amp;Use City Value:</string>
@@ -803,15 +765,15 @@
          </property>
         </widget>
        </item>
-       <item row="6" column="1">
+       <item row="4" column="1">
         <widget class="QCheckBox" name="useCityValue">
          <property name="text">
           <string/>
          </property>
         </widget>
        </item>
-       <item row="7" column="0" colspan="2">
-        <widget class="QGroupBox" name="groupBox">
+       <item row="5" column="0" colspan="2">
+        <widget class="QGroupBox" name="grpPredefinedCities">
          <property name="title">
           <string>Predefined &amp;Cities</string>
          </property>
@@ -996,7 +958,6 @@
   <tabstop>gtfsTripUpdates</tabstop>
   <tabstop>gtfsAlerts</tabstop>
   <tabstop>timeZone</tabstop>
-  <tabstop>fileVersion</tabstop>
   <tabstop>defaultVehicleType</tabstop>
   <tabstop>minFetchWait</tabstop>
   <tabstop>useCityValue</tabstop>

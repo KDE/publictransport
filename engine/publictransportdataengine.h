@@ -281,7 +281,7 @@ protected slots:
      * @brief The network state has changed, eg. was connected or disconnected.
      *
      * This slot is connected with the @c networkstatus module of @c kded through DBus.
-     * @p state The new network state.
+     * @p state The new network state. See Solid::Networking::Status.
      **/
     void networkStateChanged( uint state );
 
@@ -1462,14 +1462,15 @@ tag are <span style="background-color: #ffdddd;">highlighted</span>):
 <td>Optional?</td> <td>Description</td></tr>
 
 <tr style="background-color: #ffdddd;">
-<td><b>\<serviceProvider\> </b></td>
-<td>Root</td> <td>Required</td> <td>This is the root item.</td></tr>
+<td><b>\<?xml version="1.0" encoding="UTF-8"?\></b></td>
+<td>Root</td> <td>Required</td><td>XML declaration.</td></tr>
 
-<tr><td><b>\<xml_file_version type="publictransport" version="1.0" /\> </b></td>
-<td>\<serviceProvider\> </td> <td>Not used</td>
-<td>This is currently not used by the data engine. But to be sure that the xml is parsed correctly
-you should add this tag. The version is the version of the xml file structure,
-current version is 1.0.</td></tr>
+<tr style="background-color: #ffdddd;">
+<td><b>\<serviceProvider fileVersion="1.1" version=@em "plugin-version" type=@em "provider-type" \> </b></td>
+<td>Root</td> <td>Required</td> <td>This is the root item. The only currently supported provider
+plugin format version is 1.1 and gets written as 'fileVersion' attribute. The 'version' attribute
+contains the version of the plugin itself and the 'type' attribute specifies the type of the
+plugin, which can currently be either @em "script" or @em "gtfs".</td></tr>
 
 <tr style="background-color: #ffdddd;">
 <td><b>\<name\> </b></td><td>\<serviceProvider\></td> <td>Required</td>
@@ -1502,10 +1503,6 @@ The email address of the author of the service provider plugin.</td></tr>
 <tr style="background-color: #ffdddd;">
 <td><b>\<version\> </b></td><td>\<serviceProvider\> </td> <td>Required</td>
 <td>The version of the service provider plugin, should start with "1.0".</td></tr>
-
-<tr style="background-color: #ffdddd;">
-<td><b>\<type\> </b></td><td>\<serviceProvider\></td> <td>Required</td>
-<td>Can be either HTML or XML.</td></tr>
 
 <tr style="background-color: #ffdddd;">
 <td><b>\<url\> </b></td><td>\<serviceProvider\></td> <td>Required</td>

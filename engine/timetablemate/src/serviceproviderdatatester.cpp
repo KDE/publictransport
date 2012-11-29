@@ -191,17 +191,18 @@ TestModel::TestState ServiceProviderDataTester::isFileVersionValid( const QStrin
         QList< TimetableDataRequestMessage > *childrenExplanations )
 {
     Q_UNUSED( childrenExplanations )
-    if ( fileVersion.isEmpty() || fileVersion != "1.0" ) {
+
+    // Only file format version 1.1 is currently supported
+    if ( fileVersion.isEmpty() || fileVersion != QLatin1String("1.1") ) {
         if ( errorMessage ) {
             if ( errorMessage ) {
-                *errorMessage = i18nc("@info/plain", "The PublicTransport data engine currently "
-                        "only supports version '1.0'");
+                *errorMessage = i18nc("@info/plain", "Only provider plugin format version 1.1 is "
+                                      "currently supported.");
             }
             if ( tooltip ) {
-                *tooltip = i18nc("@info",
-                        "<title>The PublicTransport data engine currently only supports version '1.0'</title>"
-                        "<para>Specify version '1.0' as <interface>File Type Version</interface> "
-                        "in the project settings.</para>");
+                *tooltip = i18nc("@info", "<title>Unsupported Plugin Format Version</title>"
+                        "<para>The only currently supported provider plugin format version is 1.1."
+                        "</para>");
             }
         }
         return TestModel::TestFinishedWithErrors;

@@ -182,7 +182,6 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     QRegExpValidator *versionValidator =
             new QRegExpValidator( QRegExp("\\d+(\\.\\d+)?(\\.\\d+)?"), this );
     ui_provider->version->setValidator( versionValidator );
-    ui_provider->fileVersion->setValidator( versionValidator );
 
     // Set a validator for the email line edit
     // The reg exp is "inspired" by http://www.regular-expressions.info/email.html
@@ -194,7 +193,6 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     // Install event filters to filter out focus out events
     // if the line edit's text cannot be validated
     ui_provider->version->installEventFilter( this );
-    ui_provider->fileVersion->installEventFilter( this );
     ui_provider->name->installEventFilter( this );
     ui_provider->description->installEventFilter( this );
     ui_provider->author->installEventFilter( this );
@@ -314,7 +312,6 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     connect( ui_provider->shortAuthor, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->email, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->defaultVehicleType, SIGNAL(currentIndexChanged(int)), m_mapper, SLOT(map()) );
-    connect( ui_provider->fileVersion, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->predefinedCities, SIGNAL(changed()), m_mapper, SLOT(map()) );
     connect( ui_provider->sampleStopNames, SIGNAL(changed()), m_mapper, SLOT(map()) );
     connect( ui_provider->sampleCity, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
@@ -336,7 +333,6 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     m_mapper->setMapping( ui_provider->shortAuthor, ui_provider->shortAuthor );
     m_mapper->setMapping( ui_provider->email, ui_provider->email );
     m_mapper->setMapping( ui_provider->defaultVehicleType, ui_provider->defaultVehicleType );
-    m_mapper->setMapping( ui_provider->fileVersion, ui_provider->fileVersion );
     m_mapper->setMapping( ui_provider->predefinedCities, ui_provider->predefinedCities );
     m_mapper->setMapping( ui_provider->sampleStopNames, ui_provider->sampleStopNames );
     m_mapper->setMapping( ui_provider->sampleCity, ui_provider->sampleCity );
@@ -379,7 +375,6 @@ bool ProjectSettingsDialog::check()
 {
     bool result = testWidget( ui_provider->email );
     result = testWidget( ui_provider->version ) && result;
-    result = testWidget( ui_provider->fileVersion ) && result;
     result = testWidget( ui_provider->name ) && result;
     result = testWidget( ui_provider->description ) && result;
     result = testWidget( ui_provider->author ) && result;
@@ -444,8 +439,6 @@ TestModel::Test testFromWidget( Ui::timetablemateview_base *ui, QWidget *widget 
         return TestModel::ServiceProviderDataNameTest;
     } else if ( widget == ui->version ) {
         return TestModel::ServiceProviderDataVersionTest;
-    } else if ( widget == ui->fileVersion ) {
-        return TestModel::ServiceProviderDataFileFormatVersionTest;
     } else if ( widget == ui->author ) {
         return TestModel::ServiceProviderDataAuthorNameTest;
     } else if ( widget == ui->shortAuthor ) {
@@ -581,7 +574,7 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     m_providerData->setNames( names );
     m_providerData->setDescriptions( descriptions );
     m_providerData->setVersion( ui_provider->version->text() );
-    m_providerData->setFileFormatVersion( ui_provider->fileVersion->text() );
+    m_providerData->setFileFormatVersion( "1.1" ); // Update to current format version
     m_providerData->setUseSeparateCityValue( ui_provider->useCityValue->isChecked() );
     m_providerData->setOnlyUseCitiesInList( ui_provider->onlyAllowPredefinedCities->isChecked() );
     m_providerData->setUrl( ui_provider->url->text(), ui_provider->shortUrl->text() );
@@ -895,6 +888,20 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *data,
     m_providerData = data->clone( data->parent() );
     m_openedPath = fileName;
     ui_provider->type->setCurrentIndex( providerTypeToComboBoxIndex(data->type()) );
+
+    if ( data->fileFormatVersion() != QLatin1String("1.1") ) {
+        KMessageBox::information( this, i18nc("@info",
+                "<title>Invalid Provider Plugin Format Version</title>"
+                "<para>The provider plugin format version has been set to "
+                "<emphasize strong='1'>1.1</emphasize>, because the specified version "
+                "<emphasize strong='1'>%1</emphasize> is not supported.</para>"
+                "<para>Please make sure that the plugin complies with that version "
+                "and update it if neccessary.</para>"
+                "<para><note>You can cancel the settings dialog to not change anything."
+                "</note></para>",
+                data->fileFormatVersion()) );
+    }
+
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     ui_provider->scriptFile->setText( data->scriptFileName() );
     checkScriptExtensionsInWidget( data->scriptExtensions() );
@@ -934,7 +941,6 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *data,
             ui_provider->defaultVehicleType->findData( Enums::toString(data->defaultVehicleType()) );
     ui_provider->defaultVehicleType->setCurrentIndex(
             defaultVehicleTypeIndex > 0 ? defaultVehicleTypeIndex : 0 );
-    ui_provider->fileVersion->setText( data->fileFormatVersion() );
     m_changelog->clear();
     m_changelog->addChangelog( data->changelog(), data->shortAuthor() );
 
