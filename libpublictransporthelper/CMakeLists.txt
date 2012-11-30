@@ -110,7 +110,7 @@ endif ( MARBLE_FOUND )
 target_link_libraries( ${libraries} )
 
 set_target_properties( publictransporthelper
-	PROPERTIES VERSION 0 SOVERSION 10
+	PROPERTIES VERSION 0 SOVERSION 11
 )
 
 install( TARGETS publictransporthelper

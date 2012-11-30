@@ -23,8 +23,10 @@
 // Qt includes
 #include <QObject>
 
+/** @brief Provides an enumeration of tab types. */
 class Tabs : public QObject {
-    Q_ENUMS( TabType )
+    Q_OBJECT
+    Q_ENUMS( Type )
 
 public:
     /** @brief Types of tabs. */

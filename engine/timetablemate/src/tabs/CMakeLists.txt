@@ -6,6 +6,7 @@ set( tab_SRCS
     tabs/webtab.cpp
     tabs/plasmapreviewtab.cpp
     tabs/plasmapreview.cpp
+    tabs/tabs.h
 )
 
 if ( BUILD_PROVIDER_TYPE_SCRIPT )

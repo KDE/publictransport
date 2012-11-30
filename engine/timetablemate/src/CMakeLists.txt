@@ -59,7 +59,7 @@ add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongener
             ${CMAKE_CURRENT_SOURCE_DIR}/../../publictransportdataengine.h
             ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator )
 
-qt4_wrap_cpp( timetablemate_MOC_SRCS ../../enums.h )
+qt4_wrap_cpp( timetablemate_MOC_SRCS ../../enums.h tabs/tabs.h )
 set( timetablemate_SRCS
    main.cpp
    timetablemate.cpp
@@ -89,6 +89,7 @@ set( timetablemate_SRCS
    ../../serviceproviderglobal.cpp
    ${timetablemate_MOC_SRCS}
 )
+qt4_automoc( timetablemate_SRCS )
 
 if ( BUILD_PROVIDER_TYPE_SCRIPT )
     set ( timetablemate_SRCS ${timetablemate_SRCS}

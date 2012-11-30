@@ -52,274 +52,13 @@ namespace Scripting {
 
 class Network;
 
-/**
- * @defgroup scripting Classes Used for Scripts
- *
- * These classes get exposed to scripts or are used by scripted service provider plugins.
- * Each call to a script from the data engine creates a new thread using ThreadWeaver. Each thread
- * uses it's own QScriptEngine instance to execute the script.
- *
- * Scripts are written in ECMAScript, but they can access Kross to support other languages, ie.
- * Python or Ruby. Kross needs to be imported explicitly. That can be done by adding an
- * @em "extensions" attribute to the @em \<script\> tag in the XML file, like this:
- * @verbatim<script extensions="kross">file.js</script>@endverbatim. Other extensions can also be
- * imported, eg. "qt.core" to use classes provided by the "qt.core" bindings.
- *
- * To use eg. Python code in the script, the following code can then be used in a script:
- * @code
- * // Create Kross action
- * var action = Kross.action( "MyPythonScript" );
- *
- * // Propagate action to the Python script
- * action.addQObject( action, "MyAction" );
- *
- * // Set the interpreter to use, eg. "python", "ruby"
- * action.setInterpreter( "python" );
- *
- * // Set the code to execute and trigger execution
- * action.setCode("import MyAction ; print 'This is Python. name=>',MyAction.interpreter()");
- * action.trigger();
- * @endcode
- * @todo If needed a later version might make this simpler by examining the file type of the script
- *   file and automatically insert the contents of the script file into the setCode() function
- *   like above.
- *
- * @n
- *
- * @section script_exposed Classes Exposed to Scripts
- *
- * Scripts can access some objects that represent classes mentioned here. Only one instance of
- * these classes is available in a script.
- * @li @em ResultObject Stores results, ie. parsed data for departures, arrivals, journeys or
- *   stop suggestions. Available for scripts under the name @b result.
- * @li @em Network Provides network access to scripts and is available for scripts under
- *   the name @b network. This class can create objects of type NetworkRequest using
- *   Network::createRequest() for asynchronous requests. NetworkRequest objects have signals
- *   that scripts can connect to, ie. NetworkRequest::finished() to indicate a finished request.
- * @li @em Storage Stores data between script calls. Can store data in memory or persistently,
- *   ie. on disk. An object of this class is available for scripts under the name @b storage.
- *   The storage object gets shared between calls to the same script (for the same service
- *   provider) and can be use by multiple script instances at the same time.
- * @li @em Helper Provides some helper functions to scripts, available under the name @b helper.
- *
- * @n
- *
- * @section script_functions Script Functions to be Implemented
- *
- * There should be specially named functions in the script, that get called by the data engine.
- * Only the @em getTimetable function @em must be implemented.
- *
- * @subsection script_functions_gettimetable getTimetable( values )
- *   This function @em must be implemented (but that may change). Gets called to request
- *   departures/arrivals. The only argument contains information about the request with these
- *   properties:
- *   @li @em stop: The name/ID of the stop to get departures/arrivals for.
- *   @li @em dateTime: A Date object with the date and time of the earliest departure/arrival to get.
- *   @li @em maxCount: The maximal number of departures/arrivals to get.
- *   @li @em dataType: This can be "arrivals" or "departures".
- *   @li @em city: If used, this contains the city name to get departures/arrivals for. Only some
- *     service providers need a separate city value, most are happy with a stop name/stop ID.
- *
- * @subsection script_functions_getstopsuggestions getStopSuggestions( values )
- *   Gets called to request stop suggestions. Since it may be called very often it should be fast,
- *   ie. the downloaded data should be as small as possible. The only argument contains information
- *   about the request with these properties:
- *   @li @em stop: A part of a stop name to get suggestions for. This is what users can type in, eg.
- *     the beginning of the complete stop name.
- *   @li @em maxCount: The maximal number of stop suggestions to get.
- *   @li @em city: If used, this contains the city name to get stop suggestions for. Only some
- *     service providers need a separate city value, most are happy with a part of the stop name.
- *
- * @subsection script_functions_getjourneys getJourneys( values )
- *   Gets called to request journeys (trips from stop A to stop B). The only argument contains
- *   information about the request with these properties:
- *   @li @em originStop: The name/ID of the start/origin stop, also available as 'stop' property.
- *   @li @em targetStop: The name/ID of the target/destination stop.
- *   @li @em dateTime: A Date object with the date and time of the earliest journey to get.
- *   @li @em maxCount: The maximal number of journeys to get.
- *   @li @em dataType: This can be "journeys"/"journeysDep" (journeys departing at the given @em dateTime)
- *     or "journeysArr" (journeys arriving at the given @em dateTime).
- *   @li @em city: If used, this contains the city name to get journeys for. Only some
- *     service providers need a separate city value, most are happy with a stop name/stop ID.
- *
- * @subsection script_functions_features features()
- *   Can be implemented to provide information about what information types the script can return.
- *   This can be done by simply returning a list of strings, where each string is the name of a
- *   type of information. Only optional information that the script provides needs to be returned
- *   by this function. This list gets used for the feature list of scripted service provider plugins.
- *   @li @b Arrivals The script can parse arrivals
- *   @li @b Delay The script can parse delay information
- *   @li @b DelayReason The script can also parse a string describing the reason of a delay
- *   @li @b Platform The platform where a departure/arrival happens can be parsed
- *   @li @b JourneyNews Additional information in text form about departures/arrivals/journeys
- *     can be parsed
- *   @li @b StopID Stop IDs can be parsed and used instead of stop names to prevent ambiguities
- *   @li @b Pricing Pricing information can be parsed for journeys
- *   @li @b Changes The number of changes in a journey can be parsed
- *   @li @b RouteStops A list of stop names on the route can be parsed
- *   @li @b RouteTimes A list of times at which the vehicle passes the stops in RouteStops can
- *     be parsed
- *   @li @b RoutePlatformsDeparture A list of platforms in the route where the vehicle departs
- *     can be parsed
- *   @li @b RoutePlatformsArrival A list of platforms in the route where the vehicle arrives
- *     can be parsed
- *   @li @b RouteTimesDeparture A list of times at which the vehicle departs from the stops
- *     in RouteStops can be parsed, eg. for journeys
- *   @li @b RouteTimesArrival A list of times at which the vehicle arrives from the stops
- *     in RouteStops can be parsed, eg. for journeys
- *   @li @b RouteTypesOfVehicles A list of vehicle types used for subtrips in a journey (between
- *     stops in RouteStops)
- *   @li @b RouteTransportLines A list of transport line strings of vehicles used for subtrips
- *     in a journy
- *
- *   @see TimetableInformation
- *
- * @n
- *
- * @section script_collecting_items Collecting Parsed Items
- * The object @b result (ResultObject) gets used by scripts to collect parsed departures/
- * arrivals/journeys/stop suggestions. It provides a function ResultObject::addData(), which
- * accepts an object with properties that have special names. A simple departure item can be added
- * to the result object like this:
- * @code
- * result.addData({ DepartureDateTime: new Date(),
- *                  VehicleType: PublicTransport.Bus,
- *                  Target: "SomeTarget" });
- * @endcode
- *
- * Another possibility is to assign the properties when they get parsed, like this:
- * @code
- * var departure = {};
- * departure.DepartureDateTime = new Date();
- * departure.VehicleType = PublicTransport.Bus;
- * departure.Target = "SomeTarget";
- * result.addData( departure );
- * @endcode
- *
- * You can also use enumerable values to store data (available in "PublicTransport"):
- * @code
- * var departure = {};
- * departure[ PublicTransport.DepartureDateTime ] = new Date();
- * departure[ PublicTransport.VehicleType ] = PublicTransport.Bus;
- * departure[ PublicTransport.Target ] = "SomeTarget";
- * result.addData( departure );
- * @endcode
- *
- * The names of the properties are important, but upper or lower case does not matter.
- * All entries in the TimetableInformation enumerable can be used to add information, look
- * there fore more detailed information. This enumerable is a central point of the Public Transport
- * data engine and gets used by all service provider plugin types to store information about results.
- *
- * @n
- * @subsection script_collecting_items_departures Information Types Used for Departures/Arrivals
- * @em DepartureDateTime, @em DepartureDate, @em DepartureTime, @em TypeOfVehicle,
- * @em TransportLine, @em FlightNumber (alias for @em TransportLine), @em Target,
- * @em TargetShortened, @em Platform, @em Delay, @em DelayReason, @em JourneyNews,
- * @em JourneyNewsOther, @em JourneyNewsLink, @em Operator, @em Status, @em RouteStops,
- * @em RouteStopsShortened, @em RouteTimes, @em RouteTimesDeparture, @em RouteTimesArrival,
- * @em RouteExactStops, @em RouteTypesOfVehicles, @em RouteTransportLines,
- * @em RoutePlatformsDeparture, @em RoutePlatformsArrival, @em RouteTimesDepartureDelay,
- * @em RouteTimesArrivalDelay, @em IsNightLine (currently unused).
- * @note At least these information types are needed to form a valid departure/arrival object:
- *   @em DepartureDateTime or @em DepartureTime (the date can be omitted, but that can produce
- *   wrong guessed dates), @em TypeOfVehicle and @em TransportLine.
- * @note When arrivals are requested, @em DepartureDateTime, @em DepartureDate and
- *   @em DepartureTime stand actually for the arrival date/time. The names that start with @em Arrival are
- *   used for journeys only.
- *   @todo This might change, allowing both for arrivals.
- *
- * @n
- * @subsection script_collecting_items_journeys Information Types Used for Journeys
- * @em DepartureDateTime, @em DepartureDate, @em DepartureTime, @em Duration, @em StartStopName,
- * @em StartStopID, @em TargetStopName, @em TargetStopID, @em ArrivalDateTime, @em ArrivalDate,
- * @em ArrivalTime, @em Changes, @em TypesOfVehicleInJourney, @em Pricing, @em RouteStops,
- * @em RouteStopsShortened, @em RouteTimes, @em RouteTimesDeparture, @em RouteTimesArrival,
- * @em RouteExactStops, @em RouteTypesOfVehicles, @em RouteTransportLines,
- * @em RoutePlatformsDeparture, @em RoutePlatformsArrival, @em RouteTimesDepartureDelay,
- * @em RouteTimesArrivalDelay.
- * @note At least these information types are needed to form a valid journey object:
- *   @em DepartureDateTime or @em DepartureTime, @em ArrivalDateTime or @em ArrivalTime,
- *   @em StartStopName and @em TargetStopName.
- *
- * @n
- * @subsection script_collecting_items_journeys Information Types Used for Stop Suggestions
- *  @em StopName, @em StopID, @em StopWeight, @em StopCity, @em StopCountryCode.
- * @note Only @em StopName is required to form a valid stop suggestion object.
- *
- * @n
- * @subsection script_collecting_items_vehicletypes Vehicle Types
- *
- * Vehicle types can be given as enumerable values or names (in @em TypeOfVehicle,
- * @em RouteTypesOfVehicles, @em TypesOfVehicleInJourney), see @ref Enums::VehicleType. @n
- *
- * These are the enumerables of currently supported vehicle types (the names without
- * "PublicTransport." can also be used as vehicle type):@n
- * <table>
- * <tr><td></td><td>PublicTransport.Unknown</td>
- * <tr><td>@image html hi16-app-vehicle_type_tram.png
- * </td><td>PublicTransport.Tram</td>
- * <tr><td>@image html hi16-app-vehicle_type_bus.png
- * </td><td>PublicTransport.Bus</td>
- * <tr><td>@image html hi16-app-vehicle_type_subway.png
- * </td><td>PublicTransport.Subway</td>
- * <tr><td>@image html hi16-app-vehicle_type_train_interurban.png
- * </td><td>PublicTransport.InterurbanTrain</td>
- * <tr><td>@image html hi16-app-vehicle_type_metro.png
- * </td><td>PublicTransport.Metro</td>
- * <tr><td>@image html hi16-app-vehicle_type_trolleybus.png
- * </td><td>PublicTransport.TrolleyBus</td>
- * <tr><td>@image html hi16-app-vehicle_type_train_regional.png
- * </td><td>PublicTransport.RegionalTrain</td>
- * <tr><td>@image html hi16-app-vehicle_type_train_regional.png
- * </td><td>PublicTransport.RegionalExpressTrain</td>
- * <tr><td>@image html hi16-app-vehicle_type_train_interregional.png
- * </td><td>PublicTransport.InterregionalTrain</td>
- * <tr><td>@image html hi16-app-vehicle_type_train_intercity.png
- * </td><td>PublicTransport.IntercityTrain</td>
- * <tr><td>@image html hi16-app-vehicle_type_train_highspeed.png
- * </td><td>PublicTransport.HighSpeedTrain</td>
- * <tr><td>@image html hi16-app-vehicle_type_feet.png
- * </td><td>PublicTransport.Feet" (for journeys to walk from one intermediate stop to the next)</td>
- * <tr><td>@image html hi16-app-vehicle_type_ferry.png
- * </td><td>PublicTransport.Ferry</td>
- * <tr><td>@image html hi16-app-vehicle_type_ferry.png
- * </td><td>PublicTransport.Ship</td>
- * <tr><td>@image html hi16-app-vehicle_type_plane.png
- * </td><td>PublicTransport.Plane</td>
- * </table>
- *
- * @see TimetableInformation
- * @see VehicleType
- *
- * @n
- *
- * @section script_advanced Advanced Features
- *
- * Scripts can use some additional features. For example the Storage can be used to store data
- * that would otherwise have to be downloaded and parsed over and over again. Data can be stored
- * in memory (for the current session only) or persistently on disk (using KConfig).
- * @see Storage
- *
- * @n
- *
- * The ResultObject class has additional functions other than ResultObject::addData(). For example
- * the ResultObject::publish() function can be used to tell the data engine to publish the items
- * parsed so far to visualizations. A good use case is to call publish() when a document
- * has been read but for more results another document needs to be downloaded first.
- * @note By default data is automatically published after the first few items to provide
- *   visualizations with data as soon as possible. Use ResultObject::enableFeature() to change
- *   this behaviour.
- *
- * There is also a Hint enumeration to give hints to the data engine. Use ResultObject::giveHint()
- * to give a hint.
- **/
-
+/** @ingroup scriptApi
+ * @{ */
 /**
  * @brief Represents one asynchronous request, created with Network::createRequest().
  *
  * To get notified about new data, connect to either the finished() or the readyRead() signal.
  *
- * @ingroup scripting
  * @since 0.10
  **/
 class NetworkRequest : public QObject {
@@ -349,7 +88,6 @@ public:
      * @brief The URL of this request.
      *
      * @note The URL can not be changed, a request object is only used for @em one request.
-     * @ingroup scripting
      **/
     QString url() const;
 
@@ -363,13 +101,11 @@ public:
 
     /**
      * @brief Whether or not the request is currently running.
-     * @ingroup scripting
      **/
     bool isRunning() const;
 
     /**
      * @brief Whether or not the request is finished (successful or not), ie. was running.
-     * @ingroup scripting
      **/
     bool isFinished() const;
 
@@ -394,7 +130,6 @@ public:
      *   default) the "ContentType" header gets used if it was set using setHeader(). Otherwise
      *   utf8 gets used.
      * @see isRunning()
-     * @ingroup scripting
      **/
     Q_INVOKABLE void setPostData( const QString &postData, const QString &charset = QString() );
 
@@ -416,7 +151,6 @@ public:
      *   string (the default) the "ContentType" header gets used if it was set using setHeader().
      *   Otherwise utf8 gets used.
      * @see isRunning()
-     * @ingroup scripting
      **/
     Q_INVOKABLE void setHeader( const QString &header, const QString &value,
                                 const QString &charset = QString() );
@@ -435,14 +169,12 @@ public Q_SLOTS:
 Q_SIGNALS:
     /**
      * @brief Emitted when this request was started.
-     * @ingroup scripting
      **/
     void started();
 
     /**
      * @brief Emitted when this request got aborted or timed out.
      * @param timedOut Whether or not the request was aborted because of a timeout.
-     * @ingroup scripting
      **/
     void aborted( bool timedOut = false );
 
@@ -454,7 +186,6 @@ Q_SIGNALS:
      * @param errorString A human readable description of the error if @p error is @c true.
      * @param statusCode The HTTP status code that was received or -1 if there was an error.
      * @param size The size in bytes of the received data.
-     * @ingroup scripting
      **/
     void finished( const QByteArray &data = QByteArray(), bool error = false,
                    const QString &errorString = QString(), int statusCode = -1, int size = 0 );
@@ -463,7 +194,6 @@ Q_SIGNALS:
      * @brief Emitted when new data is available for this request.
      *
      * @param data New downloaded data for this request.
-     * @ingroup scripting
      **/
     void readyRead( const QByteArray &data );
 
@@ -493,7 +223,10 @@ private:
     QByteArray m_postData;
     quint32 m_uncompressedSize;
 };
+/** \} */ // @ingroup scriptApi
 
+/** @ingroup scriptApi
+ * @{ */
 /**
  * @brief Provides network access to scripts.
  *
@@ -537,7 +270,6 @@ private:
  * @note One request object created with createRequest() can not be used multiple times in
  *   parallel. To start another request create a new request object.
  *
- * @ingroup scripting
  * @since 0.10
  **/
 class Network : public QObject, public QScriptable {
@@ -596,14 +328,12 @@ public:
      *   at the requested URL, but eg. in XML format.
      * @param timeout Maximum time in milliseconds to wait for the reply to finish.
      *   If smaller than 0, no timeout gets used.
-     * @ingroup scripting
      **/
     Q_INVOKABLE QByteArray getSynchronous( const QString &url, const QString &userUrl = QString(),
                                            int timeout = DEFAULT_TIMEOUT );
 
     /**
      * @brief This is an alias for getSynchronous().
-     * @ingroup scripting
      **/
     Q_INVOKABLE inline QByteArray downloadSynchronous( const QString &url,
                                                        const QString &userUrl = QString(),
@@ -618,7 +348,6 @@ public:
      * @note Each NetworkRequest object can only be used once for one download.
      *
      * @see get, download, post, head
-     * @ingroup scripting
      **/
     Q_INVOKABLE NetworkRequest *createRequest( const QString &url,
                                                const QString &userUrl = QString() );
@@ -629,7 +358,6 @@ public:
      * @param request The NetworkRequest object created with createRequest().
      * @param timeout Maximum time in milliseconds to wait for the reply to finish.
      *   If smaller than 0, no timeout gets used.
-     * @ingroup scripting
      **/
     Q_INVOKABLE void get( NetworkRequest *request, int timeout = DEFAULT_TIMEOUT );
 
@@ -639,7 +367,6 @@ public:
      * @param request The NetworkRequest object created with createRequest().
      * @param timeout Maximum time in milliseconds to wait for the reply to finish.
      *   If smaller than 0, no timeout gets used.
-     * @ingroup scripting
      **/
     Q_INVOKABLE void post( NetworkRequest *request, int timeout = DEFAULT_TIMEOUT );
 
@@ -647,13 +374,11 @@ public:
      * @brief Perform the network @p request asynchronously, but only get headers.
      *
      * @param request The NetworkRequest object created with createRequest().
-     * @ingroup scripting
      **/
     Q_INVOKABLE void head( NetworkRequest *request, int timeout = DEFAULT_TIMEOUT );
 
     /**
      * @brief This is an alias for get().
-     * @ingroup scripting
      **/
     Q_INVOKABLE inline void download( NetworkRequest *request, int timeout = DEFAULT_TIMEOUT ) {
         get( request, timeout );
@@ -662,7 +387,6 @@ public:
     /**
      * @brief Returns whether or not there are asynchronous requests running in the background.
      * @see runningRequests
-     * @ingroup scripting
      **/
     Q_INVOKABLE bool hasRunningRequests() const;
 
@@ -671,7 +395,6 @@ public:
      *
      * If hasRunningRequests() returns @c false, this will return an empty list.
      * @see hasRunningRequests
-     * @ingroup scripting
      **/
     Q_INVOKABLE QList< NetworkRequest::Ptr > runningRequests() const;
 
@@ -693,7 +416,6 @@ Q_SIGNALS:
      *
      * This signal is @em not emitted if the network gets accessed synchronously.
      * @param request The request that has been started.
-     * @ingroup scripting
      * @see synchronousRequestStarted()
      **/
     void requestStarted( const NetworkRequest::Ptr &request );
@@ -709,7 +431,6 @@ Q_SIGNALS:
      * @param timestamp The date and time on which the request was finished.
      * @param statusCode The HTTP status code received.
      * @param size The size in bytes of the received data.
-     * @ingroup scripting
      * @see synchronousRequestFinished()
      **/
     void requestFinished( const NetworkRequest::Ptr &request,
@@ -726,7 +447,6 @@ Q_SIGNALS:
      *
      * This signal is @em not emitted if the network gets accessed asynchronously.
      * @param url The URL of the request that has been started.
-     * @ingroup scripting
      * @see requestStarted()
      **/
     void synchronousRequestStarted( const QString &url );
@@ -741,7 +461,6 @@ Q_SIGNALS:
      * @param statusCode The HTTP status code if @p cancelled is @c false.
      * @param waitTime The time spent waiting for the download to finish.
      * @param size The size in bytes of the received data.
-     * @ingroup scripting
      * @see requestFinished()
      **/
     void synchronousRequestFinished( const QString &url, const QByteArray &data = QByteArray(),
@@ -753,7 +472,6 @@ Q_SIGNALS:
      *
      * This signal is @em not emitted if the network gets accessed asynchronously.
      * @param url The URL of the request that has been redirected.
-     * @ingroup scripting
      * @see requestRedirected()
      **/
     void synchronousRequestRedirected( const QString &url );
@@ -763,7 +481,6 @@ Q_SIGNALS:
      *
      * This signal gets emitted just after emitting requestFinished(), if there are no more running
      * requests.
-     * @ingroup scripting
      **/
     void allRequestsFinished();
 
@@ -772,14 +489,12 @@ Q_SIGNALS:
      *
      * This signal is @em not emitted if the network gets accessed synchronously.
      * @param request The request that was aborted.
-     * @ingroup scripting
      **/
     void requestAborted( const NetworkRequest::Ptr &request );
 
 public Q_SLOTS:
     /**
      * @brief Aborts all running (asynchronous) downloads.
-     * @ingroup scripting
      **/
     void abortAllRequests();
 
@@ -806,7 +521,10 @@ private:
     QList< NetworkRequest::Ptr > m_requests;
     QList< NetworkRequest::Ptr > m_finishedRequests;
 };
+/** \} */ // @ingroup scriptApi
 
+/** @ingroup scriptApi
+ * @{ */
 /**
  * @brief A helper class for scripts.
  *
@@ -830,18 +548,17 @@ private:
  *
  * helper.debug("Debug message, eg. something unexpected happened");
  * @endcode
- *
- * @ingroup scripting
  **/
 class Helper : public QObject, protected QScriptable {
     Q_OBJECT
     Q_ENUMS( ErrorSeverity )
 
 public:
+    /** @brief The severity of an error. */
     enum ErrorSeverity {
-        Information,
-        Warning,
-        Fatal
+        Information, /**< The message is only an information. */
+        Warning, /**< The message is a warning. */
+        Fatal /**< The message describes a fatal error. */
     };
 
     /**
@@ -1318,7 +1035,10 @@ private:
     QString m_lastErrorMessage;
     int m_errorMessageRepetition;
 };
+/** \} */ // @ingroup scriptApi
 
+/** @ingroup scriptApi
+ * @{ */
 /**
  * @brief This class is used by scripts to store results in, eg. departures.
  *
@@ -1329,8 +1049,6 @@ private:
  * // Add stop suggestion data to result set
  * result.addData({ StopName: "Name" });
  * @endcode
- *
- * @ingroup scripting
  **/
 class ResultObject : public QObject, protected QScriptable {
     Q_OBJECT
@@ -1578,7 +1296,6 @@ Q_SIGNALS:
 public Q_SLOTS:
     /**
      * @brief Clears the list of stored TimetableData objects.
-     * @ingroup scripting
      **/
     void clear();
 
@@ -1622,10 +1339,13 @@ private:
     Features m_features;
     Hints m_hints;
 };
+/** \} */ // @ingroup scriptApi
 Q_DECLARE_OPERATORS_FOR_FLAGS( ResultObject::Features );
 Q_DECLARE_OPERATORS_FOR_FLAGS( ResultObject::Hints );
 
 class StoragePrivate;
+/** @ingroup scriptApi
+ * @{ */
 /**
  * @brief Used by scripts to store data between calls.
  *
@@ -1693,14 +1413,13 @@ class StoragePrivate;
  * @endcode
  *
  * @warning Since the script can run multiple times simultanously in different threads which share
- *   the same Storage object, the stored values are also shared . If you want to store a value for
+ *   the same Storage object, the stored values are also shared. If you want to store a value for
  *   the current job of the script only (eg. getting departures and remember a value after an
  *   asynchronous request), you should store the value in a global script variable instead.
  *   Otherwise one departure request job might use the value stored by another one, which is
  *   probably not what you want. Scripts can not not access the Storage object of other scripts
  *   (for other service providers).
  *
- * @ingroup scripting
  * @since 0.10
  **/
 class Storage : public QObject {
@@ -1748,31 +1467,26 @@ public:
 
     /**
      * @brief Whether or not a data entry with @p name exists in memory.
-     * @ingroup scripting
      **/
     Q_INVOKABLE bool hasData( const QString &name ) const;
 
     /**
      * @brief Whether or not a data entry with @p name exists in persistent memory.
-     * @ingroup scripting
      **/
     Q_INVOKABLE bool hasPersistentData( const QString &name ) const;
 
     /**
      * @brief Reads all data stored in memory.
-     * @ingroup scripting
      **/
     Q_INVOKABLE QVariantMap read();
 
     /**
      * @brief Reads data stored in memory with @p name.
-     * @ingroup scripting
      **/
     Q_INVOKABLE QVariant read( const QString &name, const QVariant& defaultData = QVariant() );
 
     /**
      * @brief Reads the lifetime remaining for data written using writePersistent() with @p name.
-     * @ingroup scripting
      **/
     Q_INVOKABLE int lifetime( const QString &name );
 
@@ -1784,7 +1498,6 @@ public:
      *   If you use another default value than the default invalid QVariant, the type must match
      *   the type of the stored value. Otherwise an invalid QVariant gets returned.
      * @see lifetime()
-     * @ingroup scripting
      **/
     Q_INVOKABLE QVariant readPersistent( const QString &name,
                                          const QVariant& defaultData = QVariant() );
@@ -1799,7 +1512,6 @@ public:
 public Q_SLOTS:
     /**
      * @brief Stores @p data in memory with @p name.
-     * @ingroup scripting
      **/
     void write( const QString &name, const QVariant &data );
 
@@ -1808,19 +1520,16 @@ public Q_SLOTS:
      *
      * @param data The data to write to disk. This can be a script object.
      * @overload
-     * @ingroup scripting
      **/
     void write( const QVariantMap &data );
 
     /**
      * @brief Removes data stored in memory with @p name.
-     * @ingroup scripting
      **/
     void remove( const QString &name );
 
     /**
      * @brief Clears all data stored in memory.
-     * @ingroup scripting
      **/
     void clear();
 
@@ -1834,7 +1543,6 @@ public Q_SLOTS:
      * @param lifetime The lifetime in days of the data. Limited to 30 days and defaults to 7 days.
      *
      * @see lifetime
-     * @ingroup scripting
      **/
     void writePersistent( const QString &name, const QVariant &data,
                           uint lifetime = DEFAULT_LIFETIME );
@@ -1851,7 +1559,6 @@ public Q_SLOTS:
      *
      * @see lifetime
      * @overload
-     * @ingroup scripting
      **/
     void writePersistent( const QVariantMap &data, uint lifetime = DEFAULT_LIFETIME );
 
@@ -1860,7 +1567,6 @@ public Q_SLOTS:
      *
      * @note Scripts do not need to remove data written persistently, ie. to disk, because each
      *   data entry has a lifetime, which is currently limited to 30 days and defaults to 7 days.
-     * @ingroup scripting
      **/
     void removePersistent( const QString &name );
 
@@ -1869,7 +1575,6 @@ public Q_SLOTS:
      *
      * @note Scripts do not need to remove data written persistently, ie. to disk, because each
      *   data entry has a lifetime, which is currently limited to 30 days and defaults to 7 days.
-     * @ingroup scripting
      **/
     void clearPersistent();
 
@@ -1881,7 +1586,10 @@ private:
 
     StoragePrivate *d;
 };
+/** \} */ // @ingroup scriptApi
 
+/** @ingroup scriptApi
+ * @{ */
 /**
  * @brief A data stream class to be used in scripts.
  *
@@ -1955,6 +1663,7 @@ private:
     QDataStream *thisDataStream() const;
     QSharedPointer< QDataStream > m_dataStream;
 };
+/** \} */ // @ingroup scriptApi
 
 typedef DataStreamPrototype* DataStreamPrototypePtr;
 QScriptValue constructStream( QScriptContext *context, QScriptEngine *engine );

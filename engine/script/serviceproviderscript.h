@@ -49,18 +49,19 @@ using namespace Scripting;
 /**
  * @brief The base class for all scripted service providers.
  *
- * Scripts are executed in a separate thread and do network requests synchronously
- * from withing the script. Scripts are written in ECMAScript (QScript), but the "kross" extension
- * gets loaded automatically, so that you can also use other languages supported by Kross.
+ * Scripts are executed in separate threads and can start synchronous/asynchronous network requests.
+ * Scripts are written in QtScript, ie. ECMAScript/JavaScript. See @ref scriptApi for more
+ * information.
  *
- * To use eg. Python code in the script, the following code can be used:
- * @code
- *  var action = Kross.action( "MyPythonScript" ); // Create Kross action
- *  action.addQObject( action, "MyAction" ); // Propagate action to itself
- *  action.setInterpreter( "python" ); // Set the interpreter to use, eg. "python", "ruby"
- *  action.setCode("import MyAction ; print 'This is Python. name=>',MyAction.interpreter()");
- *  action.trigger(); // Run the script
- * @endcode
+ * @note Other script languages supported by Kross can be used, the "kross" extension is then
+ *   needed. To use eg. Python code in the script, the following code can be used:
+ *   @code
+ *    var action = Kross.action( "MyPythonScript" ); // Create Kross action
+ *    action.addQObject( action, "MyAction" ); // Propagate action to itself
+ *    action.setInterpreter( "python" ); // Set the interpreter to use, eg. "python", "ruby"
+ *    action.setCode("import MyAction ; print 'This is Python. name=>',MyAction.interpreter()");
+ *    action.trigger(); // Run the script
+ *   @endcode
  */
 class ServiceProviderScript : public ServiceProvider {
     Q_OBJECT

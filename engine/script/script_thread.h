@@ -114,8 +114,6 @@ bool importExtension( QScriptEngine *engine, const QString &extension );
 
 /**
  * @brief Executes a script.
- *
- * @ingroup scripting
  **/
 class ScriptJob : public ThreadWeaver::Job {
     Q_OBJECT

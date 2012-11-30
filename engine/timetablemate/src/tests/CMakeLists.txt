@@ -52,6 +52,7 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
         ../debugger/breakpointmodel.h
         ../debugger/variablemodel.h
 
+        ../tabs/tabs.h
         ../tabs/abstracttab.h
         ../tabs/projectsourcetab.h
         ../tabs/scripttab.h

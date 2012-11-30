@@ -86,11 +86,19 @@ enum GtfsServiceError {
             * trying to delete the GTFS database. */
 };
 
+/**
+ * @brief Contains enumerables which are also made available to scripts.
+ *
+ * Scripts can access the enumerables in this class in the @em PublicTransport script object,
+ * eg. @em PublicTransport.ProvidesArrivals.
+ * This class only contains enumerables and static functions.
+ **/
 class Enums : public QObject {
     Q_OBJECT
-    Q_ENUMS( TimetableInformation ServiceProviderType ProviderFeature VehicleType
-             LineService MoreItemsDirection )
 
+    // NOTE The ';' at the end is needed for doxygen, otherwise the enumarables get skipped
+    Q_ENUMS( TimetableInformation ServiceProviderType ProviderFeature
+             VehicleType LineService MoreItemsDirection );
 public:
     /**
     * @brief Different types of timetable information.
@@ -351,86 +359,149 @@ public:
     };
 
     /**
-    * @brief The type of the vehicle used for a public transport line.
+    * @brief Types of vehicles.
     *
-    * Scripts can use the names (case insensitive) of these enumerables as vehicle types.
+    * Scripts can access these enumerables in the @em PublicTransport script object,
+    * eg. @em PublicTransport.Bus.
     * @code
-    * result.addData({ TypeOfVehicle: "Bus" });
-    * result.addData({ TypeOfVehicle: "traM" });
-    * result.addData({ TypeOfVehicle: "RegionalExpressTrain" });
+    * result.addData({ TypeOfVehicle: PublicTransport.Bus, ... });
+    * result.addData({ TypeOfVehicle: PublicTransport.Tram, ... });
+    * result.addData({ TypeOfVehicle: PublicTransport.RegionalExpressTrain, ... });
     * @endcode
     **/
     enum VehicleType {
         InvalidVehicleType = -1, /**< Invalid vehicle type. */
         UnknownVehicleType = 0, /**< The type of the vehicle is unknown. */
 
-        Tram = 1, /**< @image html hi16-app-vehicle_type_tram.png A tram / streetcar. */
-        Bus = 2, /**< @image html hi16-app-vehicle_type_bus.png A bus. */
-        Subway = 3, /**< @image html hi16-app-vehicle_type_subway.png A subway. */
-
-        /** @image html hi16-app-vehicle_type_train_interurban.png An interurban train. */
-        InterurbanTrain = 4,
-
-        Metro = 5, /**< @image html hi16-app-vehicle_type_metro.png A metro. */
+        /**
+         * <table style="boder:1;"><tr><td>@image html hi16-app-vehicle_type_tram.png
+         * </td><td>
+         * A tram / streetcar.
+         * </td></tr></table>
+         **/
+        Tram = 1,
 
         /**
-        * @image html hi16-app-vehicle_type_trolleybus.png
-        * A trolleybus (also known as trolley bus, trolley coach, trackless trolley, trackless tram
-        * or trolley) is an electric bus that draws its electricity from overhead wires (generally
-        * suspended from roadside posts) using spring-loaded trolley poles.
-        **/
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_bus.png
+         * </td><td>
+         * A bus.
+         * </td></tr></table>
+         **/
+        Bus = 2,
+
+        /**
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_subway.png
+         * </td><td>
+         * A subway.
+         * </td></tr></table>
+         **/
+        Subway = 3,
+
+        /**
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_train_interurban.png
+         * </td><td>
+         * An interurban train.
+         * </td></tr></table>
+         **/
+        InterurbanTrain = 4,
+
+        /**
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_metro.png
+         * </td><td>
+         * A metro.
+         * </td></tr></table>
+         **/
+        Metro = 5,
+
+        /**
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_trolleybus.png
+         * </td><td>
+         * A trolleybus (also known as trolley bus, trolley coach, trackless trolley, trackless tram
+         * or trolley) is an electric bus that draws its electricity from overhead wires (generally
+         * suspended from roadside posts) using spring-loaded trolley poles.
+         * </td></tr></table>
+         **/
         TrolleyBus = 6,
 
         /**
-        * @image html hi16-app-vehicle_type_train_regional.png
-        * A regional train. Stops at many small stations, slow.
-        **/
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_train_regional.png
+         * </td><td>
+         * A regional train. Stops at many small stations, slow.
+         * </td></tr></table>
+         **/
         RegionalTrain = 10,
 
         /**
-        * @image html hi16-app-vehicle_type_train_regional.png
-        * A regional express train. Stops at less small stations than RegionalTrain but is faster.
-        **/
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_train_regional.png
+         * </td><td>
+         * A regional express train. Stops at less small stations than RegionalTrain but is faster.
+         * </td></tr></table>
+         **/
         RegionalExpressTrain = 11,
 
         /**
-        * @image html hi16-app-vehicle_type_train_interregional.png
-        * An inter-regional train. Higher distances and faster than RegionalTrain and
-        * RegionalExpressTrain.
-        **/
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_train_interregional.png
+         * </td><td>
+         * An inter-regional train. Higher distances and faster than RegionalTrain and
+         * RegionalExpressTrain.
+         * </td></tr></table>
+         **/
         InterregionalTrain = 12,
 
         /**
-        * @image html hi16-app-vehicle_type_train_intercity.png
-        * An intercity / eurocity train. Connects cities.
-        **/
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_train_intercity.png
+         * </td><td>
+         * An intercity / eurocity train. Connects cities.
+         * </td></tr></table>
+         **/
         IntercityTrain = 13,
 
         /**
-        * @image html hi16-app-vehicle_type_train_highspeed.png
-        * A highspeed train, eg. an ICE (intercity express) or TGV.
-        * Trains at > 250 km/h, high distances.
-        **/
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_train_highspeed.png
+         * </td><td>
+         * A highspeed train, eg. an ICE (intercity express) or TGV.
+         * Trains at > 250 km/h, high distances.
+         * </td></tr></table>
+         **/
         HighSpeedTrain = 14,
 
         /**
-        * @image html hi16-app-vehicle_type_feet.png
-        * By feet, ie. no vehicle. Used for journeys, eg. from platform A to platform B when changing
-        * the vehicle.
-        **/
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_feet.png
+         * </td><td>
+         * By feet, ie. no vehicle. Used for journeys, eg. from platform A to platform B when changing
+         * the vehicle.
+         * </td></tr></table>
+         **/
         Footway = 50,
-        Feet = Footway, /**< DEPRECATED */
+        Feet = Footway, /**< @deprecated Use Footway instead. */
 
-        /** @image html hi16-app-vehicle_type_ferry.png A ferry. */
+        /**
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_ferry.png
+         * </td><td>
+         * A ferry.
+         * </td></tr></table>
+         **/
         Ferry = 100,
 
-        /** @image html hi16-app-vehicle_type_ferry.png A ship, but not a ferry. */
+        /**
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_ferry.png
+         * </td><td>
+         * A ship, but not a ferry.
+         * </td></tr></table>
+         **/
         Ship = 101,
 
-        /** @image html hi16-app-vehicle_type_plane.png An aeroplane. */
+        /**
+         * <table style="boder:0;"><tr><td>@image html hi16-app-vehicle_type_plane.png
+         * </td><td>
+         * An aeroplane.
+         * </td></tr></table>
+         **/
         Plane = 200,
 
-        /** A spacecraft. @todo Currently unused. */
+        /**
+         * A spacecraft. @todo Currently unused.
+         **/
         Spacecraft = 300
     };
 
