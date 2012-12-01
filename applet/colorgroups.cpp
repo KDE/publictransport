@@ -45,6 +45,8 @@ public:
 ColorGroupSettingsList ColorGroups::generateColorGroupSettingsFrom(
         const QList< DepartureInfo >& infoList, DepartureArrivalListType departureArrivalListType )
 {
+    Q_UNUSED( departureArrivalListType );
+
     // Maximal number of groups
     const int maxGroupCount = 10;
 

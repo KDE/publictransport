@@ -2116,6 +2116,8 @@ QScriptValue constructStream( QScriptContext *context, QScriptEngine *engine )
     } else if ( argument.isVariant() ) {
         const QVariant variant = argument.toVariant();
         object = new DataStreamPrototype( variant.toByteArray() );
+    } else {
+        return engine->undefinedValue();
     }
     return engine->newQObject( object, QScriptEngine::ScriptOwnership );
 }

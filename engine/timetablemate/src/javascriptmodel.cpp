@@ -456,9 +456,9 @@ QStringList JavaScriptModel::functionNames() const
             // Also add anynomous function declarations, they may be childs of StatementNode's,
             // eg. "var test = function(){};"
             foreach ( const CodeNode::Ptr &child, node->children() ) {
-                FunctionNode::Ptr function = node.dynamicCast< FunctionNode >();
-                if ( function->isAnonymous() ) {
-                    functions << function->name();
+                FunctionNode::Ptr childFunction = child.dynamicCast< FunctionNode >();
+                if ( childFunction ) {
+                    functions << childFunction->name();
                 }
             }
         }

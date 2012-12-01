@@ -693,7 +693,9 @@ QString PublicTransportEngine::updateProviderState( const QString &providerId,
     QSharedPointer< KConfig > cache = ServiceProviderGlobal::cache();
     KConfigGroup group = cache->group( providerId );
     const QString cachedState = readFromCache ? group.readEntry("state", QString()) : QString();
+#ifdef BUILD_PROVIDER_TYPE_GTFS // Currently type is only used for GTFS
     const Enums::ServiceProviderType type = ServiceProviderGlobal::typeFromString( providerType );
+#endif // BUILD_PROVIDER_TYPE_GTFS
 
     // Test if there is an error
     if ( m_erroneousProviders.contains(providerId) ) {

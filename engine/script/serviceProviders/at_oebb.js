@@ -78,7 +78,6 @@ hafas.timetable.parser.parseHtmlMobile = function( html ) {
 	departures.push( departure );
     }
 
-    print( "Found " + departures.length + " departures in a HTML document with " + html.length + " characters" );
     return departures;
 };
 

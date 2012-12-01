@@ -94,20 +94,9 @@ JavaScriptParser::~JavaScriptParser()
 QString JavaScriptParser::Token::whitespacesBetween( const JavaScriptParser::Token* token1,
                                                      const JavaScriptParser::Token* token2 )
 {
-    QString whitespaces;
-    int newLines = token2->line - token1->line;
-    if ( newLines > 0 ) {
-        while ( --newLines > 0 ) {
-            whitespaces += '\n';
-        }
-        return whitespaces;
-    }
-
-    int spaces = token2->posStart - token1->posEnd;
-    while ( --spaces > 0 ) {
-        whitespaces += ' ';
-    }
-    return whitespaces;
+    const int newLines = token2->line - token1->line;
+    return newLines > 0 ? QString(newLines, '\n')
+                        : QString(token2->posStart - token1->posEnd, ' ');
 }
 
 bool JavaScriptParser::tryMoveToNextToken()
@@ -665,7 +654,7 @@ QList< CodeNode::Ptr > JavaScriptParser::parse()
     // Get token from the code, with line number and column begin/end
     m_token.clear();
     QString alpha( "abcdefghijklmnopqrstuvwxyz_" );
-    QRegExp rxTokenBegin( "[^\\s]" );
+    QRegExp rxTokenBegin( "\\S" );
     QRegExp rxTokenEnd( "\\s|[-=#!$%&~;:,<>^`´/\\.\\+\\*\\\\\\(\\)\\{\\}\\[\\]'\"\\?\\|]" );
     QStringList lines2 = m_code.split( '\n' );
     for ( int lineNr = 0; lineNr < lines2.count(); ++lineNr ) {

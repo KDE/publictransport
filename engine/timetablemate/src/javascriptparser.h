@@ -432,7 +432,7 @@ private:
 
     inline bool atEnd() const { return m_it == m_token.constEnd(); };
     inline Token *currentToken() const {
-        Q_ASSERT( !atEnd() );
+//         Q_ASSERT( !atEnd() );
         return *m_it;
     };
     inline QString whitespaceSinceLastToken() const {
