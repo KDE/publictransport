@@ -59,9 +59,9 @@ public:
      * @brief Creates a new stop widget.
      *
      * @param parent The parent widget of the stop widget. Default is 0.
+     * @param stopSettings The stop settings to initialize the stop widget with.
      * @param providerModel A pointer to an already created ServiceProviderModel. If this is 0,
      *   a new model gets created.
-     * @param stopSettings The stop settings to initialize the stop widget with.
      * @param stopSettingsDialogOptions Options for used StopSettingsDialog. The user can open
      *   a stop settings dialog to change the stop settings.
      *   Default is StopSettingsDialog::DefaultOptions.
@@ -75,8 +75,8 @@ public:
      *   @ref StopSettingsWidgetFactory::widgetForSetting.
      *   To be used in StopSettingsDialogs.
      **/
-    explicit StopWidget( QWidget* parent = 0, ServiceProviderModel *providerModel = 0,
-            const StopSettings &stopSettings = StopSettings(),
+    explicit StopWidget( QWidget* parent = 0, const StopSettings &stopSettings = StopSettings(),
+            ServiceProviderModel *providerModel = 0,
             StopSettingsDialog::Options stopSettingsDialogOptions = StopSettingsDialog::DefaultOptions,
             ServiceProviderDataDialog::Options providerDataDialogOptions = ServiceProviderDataDialog::DefaultOptions,
             FilterSettingsList *filterConfigurations = 0,

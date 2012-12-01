@@ -707,7 +707,7 @@ void PublicTransportHelperTest::stopSettingsDialogAddWidgetsLaterCustomFactoryTe
 
 void PublicTransportHelperTest::stopWidgetTest()
 {
-    StopWidget stopWidget( 0, 0, m_stopSettings, StopSettingsDialog::DefaultOptions,
+    StopWidget stopWidget( 0, m_stopSettings, 0, StopSettingsDialog::DefaultOptions,
                            ServiceProviderDataDialog::DefaultOptions, &m_filterConfigurations );
 
 //     QSignalSpy changedSpy( &stopWidget, SIGNAL(changed(StopSettings)) );

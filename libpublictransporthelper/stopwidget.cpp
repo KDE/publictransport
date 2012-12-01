@@ -47,8 +47,8 @@ class StopWidgetPrivate
     Q_DECLARE_PUBLIC( StopWidget )
 
 public:
-    StopWidgetPrivate( StopWidget *q, ServiceProviderModel *providerModel,
-        const StopSettings& _stopSettings, FilterSettingsList *_filterConfigurations,
+    StopWidgetPrivate( StopWidget *q, const StopSettings& _stopSettings,
+        ServiceProviderModel *providerModel, FilterSettingsList *_filterConfigurations,
         StopSettingsDialog::Options _stopSettingsDialogOptions,
         ServiceProviderDataDialog::Options _providerDataDialogOptions,
         QList<int> _settings, int _stopIndex,
@@ -146,13 +146,13 @@ protected:
     StopWidget *q_ptr;
 };
 
-StopWidget::StopWidget( QWidget* parent, ServiceProviderModel *providerModel,
-        const StopSettings& stopSettings, StopSettingsDialog::Options stopSettingsDialogOptions,
+StopWidget::StopWidget( QWidget* parent, const StopSettings& stopSettings,
+        ServiceProviderModel *providerModel, StopSettingsDialog::Options stopSettingsDialogOptions,
         ServiceProviderDataDialog::Options providerDataDialogOptions,
         FilterSettingsList *filterConfigurations, QList<int> settings, int stopIndex,
         StopSettingsWidgetFactory::Pointer factory )
         : QWidget(parent),
-          d_ptr(new StopWidgetPrivate(this, providerModel, stopSettings, filterConfigurations,
+          d_ptr(new StopWidgetPrivate(this, stopSettings, providerModel, filterConfigurations,
                                       stopSettingsDialogOptions, providerDataDialogOptions,
                                       settings, stopIndex, factory))
 {
@@ -483,7 +483,7 @@ QWidget* StopListWidget::createNewWidget()
 QWidget* StopListWidget::createNewWidget( const StopSettings &stopSettings )
 {
     Q_D( StopListWidget );
-    StopWidget *stopWidget = new StopWidget( this, d->providerModel, stopSettings,
+    StopWidget *stopWidget = new StopWidget( this, stopSettings, d->providerModel,
             d->stopSettingsDialogOptions, d->providerDataDialogOptions,
             d->filterConfigurations, d->settings, -1, d->factory );
     connect( stopWidget, SIGNAL(remove()), this, SLOT(removeLastWidget()) );
