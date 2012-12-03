@@ -262,6 +262,7 @@ private:
 
     ScriptData m_scriptData;
     QSharedPointer< Storage > m_scriptStorage;
+    QList< ScriptJob* > m_runningJobs;
 };
 
 #endif // Multiple inclusion guard

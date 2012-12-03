@@ -192,27 +192,27 @@ public:
 
     /**
      * @brief Get a list of providers that have changed since this function was last called.
-     * This function also resets providerDirectoryWasChanged() to @p false.
+     * This function also resets isDirty() to @p false.
      **/
     QStringList takeChangedProviders() {
         const QStringList changedProviders = m_changedProviders;
         m_changedProviders.clear();
-        m_providerDirectoryWasChanged = false;
+        m_dirty = false;
         return changedProviders;
     };
 
-    /** @brief Check if the provider directory was changed and takeChangedProviders() was not called. */
-    bool providerDirectoryWasChanged() const { return m_providerDirectoryWasChanged; };
+    /** @brief Check if there were changes to the providers. */
+    bool isDirty() const { return m_dirty; };
 
     /** @brief Called when the provider plugin installation directory was changed. */
-    void setProviderDirectoryWasChanged() { m_providerDirectoryWasChanged = true; };
+    void providersHaveChanged() { m_dirty = true; };
 
 private:
     bool mayProviderBeNewlyChanged( const QString &providerId ) const {
         return !m_changedProviders.contains(providerId) && m_providerData.contains(providerId);
     };
 
-    bool m_providerDirectoryWasChanged;
+    bool m_dirty;
     QStringList m_changedProviders;
     QHash< QString, ProviderData > m_providerData;
 };

@@ -80,8 +80,24 @@ ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, Q
 ServiceProviderScript::~ServiceProviderScript()
 {
     // Wait for running jobs to finish for proper cleanup
-    ThreadWeaver::Weaver::instance()->requestAbort();
-    ThreadWeaver::Weaver::instance()->finish(); // This prevents crashes on exit of the engine
+    if ( !m_runningJobs.isEmpty() ) {
+        foreach ( ScriptJob *job, m_runningJobs ) {
+            // Disconnect all slots connected to the job and then abort it
+            disconnect( job, 0, this, 0 );
+            job->requestAbort();
+
+            // Wait for the job to get aborted
+            QEventLoop loop;
+            connect( job, SIGNAL(done(ThreadWeaver::Job*)), &loop, SLOT(quit()) );
+            QTimer::singleShot( 1000, &loop, SLOT(quit()) );
+            if ( !job->isFinished() ) {
+                loop.exec(); // The job is still not finished, wait for it
+            }
+
+            // The job has finished or the timeout was reached
+            job->deleteLater();
+        }
+    }
 }
 
 QStringList ServiceProviderScript::allowedExtensions()
@@ -545,6 +561,7 @@ void ServiceProviderScript::jobDone( ThreadWeaver::Job* job )
     const QString sourceName = scriptJob->request()->sourceName();
     PublicTransportInfoList results = m_publishedData.take( sourceName );
 
+    m_runningJobs.removeOne( scriptJob );
     scriptJob->deleteLater();
 }
 
@@ -636,6 +653,7 @@ void ServiceProviderScript::requestMoreItems( const MoreItemsRequest &moreItemsR
 
 void ServiceProviderScript::enqueue( ScriptJob *job )
 {
+    m_runningJobs << job;
     connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );

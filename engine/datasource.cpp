@@ -38,7 +38,7 @@ DataSource::~DataSource()
 
 ProvidersDataSource::ProvidersDataSource( const QString &dataSource,
                                           const QHash<QString, ProviderData> &providerData )
-        : DataSource(dataSource), m_providerDirectoryWasChanged(false), m_providerData(providerData)
+        : DataSource(dataSource), m_dirty(true), m_providerData(providerData)
 {
 }
 

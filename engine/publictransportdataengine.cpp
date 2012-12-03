@@ -102,11 +102,10 @@ void PublicTransportEngine::publishData( DataSource *dataSource )
 ProvidersDataSource *PublicTransportEngine::providersDataSource() const
 {
     const QString name = sourceTypeKeyword( ServiceProvidersSource );
-    if ( !m_dataSources.contains(name) ) {
-        kWarning() << "ProvidersDataSource not created yet";
-        return 0;
-    }
-    return dynamic_cast< ProvidersDataSource* >( m_dataSources[name] );
+    ProvidersDataSource *dataSource = dynamic_cast< ProvidersDataSource* >( m_dataSources[name] );
+    Q_ASSERT_X( dataSource, "PublicTransportEngine::providersDataSource()",
+                "ProvidersDataSource is not available in m_dataSources!" );
+    return dataSource;
 }
 
 #ifdef BUILD_PROVIDER_TYPE_GTFS
@@ -239,6 +238,18 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
     QDBusConnection::sessionBus().connect( "org.kde.kded", "/modules/networkstatus",
                                            "org.kde.Solid.Networking.Client", "statusChanged",
                                            this, SLOT(networkStateChanged(uint)) );
+
+    // Create "ServiceProviders" and "ServiceProvider [providerId]" data source object
+    const QString name = sourceTypeKeyword( ServiceProvidersSource );
+    m_dataSources.insert( name, new ProvidersDataSource(name) );
+    updateServiceProviderSource();
+
+    // Create a file system watcher for the provider plugin installation directories
+    const QStringList directories = KGlobal::dirs()->findDirs( "data",
+            ServiceProviderGlobal::installationSubDirectory() );
+    m_fileSystemWatcher = new QFileSystemWatcher( directories );
+    connect( m_fileSystemWatcher, SIGNAL(directoryChanged(QString)),
+                this, SLOT(serviceProviderDirChanged(QString)) );
 }
 
 PublicTransportEngine::~PublicTransportEngine()
@@ -334,6 +345,11 @@ void PublicTransportEngine::slotSourceRemoved( const QString &sourceName )
             }
         }
 
+        if ( sourceName == sourceTypeKeyword(ServiceProvidersSource) ) {
+            // Do not remove ServiceProviders data source
+            return;
+        }
+
         // If a provider was used by the source,
         // remove the provider if it is not used by another source
         const DataSource *dataSource = m_dataSources.take( nonAmbiguousName );
@@ -398,23 +414,27 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
     // To get the list of features, ServiceProviderData is not enough
     // A given ServiceProvider or cached data gets used if available. Otherwise the ServiceProvider
     // gets created just to get the list of features
+    const QSharedPointer<KConfig> cache = ServiceProviderGlobal::cache();
+    KConfigGroup providerGroup = cache->group( data.id() );
     if ( provider ) {
         // Write features to the return value
         const QList< Enums::ProviderFeature > features = provider->features();
-        dataServiceProvider.insert( "features", ServiceProviderGlobal::featureStrings(features) );
+        const QStringList featureStrings = ServiceProviderGlobal::featureStrings( features );
+        dataServiceProvider.insert( "features", featureStrings );
         dataServiceProvider.insert( "featureNames", ServiceProviderGlobal::featureNames(features) );
-    } else {
-        const QSharedPointer<KConfig> cache = ServiceProviderGlobal::cache();
-        KConfigGroup group = cache->group( data.id() );
 
+        // Make sure, features have been written to the cache
+        providerGroup.writeEntry( "features", featureStrings );
+    } else {
         // Check stored feature strings and re-read features if an invalid string was found
         bool ok;
-        QStringList featureStrings = group.readEntry("features", QStringList());
+        QStringList featureStrings = providerGroup.readEntry("features", QStringList());
         const bool featureListIsEmpty = featureStrings.removeOne("(none)");
         QList< Enums::ProviderFeature > features =
                 ServiceProviderGlobal::featuresFromFeatureStrings( featureStrings, &ok );
 
         if ( (featureListIsEmpty || !featureStrings.isEmpty()) && ok ) {
+            // Feature list could be read from cache
             dataServiceProvider.insert( "features", featureStrings );
             dataServiceProvider.insert( "featureNames",
                                         ServiceProviderGlobal::featureNames(features) );
@@ -444,7 +464,7 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
             dataServiceProvider.insert( "featureNames", featuresNames );
 
             // Write features to cache
-            group.writeEntry( "features", featureStrings );
+            providerGroup.writeEntry( "features", featureStrings );
         }
     }
 
@@ -612,29 +632,12 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const SourceR
 bool PublicTransportEngine::updateServiceProviderSource()
 {
     const QString name = sourceTypeKeyword( ServiceProvidersSource );
-    QVariantHash data;
     ProvidersDataSource *providersSource = providersDataSource();
-    if ( providersSource && !providersSource->providerDirectoryWasChanged() ) {
-        data = providersSource->data();
-    } else {
-        if ( !m_fileSystemWatcher ) {
-            const QStringList directories = KGlobal::dirs()->findDirs( "data",
-                    ServiceProviderGlobal::installationSubDirectory() );
-            m_fileSystemWatcher = new QFileSystemWatcher( directories );
-            connect( m_fileSystemWatcher, SIGNAL(directoryChanged(QString)),
-                     this, SLOT(serviceProviderDirChanged(QString)) );
-        }
-
+    if ( providersSource->isDirty() ) {
         const QStringList providers = ServiceProviderGlobal::installedProviders();
         if ( providers.isEmpty() ) {
             kWarning() << "Could not find any service provider plugins";
             return false;
-        }
-
-        // Create ProvidersDataSource object
-        // for "ServiceProviders" and "ServiceProvider <providerId>" data sources
-        if ( !providersSource ) {
-            providersSource = new ProvidersDataSource( name );
         }
 
         QStringList loadedProviders;
@@ -674,7 +677,6 @@ bool PublicTransportEngine::updateServiceProviderSource()
 
         // Insert the data source, providersData );
         m_dataSources.insert( name, providersSource );
-        data = providersSource->data();
     }
 
     // Remove all old data, some service providers may have been updated and are now erroneous
@@ -881,13 +883,17 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
             updateErroneousServiceProviderSource();
             return false;
         }
+
+        // The provider is already created, use it in serviceProviderData(), if needed
+        *providerData = serviceProviderData( provider.data() );
+    } else {
+        *providerData = serviceProviderData( *data );
     }
 
     m_erroneousProviders.remove( providerId );
     const QLatin1String name = sourceTypeKeyword( ErroneousServiceProvidersSource );
     removeData( name, providerId );
 
-    *providerData = serviceProviderData( *data );
     errorMessage->clear();
     return true;
 }
@@ -1216,7 +1222,7 @@ void PublicTransportEngine::reloadChangedProviders()
     // Do not remove it here, so that it can track which providers have changed
     ProvidersDataSource *providersSource = providersDataSource();
     if ( providersSource ) {
-        providersSource->setProviderDirectoryWasChanged();
+        providersSource->providersHaveChanged();
     }
 
     // Remove cached locations source to have it updated

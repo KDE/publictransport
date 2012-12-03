@@ -66,18 +66,11 @@ ScriptJob::ScriptJob( const ScriptData &data, const QSharedPointer< Storage > &s
 
 ScriptJob::~ScriptJob()
 {
+    // Abort, if still running
+    requestAbort();
+
+    // Delete the script engine
     m_mutex->lock();
-    m_quit = true;
-    if ( m_eventLoop ) {
-        QEventLoop *loop = m_eventLoop;
-        m_eventLoop = 0;
-        loop->quit();
-    }
-
-    if ( !isFinished() && m_objects.isValid() && m_objects.network->hasRunningRequests() ) {
-        m_objects.network->abortAllRequests();
-    }
-
     if ( m_engine ) {
         m_engine->abortEvaluation();
         m_engine->deleteLater();
@@ -86,6 +79,26 @@ ScriptJob::~ScriptJob()
     m_mutex->unlock();
 
     delete m_mutex;
+}
+
+void ScriptJob::requestAbort()
+{
+    QMutexLocker locker( m_mutex );
+    if ( m_quit || !m_engine ) {
+        // Is already aborting/finished
+        return;
+    }
+
+    m_quit = true;
+    if ( m_eventLoop ) {
+        QEventLoop *loop = m_eventLoop;
+        m_eventLoop = 0;
+        loop->quit();
+    }
+
+    if ( !isFinished() && m_objects.network->hasRunningRequests() ) {
+        m_objects.network->abortAllRequests();
+    }
 }
 
 ScriptAgent::ScriptAgent( QScriptEngine* engine, QObject *parent )

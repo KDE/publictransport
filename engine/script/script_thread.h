@@ -132,6 +132,9 @@ public:
     /** @brief Destructor. */
     virtual ~ScriptJob();
 
+    /** @brief Abort the job. */
+    virtual void requestAbort();
+
     /** @brief Return a pointer to the object containing inforamtion about the request of this job. */
     virtual const AbstractRequest* request() const = 0;
 
