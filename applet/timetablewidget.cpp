@@ -1528,6 +1528,7 @@ PublicTransportWidget::PublicTransportWidget( Options options, QGraphicsItem* pa
     l->setSpacing( 0.0 );
     container->setLayout( l );
     setWidget( container );
+    setFlag( ItemClipsChildrenToShape );
 
     m_maxLineCount = 2;
     m_iconSize = 32;
