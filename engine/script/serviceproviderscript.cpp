@@ -21,7 +21,7 @@
 #include "serviceproviderscript.h"
 
 // Own includes
-#include "scripting.h"
+#include "scriptapi.h"
 #include "script_thread.h"
 #include "serviceproviderglobal.h"
 #include "serviceproviderdata.h"

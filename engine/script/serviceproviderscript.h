@@ -27,11 +27,11 @@
 
 // Own includes
 #include "../serviceprovider.h" // Base class
-#include "scripting.h"
+#include "scriptapi.h"
 #include "scriptobjects.h"
 
 class ScriptJob;
-namespace Scripting {
+namespace ScriptApi {
     class Storage;
 };
 namespace ThreadWeaver {
@@ -44,7 +44,7 @@ class QFileInfo;
 /** @brief Stores information about a departure/arrival/journey/stop suggestion. */
 typedef QHash<Enums::TimetableInformation, QVariant> TimetableData;
 
-using namespace Scripting;
+using namespace ScriptApi;
 
 /**
  * @brief The base class for all scripted service providers.

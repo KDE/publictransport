@@ -35,7 +35,7 @@
 #include "tabs/plasmapreviewtab.h"
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     #include "tabs/scripttab.h"
-    #include "../../script/scripting.h" // For Q_DECLARE_METATYPE's (eg. Helper::ErrorSeverity used in connections)
+    #include "../../script/scriptapi.h" // For Q_DECLARE_METATYPE's (eg. Helper::ErrorSeverity used in connections)
 #endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     #include "tabs/gtfsdatabasetab.h"

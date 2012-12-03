@@ -47,7 +47,7 @@
 // #define DEBUG_JOB_START_END
 
 class QEventLoop;
-namespace Scripting
+namespace ScriptApi
 {
     class Storage;
     class Network;

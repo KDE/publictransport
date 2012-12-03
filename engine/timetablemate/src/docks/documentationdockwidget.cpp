@@ -56,6 +56,7 @@ DocumentationDockWidget::DocumentationDockWidget( KActionMenu *showDocksAction, 
     m_documentationChooser->addItem( classIcon, "Network Object", "network" );
     m_documentationChooser->addItem( classIcon, "NetworkRequest Objects", "networkrequest" );
     m_documentationChooser->addItem( classIcon, "Storage Object", "storage" );
+    m_documentationChooser->addItem( classIcon, "DataStream Object", "datastreamprototype" );
     m_documentationWidget = new KWebView( container );
     m_documentationWidget->pageAction( QWebPage::OpenLinkInNewWindow )->setVisible( false );
     m_documentationWidget->pageAction( QWebPage::OpenFrameInNewWindow )->setVisible( false );

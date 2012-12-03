@@ -36,8 +36,8 @@ endif ( ENABLE_DEBUGGER_JOB_SYNCHRONIZATION )
 # Create debug_config.h from debug_config.h.in, ie. create #define's for each enabled variable from above
 configure_file( debug_config.h.in debug_config.h )
 
-# Generate completion data class files and HTML documentation from scripting.h.
-# Rerun when the source file (scripting.h) or the tool changes.
+# Generate completion data class files and HTML documentation from scriptapi.h.
+# Rerun when the source file (scriptapi.h) or the tool changes.
 # Put the generated class files into the binary directory
 # and the HTML documentation into the sources.
 add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.h
@@ -48,15 +48,16 @@ add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongener
                            ${CMAKE_CURRENT_SOURCE_DIR}/../doc/networkrequest.html
                            ${CMAKE_CURRENT_SOURCE_DIR}/../doc/resultobject.html
                            ${CMAKE_CURRENT_SOURCE_DIR}/../doc/storage.html
+                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/datastream.html
                            ${CMAKE_CURRENT_SOURCE_DIR}/../doc/enums.html
                            ${CMAKE_CURRENT_SOURCE_DIR}/../doc/default.css
     COMMAND ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator
             --verbose
             --out_completion ${CMAKE_CURRENT_BINARY_DIR}
             --out_doc ${CMAKE_CURRENT_SOURCE_DIR}/../doc
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scripting.h
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scriptapi.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../enums.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/../../publictransportdataengine.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../engine-doc.h
             ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator )
 
 qt4_wrap_cpp( timetablemate_MOC_SRCS ../../enums.h tabs/tabs.h )
@@ -94,7 +95,7 @@ qt4_automoc( timetablemate_SRCS )
 if ( BUILD_PROVIDER_TYPE_SCRIPT )
     set ( timetablemate_SRCS ${timetablemate_SRCS}
         ../../script/serviceproviderscript.cpp
-        ../../script/scripting.cpp
+        ../../script/scriptapi.cpp
         ../../script/script_thread.cpp
         ../../script/scriptobjects.cpp
     )

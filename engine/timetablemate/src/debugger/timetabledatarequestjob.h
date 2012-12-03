@@ -33,10 +33,10 @@
 #include "../testmodel.h" // For TestModel::TimetableDataRequestMessage
 
 // Includes form the PublicTransport engine
-#include <engine/script/scripting.h>
+#include <engine/script/scriptapi.h>
 
 class QEventLoop;
-namespace Scripting
+namespace ScriptApi
 {
     class ResultObject;
     class NetworkRequest;
@@ -48,7 +48,7 @@ struct StopSuggestionRequest;
 struct DepartureRequest;
 struct AdditionalDataRequest;
 
-using namespace Scripting;
+using namespace ScriptApi;
 
 namespace Debugger {
 

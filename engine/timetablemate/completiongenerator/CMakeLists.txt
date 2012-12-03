@@ -23,7 +23,7 @@ set( completiongenerator_SRCS
    ../../global.cpp
    ../../serviceproviderglobal.cpp
    ../../departureinfo.cpp
-   ../../script/scripting.cpp
+   ../../script/scriptapi.cpp
    ${completiongenerator_MOC_SRCS}
 )
 

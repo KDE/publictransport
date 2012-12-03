@@ -39,7 +39,7 @@
 
 class AbstractRequest;
 class ServiceProviderData;
-namespace Scripting {
+namespace ScriptApi {
     class Network;
     class Storage;
     class ResultObject;
@@ -61,7 +61,7 @@ class QScriptProgram;
 class QScriptEngine;
 class QScriptContextInfo;
 
-using namespace Scripting;
+using namespace ScriptApi;
 
 /** @brief The Debugger namespace contains classes and enumerations used for debugging scripts. */
 namespace Debugger {

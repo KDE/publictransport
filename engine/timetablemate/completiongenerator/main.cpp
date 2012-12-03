@@ -56,10 +56,12 @@ int main( int argc, char **argv )
     options.add( "completion_class_name <argument>",
                  ki18n("Name of the generated class for code completion"),
                  "JavaScriptCompletionGeneric" );
-    options.add( "input_script <argument>", ki18n("Scripting input file path."),
-                 "../../../../engine/script/scripting.h" );
+    options.add( "input_script <argument>", ki18n("Script API input file path."),
+                 "../../../../engine/script/scriptapi.h" );
+    options.add( "input_script_doc <argument>", ki18n("Global script API documentation input file path."),
+                 "../../../../engine/script/scriptapi-doc.h" );
     options.add( "input_engine <argument>", ki18n("Engine input file path."),
-                 "../../../../engine/publictransportdataengine.h" );
+                 "../../../../engine/engine-doc.h" );
     options.add( "input_enum <argument>", ki18n("Engine enum file path."),
                  "../../../../engine/enums.h" );
     options.add( "silent", ki18n("Print out no warnings/debug messages.") );
@@ -73,6 +75,7 @@ int main( int argc, char **argv )
     const QString documentationOutputPath = args->isSet("out_doc")
             ? args->getOption("out_doc") : QDir::currentPath();
     const QString inputScriptFilePath = args->getOption("input_script");
+    const QString inputScriptDocFilePath = args->getOption("input_script_doc");
     const QString inputEngineFilePath = args->getOption("input_engine");
     const QString inputEnumFilePath = args->getOption("input_enum");
     const QString completionClassName = args->getOption("completion_class_name");
@@ -92,6 +95,10 @@ int main( int argc, char **argv )
     if ( !QFile(inputScriptFilePath).exists() ) {
         qFatal( "The input file (--input_script) does not exist: %s",
                 inputScriptFilePath.toUtf8().data() );
+    }
+    if ( !QFile(inputScriptDocFilePath).exists() ) {
+        qFatal( "The input file (--input_script_doc) does not exist: %s",
+                inputScriptDocFilePath.toUtf8().data() );
     }
     if ( !QFile(inputEngineFilePath).exists() ) {
         qFatal( "The input file (--input_engine) does not exist: %s",
@@ -122,7 +129,28 @@ int main( int argc, char **argv )
     parser.addClass( Network::staticMetaObject, "network" );
     parser.addClass( NetworkRequest::staticMetaObject );
     parser.addClass( Storage::staticMetaObject, "storage" );
+    parser.addClass( DataStreamPrototype::staticMetaObject, "DataStream" );
     parser.parse();
+
+    // Parse global script API documentation
+    Comments scriptApiDocumentation;
+    QFile scriptDocFile( inputScriptDocFilePath );
+    if ( !scriptDocFile.open(QIODevice::ReadOnly) ) {
+        qWarning() << "Could not open engine source file" << scriptDocFile.errorString();
+    } else {
+        scriptApiDocumentation << DocumentationParser::parseGlobalDocumentation( &scriptDocFile );
+        scriptDocFile.close();
+    }
+
+    EnumCommentList enumDocumentation;
+    DocumentationParser enumParser( inputEnumFilePath );
+    enumParser.addClass( Enums::staticMetaObject, "PublicTransport" );
+    enumParser.parse();
+    foreach ( const ClassInformation &classInformation, enumParser.classInformations() ) {
+        if ( classInformation.className == QLatin1String("Enums") ) {
+            enumDocumentation = classInformation.sortedEnums;
+        }
+    }
 
     // Extract "provider_infos_xml" section from the global documentation
     QFile engineFile( inputEngineFilePath );
@@ -133,10 +161,10 @@ int main( int argc, char **argv )
         QByteArray data = engineFile.readAll();
         engineFile.close();
 
-        const int startPos = data.indexOf( "@section provider_infos_xml" );
+        const int startPos = data.indexOf( "@section provider_plugin_pts" );
         int endPos = data.indexOf( "@section", startPos + 27 );
         if ( startPos == -1 ) {
-            qWarning() << "Did not find the section with the ID 'provider_infos_xml'";
+            qWarning() << "Did not find the section with the ID 'provider_plugin_pts'";
         } else {
             if ( endPos == -1 ) {
                 endPos = data.length();
@@ -149,8 +177,7 @@ int main( int argc, char **argv )
     }
 
     DocumentationParser parserEnum( inputEnumFilePath );
-    parserEnum.addEnum( "TimetableInformation" );
-    parserEnum.addEnum( "VehicleType" );
+    parserEnum.addClass( Enums::staticMetaObject, "PublicTransport" );
     parserEnum.parse();
 
     // Initialize generator
@@ -166,9 +193,8 @@ int main( int argc, char **argv )
     // Write HTML documentation files
     qDebug() << "Write HTML documentation files";
     documentationGenerator.writeDocumentation( parser.classInformations(),
-                                               parser.globalComments() << engineComments,
-                                               parserEnum.globalEnumComments(),
-                                               documentationOutputPath );
+                                               Comments() << scriptApiDocumentation << engineComments,
+                                               enumDocumentation, documentationOutputPath );
     return 0;
 }
 

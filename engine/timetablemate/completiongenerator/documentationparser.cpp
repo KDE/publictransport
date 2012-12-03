@@ -107,10 +107,10 @@ ClassInformation DocumentationParser::parseClass( const QMetaObject &object )
 
 QString DocumentationParser::cToQtScriptTypeName( const QString &cTypeName )
 {
-    if( cTypeName == QLatin1String("QString") ||
-        cTypeName == QLatin1String("QByteArray") )
-    {
+    if( cTypeName == QLatin1String("QString") || cTypeName == QLatin1String("QUrl") ) {
         return "string";
+    } else if( cTypeName == QLatin1String("QByteArray") ) {
+        return "QByteArray";
     } else if( cTypeName == QLatin1String("QVariantMap") ) {
         return "object";
     } else if( cTypeName == QLatin1String("QVariantList") ||
@@ -124,18 +124,26 @@ QString DocumentationParser::cToQtScriptTypeName( const QString &cTypeName )
     {
         return "date";
     } else if( cTypeName == QLatin1String("QVariant") ) {
-        return "any";
-    } else if( cTypeName == QLatin1String("NetworkRequest*") ) {
+        return "variant";
+    } else if( cTypeName.startsWith("Enums::") ) {
+        return cTypeName.mid( 7 ); // Cut the "Enums::"
+    } else if( cTypeName == QLatin1String("NetworkRequest*") ||
+               cTypeName == QLatin1String("NetworkRequest::Ptr") )
+    {
         return "NetworkRequest";
     } else if( cTypeName == QLatin1String("Feature") ) {
         return "enum.feature"; // Enums are available under the enum object
     } else if( cTypeName == QLatin1String("Hint") ) {
         return "enum.hint";
-    } else if( cTypeName == QLatin1String("int") ||
-               cTypeName == QLatin1String("uint") ||
-               cTypeName == QLatin1String("bool") )
+    } else if( cTypeName == QLatin1String("bool") ) {
+        return "bool";
+    } else if( cTypeName == QLatin1String("int") || cTypeName == QLatin1String("uint") ||
+               cTypeName == QLatin1String("qint8") || cTypeName == QLatin1String("quint8") ||
+               cTypeName == QLatin1String("qint16") || cTypeName == QLatin1String("quint16") ||
+               cTypeName == QLatin1String("qint32") || cTypeName == QLatin1String("quint32") ||
+               cTypeName == QLatin1String("qint64") || cTypeName == QLatin1String("quint64") )
     {
-        return cTypeName; // unchanged
+        return "number";
     } else if( cTypeName == QLatin1String("void") || cTypeName.isEmpty() ) {
         return "void";
     } else {
@@ -588,9 +596,6 @@ DocumentationParser::ParseContext DocumentationParser::parseDocumentationBlock(
             // End of multiline comment found
             // Remove closing "*/" or "**/" and parse the last line
             parseInfo.line.remove( QRegExp("\\*?\\*/\\s*$") );
-
-
-
         }
         parseInfo.line.remove( commentStarCleanerRegExp );
         Q_ASSERT( parseInfo.newComment == 0 && !parseInfo.lastCommentClosed );
@@ -624,6 +629,7 @@ DocumentationParser::ParseContext DocumentationParser::parseDocumentationBlock(
     // Find method signature directly after last found comment block
     bool foundEnumerable = false;
     if ( preDeclaredEnumerable.isEmpty() ) {
+        const qint64 oldFilePos = dev->pos();
         parseInfo.startNewLine( dev->readLine().trimmed() );
 
         if ( methodSignatureRegExp.indexIn(parseInfo.line) != -1 ) {
@@ -705,6 +711,12 @@ DocumentationParser::ParseContext DocumentationParser::parseDocumentationBlock(
             parseResults->globalComments << parseInfo.comment;
             *lineNumber = parseInfo.lineNumber;
             return context;
+        } else if ( parseInfo.line.trimmed().startsWith(QLatin1String("/**")) ) {
+            // Found another comment block beginning just after this comment block,
+            // discard this comment block and go back to the beginning position of the newly found block
+            *lineNumber = parseInfo.lineNumber - 1;
+            dev->seek( oldFilePos ); // Seek back to old position
+            return context;
         }
     } else if ( context.isInEnum() && !preDeclaredEnumerable.isEmpty() ) {
         // Enumerable comment block is referring to previous enumerable declaration ("/**<")
@@ -733,23 +745,34 @@ DocumentationParser::ParseContext DocumentationParser::parseDocumentationBlock(
             enumerableValueString.remove( 0, 2 );
             enumerableValue = enumerableValueString.toInt( 0, 16 );
         } else if ( enumerableValueString.isEmpty() ) {
+//             kDebug()
             enumerableValue = enumComment->lastEnumerableValue + 1;
         } else {
-            enumerableValue = enumerableValueString.toInt();
+            bool ok;
+            enumerableValue = enumerableValueString.toInt( &ok );
+            if ( !ok ) {
+                foreach ( const EnumerableComment &enumerable, enumComment->enumerables ) {
+                    if ( enumerable.name == enumerableValueString ) {
+                        // Use the value of the enumerable, which name was given
+                        enumerableValue = enumerable.value;
+                        break;
+                    }
+                }
+            }
         }
         EnumerableComment enumerableComment( enumerableName, enumerableValue,
                                              parseInfo.comment.brief,
                                              parseInfo.comment.otherComments );
-        enumComment->enumerables[ enumerableName ] = enumerableComment;
-//         if ( context.isInClass() ) {
-//             // Found an enumerable of an enum inside a class
-//             parseResults->classComments[ context.className ].enumComments[ context.enumName ]
-//                     .enumerables[ enumerableName ] = enumerableComment;
-//         } else {
-//             // Found an enumerable of a global enum
-//             parseResults->enumComments[ context.enumName ].enumerables[ enumerableName ]
-//                     = enumerableComment;
-//         }
+        enumComment->addEnumerable( enumerableComment );
+        if ( context.isInClass() ) {
+            // Found an enumerable of an enum inside a class
+            parseResults->classComments[ context.className ].enumComments[ context.enumName ]
+                    .enumerables[ enumerableName ] = enumerableComment;
+        } else {
+            // Found an enumerable of a global enum
+            parseResults->enumComments[ context.enumName ].enumerables[ enumerableName ]
+                    = enumerableComment;
+        }
     } else if (
         // Constructors
         parseInfo.line.indexOf(QRegExp("^\\s*\\w+\\s*\\(")) == -1 &&

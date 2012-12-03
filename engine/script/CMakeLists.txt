@@ -3,7 +3,7 @@
 set ( script_SRCS
     script/serviceproviderscript.cpp
     script/script_thread.cpp
-    script/scripting.cpp
+    script/scriptapi.cpp
     script/scriptobjects.cpp
 )
 

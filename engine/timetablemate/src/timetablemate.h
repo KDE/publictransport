@@ -73,13 +73,13 @@ namespace Ui {
 }
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-namespace Scripting {
+namespace ScriptApi {
     class ResultObject;
 };
 namespace Debugger {
     class Breakpoint;
 }
-using namespace Scripting;
+using namespace ScriptApi;
 using namespace Debugger; // Needed for slots to match signals, eg. using Breakpoint instead of Debugger::Breakpoint
 #endif
 

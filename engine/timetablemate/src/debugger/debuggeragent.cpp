@@ -26,7 +26,7 @@
 #include "variablemodel.h"
 
 // PublicTransport engine includes
-#include <engine/script/scripting.h>
+#include <engine/script/scriptapi.h>
 
 // KDE includes
 #include <KDebug>
@@ -1541,7 +1541,7 @@ void DebuggerAgent::shutdown()
 
     setState( NotRunning );
 
-    Scripting::Network *scriptNetwork = qobject_cast< Scripting::Network* >(
+    ScriptApi::Network *scriptNetwork = qobject_cast< ScriptApi::Network* >(
             engine()->globalObject().property("network").toQObject() );
     Q_ASSERT( scriptNetwork );
     const bool hasRunningRequests = scriptNetwork->hasRunningRequests();

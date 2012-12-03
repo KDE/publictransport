@@ -18,7 +18,7 @@
 */
 
 // Header
-#include "scripting.h"
+#include "scriptapi.h"
 
 // Own includes
 #include "config.h"
@@ -51,7 +51,7 @@
 // Other includes
 #include <zlib.h>
 
-namespace Scripting {
+namespace ScriptApi {
 
 NetworkRequest::NetworkRequest( QObject *parent )
         : QObject(parent), m_mutex(new QMutex(QMutex::Recursive)), m_network(0),
@@ -2287,6 +2287,6 @@ quint64 NetworkRequest::uncompressedSize() const
     return m_uncompressedSize;
 }
 
-#include "scripting.moc"
+#include "scriptapi.moc"
 
-}; // namespace Scripting
+}; // namespace ScriptApi

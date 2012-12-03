@@ -118,7 +118,7 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
 
         ../../../script/scriptobjects.cpp
         ../../../script/script_thread.cpp
-        ../../../script/scripting.cpp
+        ../../../script/scriptapi.cpp
         ../../../script/serviceproviderscript.cpp
 
         ../../../gtfs/gtfsdatabase.cpp

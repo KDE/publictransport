@@ -18,7 +18,7 @@
  */
 
 #include "ScriptApiTest.h"
-#include "script/scripting.h"
+#include "script/scriptapi.h"
 
 #include <QtTest/QTest>
 #include <QSignalSpy>
@@ -54,7 +54,7 @@ void ScriptApiTest::helperAddDaysToDateTest()
     QFETCH(QDateTime, dateTime);
     QFETCH(int, daysToAdd);
     QFETCH(QDateTime, result);
-    QCOMPARE( Scripting::Helper::addDaysToDate(dateTime, daysToAdd), result );
+    QCOMPARE( ScriptApi::Helper::addDaysToDate(dateTime, daysToAdd), result );
 }
 
 void ScriptApiTest::helperAddDaysToDate2Test_data()
@@ -74,7 +74,7 @@ void ScriptApiTest::helperAddDaysToDate2Test()
     QFETCH(int, daysToAdd);
     QFETCH(QString, format);
     QFETCH(QString, result);
-    QCOMPARE( Scripting::Helper::addDaysToDate(dateTime, daysToAdd, format), result );
+    QCOMPARE( ScriptApi::Helper::addDaysToDate(dateTime, daysToAdd, format), result );
 }
 
 void ScriptApiTest::helperAddMinsToTimeTest_data()
@@ -94,7 +94,7 @@ void ScriptApiTest::helperAddMinsToTimeTest()
     QFETCH(int, minsToAdd);
     QFETCH(QString, format);
     QFETCH(QString, result);
-    QCOMPARE( Scripting::Helper::addMinsToTime(time, minsToAdd, format), result );
+    QCOMPARE( ScriptApi::Helper::addMinsToTime(time, minsToAdd, format), result );
 }
 
 void ScriptApiTest::helperMatchDateTest_data()
@@ -112,7 +112,7 @@ void ScriptApiTest::helperMatchDateTest()
     QFETCH(QString, string);
     QFETCH(QString, format);
     QFETCH(QDate, result);
-    QCOMPARE( Scripting::Helper::matchDate(string, format), result );
+    QCOMPARE( ScriptApi::Helper::matchDate(string, format), result );
 }
 
 QVariantMap timeResult( int hour, int minute ) {
@@ -137,7 +137,7 @@ void ScriptApiTest::helperMatchTimeTest()
     QFETCH(QString, string);
     QFETCH(QString, format);
     QFETCH(QVariantMap, result);
-    QCOMPARE( Scripting::Helper::matchTime(string, format), result );
+    QCOMPARE( ScriptApi::Helper::matchTime(string, format), result );
 }
 
 void ScriptApiTest::helperFormatDateTest_data()
@@ -159,7 +159,7 @@ void ScriptApiTest::helperFormatDateTest()
     QFETCH(int, day);
     QFETCH(QString, format);
     QFETCH(QString, result);
-    QCOMPARE( Scripting::Helper::formatDate(year, month, day, format), result );
+    QCOMPARE( ScriptApi::Helper::formatDate(year, month, day, format), result );
 }
 
 void ScriptApiTest::helperFormatTimeTest_data()
@@ -179,7 +179,7 @@ void ScriptApiTest::helperFormatTimeTest()
     QFETCH(int, minute);
     QFETCH(QString, format);
     QFETCH(QString, result);
-    QCOMPARE( Scripting::Helper::formatTime(hour, minute, format), result );
+    QCOMPARE( ScriptApi::Helper::formatTime(hour, minute, format), result );
 }
 
 void ScriptApiTest::helperFormatDateTimeTest_data()
@@ -205,7 +205,7 @@ void ScriptApiTest::helperFormatDateTimeTest()
     QFETCH(int, minute);
     QFETCH(QString, format);
     QFETCH(QString, result);
-    QCOMPARE( Scripting::Helper::formatDateTime(QDateTime(QDate(year, month, day),
+    QCOMPARE( ScriptApi::Helper::formatDateTime(QDateTime(QDate(year, month, day),
                                                           QTime(hour, minute)), format), result );
 }
 
@@ -222,7 +222,7 @@ void ScriptApiTest::helperCamelCaseTest()
 {
     QFETCH(QString, string);
     QFETCH(QString, result);
-    QCOMPARE( Scripting::Helper::camelCase(string), result );
+    QCOMPARE( ScriptApi::Helper::camelCase(string), result );
 }
 
 void ScriptApiTest::helperTrimTest_data()
@@ -237,7 +237,7 @@ void ScriptApiTest::helperTrimTest()
 {
     QFETCH(QString, string);
     QFETCH(QString, result);
-    QCOMPARE( Scripting::Helper::trim(string), result );
+    QCOMPARE( ScriptApi::Helper::trim(string), result );
 }
 
 void ScriptApiTest::helpeStripTagsTest_data()
@@ -252,7 +252,7 @@ void ScriptApiTest::helpeStripTagsTest()
 {
     QFETCH(QString, string);
     QFETCH(QString, result);
-    QCOMPARE( Scripting::Helper::stripTags(string), result );
+    QCOMPARE( ScriptApi::Helper::stripTags(string), result );
 }
 
 void ScriptApiTest::helperSplitSkipEmptyPartsTest_data()
@@ -269,7 +269,7 @@ void ScriptApiTest::helperSplitSkipEmptyPartsTest()
     QFETCH(QString, string);
     QFETCH(QString, separator);
     QFETCH(QStringList, result);
-    QCOMPARE( Scripting::Helper::splitSkipEmptyParts(string, separator), result );
+    QCOMPARE( ScriptApi::Helper::splitSkipEmptyParts(string, separator), result );
 }
 
 void ScriptApiTest::helperDecodeHtmlEntitiesTest_data()
@@ -285,7 +285,7 @@ void ScriptApiTest::helperDecodeHtmlEntitiesTest()
 {
     QFETCH(QString, string);
     QFETCH(QString, result);
-    QCOMPARE( Scripting::Helper::decodeHtmlEntities(string), result );
+    QCOMPARE( ScriptApi::Helper::decodeHtmlEntities(string), result );
 }
 
 void ScriptApiTest::helperDurationTest_data()
@@ -305,7 +305,7 @@ void ScriptApiTest::helperDurationTest()
     QFETCH(QString, time2);
     QFETCH(QString, format);
     QFETCH(int, result);
-    QCOMPARE( Scripting::Helper::duration(time1, time2, format), result );
+    QCOMPARE( ScriptApi::Helper::duration(time1, time2, format), result );
 }
 
 void ScriptApiTest::helperFindFirstHtmlTagTest_data()
@@ -348,7 +348,7 @@ void ScriptApiTest::helperFindFirstHtmlTagTest()
     QFETCH(QVariantMap, options);
     QFETCH(QVariantMap, expectedResult);
 
-    QVariantMap results = Scripting::Helper::findFirstHtmlTag( string, tagName, options );
+    QVariantMap results = ScriptApi::Helper::findFirstHtmlTag( string, tagName, options );
     for ( QVariantMap::ConstIterator it = expectedResult.constBegin();
           it != expectedResult.constEnd(); ++it )
     {
@@ -538,7 +538,7 @@ void ScriptApiTest::helperFindHtmlTagsTest()
     QFETCH(int, expectedResultCount);
     QFETCH(QVariantList, expectedResults);
 
-    QVariantList results = Scripting::Helper::findHtmlTags( string, tagName, options );
+    QVariantList results = ScriptApi::Helper::findHtmlTags( string, tagName, options );
     QCOMPARE( results.count(), expectedResultCount );
     for ( int i = 0; i < expectedResultCount; ++i ) {
         const QVariantMap expectedResult = expectedResults[i].toMap();
@@ -635,7 +635,7 @@ void ScriptApiTest::helperFindNamedHtmlTagsTest()
     QFETCH(QVariantMap, expectedResults);
     QFETCH(QStringList, expectedNames);
 
-    QVariantMap results = Scripting::Helper::findNamedHtmlTags( string, tagName, options );
+    QVariantMap results = ScriptApi::Helper::findNamedHtmlTags( string, tagName, options );
     QCOMPARE( results.count() - 1, expectedResultCount ); // -1 for the "names" entry which contains all found names
     QVERIFY( results.contains("names") );
     QCOMPARE( results["names"].toStringList(), expectedNames );
@@ -669,7 +669,7 @@ void ScriptApiTest::storageReadWriteTest()
     QFETCH(QString, name);
     QFETCH(QVariant, data);
 
-    Scripting::Storage storage( "Test" );
+    ScriptApi::Storage storage( "Test" );
     storage.write( name, data );
     QVERIFY( storage.hasData(name) );
 
@@ -707,7 +707,7 @@ void ScriptApiTest::storageReadWritePersistentTest()
     QFETCH(int, lifetime);
     QFETCH(int, expectedLifetime);
 
-    Scripting::Storage storage( "Test" );
+    ScriptApi::Storage storage( "Test" );
     storage.writePersistent( name, data, lifetime );
     QVERIFY( storage.hasPersistentData(name) );
 
@@ -720,69 +720,69 @@ void ScriptApiTest::storageReadWritePersistentTest()
 
 void ScriptApiTest::resultFeaturesHintsTest()
 {
-    Scripting::ResultObject result( this );
+    ScriptApi::ResultObject result( this );
 
     // Test defaults
-    QCOMPARE( result.features(), Scripting::ResultObject::DefaultFeatures );
-    const bool defaultAutoDecode = Scripting::ResultObject::Features(Scripting::ResultObject::DefaultFeatures)
-              .testFlag(Scripting::ResultObject::AutoDecodeHtmlEntities);
-    const bool defaultAutoPublish = Scripting::ResultObject::Features(Scripting::ResultObject::DefaultFeatures)
-              .testFlag(Scripting::ResultObject::AutoPublish);
-    const bool defaultAutoRemoveCityFromStopNames = Scripting::ResultObject::Features(Scripting::ResultObject::DefaultFeatures)
-              .testFlag(Scripting::ResultObject::AutoRemoveCityFromStopNames);
-    QCOMPARE( result.isFeatureEnabled(Scripting::ResultObject::AutoDecodeHtmlEntities),
+    QCOMPARE( result.features(), ScriptApi::ResultObject::DefaultFeatures );
+    const bool defaultAutoDecode = ScriptApi::ResultObject::Features(ScriptApi::ResultObject::DefaultFeatures)
+              .testFlag(ScriptApi::ResultObject::AutoDecodeHtmlEntities);
+    const bool defaultAutoPublish = ScriptApi::ResultObject::Features(ScriptApi::ResultObject::DefaultFeatures)
+              .testFlag(ScriptApi::ResultObject::AutoPublish);
+    const bool defaultAutoRemoveCityFromStopNames = ScriptApi::ResultObject::Features(ScriptApi::ResultObject::DefaultFeatures)
+              .testFlag(ScriptApi::ResultObject::AutoRemoveCityFromStopNames);
+    QCOMPARE( result.isFeatureEnabled(ScriptApi::ResultObject::AutoDecodeHtmlEntities),
               defaultAutoDecode );
-    QCOMPARE( result.isFeatureEnabled(Scripting::ResultObject::AutoPublish), defaultAutoPublish );
-    QCOMPARE( result.isFeatureEnabled(Scripting::ResultObject::AutoRemoveCityFromStopNames),
+    QCOMPARE( result.isFeatureEnabled(ScriptApi::ResultObject::AutoPublish), defaultAutoPublish );
+    QCOMPARE( result.isFeatureEnabled(ScriptApi::ResultObject::AutoRemoveCityFromStopNames),
               defaultAutoRemoveCityFromStopNames );
-    QCOMPARE( result.hints(), Scripting::ResultObject::NoHint );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::CityNamesAreLeft), false );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::CityNamesAreRight), false );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::DatesNeedAdjustment), false );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::NoDelaysForStop), false );
+    QCOMPARE( result.hints(), ScriptApi::ResultObject::NoHint );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::CityNamesAreLeft), false );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::CityNamesAreRight), false );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::DatesNeedAdjustment), false );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::NoDelaysForStop), false );
 
-    result.enableFeature( Scripting::ResultObject::AutoDecodeHtmlEntities, false );
-    QCOMPARE( result.isFeatureEnabled(Scripting::ResultObject::AutoDecodeHtmlEntities), false );
-    QCOMPARE( result.isFeatureEnabled(Scripting::ResultObject::AutoPublish), defaultAutoPublish );
-    QCOMPARE( result.isFeatureEnabled(Scripting::ResultObject::AutoRemoveCityFromStopNames),
+    result.enableFeature( ScriptApi::ResultObject::AutoDecodeHtmlEntities, false );
+    QCOMPARE( result.isFeatureEnabled(ScriptApi::ResultObject::AutoDecodeHtmlEntities), false );
+    QCOMPARE( result.isFeatureEnabled(ScriptApi::ResultObject::AutoPublish), defaultAutoPublish );
+    QCOMPARE( result.isFeatureEnabled(ScriptApi::ResultObject::AutoRemoveCityFromStopNames),
               defaultAutoRemoveCityFromStopNames );
-//     QCOMPARE( result.features(), Scripting::ResultObject::AutoPublish |
-//                                  Scripting::ResultObject::AutoRemoveCityFromStopNames );
+//     QCOMPARE( result.features(), ScriptApi::ResultObject::AutoPublish |
+//                                  ScriptApi::ResultObject::AutoRemoveCityFromStopNames );
 
-    result.enableFeature( Scripting::ResultObject::AutoPublish, false );
-    QCOMPARE( result.isFeatureEnabled(Scripting::ResultObject::AutoDecodeHtmlEntities), false );
-    QCOMPARE( result.isFeatureEnabled(Scripting::ResultObject::AutoPublish), false );
-    QCOMPARE( result.isFeatureEnabled(Scripting::ResultObject::AutoRemoveCityFromStopNames),
+    result.enableFeature( ScriptApi::ResultObject::AutoPublish, false );
+    QCOMPARE( result.isFeatureEnabled(ScriptApi::ResultObject::AutoDecodeHtmlEntities), false );
+    QCOMPARE( result.isFeatureEnabled(ScriptApi::ResultObject::AutoPublish), false );
+    QCOMPARE( result.isFeatureEnabled(ScriptApi::ResultObject::AutoRemoveCityFromStopNames),
               defaultAutoRemoveCityFromStopNames );
-//     QCOMPARE( result.features(), Scripting::ResultObject::AutoRemoveCityFromStopNames );
+//     QCOMPARE( result.features(), ScriptApi::ResultObject::AutoRemoveCityFromStopNames );
 
-    result.giveHint( Scripting::ResultObject::CityNamesAreLeft, true );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::CityNamesAreLeft), true );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::CityNamesAreRight), false );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::DatesNeedAdjustment), false );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::NoDelaysForStop), false );
-    QCOMPARE( result.hints(), Scripting::ResultObject::CityNamesAreLeft );
+    result.giveHint( ScriptApi::ResultObject::CityNamesAreLeft, true );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::CityNamesAreLeft), true );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::CityNamesAreRight), false );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::DatesNeedAdjustment), false );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::NoDelaysForStop), false );
+    QCOMPARE( result.hints(), ScriptApi::ResultObject::CityNamesAreLeft );
 
     // Test automatic disabling of CityNamesAreLeft if CityNamesAreRight gets enabled
-    result.giveHint( Scripting::ResultObject::CityNamesAreRight, true );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::CityNamesAreLeft), false );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::CityNamesAreRight), true );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::DatesNeedAdjustment), false );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::NoDelaysForStop), false );
-    QCOMPARE( result.hints(), Scripting::ResultObject::CityNamesAreRight );
+    result.giveHint( ScriptApi::ResultObject::CityNamesAreRight, true );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::CityNamesAreLeft), false );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::CityNamesAreRight), true );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::DatesNeedAdjustment), false );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::NoDelaysForStop), false );
+    QCOMPARE( result.hints(), ScriptApi::ResultObject::CityNamesAreRight );
 
-    result.giveHint( Scripting::ResultObject::DatesNeedAdjustment, true );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::CityNamesAreLeft), false );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::CityNamesAreRight), true );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::DatesNeedAdjustment), true );
-    QCOMPARE( result.isHintGiven(Scripting::ResultObject::NoDelaysForStop), false );
-    QCOMPARE( result.hints(), Scripting::ResultObject::CityNamesAreRight |
-                              Scripting::ResultObject::DatesNeedAdjustment );
+    result.giveHint( ScriptApi::ResultObject::DatesNeedAdjustment, true );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::CityNamesAreLeft), false );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::CityNamesAreRight), true );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::DatesNeedAdjustment), true );
+    QCOMPARE( result.isHintGiven(ScriptApi::ResultObject::NoDelaysForStop), false );
+    QCOMPARE( result.hints(), ScriptApi::ResultObject::CityNamesAreRight |
+                              ScriptApi::ResultObject::DatesNeedAdjustment );
 }
 
 void ScriptApiTest::resultDataTest()
 {
-    Scripting::ResultObject result( this );
+    ScriptApi::ResultObject result( this );
 
     // Test defaults
     QVERIFY( !result.hasData() );
@@ -839,7 +839,7 @@ void ScriptApiTest::resultDataTest()
 
 void ScriptApiTest::networkSynchronousTest()
 {
-    Scripting::Network network;
+    ScriptApi::Network network;
 
     // Test synchronous download (max 10 seconds)
     const QString url = "http://www.google.de";
@@ -855,7 +855,7 @@ void ScriptApiTest::networkSynchronousTest()
 
 void ScriptApiTest::networkAsynchronousTest()
 {
-    Scripting::Network network;
+    ScriptApi::Network network;
 
     // Signals are only emitted for asynchronous access
     QSignalSpy requestStartedSpy( &network, SIGNAL(requestStarted(NetworkRequest::Ptr)) );
@@ -865,7 +865,7 @@ void ScriptApiTest::networkAsynchronousTest()
 
     // Test synchronous download (max 10 seconds)
     const QString url = "http://www.google.de";
-    Scripting::NetworkRequest *request = network.createRequest( url );
+    ScriptApi::NetworkRequest *request = network.createRequest( url );
 
     // Wait for asynchronous download to finish
     QEventLoop loop( this );
@@ -884,7 +884,7 @@ void ScriptApiTest::networkAsynchronousTest()
 
 void ScriptApiTest::networkAsynchronousAbortTest()
 {
-    Scripting::Network network;
+    ScriptApi::Network network;
 
     // Signals are only emitted for asynchronous access
     QSignalSpy requestStartedSpy( &network, SIGNAL(requestStarted(NetworkRequest::Ptr)) );
@@ -894,7 +894,7 @@ void ScriptApiTest::networkAsynchronousAbortTest()
 
     // Test synchronous download (max 10 seconds)
     const QString url = "http://www.google.de";
-    Scripting::NetworkRequest *request = network.createRequest( url );
+    ScriptApi::NetworkRequest *request = network.createRequest( url );
 
     // Start asynchronous download and wait for it to finish,
     // but directly abort the download
@@ -916,7 +916,7 @@ void ScriptApiTest::networkAsynchronousAbortTest()
 
 void ScriptApiTest::networkAsynchronousMultipleTest()
 {
-    Scripting::Network network;
+    ScriptApi::Network network;
 
     // Signals are only emitted for asynchronous access
     QSignalSpy requestStartedSpy( &network, SIGNAL(requestStarted(NetworkRequest::Ptr)) );
@@ -927,8 +927,8 @@ void ScriptApiTest::networkAsynchronousMultipleTest()
     // Test synchronous download (max 10 seconds)
     const QString url1 = "http://www.google.de";
     const QString url2 = "http://www.wikipedia.de";
-    Scripting::NetworkRequest *request1 = network.createRequest( url1 );
-    Scripting::NetworkRequest *request2 = network.createRequest( url2 );
+    ScriptApi::NetworkRequest *request1 = network.createRequest( url1 );
+    ScriptApi::NetworkRequest *request2 = network.createRequest( url2 );
 
     // Start two asynchronous downloads and wait for both to finish
     QEventLoop loop(this);

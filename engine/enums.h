@@ -106,7 +106,7 @@ public:
     * In scripts the enumerable names can be used as property names of a result object, eg.:
     * @code
     * result.addData({ DepartureDateTime: new Date(),
-    *                  TypeOfVehicle: "Bus",
+    *                  TypeOfVehicle: PublicTransport.Bus,
     *                  Target: "SomeTarget" });
     * @endcode
     */

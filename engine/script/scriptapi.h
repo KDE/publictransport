@@ -48,7 +48,7 @@ class QMutex;
 typedef QHash<Enums::TimetableInformation, QVariant> TimetableData;
 
 /** @brief Namespace for classes exposed to scripts. */
-namespace Scripting {
+namespace ScriptApi {
 
 class Network;
 
@@ -58,8 +58,6 @@ class Network;
  * @brief Represents one asynchronous request, created with Network::createRequest().
  *
  * To get notified about new data, connect to either the finished() or the readyRead() signal.
- *
- * @since 0.10
  **/
 class NetworkRequest : public QObject {
     Q_OBJECT
@@ -269,8 +267,6 @@ private:
  *
  * @note One request object created with createRequest() can not be used multiple times in
  *   parallel. To start another request create a new request object.
- *
- * @since 0.10
  **/
 class Network : public QObject, public QScriptable {
     Q_OBJECT
@@ -1159,7 +1155,6 @@ public:
      *   under the name "enum".
      *
      * @see Feature
-     * @since 0.10
      **/
     Q_INVOKABLE bool isFeatureEnabled( Feature feature ) const;
 
@@ -1179,7 +1174,6 @@ public:
      * @param enable @c True to enable @p feature, @c false to disable it.
      *
      * @see Feature
-     * @since 0.10
      **/
     Q_INVOKABLE void enableFeature( Feature feature, bool enable = true );
 
@@ -1197,8 +1191,6 @@ public:
      *
      * @param hint The hint to check. Scripts can access the Hint enumeration
      *   under the name "enum".
-     *
-     * @since 0.10
      */
     Q_INVOKABLE bool isHintGiven( Hint hint ) const;
 
@@ -1215,8 +1207,6 @@ public:
      *
      * @param hint The hint to give.
      * @param enable Whether the @p hint should be set or unset.
-     *
-     * @since 0.10
      */
     Q_INVOKABLE void giveHint( Hint hint, bool enable = true );
 
@@ -1225,7 +1215,6 @@ public:
      *
      * Scripts can access the Features enumeration like @verbatimenum.AutoPublish@endverbatim.
      * By default this equals to DefaultFeatures.
-     * @since 0.10
      */
     Features features() const;
 
@@ -1234,7 +1223,6 @@ public:
      *
      * Scripts can access the Hints enumeration like @verbatimenum.CityNamesAreLeft@endverbatim.
      * By default this equals to NoHints.
-     * @since 0.10
      */
     Hints hints() const;
 
@@ -1274,7 +1262,6 @@ Q_SIGNALS:
      *
      * @see Feature
      * @see setFeatureEnabled
-     * @since 0.10
      **/
     void publish();
 
@@ -1419,8 +1406,6 @@ class StoragePrivate;
  *   Otherwise one departure request job might use the value stored by another one, which is
  *   probably not what you want. Scripts can not not access the Storage object of other scripts
  *   (for other service providers).
- *
- * @since 0.10
  **/
 class Storage : public QObject {
     Q_OBJECT
@@ -1593,6 +1578,37 @@ private:
 /**
  * @brief A data stream class to be used in scripts.
  *
+ * This class gets made available to scripts under the name @c DataStream.
+ * It can be setup to read from @c data that was received from a network request like here:
+ * @code
+ * // data is a QByteArray as received from a network request
+ * // That data can now be decoded using helper.decode(),
+ * // but if it contains binary data DataStream should be used with a QBuffer
+ * var buffer = new QBuffer( data );
+ * buffer.open( QIODevice.ReadOnly );
+ * var stream = new DataStream( buffer );
+ * // The stream is now ready
+ *
+ * // Seek to position 10, if possible
+ * if ( 10 < buffer.size() ) {
+ *    stream.seek( 10 );
+ * }
+ *
+ * // The current position is available in the 'pos' property
+ * var pos = stream.pos;
+ *
+ * // Skip some bytes
+ * stream.skip( 2 ); // Skip two bytes, equal to stream.seek(stream.pos + 2)
+ *
+ * // Read data
+ * var number = stream.readUInt32(); // Read a four byte unsigned integer
+ * var smallNumber = stream.readInt8(); // Read a one byte integer
+ * var string = stream.readString(); // Read a string, ends at the first found \0
+ *
+ * // Close the buffer again
+ * buffer.close();
+ * @endcode
+ *
  * This class wraps a QDataStream, because it's read/write operators cannot be used from QtScript
  * otherwise, ie. the operator>>(), operator<<() functions. This class offers some read functions
  * to make this possible, ie readInt8(), readUInt8() or readString(). To read byte data use
@@ -1670,21 +1686,21 @@ QScriptValue constructStream( QScriptContext *context, QScriptEngine *engine );
 QScriptValue dataStreamToScript( QScriptEngine *engine, const DataStreamPrototypePtr &stream );
 void dataStreamFromScript( const QScriptValue &object, DataStreamPrototypePtr &stream );
 
-}; // namespace Scripting
+}; // namespace ScriptApi
 
-Q_DECLARE_METATYPE(Scripting::Helper::ErrorSeverity)
-Q_DECLARE_METATYPE(Scripting::ResultObject::Hint)
-Q_DECLARE_METATYPE(Scripting::ResultObject::Hints)
-Q_DECLARE_METATYPE(Scripting::ResultObject::Feature)
-Q_DECLARE_METATYPE(Scripting::ResultObject::Features)
+Q_DECLARE_METATYPE(ScriptApi::Helper::ErrorSeverity)
+Q_DECLARE_METATYPE(ScriptApi::ResultObject::Hint)
+Q_DECLARE_METATYPE(ScriptApi::ResultObject::Hints)
+Q_DECLARE_METATYPE(ScriptApi::ResultObject::Feature)
+Q_DECLARE_METATYPE(ScriptApi::ResultObject::Features)
 
-Q_DECLARE_METATYPE(Scripting::NetworkRequest*)
-Q_DECLARE_METATYPE(Scripting::NetworkRequest::Ptr)
-Q_SCRIPT_DECLARE_QMETAOBJECT(Scripting::NetworkRequest, QObject*)
+Q_DECLARE_METATYPE(ScriptApi::NetworkRequest*)
+Q_DECLARE_METATYPE(ScriptApi::NetworkRequest::Ptr)
+Q_SCRIPT_DECLARE_QMETAOBJECT(ScriptApi::NetworkRequest, QObject*)
 
 Q_DECLARE_METATYPE(QIODevice*)
 Q_DECLARE_METATYPE(QDataStream*)
-Q_DECLARE_METATYPE(Scripting::DataStreamPrototype*)
-Q_SCRIPT_DECLARE_QMETAOBJECT(Scripting::DataStreamPrototype, QObject*)
+Q_DECLARE_METATYPE(ScriptApi::DataStreamPrototype*)
+Q_SCRIPT_DECLARE_QMETAOBJECT(ScriptApi::DataStreamPrototype, QObject*)
 
 #endif // Multiple inclusion guard

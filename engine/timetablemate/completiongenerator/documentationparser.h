@@ -25,13 +25,13 @@
 #include "parser_structures.h"
 
 // PublicTransport engine includes
-#include <engine/script/scripting.h>
+#include <engine/script/scriptapi.h>
 
 // Qt includes
 #include <QFile>
 #include <QDir>
 
-using namespace Scripting;
+using namespace ScriptApi;
 
 /**
  * @brief Parse doxygen comment blocks in C++ header files.

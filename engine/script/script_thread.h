@@ -27,7 +27,7 @@
 
 // Own includes
 #include "enums.h"
-#include "scripting.h"
+#include "scriptapi.h"
 #include "scriptobjects.h"
 #include "serviceproviderdata.h"
 
@@ -49,7 +49,7 @@ class AdditionalDataRequest;
 class MoreItemsRequest;
 
 class ServiceProviderData;
-namespace Scripting {
+namespace ScriptApi {
     class Storage;
     class Network;
     class Helper;
@@ -60,7 +60,7 @@ class QScriptProgram;
 class QScriptEngine;
 class QEventLoop;
 
-using namespace Scripting;
+using namespace ScriptApi;
 
 /** @brief Stores information about a departure/arrival/journey/stop suggestion. */
 typedef QHash<Enums::TimetableInformation, QVariant> TimetableData;

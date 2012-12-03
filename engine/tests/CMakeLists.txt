@@ -45,7 +45,7 @@ set( ScriptApiTest_SRCS
    ../global.cpp
    ../serviceproviderglobal.cpp
    ../departureinfo.cpp
-   ../script/scripting.cpp
+   ../script/scriptapi.cpp
     ${engine_tests_MOC_SRCS} )
 qt4_automoc( ${ScriptApiTest_SRCS} )
 add_executable( ScriptApiTest ${ScriptApiTest_SRCS} )

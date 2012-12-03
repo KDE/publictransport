@@ -21,9 +21,9 @@
 #define SCRIPTOBJECTS_HEADER
 
 #include "serviceproviderdata.h"
-#include "scripting.h"
+#include "scriptapi.h"
 
-using namespace Scripting;
+using namespace ScriptApi;
 
 class QMutex;
 class QScriptEngine;
