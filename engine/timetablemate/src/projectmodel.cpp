@@ -223,7 +223,7 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
 #endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
             case ProjectModelItem::GtfsDatabaseItem:
-                return i18nc("@info:tooltip", "Shows the GTFS database and allows to start it's "
+                return i18nc("@info:tooltip", "Shows the GTFS database and allows to start its "
                              "import from the GTFS feed.");
 #else
             case ProjectModelItem::GtfsDatabaseItem:

@@ -896,7 +896,7 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *data,
                 "<emphasize strong='1'>1.1</emphasize>, because the specified version "
                 "<emphasize strong='1'>%1</emphasize> is not supported.</para>"
                 "<para>Please make sure that the plugin complies with that version "
-                "and update it if neccessary.</para>"
+                "and update it if necessary.</para>"
                 "<para><note>You can cancel the settings dialog to not change anything."
                 "</note></para>",
                 data->fileFormatVersion()) );
