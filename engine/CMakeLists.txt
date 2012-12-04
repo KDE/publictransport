@@ -69,7 +69,7 @@ if ( BUILD_PROVIDER_TYPE_GTFS )
     endif ( PROTOBUF_FOUND )
 
     # Enable/disable GTFS-realtime support with ProtocolBuffers
-    set( BUILD_GTFS_REALTIME PROTOBUF_FOUND )
+    set( BUILD_GTFS_REALTIME ${PROTOBUF_FOUND} )
 else ( BUILD_PROVIDER_TYPE_GTFS )
     set( BUILD_GTFS_REALTIME FALSE )
 endif ( BUILD_PROVIDER_TYPE_GTFS )
