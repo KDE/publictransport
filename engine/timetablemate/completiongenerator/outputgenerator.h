@@ -51,7 +51,7 @@ public:
                                            * ie. "class::method()" or "class.method()". */
         ReferencesWithBrackets = 0x0002  /**< Method references need to be followed by brackets "()". */
     };
-    Q_DECLARE_FLAGS( ReferenceTypes, ReferenceType );
+    Q_DECLARE_FLAGS( ReferenceTypes, ReferenceType )
 
     AbstractGenerator() {};
     virtual ~AbstractGenerator() {};

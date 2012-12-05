@@ -82,7 +82,7 @@ enum GtfsServiceError {
     GtfsErrorDownloadFailed = KJob::UserDefinedError + 6, /**< A GTFS feed download failed. */
     GtfsErrorImportFailed = KJob::UserDefinedError + 7, /**< Failed to import the GTFS feed into
             * the database, after it was successfully downloaded. */
-    GtfsErrorCannotDeleteDatabase = KJob::UserDefinedError + 8, /**< There was an error while
+    GtfsErrorCannotDeleteDatabase = KJob::UserDefinedError + 8 /**< There was an error while
             * trying to delete the GTFS database. */
 };
 
@@ -98,7 +98,7 @@ class Enums : public QObject {
 
     // NOTE The ';' at the end is needed for doxygen, otherwise the enumarables get skipped
     Q_ENUMS( TimetableInformation ServiceProviderType ProviderFeature
-             VehicleType LineService MoreItemsDirection );
+             VehicleType LineService MoreItemsDirection )
 public:
     /**
     * @brief Different types of timetable information.
@@ -512,7 +512,7 @@ public:
         NightLine = 0x01, /**< The public transport line is a night line. */
         ExpressLine = 0x02 /**< The public transport line is an express line. */
     };
-    // Q_DECLARE_FLAGS( LineServices, LineService ); // Gives a compiler error here.. but not in departureinfo.h TODO #include <QMetaType>
+    // Q_DECLARE_FLAGS( LineServices, LineService ) // Gives a compiler error here.. but not in departureinfo.h TODO #include <QMetaType>
 
     /** @brief Whether to request earlier or later items. */
     enum MoreItemsDirection {

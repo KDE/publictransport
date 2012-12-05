@@ -76,7 +76,7 @@ public:
         StopButton   = 0x02,
         PauseButton  = 0x04
     };
-    Q_DECLARE_FLAGS( ButtonTypes, ButtonType );
+    Q_DECLARE_FLAGS( ButtonTypes, ButtonType )
 
     /// Different states for an additional button
     enum ButtonState {
@@ -87,7 +87,7 @@ public:
         ButtonHovered = 0x04 ///< The mouse is currently over the button. If another button
                 ///< currently has state ButtonPressedMouseOutside only that button may get hovered.
     };
-    Q_DECLARE_FLAGS( ButtonStates, ButtonState );
+    Q_DECLARE_FLAGS( ButtonStates, ButtonState )
 
     /// Provides information about an additional button to be shown inside the StopLineEdit
     struct Button {
@@ -272,8 +272,8 @@ public:
 protected:
     StopLineEdit* const q_ptr;
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS( StopLineEditPrivate::ButtonTypes );
-Q_DECLARE_OPERATORS_FOR_FLAGS( StopLineEditPrivate::ButtonStates );
+Q_DECLARE_OPERATORS_FOR_FLAGS( StopLineEditPrivate::ButtonTypes )
+Q_DECLARE_OPERATORS_FOR_FLAGS( StopLineEditPrivate::ButtonStates )
 
 StopLineEdit::StopLineEdit( QWidget* parent, const QString &serviceProvider,
                             KGlobalSettings::Completion completion )

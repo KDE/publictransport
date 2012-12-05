@@ -54,7 +54,7 @@ namespace ScriptApi {
     class Network;
     class Helper;
     class ResultObject;
-};
+}
 
 class QScriptProgram;
 class QScriptEngine;

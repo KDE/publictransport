@@ -65,7 +65,7 @@ enum DebugFlag {
     InterruptOnExceptionsAndBreakpoints = InterruptOnExceptions | InterruptOnBreakpoints,
     DefaultDebugFlags = NeverInterrupt
 };
-Q_DECLARE_FLAGS( DebugFlags, DebugFlag );
+Q_DECLARE_FLAGS( DebugFlags, DebugFlag )
 
 /** @brief Execution control types. */
 enum ExecutionControl {
@@ -132,7 +132,7 @@ enum ScriptStoppedFlag {
             * waiting for a network request. It will continue automatically when the request has
             * finished (when the signal is connected to a slot in the script). */
 };
-Q_DECLARE_FLAGS( ScriptStoppedFlags, ScriptStoppedFlag );
+Q_DECLARE_FLAGS( ScriptStoppedFlags, ScriptStoppedFlag )
 
 /** @brief Contains information about the result of an evaluation. */
 struct EvaluationResult {
@@ -477,7 +477,7 @@ inline QDebug &operator <<( QDebug debug, ExecutionControl executeControlType )
 }; // namespace Debugger
 
 // Make Frame and FrameStack known to the meta object system
-Q_DECLARE_METATYPE( Debugger::Frame );
-Q_DECLARE_METATYPE( Debugger::FrameStack );
+Q_DECLARE_METATYPE( Debugger::Frame )
+Q_DECLARE_METATYPE( Debugger::FrameStack )
 
 #endif // Multiple inclusion guard

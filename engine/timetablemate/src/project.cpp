@@ -118,7 +118,7 @@ public:
                 * slots. */
         UseQueuedConnection     = 0x0002
     };
-    Q_DECLARE_FLAGS( ConnectProjectActionFlags, ConnectProjectActionFlag );
+    Q_DECLARE_FLAGS( ConnectProjectActionFlags, ConnectProjectActionFlag )
 
     enum TestState {
         NoTestRunning,

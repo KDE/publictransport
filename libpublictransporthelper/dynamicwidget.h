@@ -263,7 +263,7 @@ public:
 //     enum DynamicWidgetContainerOption {
 //         NoOption = 0x0000
 //     };
-//     Q_DECLARE_FLAGS( DynamicWidgetContainerOptions, DynamicWidgetContainerOption );
+//     Q_DECLARE_FLAGS( DynamicWidgetContainerOptions, DynamicWidgetContainerOption )
 
     /**
      * @brief Creates a new AbstractDynamicWidgetContainer instance.

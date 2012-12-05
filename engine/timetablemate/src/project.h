@@ -350,7 +350,7 @@ public:
 
         DefaultInstallType = LocalInstallation /**< The default installation type. */
     };
-    Q_DECLARE_FLAGS( InstallTypes, InstallType );
+    Q_DECLARE_FLAGS( InstallTypes, InstallType )
 
     /** @brief . */
     struct ProjectActionData {
@@ -1230,6 +1230,6 @@ private:
     ProjectPrivate *d_ptr;
 };
 
-Q_DECLARE_METATYPE( Project::ProjectActionData );
+Q_DECLARE_METATYPE( Project::ProjectActionData )
 
 #endif // Multiple inclusion guard

@@ -36,8 +36,8 @@ class AbstractRequest;
 class ServiceProviderData;
 class QAction;
 
-Q_DECLARE_METATYPE( QAction* );
-Q_DECLARE_METATYPE( Qt::AlignmentFlag );
+Q_DECLARE_METATYPE( QAction* )
+Q_DECLARE_METATYPE( Qt::AlignmentFlag )
 
 struct TimetableDataRequestMessage {
     enum Type {
@@ -50,7 +50,7 @@ struct TimetableDataRequestMessage {
         NoFeature = 0x0000,
         OpenLink  = 0x0001
     };
-    Q_DECLARE_FLAGS( Features, Feature );
+    Q_DECLARE_FLAGS( Features, Feature )
 
     TimetableDataRequestMessage( const QString &message, Type type = Information,
                                  const QString &fileName = QString(), int lineNumber = -1,
@@ -196,7 +196,7 @@ public:
         NoTestFlags     = 0x00,
         TestIsOutdated  = 0x01
     };
-    Q_DECLARE_FLAGS( TestFlags, TestFlag );
+    Q_DECLARE_FLAGS( TestFlags, TestFlag )
 
     /** @brief Constructor. */
     explicit TestModel( QObject *parent = 0 );
@@ -398,7 +398,7 @@ private:
     QHash< TestCase, TestCaseData > m_unstartableTestCases;
 };
 
-Q_DECLARE_OPERATORS_FOR_FLAGS( TestModel::TestFlags );
+Q_DECLARE_OPERATORS_FOR_FLAGS( TestModel::TestFlags )
 
 inline QDebug &operator <<( QDebug debug, TestModel::Test test )
 {

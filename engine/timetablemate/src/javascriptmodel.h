@@ -42,7 +42,7 @@ public:
                             * only if the first line is searched. */
         MatchChildren = 0x0002 /**< Goes down the hierarchy to search for nodes. */
     };
-    Q_DECLARE_FLAGS( MatchOptions, MatchOption );
+    Q_DECLARE_FLAGS( MatchOptions, MatchOption )
 
     JavaScriptModel( QObject *parent = 0 );
     ~JavaScriptModel();

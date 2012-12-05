@@ -52,7 +52,7 @@ public:
         AllowPopupResizing  = 0x02, /**< Allow resizing of the popup. */
         DefaultFlags = ShowCloseButton | AllowPopupResizing /**< Default popup flags. */
     };
-    Q_DECLARE_FLAGS( PopupFlags, PopupFlag );
+    Q_DECLARE_FLAGS( PopupFlags, PopupFlag )
 
     /** @brief The position of the popup relative to the trigger widget. */
     enum Position {
@@ -116,6 +116,6 @@ private:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS( PopupHandler::PopupFlags )
 
-}; // namespace PublicTransport
+} // namespace PublicTransport
 
 #endif // PUBLICTRANSPORTMAPWIDGET_H

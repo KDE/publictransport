@@ -247,4 +247,4 @@ void PublicTransportMapWidget::paintEvent( QPaintEvent *event )
     delete painter;
 }
 
-}; // namespace PublicTransport
+} // namespace PublicTransport

@@ -52,8 +52,8 @@ class ServiceProviderDataDialogPrivate;
 class PUBLICTRANSPORTHELPER_EXPORT ServiceProviderDataWidget : public QWidget
 {
     Q_OBJECT
-    friend ServiceProviderDataDialog;
-    friend ServiceProviderDataDialogPrivate;
+    friend class ServiceProviderDataDialog;
+    friend class ServiceProviderDataDialogPrivate;
 
 public:
     /**
@@ -125,7 +125,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS(ServiceProviderDataWidget::Options)
 class PUBLICTRANSPORTHELPER_EXPORT ServiceProviderDataDialog : public KDialog
 {
     Q_OBJECT
-    friend ServiceProviderDataWidget;
+    friend class ServiceProviderDataWidget;
 
 public:
     /**

@@ -263,7 +263,7 @@ QVariantHash ServiceProviderDataWidget::providerStateData() const
 }
 
 class ServiceProviderDataDialogPrivate {
-    friend ServiceProviderDataWidget;
+    friend class ServiceProviderDataWidget;
 
 public:
     ServiceProviderDataDialogPrivate( ServiceProviderDataDialog *q ) : q(q), widget(0) {};

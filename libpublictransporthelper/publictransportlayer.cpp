@@ -51,7 +51,7 @@ enum StopFlag {
     SelectedStop = 0x04, /**< The stop is selected, only one stop can be selected at a time. */
     InternalStop = 0x08  /**< The stop was requested internally by PublicTransportLayer. */
 };
-Q_DECLARE_FLAGS( StopFlags, StopFlag );
+Q_DECLARE_FLAGS( StopFlags, StopFlag )
 
 /** @brief Stores additional data for a stop. */
 struct StopData {
@@ -847,4 +847,4 @@ bool PublicTransportLayer::isStopVisible( const Stop &stop ) const
     }
 }
 
-}; // namespace PublicTransport
+} // namespace PublicTransport

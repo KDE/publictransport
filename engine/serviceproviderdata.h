@@ -558,6 +558,6 @@ protected:
     QString m_notes;
 };
 
-Q_DECLARE_METATYPE( ServiceProviderData );
+Q_DECLARE_METATYPE( ServiceProviderData )
 
 #endif // Multiple inclusion guard

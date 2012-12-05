@@ -46,8 +46,8 @@ enum Transformation {
     AllTransformations = DefaultTransformations | TransformAllReferences | TransformHighlightCode
             /**< All available transformations. */
 };
-Q_DECLARE_FLAGS( Transformations, Transformation );
-Q_DECLARE_OPERATORS_FOR_FLAGS( Transformations );
+Q_DECLARE_FLAGS( Transformations, Transformation )
+Q_DECLARE_OPERATORS_FOR_FLAGS( Transformations )
 
 /** @brief Supported types of doxygen commands. */
 enum DoxygenCommandType {

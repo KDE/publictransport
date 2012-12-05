@@ -50,8 +50,8 @@ struct ChangelogEntry {
                engineVersion == other.engineVersion && description == other.description;
     };
 };
-Q_DECLARE_METATYPE(ChangelogEntry);
-Q_DECLARE_METATYPE(QList<ChangelogEntry>);
+Q_DECLARE_METATYPE(ChangelogEntry)
+Q_DECLARE_METATYPE(QList<ChangelogEntry>)
 
 /**
  * @brief Read service provider data XML files.

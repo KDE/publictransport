@@ -203,6 +203,6 @@ private:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS( PublicTransportLayer::Flags )
 
-}; // namespace PublicTransport
+} // namespace PublicTransport
 
 #endif // Multiple inclusion guard

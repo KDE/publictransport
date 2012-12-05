@@ -65,7 +65,7 @@ public:
                 * flag in the created layer. */
         DefaultFlags = AutoLoadStopsForMapRegion
     };
-    Q_DECLARE_FLAGS( Flags, Flag );
+    Q_DECLARE_FLAGS( Flags, Flag )
 
     /** @brief Options to filter stops. */
     enum StopOption {
@@ -161,6 +161,6 @@ private:
 };
 Q_DECLARE_OPERATORS_FOR_FLAGS( PublicTransportMapWidget::Flags )
 
-}; // namespace PublicTransport
+} // namespace PublicTransport
 
 #endif // PUBLICTRANSPORTMAPWIDGET_H

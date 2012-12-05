@@ -357,4 +357,4 @@ bool PopupHandler::eventFilter( QObject *object, QEvent *event )
     return false;
 }
 
-}; // namespace PublicTransport
+} // namespace PublicTransport

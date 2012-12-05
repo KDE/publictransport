@@ -204,7 +204,7 @@ public:
 
         DefaultSettingsFlags    = ColorizeDepartureGroups | DrawShadows | UseThemeFont
     };
-    Q_DECLARE_FLAGS( SettingsFlags, SettingsFlag );
+    Q_DECLARE_FLAGS( SettingsFlags, SettingsFlag )
 
     /** @brief Boolean flags controlling the departure time display. */
     enum DepartureTimeFlag {
@@ -217,7 +217,7 @@ public:
         ShowTimeAndRemainingTime = ShowDepartureTime | ShowRemainingTime,
         DefaultDepartureTimeFlags = ShowTimeAndRemainingTime | DisplayDepartureTimeBold
     };
-    Q_DECLARE_FLAGS( DepartureTimeFlags, DepartureTimeFlag );
+    Q_DECLARE_FLAGS( DepartureTimeFlags, DepartureTimeFlag )
 
     /** @brief Different ways to request additional timetable data. */
     enum AdditionalDataRequestType {
@@ -594,7 +594,7 @@ private:
     float m_sizeFactor;
 };
 
-Q_DECLARE_OPERATORS_FOR_FLAGS( Settings::DepartureTimeFlags );
-Q_DECLARE_OPERATORS_FOR_FLAGS( Settings::SettingsFlags );
+Q_DECLARE_OPERATORS_FOR_FLAGS( Settings::DepartureTimeFlags )
+Q_DECLARE_OPERATORS_FOR_FLAGS( Settings::SettingsFlags )
 
 #endif // SETTINGS_HEADER

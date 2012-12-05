@@ -268,7 +268,7 @@ public:
         IncludesAdditionalData  = 0x04  /**< Whether or not the object includes additional data
                                            * that was requested using the timetable service. */
     };
-    Q_DECLARE_FLAGS( DepartureFlags, DepartureFlag );
+    Q_DECLARE_FLAGS( DepartureFlags, DepartureFlag )
 
     /** Creates an invalid DepartureInfo object. */
     DepartureInfo() : PublicTransportInfo() {

@@ -66,7 +66,7 @@ public:
         CorrectEverything = DeduceMissingValues | TestValuesForCorrectFormat |
                 CombineToPreferredValueType
     };
-    Q_DECLARE_FLAGS( Corrections, Correction );
+    Q_DECLARE_FLAGS( Corrections, Correction )
 
     /**
      * @brief Contructs a new PublicTransportInfo object based on the information given

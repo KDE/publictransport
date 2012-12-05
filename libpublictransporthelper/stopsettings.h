@@ -265,7 +265,7 @@ public:
     template< class Type >
     inline Type get( int setting ) const {
         return operator[]( setting ).value<Type>();
-    };
+    }
 
     /**
      * @brief Overloaded version of @ref get(int) to also accept
@@ -274,7 +274,7 @@ public:
     template< class Type >
     inline Type get( StopSetting setting ) {
         return get<Type>( static_cast<int>(setting) );
-    };
+    }
 
     /**
      * @brief Sets the value of the given @p setting to @p value.

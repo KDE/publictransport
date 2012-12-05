@@ -94,7 +94,7 @@ enum VariableFlag {
                                 = 0x0004, /**< The variable was defined in a parent context. */
     VariableIsChanged           = 0x0008  /**< The variable was just changed. */
 };
-Q_DECLARE_FLAGS( VariableFlags, VariableFlag );
+Q_DECLARE_FLAGS( VariableFlags, VariableFlag )
 
 /** @brief Contains data for a variable, used by VariableItem. */
 struct VariableData {

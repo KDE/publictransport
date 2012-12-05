@@ -41,7 +41,7 @@ enum NodeType {
     AllNodeTypes    = Block | Function | Argument | Statement | Comment | String |
                       FunctionCall | Bracketed | UnknownNodeType
 };
-Q_DECLARE_FLAGS( NodeTypes, NodeType );
-Q_DECLARE_OPERATORS_FOR_FLAGS( NodeTypes );
+Q_DECLARE_FLAGS( NodeTypes, NodeType )
+Q_DECLARE_OPERATORS_FOR_FLAGS( NodeTypes )
 
 #endif // Multiple inclusion guard

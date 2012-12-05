@@ -2289,4 +2289,4 @@ quint64 NetworkRequest::uncompressedSize() const
 
 #include "scriptapi.moc"
 
-}; // namespace ScriptApi
+} // namespace ScriptApi

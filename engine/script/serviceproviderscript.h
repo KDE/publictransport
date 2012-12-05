@@ -33,10 +33,10 @@
 class ScriptJob;
 namespace ScriptApi {
     class Storage;
-};
+}
 namespace ThreadWeaver {
     class Job;
-};
+}
 class QScriptEngine;
 class QScriptProgram;
 class QFileInfo;

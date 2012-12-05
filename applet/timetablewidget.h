@@ -786,7 +786,7 @@ public:
 
         ShowEarlierAndLaterJourneysItems = ShowEarlierJourneysItem | ShowLaterJourneysItem
     };
-    Q_DECLARE_FLAGS( Flags, Flag );
+    Q_DECLARE_FLAGS( Flags, Flag )
 
     JourneyTimetableWidget( Options options = DefaultOptions,
                             Flags flags = ShowEarlierAndLaterJourneysItems,

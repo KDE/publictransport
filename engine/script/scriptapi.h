@@ -1085,7 +1085,7 @@ public:
         DefaultFeatures = AutoPublish | AutoDecodeHtmlEntities
                 /**< The default set of features gets enabled. */
     };
-    Q_DECLARE_FLAGS( Features, Feature );
+    Q_DECLARE_FLAGS( Features, Feature )
 
     /**
      * @brief Can be used by scripts to give hints to the data engine.
@@ -1106,7 +1106,7 @@ public:
         CityNamesAreLeft    = 0x04, /**< City names are most likely on the left of stop names. */
         CityNamesAreRight   = 0x08  /**< City names are most likely on the right of stop names. */
     };
-    Q_DECLARE_FLAGS( Hints, Hint );
+    Q_DECLARE_FLAGS( Hints, Hint )
 
     /**
      * @brief Creates a new ResultObject instance.
@@ -1327,8 +1327,8 @@ private:
     Hints m_hints;
 };
 /** \} */ // @ingroup scriptApi
-Q_DECLARE_OPERATORS_FOR_FLAGS( ResultObject::Features );
-Q_DECLARE_OPERATORS_FOR_FLAGS( ResultObject::Hints );
+Q_DECLARE_OPERATORS_FOR_FLAGS( ResultObject::Features )
+Q_DECLARE_OPERATORS_FOR_FLAGS( ResultObject::Hints )
 
 class StoragePrivate;
 /** @ingroup scriptApi
@@ -1686,7 +1686,7 @@ QScriptValue constructStream( QScriptContext *context, QScriptEngine *engine );
 QScriptValue dataStreamToScript( QScriptEngine *engine, const DataStreamPrototypePtr &stream );
 void dataStreamFromScript( const QScriptValue &object, DataStreamPrototypePtr &stream );
 
-}; // namespace ScriptApi
+} // namespace ScriptApi
 
 Q_DECLARE_METATYPE(ScriptApi::Helper::ErrorSeverity)
 Q_DECLARE_METATYPE(ScriptApi::ResultObject::Hint)

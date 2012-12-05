@@ -419,7 +419,7 @@ public:
         NoFlags = 0x00,
         IsLeavingSoon = 0x01
     };
-    Q_DECLARE_FLAGS( Flags, Flag );
+    Q_DECLARE_FLAGS( Flags, Flag )
 
     DepartureItem( const DepartureInfo &departureInfo, const Info *info );
 

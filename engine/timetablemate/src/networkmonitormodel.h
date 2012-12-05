@@ -57,7 +57,7 @@ public:
 
         AllTypes = GetRequest | PostRequest | Reply
     };
-    Q_DECLARE_FLAGS( Types, Type );
+    Q_DECLARE_FLAGS( Types, Type )
 
     /**
      * @brief Available content types of NetworkMonitorModel items.
@@ -85,7 +85,7 @@ public:
         UninterestingData = RetrievingContentType | ImageData | CssData | ScriptData,
         AllData =  InterestingData | UninterestingData | UnknownData | NoData
     };
-    Q_DECLARE_FLAGS( ContentTypes, ContentType );
+    Q_DECLARE_FLAGS( ContentTypes, ContentType )
 
     /** @brief Contains additional data for items with content of type ImageData. */
     struct AdditionalImageData {

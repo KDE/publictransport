@@ -71,9 +71,9 @@ public:
         AllTestsPassed = XmlStructureTestPassed | SubTypeTestPassed,
 
         /** All tests failed. */
-        AllTestsFailed = XmlStructureTestFailed | SubTypeTestFailed,
+        AllTestsFailed = XmlStructureTestFailed | SubTypeTestFailed
     };
-    Q_DECLARE_FLAGS( Results, Result );
+    Q_DECLARE_FLAGS( Results, Result )
 
     /** @brief Get the PluginTestStatus enumerable associated with the given @p testResults. */
     static Status statusFromResults( Results testResults );
