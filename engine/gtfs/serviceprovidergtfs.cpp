@@ -807,11 +807,3 @@ Enums::VehicleType ServiceProviderGtfs::vehicleTypeFromGtfsRouteType( int gtfsRo
         return Enums::UnknownVehicleType;
     }
 }
-
-int ServiceProviderGtfs::minFetchWait( UpdateFlags updateFlags ) const
-{
-    Q_UNUSED( updateFlags );
-
-    // Wait minimally one minute until an update
-    return qMax( 60, ServiceProvider::minFetchWait() );
-}

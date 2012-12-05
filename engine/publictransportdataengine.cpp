@@ -1650,30 +1650,35 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
 //         qDeleteAll( departures );
 //     }
 
-    // Store a proposal for the next download time
+    // Fill the data source with general information
     const QDateTime dateTime = QDateTime::currentDateTime();
-    QDateTime last = items.isEmpty() ? dateTime
-            : items.last()->value(Enums::DepartureDateTime).toDateTime();
-    dataSource->setNextDownloadTimeProposal( dateTime.addSecs(dateTime.secsTo(last) / 3) );
-    const QDateTime nextUpdateTime = provider->nextUpdateTime( dataSource->updateFlags(),
-            dataSource->lastUpdate(), dataSource->nextDownloadTimeProposal(), dataSource->data() );
-    const QDateTime minManualUpdateTime = provider->nextUpdateTime(
-            dataSource->updateFlags() | UpdateWasRequestedManually,
-            dataSource->lastUpdate(), dataSource->nextDownloadTimeProposal(), dataSource->data() );
-
-    // Store received data in the data source map
     dataSource->setValue( "serviceProvider", provider->id() );
     dataSource->setValue( "delayInfoAvailable", globalInfo.delayInfoAvailable );
     dataSource->setValue( "requestUrl", requestUrl );
     dataSource->setValue( "parseMode", request.parseModeName() );
     dataSource->setValue( "error", false );
-    dataSource->setValue( "updated", QDateTime::currentDateTime() );
+    dataSource->setValue( "updated", dateTime );
+
+    // Store a proposal for the next download time
+    QDateTime last = items.isEmpty() ? dateTime
+            : items.last()->value(Enums::DepartureDateTime).toDateTime();
+    dataSource->setNextDownloadTimeProposal( dateTime.addSecs(dateTime.secsTo(last) / 3) );
+    const QDateTime nextUpdateTime = provider->nextUpdateTime( dataSource->updateFlags(),
+            dateTime, dataSource->nextDownloadTimeProposal(), dataSource->data() );
+    const QDateTime minManualUpdateTime = provider->nextUpdateTime(
+            dataSource->updateFlags() | UpdateWasRequestedManually,
+            dateTime, dataSource->nextDownloadTimeProposal(), dataSource->data() );
+
+    // Store update times in the data source
     dataSource->setValue( "nextAutomaticUpdate", nextUpdateTime );
     dataSource->setValue( "minManualUpdateTime", minManualUpdateTime );
+
+    // Publish the data source and cache it
     setData( sourceName, dataSource->data() );
     m_dataSources[ nonAmbiguousName ] = dataSource;
 
     int msecsUntilUpdate = dateTime.msecsTo( nextUpdateTime );
+    Q_ASSERT( msecsUntilUpdate >= 10000 ); // Make sure to not produce too many updates by mistake
     DEBUG_ENGINE_JOBS( "Update data source in"
                        << KGlobal::locale()->prettyFormatDuration(msecsUntilUpdate) );
     if ( !dataSource->updateTimer() ) {

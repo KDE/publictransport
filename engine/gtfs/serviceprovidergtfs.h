@@ -159,12 +159,6 @@ public:
     /** @brief Gets a list of features that this provider supports. */
     virtual QList<Enums::ProviderFeature> features() const;
 
-    /**
-     * @brief Get the minimum seconds to wait between two data-fetches from the service provider.
-     * Limits the result to minimally one minute.
-     **/
-    virtual int minFetchWait( UpdateFlags updateFlags = DefaultUpdateFlags ) const;
-
 #ifdef BUILD_GTFS_REALTIME
     /** @brief Returns true, if there is a GTFS-realtime source available. */
     bool isRealtimeDataAvailable() const;

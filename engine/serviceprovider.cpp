@@ -234,26 +234,29 @@ Enums::ServiceProviderType ServiceProvider::type() const
 int ServiceProvider::minFetchWait( UpdateFlags updateFlags ) const
 {
     Q_UNUSED( updateFlags )
-    return m_data->minFetchWait();
+    return qMax( 60, m_data->minFetchWait() );
 }
 
 QDateTime ServiceProvider::nextUpdateTime( UpdateFlags updateFlags, const QDateTime &lastUpdate,
-                                           const QDateTime &nextDownloadTimeProposal,
+                                           const QDateTime &latestForSufficientChanges,
                                            const QVariantHash &data ) const
 {
+    Q_ASSERT( lastUpdate.isValid() );
+    Q_ASSERT( latestForSufficientChanges.isValid() );
+
     if ( updateFlags.testFlag(UpdateWasRequestedManually) ) {
         return lastUpdate.addSecs( minFetchWait(updateFlags) );
     }
 
     // If the requested time is constant, wait until next midnight
     const QDateTime dateTime = QDateTime::currentDateTime();
-    QDateTime minForSufficientChanges = updateFlags.testFlag(SourceHasConstantTime)
-            ? QDateTime(dateTime.date().addDays(1)) : nextDownloadTimeProposal;
+    QDateTime _latestForSufficientChanges = updateFlags.testFlag(SourceHasConstantTime)
+            ? QDateTime(dateTime.date().addDays(1)) : latestForSufficientChanges;
 
     if ( isRealtimeDataAvailable(data) ) {
         // Wait maximally 30 minutes until an update if realtime data is available,
         // for more updates the timetable service must be used to request an update manually
-        return qBound( lastUpdate.addSecs(minFetchWait(updateFlags)), minForSufficientChanges,
+        return qBound( lastUpdate.addSecs(minFetchWait(updateFlags)), _latestForSufficientChanges,
                        lastUpdate.addSecs(30 * 60) );
     } else {
         // No realtime data, no need to update existing timetable items,
@@ -261,7 +264,7 @@ QDateTime ServiceProvider::nextUpdateTime( UpdateFlags updateFlags, const QDateT
         // With constant time update only at midnight for dynamic date.
         // With dynamic time (eg. the current time) update to have enough items available
         // while old ones get removed as time passes by.
-        return qMax( lastUpdate.addSecs(minFetchWait()), minForSufficientChanges );
+        return qMax( lastUpdate.addSecs(minFetchWait()), _latestForSufficientChanges );
     }
 }
 

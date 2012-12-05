@@ -137,16 +137,27 @@ public:
     /**
      * @brief Get the minimum seconds to wait between two data-fetches from the service provider.
      *
-     * The default implementation simply takes the value from ServiceProviderData::minFetchWait().
+     * The default implementation simply takes the value from ServiceProviderData::minFetchWait(),
+     * but minimally 60 seconds to not produce too many updates.
      * @param updateFlags Flags to take into consideration when calculating the result, eg. whether
      *   or not the result gets used for a manual data source update.
      **/
     virtual int minFetchWait( UpdateFlags updateFlags = DefaultUpdateFlags ) const;
 
-    /** @brief Get the date and time when new data should be fetched from the service provider. */
-    virtual QDateTime nextUpdateTime( UpdateFlags updateFlags = DefaultUpdateFlags,
-                                      const QDateTime &lastUpdate = QDateTime(),
-                                      const QDateTime &nextDownloadTimeProposal = QDateTime(),
+    /**
+     * @brief Get the date and time when new data should be fetched from the service provider.
+     *
+     * @param updateFlags Flags to take into consideration when calculating the result, eg. whether
+     *   or not the result gets used for a manual data source update.
+     * @param lastUpdate The date and time of the last update of the data. Must be valid, there
+     *   cannot be a 'next' update without a previous one.
+     * @param latestForSufficientChanges The latest date and time at which an update should be made
+     *   to not run out of timetable items over time (passed items get removed). This is not used
+     *   if @p updateFlags has the SourceHasConstantTime flag set. Nevertheless it must be valid.
+     * @see minFetchWait()
+     **/
+    virtual QDateTime nextUpdateTime( UpdateFlags updateFlags, const QDateTime &lastUpdate,
+                                      const QDateTime &latestForSufficientChanges,
                                       const QVariantHash &data = QVariantHash() ) const;
 
     /**
