@@ -291,8 +291,7 @@ bool GtfsDatabase::createDatabaseTables( QString *errorText, QSqlDatabase databa
     return true;
 }
 
-QVariant GtfsDatabase::convertFieldValue( const QByteArray &fieldValue,
-                                                        FieldType type )
+QVariant GtfsDatabase::convertFieldValue( const QByteArray &fieldValue, FieldType type )
 {
     if ( fieldValue.isEmpty() ) {
         return QVariant();
@@ -300,8 +299,10 @@ QVariant GtfsDatabase::convertFieldValue( const QByteArray &fieldValue,
 
     switch ( type ) {
     case Integer:
-    case Date:
+        return fieldValue.toInt();
     case Double:
+        return fieldValue.toDouble();
+    case Date:
     case Url:
         return fieldValue;
     case HashId:
