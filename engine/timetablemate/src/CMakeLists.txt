@@ -138,7 +138,7 @@ endif ( BUILD_PROVIDER_TYPE_SCRIPT )
 if ( BUILD_PROVIDER_TYPE_GTFS )
     set( LIBS ${LIBS} ${QT_QTXML_LIBRARY} ${QT_QTSQL_LIBRARY} )
     if ( BUILD_GTFS_REALTIME )
-        set( LIBS ${LIBS} pthread protobuf ) # pthread is needed for protobuf
+        set( LIBS ${LIBS} ${PROTOBUF_LIBRARY} pthread ) # pthread is needed for protobuf
     endif ( BUILD_GTFS_REALTIME )
 endif ( BUILD_PROVIDER_TYPE_GTFS )
 

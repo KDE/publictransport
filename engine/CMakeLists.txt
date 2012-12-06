@@ -127,9 +127,9 @@ endif ( BUILD_PROVIDER_TYPE_SCRIPT )
 # Add libraries needed for the GTFS provider type
 if ( BUILD_PROVIDER_TYPE_GTFS )
     set( LIBS ${LIBS} ${QT_QTXML_LIBRARY} ${QT_QTSQL_LIBRARY} )
-    if ( PROTOBUF_FOUND )
-        set( LIBS ${LIBS} ${PROTOBUF_LIBRARY} )
-    endif ( PROTOBUF_FOUND )
+    if ( BUILD_GTFS_REALTIME )
+        set( LIBS ${LIBS} ${PROTOBUF_LIBRARY} pthread ) # pthread is needed for protobuf
+    endif ( BUILD_GTFS_REALTIME )
 endif ( BUILD_PROVIDER_TYPE_GTFS )
 
 # Link all collected libraries
