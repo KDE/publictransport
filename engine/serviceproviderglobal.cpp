@@ -184,7 +184,15 @@ QStringList ServiceProviderGlobal::filePatterns()
 {
     const KMimeType::Ptr mimeType =
             KMimeType::mimeType("application/x-publictransport-serviceprovider");
-    return mimeType.isNull() ? QStringList() : mimeType->patterns();
+    if ( mimeType.isNull() ) {
+        kWarning() << "The application/x-publictransport-serviceprovider mime type was not found!";
+        kWarning() << "No provider plugins will get loaded.";
+        kDebug() << "Solution: Make sure 'serviceproviderplugin.xml' is installed correctly "
+                    "and run kbuildsycoca4.";
+        return QStringList();
+    } else {
+        return mimeType->patterns();
+    }
 }
 
 QStringList ServiceProviderGlobal::fileExtensions()
