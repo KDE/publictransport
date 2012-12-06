@@ -28,7 +28,7 @@ namespace Plasma
 {
     class Applet;
     class Containment;
-};
+}
 
 class PlasmaPreview : public QGraphicsView
 {

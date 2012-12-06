@@ -135,7 +135,7 @@ class Project : public QObject {
     Q_PROPERTY( bool isInstalledGlobally READ isInstalledGlobally NOTIFY globalInstallationStateChanged )
     Q_PROPERTY( bool isDebuggerRunning READ isDebuggerRunning NOTIFY debuggerRunningChanged )
     Q_PROPERTY( bool isTestRunning READ isTestRunning NOTIFY testRunningChanged )
-    Q_PROPERTY( Enums::ServiceProviderType providerType READ providerType NOTIFY providerTypeChanged );
+    Q_PROPERTY( Enums::ServiceProviderType providerType READ providerType NOTIFY providerTypeChanged )
     Q_PROPERTY( int gtfsFeedImportProgress READ gtfsFeedImportProgress NOTIFY gtfsFeedImportProgressChanged )
     Q_PROPERTY( QString gtfsFeedImportInfoMessage READ gtfsFeedImportInfoMessage NOTIFY gtfsFeedImportInfoMessageChanged )
     Q_PROPERTY( QDateTime gtfsFeedLastModified READ gtfsFeedLastModified NOTIFY gtfsFeedSizeChanged ) // Changes with the size
@@ -307,7 +307,7 @@ public:
 
         // OtherActionGroup
         Close, /**< Close the project. */
-        SetAsActiveProject, /**< Set the project as active project. */
+        SetAsActiveProject /**< Set the project as active project. */
     };
 
     /** @brief Groups of project actions, each ProjectAction is associated with one group. */

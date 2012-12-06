@@ -187,6 +187,6 @@ protected:
                         const QModelIndex &index ) const;
 };
 
-}; // namespace Debugger
+} // namespace Debugger
 
 #endif // Multiple inclusion guard

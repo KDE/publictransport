@@ -63,7 +63,7 @@ QScriptValue debugPrintFunction( QScriptContext *context, QScriptEngine *engine 
     DebuggerAgent *debugger = qobject_cast<DebuggerAgent*>( calleeData.toQObject() );
     debugger->slotOutput( result, QScriptContextInfo(context->parentContext()) );
     return engine->undefinedValue();
-};
+}
 
 DebuggerAgent::DebuggerAgent( QScriptEngine *engine, QSemaphore *engineSemaphore, bool mutexIsLocked )
         : QObject(engine), QScriptEngineAgent(engine),
@@ -1671,4 +1671,4 @@ void DebuggerAgent::slotOutput( const QString &outputString, const QScriptContex
     emit output( outputString, contextInfo );
 }
 
-}; // namespace Debugger
+} // namespace Debugger

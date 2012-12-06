@@ -555,6 +555,6 @@ private:
     QString m_returnValue;
 };
 
-}; // namespace Debugger
+} // namespace Debugger
 
 #endif // Multiple inclusion guard

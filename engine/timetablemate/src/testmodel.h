@@ -404,18 +404,18 @@ inline QDebug &operator <<( QDebug debug, TestModel::Test test )
 {
     const int index = TestModel::staticMetaObject.indexOfEnumerator("Test");
     return debug << QLatin1String( TestModel::staticMetaObject.enumerator(index).valueToKey(test) );
-};
+}
 
 inline QDebug &operator <<( QDebug debug, TestModel::TestCase testCase )
 {
     const int index = TestModel::staticMetaObject.indexOfEnumerator("TestCase");
     return debug << QLatin1String( TestModel::staticMetaObject.enumerator(index).valueToKey(testCase) );
-};
+}
 
 inline QDebug &operator <<( QDebug debug, TestModel::TestState state )
 {
     const int index = TestModel::staticMetaObject.indexOfEnumerator("TestState");
     return debug << QLatin1String( TestModel::staticMetaObject.enumerator(index).valueToKey(state) );
-};
+}
 
 #endif // Multiple inclusion guard

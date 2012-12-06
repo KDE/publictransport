@@ -454,6 +454,6 @@ inline QDebug &operator <<( QDebug debug, VariableType type )
     }
 }
 
-}; // namespace Debugger
+} // namespace Debugger
 
 #endif // Multiple inclusion guard

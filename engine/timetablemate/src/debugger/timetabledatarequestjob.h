@@ -280,6 +280,6 @@ private:
     QList< TimetableData > m_timetableData;
 };
 
-}; // namespace Debugger
+} // namespace Debugger
 
 #endif // Multiple inclusion guard

@@ -1123,4 +1123,4 @@ bool TimetableDataRequestJob::testJourneyData( const JourneyRequest *request )
     return success;
 }
 
-}; // namespace Debugger
+} // namespace Debugger

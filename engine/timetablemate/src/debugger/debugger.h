@@ -45,14 +45,14 @@ namespace ScriptApi {
     class ResultObject;
     class Helper;
     class DataStreamPrototype;
-};
+}
 namespace ThreadWeaver {
     class Job;
     class WeaverInterface;
     class JobSequence;
     class ResourceRestrictionPolicy;
     class Thread;
-};
+}
 typedef QSharedPointer< ThreadWeaver::WeaverInterface > WeaverInterfacePointer;
 
 class QMutex;
@@ -212,7 +212,7 @@ public:
         Initializing = 0,
         ScriptLoaded,
         ScriptError,
-        ScriptModified,
+        ScriptModified
     };
 
     /** @brief Constructor. */
@@ -656,6 +656,6 @@ private:
     QTimer *m_timeout;
 };
 
-}; // namespace Debugger
+} // namespace Debugger
 
 #endif // Multiple inclusion guard

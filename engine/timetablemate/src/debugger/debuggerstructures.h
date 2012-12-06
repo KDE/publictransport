@@ -474,7 +474,7 @@ inline QDebug &operator <<( QDebug debug, ExecutionControl executeControlType )
     }
 }
 
-}; // namespace Debugger
+} // namespace Debugger
 
 // Make Frame and FrameStack known to the meta object system
 Q_DECLARE_METATYPE( Debugger::Frame )

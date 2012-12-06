@@ -94,6 +94,6 @@ private:
     FrameStack m_frames;
 };
 
-}; // namespace Debugger
+} // namespace Debugger
 
 #endif // Multiple inclusion guard

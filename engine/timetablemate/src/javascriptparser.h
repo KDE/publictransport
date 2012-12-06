@@ -32,7 +32,7 @@ class ChildListNode;
 class FunctionNode;
 namespace KTextEditor {
     class Cursor;
-};
+}
 class QString;
 class QStringList;
 
@@ -93,7 +93,7 @@ public:
         return castedNode ? castedNode
                 : (parent() && maxLevels != 0
                    ? parent()->searchUp<T>(maxLevels == -1 ? -1 : --maxLevels) : 0);
-    };
+    }
 
     /** @returns the top level parent node of this node. If this node has no parent it is
      * returned itself. */

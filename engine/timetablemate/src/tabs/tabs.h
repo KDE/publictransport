@@ -38,7 +38,7 @@ public:
         Script = 3, /**< Script document tab. */
         Web = 4, /**< Web tab. */
         PlasmaPreview = 5, /**< Plasma preview tab. */
-        GtfsDatabase = 6, /**< GTFS database tab. */
+        GtfsDatabase = 6 /**< GTFS database tab. */
     };
 
     static QLatin1String nameForType( Type type ) {

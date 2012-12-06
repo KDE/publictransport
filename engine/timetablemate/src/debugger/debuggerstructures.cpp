@@ -392,4 +392,4 @@ void Breakpoint::setValuesOf( const Breakpoint &breakpoint )
     }
 }
 
-}; // namespace Debugger
+} // namespace Debugger

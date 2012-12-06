@@ -437,6 +437,6 @@ private:
     QHash< QString, QStringList > m_scriptLines;
 };
 
-}; // namespace Debugger
+} // namespace Debugger
 
 #endif // Multiple inclusion guard

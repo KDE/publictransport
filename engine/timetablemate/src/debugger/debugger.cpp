@@ -986,4 +986,4 @@ const QPointer< DebuggerJob > Debugger::currentJob() const
     return job;
 }
 
-}; // namespace Debugger
+} // namespace Debugger

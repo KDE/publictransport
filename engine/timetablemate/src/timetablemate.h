@@ -75,7 +75,7 @@ namespace Ui {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
 namespace ScriptApi {
     class ResultObject;
-};
+}
 namespace Debugger {
     class Breakpoint;
 }
@@ -85,7 +85,7 @@ using namespace Debugger; // Needed for slots to match signals, eg. using Breakp
 
 namespace KParts {
     class PartManager;
-};
+}
 class KActionMenu;
 class KToggleAction;
 class KRecentFilesAction;

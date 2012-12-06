@@ -26,7 +26,7 @@ class Project;
 class ProjectModel;
 namespace Debugger {
     class Debugger;
-};
+}
 class QScriptContextInfo;
 class QPlainTextEdit;
 

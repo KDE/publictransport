@@ -28,7 +28,7 @@
 namespace KTextEditor
 {
     class Cursor;
-};
+}
 class EmptyNode;
 class CodeNode;
 class JavaScriptCompletionModel;
@@ -121,7 +121,7 @@ private:
     QList< CodeNode::Ptr > m_nodes;
     JavaScriptCompletionModel *m_javaScriptCompletionModel;
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS( JavaScriptModel::MatchOptions );
+Q_DECLARE_OPERATORS_FOR_FLAGS( JavaScriptModel::MatchOptions )
 
 #endif // Multiple inclusion guard
 // kate: indent-mode cstyle; indent-width 4; replace-tabs on;

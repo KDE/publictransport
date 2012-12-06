@@ -1288,4 +1288,4 @@ void DebuggerJob::gotScriptObjectsBack()
     m_agent->continueToDoSomething();
 }
 
-}; // namespace Debugger
+} // namespace Debugger
