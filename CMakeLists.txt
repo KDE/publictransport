@@ -16,7 +16,7 @@ include_directories(
 # Can be used from the command line, eg. "cmake -DINSTALL_TIMETABLEMATE=ON .."
 # to configure with timetablemate (or use "cmake -i .." for interactive options)
 # Can also be set from a CMake GUI
-option( INSTALL_ENGINE_OPENSTREETMAP "Only useful if you have GPS hardware. It can then be used to get stops near your current position" ON )
+option( INSTALL_ENGINE_OPENSTREETMAP "Note: Currently unused! Only useful if you have GPS hardware. It can then be used to get stops near your current position" OFF )
 option( INSTALL_APPLET "A plasma applet showing a departure/arrival board or journeys. Departures can be filtered and alarms can be set" ON )
 option( INSTALL_APPLET_FLIGHTS "A simple applet that shows flight departures. It uses a single service provider, that's also available for the other applets/runner" OFF )
 option( INSTALL_APPLET_GRAPHICALTIMETABLELINE "Shows a street with vehicles moving on it, representing the timetable" OFF )

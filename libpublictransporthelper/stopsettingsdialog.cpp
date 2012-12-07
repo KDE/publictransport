@@ -97,8 +97,6 @@ public:
         // Load data engines
         Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
         manager->loadEngine("publictransport");
-        manager->loadEngine("geolocation");
-        manager->loadEngine("openstreetmap");
 
         // Create location and service provider models
         modelLocations = new LocationModel( q );
@@ -108,8 +106,6 @@ public:
     ~StopSettingsDialogPrivate() {
         Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
         manager->unloadEngine("publictransport");
-        manager->unloadEngine("geolocation");
-        manager->unloadEngine("openstreetmap");
     };
 
     void init( const StopSettings &_oldStopSettings,

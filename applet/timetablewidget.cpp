@@ -1541,14 +1541,9 @@ void PublicTransportWidget::setupActions()
     connect( m_copyStopToClipboardAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
              this, SIGNAL(requestStopAction(StopAction::Type,QString,QString)) );
 
-    if ( Plasma::DataEngineManager::listAllEngines().contains("openstreetmap") ) {
-        m_showInMapAction = new StopAction( StopAction::ShowStopInMap, this );
-        connect( m_showInMapAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
-                 this, SIGNAL(requestStopAction(StopAction::Type,QString,QString)) );
-    } else {
-        kDebug() << "Not using 'Show Stop in Map' action, because the 'openstreetmap' "
-                    "data engine isn't installed!";
-    }
+    m_showInMapAction = new StopAction( StopAction::ShowStopInMap, this );
+    connect( m_showInMapAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+             this, SIGNAL(requestStopAction(StopAction::Type,QString,QString)) );
 }
 
 void PublicTransportWidget::setOption( PublicTransportWidget::Option option, bool enable )

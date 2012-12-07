@@ -40,9 +40,6 @@ namespace PublicTransport {
     class ServiceProviderModel;
     class StopListWidget;
 }
-namespace Plasma {
-    class DataEngine;
-}
 
 /**
  * @brief Manages the configuration dialog and synchronizes with Settings.
@@ -59,10 +56,8 @@ public:
         KeepWhenFinished
     };
 
-    SettingsUiManager( const Settings &settings,
-            Plasma::DataEngine *publicTransportEngine, Plasma::DataEngine *osmEngine,
-            Plasma::DataEngine *favIconEngine, Plasma::DataEngine *geolocationEngine,
-            KConfigDialog *parentDialog, DeletionPolicy deletionPolicy = DeleteWhenFinished );
+    SettingsUiManager( const Settings &settings, KConfigDialog *parentDialog,
+                       DeletionPolicy deletionPolicy = DeleteWhenFinished );
 
     /** @brief Gets a Settings object with the current settings in the dialog. */
     Settings settings();
@@ -174,8 +169,6 @@ private:
     QVariantHash m_locationData; // Location information from the data engine.
 
     StopListWidget *m_stopListWidget;
-    Plasma::DataEngine *m_publicTransportEngine, *m_osmEngine,
-            *m_favIconEngine, *m_geolocationEngine;
 
     int m_currentStopSettingsIndex;
     bool m_showHeader;

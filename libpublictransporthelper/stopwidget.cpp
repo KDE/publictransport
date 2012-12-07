@@ -60,13 +60,6 @@ public:
           providerDataDialogOptions(_providerDataDialogOptions),
           settings(_settings), stopIndex(_stopIndex), factory(_factory), q_ptr(q)
     {
-        // Load data engines
-        Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
-        manager->loadEngine("publictransport");
-        manager->loadEngine("geolocation");
-        manager->loadEngine("openstreetmap");
-        manager->loadEngine("favicons");
-
         // Create layout
         QFormLayout *infoLayout = new QFormLayout;
         stopLabel = new QLabel( q );
@@ -95,14 +88,6 @@ public:
         // Get notified when the provider model changes to update the provider label if needed
         q->connect( providerModel, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
                     q, SLOT(providerModelChanged(QModelIndex,QModelIndex)) );
-    };
-
-    ~StopWidgetPrivate() {
-        Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
-        manager->unloadEngine("publictransport");
-        manager->unloadEngine("geolocation");
-        manager->unloadEngine("openstreetmap");
-        manager->unloadEngine("favicons");
     };
 
     inline QString providerId() const { return stopSettings[ServiceProviderSetting].toString(); };

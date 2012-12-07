@@ -1205,10 +1205,7 @@ void PublicTransportApplet::createConfigurationInterface( KConfigDialog* parent 
         showDepartureList();
     }
 
-    SettingsUiManager *settingsUiManager = new SettingsUiManager(
-            d->settings, dataEngine("publictransport"),
-            dataEngine("openstreetmap"), dataEngine("favicons"),
-            dataEngine("geolocation"), parent );
+    SettingsUiManager *settingsUiManager = new SettingsUiManager( d->settings, parent );
     connect( settingsUiManager, SIGNAL(settingsAccepted(Settings)),
              this, SLOT(setSettings(Settings)) );
     connect( d->model, SIGNAL(updateAlarms(AlarmSettingsList,QList<int>)),
@@ -1494,14 +1491,12 @@ void PublicTransportApplet::departureContextMenuRequested( PublicTransportGraphi
                     stopMenu->addAction( showDeparturesAction );
                 }
 
-                if ( dataEngine("openstreetmap")->isValid() ) {
-                    StopAction *showInMapAction =
-                            new StopAction( StopAction::ShowStopInMap, stopMenu );
-                    showInMapAction->setStopName( stopName, stopNameShortened );
-                    connect( showInMapAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
-                             this, SLOT(requestStopAction(StopAction::Type,QString,QString)) );
-                    stopMenu->addAction( showInMapAction );
-                }
+                StopAction *showInMapAction =
+                        new StopAction( StopAction::ShowStopInMap, stopMenu );
+                showInMapAction->setStopName( stopName, stopNameShortened );
+                connect( showInMapAction, SIGNAL(stopActionTriggered(StopAction::Type,QString,QString)),
+                            this, SLOT(requestStopAction(StopAction::Type,QString,QString)) );
+                stopMenu->addAction( showInMapAction );
 
                 if ( !routeStopFlags.testFlag(RouteStopIsHomeStop) ) {
                     StopAction *highlightAction =

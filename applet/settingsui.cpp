@@ -42,14 +42,10 @@
 #include <Plasma/Theme>
 
 SettingsUiManager::SettingsUiManager( const Settings &settings,
-                                      Plasma::DataEngine *publicTransportEngine, Plasma::DataEngine *osmEngine,
-                                      Plasma::DataEngine *favIconEngine, Plasma::DataEngine *geolocationEngine,
                                       KConfigDialog *parentDialog, DeletionPolicy deletionPolicy )
     : QObject( parentDialog ), m_deletionPolicy( deletionPolicy ),
       m_configDialog( parentDialog ), m_modelServiceProvider( 0 ),
-      m_modelLocations( 0 ), m_stopListWidget( 0 ),
-      m_publicTransportEngine( publicTransportEngine ), m_osmEngine( osmEngine ),
-      m_favIconEngine( favIconEngine ), m_geolocationEngine( geolocationEngine )
+      m_modelLocations( 0 ), m_stopListWidget( 0 )
 {
     // Store settings that have no associated widgets
     m_currentStopSettingsIndex = settings.currentStopIndex();
