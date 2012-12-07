@@ -26,12 +26,15 @@
 #include "script/serviceproviderscript.h"
 #include "serviceproviderdata.h"
 #include "request.h"
+#include <serviceproviderglobal.h>
 
 // KDE includes
 #include <ThreadWeaver/Thread>
 #include <ThreadWeaver/Weaver>
 #include <KLocalizedString>
 #include <KDebug>
+#include <KGlobal>
+#include <KStandardDirs>
 
 // Qt includes
 #include <QScriptEngine>
@@ -443,16 +446,11 @@ QScriptValue include( QScriptContext *context, QScriptEngine *engine )
         return engine->undefinedValue();
     }
 
-    // Get path of the main script
-    QString path;
-    QScriptContext *fileInfoContext = context;
-    do {
-        path = QFileInfo( QScriptContextInfo(fileInfoContext).fileName() ).path();
-        fileInfoContext = fileInfoContext->parentContext();
-    } while ( path.isEmpty() || path == QLatin1String(".") );
+    // Find the script to be included
+    const QString subDirectory = ServiceProviderGlobal::installationSubDirectory();
+    const QString filePath = KGlobal::dirs()->findResource( "data", subDirectory + fileName );
 
-    // Construct file path to the file to be included and check if the file is already included
-    const QString filePath = path + '/' + fileName;
+    // Check if the script was already included
     QStringList includedFiles =
             engine->globalObject().property( "includedFiles" ).toVariant().toStringList();
     if ( includedFiles.contains(filePath) ) {
