@@ -244,12 +244,24 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
     m_dataSources.insert( name, new ProvidersDataSource(name) );
     updateServiceProviderSource();
 
+    // Ensure the local provider installation directory exists in the users HOME and will not
+    // get removed, by creating a small file in it so that the directory is never empty.
+    // If an installation directory gets removed, the file system watcher would need to watch the
+    // parent directory instead to get notified when it gets created again.
+    const QString installationSubDirectory = ServiceProviderGlobal::installationSubDirectory();
+    const QString saveDir = KGlobal::dirs()->saveLocation( "data", installationSubDirectory );
+    QFile saveDirKeeper( saveDir + "Do not remove this directory" );
+    saveDirKeeper.open( QIODevice::WriteOnly );
+    saveDirKeeper.write( "If this directory gets removed, PublicTransport will not get notified "
+            "about installed provider files in that directory." );
+    saveDirKeeper.close();
+
     // Create a file system watcher for the provider plugin installation directories
-    const QStringList directories = KGlobal::dirs()->findDirs( "data",
-            ServiceProviderGlobal::installationSubDirectory() );
+    // to get notified about new/modified/removed providers
+    const QStringList directories = KGlobal::dirs()->findDirs( "data", installationSubDirectory );
     m_fileSystemWatcher = new QFileSystemWatcher( directories );
     connect( m_fileSystemWatcher, SIGNAL(directoryChanged(QString)),
-                this, SLOT(serviceProviderDirChanged(QString)) );
+             this, SLOT(serviceProviderDirChanged(QString)) );
 }
 
 PublicTransportEngine::~PublicTransportEngine()

@@ -28,7 +28,6 @@
 #include "publictransporthelper_export.h"
 
 // These are included to use it's enums in the constructor
-#include "stopfinder.h"
 #include "serviceproviderdatadialog.h"
 #include "stopsettings.h"
 #include "filter.h"
@@ -50,7 +49,6 @@ class StopSettings;
 class StopSettingsDialogPrivate;
 class LocationModel;
 class ServiceProviderModel;
-class NearStopsDialog;
 
 /**
  * @brief This dialog can be used to select all needed information for a public transport stop
@@ -133,9 +131,6 @@ public:
                 * should be used to show widgets to select a location and a service provider.
                 * The dialog title is adjusted accordingly (from change stop(s) to change service
                 * provider). */
-        ShowNearbyStopsButton = 0x0002, /**< Show a dialog button to (try to) get a list of
-                * public transport stops near the users current position.
-                * Does nothing if @ref ShowStopInputField isn't also set. */
         ShowProviderInfoButton = 0x0004, /**< Show a button on the right of the service
                 * provider combobox which opens an @ref ServiceProviderDataDialog. */
         ShowInstallProviderButton = 0x0008, /**< Shows a button on the right of the service
@@ -173,14 +168,12 @@ public:
                  * It doesn't show stop selection fields, only widgets associated to service
                  * provider selection, including a provider info button and a button to install
                  * new provider plugins. */
-        SingleProviderSimpleStopSelection = ShowStopInputField | ShowNearbyStopsButton,
+        SingleProviderSimpleStopSelection = ShowStopInputField,
                 /** Shows a stop input field with autocompletion, but no widgets to change the
                  * service provider. This may be used if only one specific service provider should
                  * be used, eg. one for flights. */
-        SimpleStopSelection = SimpleProviderSelection | ShowStopInputField |
-                ShowNearbyStopsButton,
-                /**< Extends SimpleServiceProviderSelection with a stop input field and a button
-                 * to search for nearby stops. */
+        SimpleStopSelection = SimpleProviderSelection | ShowStopInputField,
+                /**< Extends SimpleServiceProviderSelection with a stop input field. */
         ExtendedStopSelection = SimpleStopSelection | ShowAllDetailsWidgets,
                 /**< Extends SimpleStopSelection with ShowAllDetailsWidgets. */
 
@@ -303,8 +296,7 @@ public:
      *
      * The created dialog is a StopSettingsDialog with the option @ref SimpleStopSelection.
      *
-     * It provides a button to install new service provider plugins and a button to find stops
-     * near the users current position.
+     * It provides a button to install new service provider plugins.
      * This function is provided for convenience, it just calls the constructor of
      * StopSettingsDialog.
      *
@@ -332,7 +324,7 @@ public:
      * The created dialog is a StopSettingsDialog with the option @ref ExtendedStopSelection.
      *
      * It provides a details section with additional settings, a button to install new provider
-     * plugins and a button to find stops near the users current position.
+     * plugins.
      *
      * This function is provided for convenience, it just calls the constructor of
      * StopSettingsDialog.
@@ -469,13 +461,6 @@ protected Q_SLOTS:
      **/
     void clickedServiceProviderInfo();
 
-    /** @brief The nearby stops button was clicked. */
-    void geolocateClicked();
-
-    /** @brief The dialog showing stops near the user was closed (after clicking the nearby
-     *  stops button). */
-    void nearStopsDialogFinished( int result );
-
     /**
      * @brief Another combined stop has been added (eg. by clicking the add button).
      *
@@ -497,13 +482,6 @@ protected Q_SLOTS:
 
     /** @brief The menu item to install a local provider plugin XML was clicked. */
     void installServiceProviderClicked();
-
-    void stopFinderGeolocationData( const QString &countryCode, const QString &city,
-                                    qreal latitude, qreal longitude, int accuracy );
-    void stopFinderError( StopFinder::Error error, const QString &errorMessage );
-    void stopFinderFinished();
-    void stopFinderFoundStops( const QStringList &stops, const QStringList &stopIDs,
-                               const QString &serviceProviderID );
 
 protected:
     virtual void accept();

@@ -33,7 +33,6 @@ set( publictransporthelper_LIB_SRCS
     serviceproviderdatadialog.cpp
 	stopsettingsdialog.cpp
 	stoplineedit.cpp
-	stopfinder.cpp
 	global.cpp
 	columnresizer.cpp
 	filter.cpp
@@ -73,7 +72,6 @@ set( publictransporthelper_LIB_HDRS
 	global.h
 	enums.h
 	stopsettings.h
-	stopfinder.h
 	filter.h
 	departureinfo.h
 	marbleprocess.h

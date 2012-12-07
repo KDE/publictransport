@@ -40,11 +40,7 @@
 #include <KLineEdit>
 #include <knuminput.h>
 #include <kdeversion.h>
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-    #include <knewstuff3/downloaddialog.h>
-#else
-    #include <knewstuff2/engine.h>
-#endif
+#include <knewstuff3/downloaddialog.h>
 #ifdef USE_KCATEGORYVIEW
     #include <KCategorizedSortFilterProxyModel>
     #include <KCategorizedView>
@@ -70,85 +66,6 @@
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
 
-// Private dialog to show a list of stops near the users current position
-class NearStopsDialog : public KDialog
-{
-public:
-    NearStopsDialog( const QString &text, QWidget* parent = 0 ) : KDialog( parent ) {
-        setButtons( Ok | Cancel );
-
-        QWidget *w = new QWidget;
-        QVBoxLayout *layout = new QVBoxLayout;
-        m_label = new QLabel( text, this );
-        m_label->setWordWrap( true );
-        m_listView = new QListView( this );
-        m_listView->setSelectionMode( QAbstractItemView::SingleSelection );
-        m_listView->setEditTriggers( QAbstractItemView::NoEditTriggers );
-        m_listModel = new QStringListModel( QStringList()
-                << i18nc( "@item:inlistbox", "Please Wait..." ), this );
-        m_listView->setModel( m_listModel );
-        layout->addWidget( m_label );
-        layout->addWidget( m_listView );
-        w->setLayout( layout );
-        setMainWidget( w );
-
-        m_noItem = true;
-    };
-
-    QListView *listView() const {
-        return m_listView;
-    };
-    QString selectedStop() const {
-        QModelIndex index = m_listView->currentIndex();
-        if ( index.isValid() ) {
-            return m_listModel->data( index, Qt::DisplayRole ).toString();
-        } else {
-            return QString();
-        }
-    };
-    QStringListModel *stopsModel() const {
-        return m_listModel;
-    };
-
-    void addStops( const QStringList &stops ) {
-        if ( m_noItem ) {
-            // Remove the "waiting for data..." item
-            m_listModel->setStringList( QStringList() );
-        }
-
-        QStringList oldStops = m_listModel->stringList();
-        QStringList newStops;
-        newStops << oldStops;
-        foreach( const QString &stop, stops ) {
-            if ( !newStops.contains(stop) && !stop.isEmpty() ) {
-                newStops << stop;
-            }
-        }
-        newStops.removeDuplicates();
-
-        if ( !newStops.isEmpty() ) {
-            if ( m_noItem ) {
-                m_noItem = false;
-                m_listView->setEnabled( true );
-            }
-            m_listModel->setStringList( newStops );
-            m_listModel->sort( 0 );
-        } else if ( m_noItem ) {
-            m_listModel->setStringList( oldStops );
-        }
-    };
-
-    bool hasItems() const {
-        return !m_noItem;
-    };
-
-private:
-    QLabel *m_label;
-    QListView *m_listView;
-    QStringListModel *m_listModel;
-    bool m_noItem;
-};
-
 // Private class of StopSettingsDialog
 class StopSettingsDialogPrivate
 {
@@ -163,8 +80,7 @@ public:
             StopSettingsWidgetFactory::Pointer _factory,
             int _stopIndex,
             StopSettingsDialog *q )
-            : factory(_factory), detailsWidget(0), stopFinder(0), nearStopsDialog(0),
-            modelLocations(0), modelServiceProviders(0),
+            : factory(_factory), detailsWidget(0), modelLocations(0), modelServiceProviders(0),
             modelLocationServiceProviders(0), stopList(0), resizer(0), q_ptr(q)
     {
         // Store options and given stop settings
@@ -253,19 +169,27 @@ public:
             }
         }
 
-        // Add nearby stops button
-        if ( options.testFlag(StopSettingsDialog::ShowNearbyStopsButton) ) {
+        // Add install provider button
+        if ( options.testFlag(StopSettingsDialog::ShowInstallProviderButton) ) {
             buttonFlags |= KDialog::User1;
-            q->connect( q, SIGNAL(user1Clicked()), q, SLOT(geolocateClicked()) );
         }
 
         // Set dialog buttons (Ok, Cancel + maybe Details and/or User1)
         q->setButtons( buttonFlags );
 
-        // Setup options of the nearby stops button (needs to be called after q->setButtons())
-        if ( options.testFlag(StopSettingsDialog::ShowNearbyStopsButton) ) {
-            q->setButtonIcon( KDialog::User1, KIcon("tools-wizard") );
-            q->setButtonText( KDialog::User1, i18nc("@action:button", "Nearby Stops...") );
+        // Setup options of the install provider button
+        if ( options.testFlag(StopSettingsDialog::ShowInstallProviderButton) ) {
+            // Add get new service providers button
+            QMenu *menu = new QMenu( q );
+            menu->addAction( KIcon("download"),
+                    i18nc("@action:inmenu", "Download New Service Providers..."),
+                    q, SLOT(downloadServiceProvidersClicked()) );
+            menu->addAction( KIcon("text-xml"),
+                    i18nc("@action:inmenu", "Install New Service Provider From Local File..."),
+                    q, SLOT(installServiceProviderClicked()) );
+            q->setButtonMenu( KDialog::User1, menu );
+            q->setButtonIcon( KDialog::User1, KIcon("get-hot-new-stuff") );
+            q->setButtonText( KDialog::User1, i18nc("@action:button", "Get New Providers") );
         }
 
         // Show/hide provider info button
@@ -276,21 +200,6 @@ public:
                         q, SLOT(clickedServiceProviderInfo()) );
         } else {
             uiStop.btnServiceProviderInfo->hide();
-        }
-
-        // Show/hide install provider button
-        if ( options.testFlag(StopSettingsDialog::ShowInstallProviderButton) ) {
-            QMenu *menu = new QMenu( q );
-            menu->addAction( KIcon("get-hot-new-stuff"),
-                             i18nc("@action:inmenu", "Get new service providers..."),
-                             q, SLOT(downloadServiceProvidersClicked()) );
-            menu->addAction( KIcon("text-xml"),
-                             i18nc("@action:inmenu", "Install new service provider from local file..."),
-                             q, SLOT(installServiceProviderClicked()) );
-            uiStop.downloadServiceProviders->setMenu( menu );
-            uiStop.downloadServiceProviders->setIcon( KIcon("get-hot-new-stuff") );
-        } else {
-            uiStop.downloadServiceProviders->hide();
         }
 
         // Create stop list widget
@@ -430,13 +339,6 @@ public:
             options.testFlag(StopSettingsDialog::ShowInstallProviderButton) )
         {
             options ^= StopSettingsDialog::ShowInstallProviderButton;
-        }
-
-        // Don't show nearby stops button, if the stop input field isn't shown
-        if ( !options.testFlag(StopSettingsDialog::ShowStopInputField) &&
-            options.testFlag(StopSettingsDialog::ShowNearbyStopsButton) )
-        {
-            options ^= StopSettingsDialog::ShowNearbyStopsButton;
         }
     };
 
@@ -663,9 +565,6 @@ public:
     StopSettingsWidgetFactory::Pointer factory;
     QWidget *detailsWidget;
     QHash<int, QWidget*> settingsWidgets;
-    StopFinder *stopFinder; // To find stops near the users current position (geolocation, osm, ...)
-    NearStopsDialog *nearStopsDialog;
-    QString stopFinderServiceProviderID;
 
     StopSettings oldStopSettings; // The last given StopSettings object (used to get settings
                                   // values for widgets that aren't shown)
@@ -956,120 +855,6 @@ int StopSettingsDialog::stopIndex() const
     return d->stopIndex;
 }
 
-void StopSettingsDialog::geolocateClicked()
-{
-    Q_D( StopSettingsDialog );
-    d->stopFinder = new StopFinder( StopFinder::ValidatedStopNamesFromOSM,
-                                    25, StopFinder::DeleteWhenFinished, this );
-    connect( d->stopFinder, SIGNAL(geolocationData(QString,QString,qreal,qreal,int)),
-             this, SLOT(stopFinderGeolocationData(QString,QString,qreal,qreal,int)) );
-    connect( d->stopFinder, SIGNAL(error(StopFinder::Error,QString)),
-             this, SLOT(stopFinderError(StopFinder::Error,QString)) );
-    connect( d->stopFinder, SIGNAL(finished()), this, SLOT(stopFinderFinished()) );
-    connect( d->stopFinder, SIGNAL(stopsFound(QStringList,QStringList,QString)),
-             this, SLOT(stopFinderFoundStops(QStringList,QStringList,QString)) );
-
-    d->stopFinder->start();
-}
-
-void StopSettingsDialog::stopFinderError( StopFinder::Error /*error*/, const QString& errorMessage )
-{
-    Q_D( StopSettingsDialog );
-    if ( d->nearStopsDialog ) {
-        d->nearStopsDialog->close();
-        d->nearStopsDialog = 0;
-
-        KMessageBox::information( this, errorMessage );
-    }
-}
-
-void StopSettingsDialog::stopFinderFinished()
-{
-    Q_D( StopSettingsDialog );
-    d->stopFinder = 0; // Deletes itself when finished
-
-    // Close dialog and show info if no stops could be found
-    if ( d->nearStopsDialog && !d->nearStopsDialog->hasItems() ) {
-        d->nearStopsDialog->close();
-        d->nearStopsDialog = 0;
-
-        // Get data from the geolocation data engine
-        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("geolocation");
-        Plasma::DataEngine::Data dataGeo = engine->query( "location" );
-        QString country = dataGeo["country code"].toString().toLower();
-        QString city = dataGeo["city"].toString();
-
-        KMessageBox::information( this,
-                i18nc("@info", "No stop could be found for your current position (%2 in %1).\n"
-                "<note>This doesn't mean that there is no public transport "
-                "stop near you. Try setting the stop name manually.</note>",
-                KGlobal::locale()->countryCodeToName( country ), city) );
-    }
-}
-
-void StopSettingsDialog::stopFinderFoundStops( const QStringList& stops,
-        const QStringList& stopIDs, const QString &serviceProviderID )
-{
-    Q_D( StopSettingsDialog );
-    for ( int i = 0; i < qMin(stops.count(), stopIDs.count()); ++i ) {
-        d->stopToStopID.insert( stops[i], stopIDs[i] );
-    }
-    d->stopFinderServiceProviderID = serviceProviderID;
-
-    if ( d->nearStopsDialog ) {
-        d->nearStopsDialog->addStops( stops );
-    }
-}
-
-void StopSettingsDialog::stopFinderGeolocationData( const QString& countryCode,
-        const QString& city, qreal /*latitude*/, qreal /*longitude*/, int accuracy )
-{
-    Q_D( StopSettingsDialog );
-    d->nearStopsDialog = new NearStopsDialog( accuracy > 10000
-            ? i18nc("@info", "These stops <emphasis strong='1'>may</emphasis> be near you, "
-                             "but your position couldn't be determined exactly (city: %1, "
-                             "country: %2).",
-                             city, KGlobal::locale()->countryCodeToName(countryCode))
-            : i18nc("@info", "These stops have been found to be near you (city: %1, "
-                             "country: %2).",
-                             city, KGlobal::locale()->countryCodeToName(countryCode)),
-            this );
-    d->nearStopsDialog->setModal( true );
-    d->nearStopsDialog->listView()->setDisabled( true );
-    connect( d->nearStopsDialog, SIGNAL(finished(int)), this, SLOT(nearStopsDialogFinished(int)) );
-    d->nearStopsDialog->show();
-}
-
-void StopSettingsDialog::nearStopsDialogFinished( int result )
-{
-    Q_D( StopSettingsDialog );
-    if ( result == KDialog::Accepted ) {
-        QString stop = d->nearStopsDialog->selectedStop();
-        d->stopFinder->deleteLater();
-        d->stopFinder = 0;
-
-        if ( stop.isNull() ) {
-            kDebug() << "No stop selected";
-        } else {
-            StopSettings settings = stopSettings();
-            Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("geolocation");
-            Plasma::DataEngine::Data geoData = engine->query( "location" );
-            settings.set( CitySetting, geoData["city"].toString() );
-            settings.set( LocationSetting, geoData["country code"].toString() );
-            settings.set( ServiceProviderSetting, d->stopFinderServiceProviderID );
-            if ( d->stopToStopID.contains(stop) ) {
-                settings.setStop( Stop(stop, d->stopToStopID[stop].toString()) );
-            } else {
-                settings.setStop( stop );
-            }
-            setStopSettings( settings );
-        }
-    }
-
-//     delete m_nearStopsDialog; // causes a crash (already deleted..?)
-    d->nearStopsDialog = 0;
-}
-
 void StopSettingsDialog::accept()
 {
     Q_D( StopSettingsDialog );
@@ -1195,67 +980,13 @@ void StopSettingsDialog::clickedServiceProviderInfo()
     infoDialog->show();
 }
 
-void StopSettingsDialog::downloadServiceProvidersClicked( )
+void StopSettingsDialog::downloadServiceProvidersClicked()
 {
-    if ( KMessageBox::warningContinueCancel( this,
-                i18nc( "@info", "The downloading may currently not work as expected, sorry." ) )
-                == KMessageBox::Cancel ) {
-        return;
-    }
-
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
+    // Show the GHNS download dialog,
+    // (de)installations are automatically detected by the data engine with it's QFileSystemWatcher
     KNS3::DownloadDialog *dialog = new KNS3::DownloadDialog( "publictransport.knsrc", this );
-    dialog->exec();
-    kDebug() << "KNS3 Results: " << dialog->changedEntries().count();
-
-    KNS3::Entry::List installed = dialog->installedEntries();
-    foreach( const KNS3::Entry &entry, installed )
-        kDebug() << entry.name() << entry.installedFiles();
-
-//     if ( !dialog->changedEntries().isEmpty() )
-//     currentServiceProviderIndex();
-
-    delete dialog;
-#else
-    Q_D( StopSettingsDialog );
-
-    KNS::Engine engine( this );
-    if ( engine.init( "publictransport2.knsrc" ) ) {
-        KNS::Entry::List entries = engine.downloadDialogModal( this );
-
-        kDebug() << entries.count();
-        if ( entries.size() > 0 ) {
-            foreach( KNS::Entry *entry, entries ) {
-                // Downloaded file has the name "hotstuff-access" which is wrong (maybe it works
-                // better with archives). So rename the file to the right name from the payload:
-                QString filename = entry->payload().representation()
-                                   .remove( QRegExp( "^.*\\?file=" ) ).remove( QRegExp( "&site=.*$" ) );
-                QStringList installedFiles = entry->installedFiles();
-
-                kDebug() << "installedFiles =" << installedFiles;
-                if ( !installedFiles.isEmpty() ) {
-                    QString installedFile = installedFiles[0];
-
-                    QString path = KUrl( installedFile ).path().remove( QRegExp( "/[^/]*$" ) ) + '/';
-                    QFile( installedFile ).rename( path + filename );
-
-                    kDebug() << "Rename" << installedFile << "to" << path + filename;
-                }
-            }
-
-            // Get a list of with the location of each service provider (locations can be contained multiple times)
-//         Plasma::DataEngine::Data serviceProviderData =
-//             m_publicTransportEngine->query("ServiceProviders");
-            // TODO: Update "ServiceProviders"-data source in the data engine.
-            // TODO: Update country list (group titles in the combo box)
-//         foreach ( QString serviceProviderName, serviceProviderData.keys() )  {
-//         QHash< QString, QVariant > curServiceProviderData = m_serviceProviderData.value(serviceProviderName).toHash();
-//         countries << curServiceProviderData["country"].toString();
-//         }
-            d->updateServiceProviderModel();
-        }
-    }
-#endif
+    dialog->setAttribute( Qt::WA_DeleteOnClose );
+    dialog->show();
 }
 
 // An XML content handler that only looks for <scriptFile>-tags
@@ -1406,8 +1137,6 @@ QDebug& operator<<( QDebug debug, StopSettingsDialog::Option option )
             return debug << "NoOption";
         case StopSettingsDialog::ShowStopInputField:
             return debug << "ShowStopInputField";
-        case StopSettingsDialog::ShowNearbyStopsButton:
-            return debug << "ShowNearbyStopsButton";
         case StopSettingsDialog::ShowProviderInfoButton:
             return debug << "ShowProviderInfoButton";
         case StopSettingsDialog::ShowInstallProviderButton:
