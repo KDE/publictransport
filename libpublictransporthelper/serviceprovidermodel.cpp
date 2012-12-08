@@ -31,6 +31,45 @@ class ServiceProviderItemPrivate
 public:
     ServiceProviderItemPrivate() {};
 
+    void setData( const QVariantHash &_data ) {
+        data = _data;
+        name = data["name"].toString();
+        if ( name.isEmpty() ) {
+            name = i18nc("@info/plain", "<warning>Provider <emphasis>%1</emphasis> "
+                         "not found!</warning>", data["id"].toString() );
+        }
+        if ( data["error"].toBool() ) {
+            name = i18nc("@info/plain", "<warning>Invalid provider "
+                         "<emphasis>%1</emphasis>!</warning>", name);
+            formattedText = QString( "%1<br /><b>Error:</b> %2" )
+                    .arg( name ).arg( data["errorMessage"].toString() );
+        } else {
+            formattedText = QString( "%1<br /><b>Type:</b> %2" )
+                    .arg( name ).arg( data["type"].toString() );
+        }
+
+        const QString location = countryCode();
+        if ( location == QLatin1String("international") ) {
+            category = i18nc("@item:inlistbox Name of the category for international "
+                                    "service providers", "International");
+            sortString = "XXXXX" + name;
+        } else if ( location == QLatin1String("unknown") || location.isEmpty() ) {
+            category = i18nc("@item:inlistbox Name of the category for service providers "
+                                    "with unknown contries", "Unknown");
+            sortString = "YYYYY" + name;
+        } else {
+            category = KGlobal::locale()->countryCodeToName( location );
+
+            // TODO Add a flag to the accessor XML files, maybe <countryWide />
+            bool isCountryWide = data["type"] == "GTFS" ? false
+                    : name.contains( location, Qt::CaseInsensitive );
+            sortString = isCountryWide ? "WWWWW" + category + "11111" + name
+                                       : "WWWWW" + category + name;
+        }
+    };
+
+    QString countryCode() const { return data["country"].toString(); };
+
     QString name;
     QString formattedText;
     KIcon icon;
@@ -39,35 +78,10 @@ public:
     QString sortString;
 };
 
-ServiceProviderItem::ServiceProviderItem( const QString &name, const QVariantHash &data )
+ServiceProviderItem::ServiceProviderItem( const QVariantHash &data )
         : d_ptr(new ServiceProviderItemPrivate())
 {
-    d_ptr->name = name;
-    d_ptr->data = data;
-    d_ptr->formattedText = QString( "<b>%1</b><br-wrap>"
-                                    "<small><b>Type:</b> %2</b></small>" )
-            .arg( name ).arg( data["type"].toString() );
-//             .arg( data["featureNames"].toStringList().join( ", " ) );
-
-    QString location = countryCode();
-    if ( location == QLatin1String("international") ) {
-        d_ptr->category = i18nc("@item:inlistbox Name of the category for international "
-                                "service providers", "International");
-        d_ptr->sortString = "XXXXX" + name;
-    } else if ( location == QLatin1String("unknown") ) {
-        d_ptr->category = i18nc("@item:inlistbox Name of the category for service providers "
-                                "with unknown contries", "Unknown");
-        d_ptr->sortString = "YYYYY" + name;
-    } else {
-        d_ptr->category = KGlobal::locale()->countryCodeToName( location );
-
-        // TODO Add a flag to the accessor XML files, maybe <countryWide />
-        bool isCountryWide = data["type"] == "GTFS" ? false
-                : name.contains( location, Qt::CaseInsensitive );
-        d_ptr->sortString = isCountryWide
-                ? "WWWWW" + d_ptr->category + "11111" + name
-                : "WWWWW" + d_ptr->category + name;
-    }
+    d_ptr->setData( data );
 }
 
 ServiceProviderItem::~ServiceProviderItem()
@@ -87,7 +101,7 @@ QString ServiceProviderItem::name() const {
 
 QString ServiceProviderItem::countryCode() const {
     Q_D( const ServiceProviderItem );
-    return d->data["country"].toString();
+    return d->countryCode();
 }
 
 QString ServiceProviderItem::formattedText() const {
@@ -122,7 +136,7 @@ void ServiceProviderItem::setIcon( const KIcon &icon ) {
 
 void ServiceProviderItem::setData( const QVariantHash &data ) {
     Q_D( ServiceProviderItem );
-    d->data = data;
+    d->setData( data );
 }
 
 class ServiceProviderModelPrivate
@@ -191,6 +205,7 @@ QVariant ServiceProviderModel::data( const QModelIndex& index, int role ) const
         return item->id();
     case LinesPerRowRole:
         return 4;
+    case Qt::ToolTipRole:
     case FormattedTextRole:
         return item->formattedText();
     case ServiceProviderDataRole:
@@ -265,7 +280,6 @@ void ServiceProviderModel::dataUpdated( const QString &sourceName,
         {
             QVariantHash serviceProviderData = it.value().toHash();
             const QString id = serviceProviderData["id"].toString();
-            const QString name = serviceProviderData["name"].toString();
             ServiceProviderItem *item = itemFromServiceProvider( id );
             if ( item ) {
                 // Update a service provider, that was already added to the model
@@ -274,8 +288,7 @@ void ServiceProviderModel::dataUpdated( const QString &sourceName,
                 dataChanged( index, index );
             } else {
                 // Add new service provider
-                newProviders << new ServiceProviderItem( name, serviceProviderData );
-
+                newProviders << new ServiceProviderItem( serviceProviderData );
             }
         }
 

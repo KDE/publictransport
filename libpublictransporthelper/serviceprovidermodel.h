@@ -50,13 +50,12 @@ public:
     /**
      * @brief Creates a new service provider item.
      *
-     * @param name The name of the service provider.
      * @param serviceProviderData A QVariantHash with data from the "publictransport" data engine.
      *
      * @note There's no need to call this yourself, just use
      *   @ref ServiceProviderModel::syncWithDataEngine to fill the model with items.
      **/
-    ServiceProviderItem( const QString &name, const QVariantHash &serviceProviderData );
+    ServiceProviderItem( const QVariantHash &serviceProviderData );
 
     virtual ~ServiceProviderItem();
 
