@@ -633,10 +633,17 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const SourceR
         setData( data.name, "stateData", stateData );
         setData( data.name, "error", false );
     } else {
-        // The provider is erroneous, only return "id", "error" and "errorMessage"
+        // The provider is erroneous
+        setData( data.name, providerData );
         setData( data.name, "id", providerId );
         setData( data.name, "error", true );
         setData( data.name, "errorMessage", errorMessage );
+
+        // Also add error information as state
+        QVariantHash stateData;
+        stateData[ "statusMessage" ] = errorMessage;
+        setData( data.name, "state", "error" );
+        setData( data.name, "stateData", stateData );
     }
     return true;
 }
@@ -669,14 +676,15 @@ bool PublicTransportEngine::updateServiceProviderSource()
                         ProvidersDataSource::ProviderData(providerData, state, stateData) );
                 loadedProviders << providerId;
             } else {
-                // Invalid provider, clear old data and only set id and error fields
-                providerData.clear();
+                // Invalid provider
                 providerData["id"] = providerId;
                 providerData["error"] = true;
                 providerData["errorMessage"] = errorMessage;
+                QVariantHash stateData;
+                stateData[ "statusMessage" ] = errorMessage;
 
                 providersSource->addProvider( providerId,
-                        ProvidersDataSource::ProviderData(providerData, "error", QVariantHash()) );
+                        ProvidersDataSource::ProviderData(providerData, "error", stateData) );
             }
         }
 
@@ -830,15 +838,24 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
         }
     }
 
-    if ( testData.status() == ServiceProviderTestData::Failed ) {
-        // Tests are marked as failed in the cache
-        kWarning() << "Tests are marked as failed in the cache" << providerId;
+    // Check the cache if the provider plugin .pts file can be read
+    if ( testData.xmlStructureTestStatus() == ServiceProviderTestData::Failed ) {
+        // The XML structure of the provider plugin .pts file is marked as failed in the cache
+        // Cannot add provider data to data sources, the file needs to be fixed first
+        kWarning() << "Provider plugin" << providerId << "is invalid.";
+        kDebug() << "Fix the provider file at" << ServiceProviderGlobal::fileNameFromId(providerId);
+        kDebug() << testData.errorMessage();
+        kDebug() << "************************************";
+
         providerData->clear();
         *errorMessage = testData.errorMessage();
         m_erroneousProviders.insert( providerId, testData.errorMessage() );
         updateErroneousServiceProviderSource();
         return false;
     }
+    // The sub type test may already be marked as failed in the cache,
+    // but when provider data can be read it should be added to provider data source
+    // also when the provider plugin is invalid
 
     // Read provider data from the XML file
     QString _errorMessage;
@@ -857,7 +874,10 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
         m_erroneousProviders.insert( providerId, _errorMessage );
         updateErroneousServiceProviderSource();
         return false;
-    } else if ( !ServiceProviderGlobal::isProviderTypeAvailable(data->type()) ) {
+    }
+
+    // Check if support for the used provider type has been build into the engine
+    if ( !ServiceProviderGlobal::isProviderTypeAvailable(data->type()) ) {
         providerData->clear();
         _errorMessage = i18nc("@info/plain", "Support for provider type %1 is not available",
                               ServiceProviderGlobal::typeName(data->type(),
@@ -866,14 +886,17 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
         m_erroneousProviders.insert( providerId, _errorMessage );
         updateErroneousServiceProviderSource();
         return false;
-    } else if ( testData.isXmlStructureTestPending() ) {
-        // Store error message in cache and do not reread unchanged XMLs everytime
+    }
+
+    // Mark the XML test as passed if not done already
+    if ( testData.isXmlStructureTestPending() ) {
         testData.setXmlStructureTestStatus( ServiceProviderTestData::Passed );
         testData.write( providerId, cache );
     }
 
-    // XML file structure test is passed, run sub-type test if not done already
-    if ( testData.isSubTypeTestPending() ) {
+    // XML file structure test is passed, run provider type test if not done already
+    switch ( testData.subTypeTestStatus() ) {
+    case ServiceProviderTestData::Pending: {
         // Need to create the provider to run tests in derived classes (in the constructor)
         const QScopedPointer<ServiceProvider> provider(
                 createProviderForData(data.data(), this, cache) );
@@ -898,8 +921,21 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
 
         // The provider is already created, use it in serviceProviderData(), if needed
         *providerData = serviceProviderData( provider.data() );
-    } else {
+        break;
+    }
+
+    case ServiceProviderTestData::Failed:
+        // Test is marked as failed in the cache
+        *errorMessage = testData.errorMessage();
+        m_erroneousProviders.insert( providerId, testData.errorMessage() );
+        updateErroneousServiceProviderSource();
         *providerData = serviceProviderData( *data );
+        return false;
+
+    case ServiceProviderTestData::Passed:
+        // Test is marked as passed in the cache
+        *providerData = serviceProviderData( *data );
+        break;
     }
 
     m_erroneousProviders.remove( providerId );

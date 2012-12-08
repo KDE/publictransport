@@ -140,19 +140,29 @@ public:
     /** @brief Get the global status of all tests. */
     inline Status status() const { return statusFromResults(m_results); };
 
+    /** @brief Get the status of the XML structure test. */
+    inline Status xmlStructureTestStatus() const {
+        return m_results.testFlag(XmlStructureTestPassed) ? Passed
+                : (m_results.testFlag(XmlStructureTestFailed) ? Failed : Pending);
+    };
+
+    /** @brief Get the status of the sub provider type test. */
+    inline Status subTypeTestStatus() const {
+        return m_results.testFlag(SubTypeTestPassed) ? Passed
+                : (m_results.testFlag(SubTypeTestFailed) ? Failed : Pending);
+    };
+
     /** @brief Get an error message, if there is an error. */
     inline QString errorMessage() const { return m_errorMessage; };
 
     /** @brief Whether or not the XML structure test is pending, ie. did not pass or fail. */
     inline bool isXmlStructureTestPending() const {
-        return !m_results.testFlag(XmlStructureTestPassed) &&
-               !m_results.testFlag(XmlStructureTestFailed);
+        return xmlStructureTestStatus() == Pending;
     };
 
     /** @brief Whether or not the sub-type test is pending, ie. did not pass or fail. */
     inline bool isSubTypeTestPending() const {
-        return !m_results.testFlag(SubTypeTestPassed) &&
-               !m_results.testFlag(SubTypeTestFailed);
+        return subTypeTestStatus() == Pending;
     };
 
     /** @brief Set the status of the XML structure test to @p status. */
