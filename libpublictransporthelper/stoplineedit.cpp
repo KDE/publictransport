@@ -339,12 +339,10 @@ void StopLineEdit::setServiceProvider( const QString& serviceProvider )
     edited( text() );
 
     // Check and watch the provider state
-    if ( d->providerType == QLatin1String("GTFS") ) {
-        if ( providerData["state"] == QLatin1String("gtfs_feed_import_pending") ) {
-            askToImportGtfsFeed();
-        }
-        engine->connectSource( "ServiceProvider " + d->serviceProvider, this );
+    if ( providerData["state"] == QLatin1String("gtfs_feed_import_pending") ) {
+        askToImportGtfsFeed();
     }
+    engine->connectSource( "ServiceProvider " + d->serviceProvider, this );
 }
 
 QString StopLineEdit::serviceProvider() const
@@ -792,6 +790,12 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
                 d->progress = stateData["progress"].toInt();
                 d->infoMessage = stateData["statusMessage"].toString();
                 update();
+            } else if ( state == QLatin1String("error") ||
+                        data["error"].toBool() || state.isEmpty() )
+            {
+                d->state = StopLineEditPrivate::Error;
+                d->errorString = data["errorMessage"].toString();
+                update();
             }
         }
         return;
@@ -820,7 +824,7 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
         kDebug() << "Stop suggestions error" << sourceName;
         d->state = StopLineEditPrivate::Error;
     } else if ( !data.contains("stops") ) {
-        kDebug() << "No stop suggestions received" << sourceName;
+        kDebug() << "Invalid stop suggestions data received" << sourceName;
         d->state = StopLineEditPrivate::Error;
     } else {
         d->state = StopLineEditPrivate::Ready;
