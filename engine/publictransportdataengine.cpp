@@ -266,6 +266,15 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
 
 PublicTransportEngine::~PublicTransportEngine()
 {
+    if ( !m_runningSources.isEmpty() || !m_providers.isEmpty() ) {
+        kDebug() << m_runningSources.count() << "data sources are still being updated,"
+                 << m_providers.count() << "providers cached, abort and delete all providers";
+        QStringList providerIds = m_providers.keys();
+        foreach ( const QString &providerId, providerIds ) {
+            deleteProvider( providerId );
+        }
+    }
+
     delete m_fileSystemWatcher;
     delete m_providerUpdateDelayTimer;
     qDeleteAll( m_dataSources );
@@ -1250,11 +1259,19 @@ void PublicTransportEngine::deleteProvider( const QString &providerId )
     foreach( const QString &cachedSource, cachedSources ) {
         const QString currentProviderId = providerIdFromSourceName( cachedSource );
         if ( currentProviderId == providerId ) {
-            // Remove data source for the current provider
-            // and remove the provider object (deletes it)
+            // Disconnect provider and abort all running requests
+            ProviderPointer provider = m_providers.take( providerId );
+            if ( provider ) {
+                disconnect( provider.data(), 0, this, 0 );
+                provider->abortAllRequests();
+            }
+
+            // Remove data source for the current provider,
+            // the provider object was already taken from m_providers and gets deleted
+            // once the shared provider pointer gets destroyed
             delete m_dataSources.take( cachedSource );
-            m_providers.remove( providerId );
             m_erroneousProviders.remove( providerId );
+            m_runningSources.removeOne( cachedSource );
         }
     }
 }
@@ -1833,7 +1850,7 @@ TimetableDataSource *PublicTransportEngine::dataSourceFromTimer( QTimer *timer )
     {
         TimetableDataSource *dataSource = dynamic_cast< TimetableDataSource* >( *it );
         if ( dataSource && (dataSource->updateAdditionalDataDelayTimer() == timer ||
-                            dataSource->updateTimer() == timer) ) 
+                            dataSource->updateTimer() == timer) )
         {
             return dataSource;
         }
@@ -2215,13 +2232,9 @@ int PublicTransportEngine::getSecsUntilUpdate( const QString &sourceName, QStrin
 QDateTime PublicTransportEngine::sourceUpdateTime( TimetableDataSource *dataSource,
                                                    UpdateFlags updateFlags )
 {
-    const QString providerId = dataSource->providerId();
-    if ( providerId.isEmpty() ) {
-        kWarning() << "Internal error: Service provider unknown"; // Could get provider id from <name>
-        return QDateTime();
-    }
+    const QString providerId = fixProviderId( dataSource->providerId() );
     const ProviderPointer provider = providerFromId( providerId );
-    if ( provider.isNull() ) {
+    if ( provider.isNull() || provider->type() == Enums::InvalidProvider ) {
         return QDateTime();
     }
 

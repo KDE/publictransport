@@ -178,7 +178,7 @@ public:
 
     AsyncDataEngineUpdater( Plasma::DataEngine *engine, Plasma::RunnerContext *context,
                             PublicTransportRunner *runner );
-    virtual ~AsyncDataEngineUpdater() {};
+    virtual ~AsyncDataEngineUpdater();
 
     QList<Result> results() const;
     Plasma::DataEngine *engine() const;
@@ -221,6 +221,7 @@ private:
     QString m_sourceName;
     PublicTransportRunner::Settings m_settings;
     PublicTransportRunner *m_runner;
+    bool m_quit;
 };
 
 #endif

@@ -178,6 +178,12 @@ public:
     /** @brief Get a pointer to the ServiceProviderData object for this provider. */
     const ServiceProviderData *data() const { return m_data; };
 
+    /** @brief Get the number of currently running requests. */
+    virtual int runningRequests() const { return 0; };
+
+    /** @brief Abort all currently running requests. */
+    virtual void abortAllRequests() {};
+
     /**
      * @brief Checks the type of @p request and calls the associated request function.
      *
@@ -383,21 +389,6 @@ signals:
     void forceUpdate();
 
 protected:
-    struct JobInfos {
-        // Mainly for QHash
-        JobInfos() : request(0) {
-        };
-
-        JobInfos( const KUrl &url, AbstractRequest *request ) : request(request) {
-            this->url = url;
-        };
-
-        ~JobInfos();
-
-        KUrl url;
-        AbstractRequest *request;
-    };
-
     /**
      * @brief Whether or not realtime data is available in the @p data of a timetable data source.
      *
@@ -409,9 +400,6 @@ protected:
 
 private:
     static QString gethex( ushort decimal );
-
-    // Stores information about currently running download jobs
-    QHash< KJob*, JobInfos > m_jobInfos;
 
     bool m_idAlreadyRequested;
 };

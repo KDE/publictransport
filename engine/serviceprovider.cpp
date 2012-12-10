@@ -61,19 +61,6 @@ ServiceProvider::ServiceProvider( const ServiceProviderData *data, QObject *pare
 
 ServiceProvider::~ServiceProvider()
 {
-    if ( !m_jobInfos.isEmpty() ) {
-        // There are still pending requests, data haven't been completely received.
-        // The result is, that the data engine won't be able to fill the data source with values.
-        // A possible cause is calling Plasma::DataEngineManager::unloadEngine() more often
-        // than Plasma::DataEngineManager::loadEngine(), which deletes the whole data engine
-        // with all it's currently loaded service provider plugins even if one other visualization
-        // is connected to the data engine. The dataUpdated() slot of this other visualization
-        // won't be called.
-        kDebug() << "Service provider with" << m_jobInfos.count() << "pending requests deleted";
-        if ( m_data ) {
-            kDebug() << m_data->id() << m_jobInfos.count();
-        }
-    }
 }
 
 ServiceProviderTestData ServiceProvider::runSubTypeTest( const ServiceProviderTestData &oldTestData,
@@ -241,8 +228,9 @@ QDateTime ServiceProvider::nextUpdateTime( UpdateFlags updateFlags, const QDateT
                                            const QDateTime &latestForSufficientChanges,
                                            const QVariantHash &data ) const
 {
-    Q_ASSERT( lastUpdate.isValid() );
-    Q_ASSERT( latestForSufficientChanges.isValid() );
+    if ( !lastUpdate.isValid() ) {
+        return QDateTime::currentDateTime();
+    }
 
     if ( updateFlags.testFlag(UpdateWasRequestedManually) ) {
         return lastUpdate.addSecs( minFetchWait(updateFlags) );
@@ -256,15 +244,19 @@ QDateTime ServiceProvider::nextUpdateTime( UpdateFlags updateFlags, const QDateT
     if ( isRealtimeDataAvailable(data) ) {
         // Wait maximally 30 minutes until an update if realtime data is available,
         // for more updates the timetable service must be used to request an update manually
-        return qBound( lastUpdate.addSecs(minFetchWait(updateFlags)), _latestForSufficientChanges,
-                       lastUpdate.addSecs(30 * 60) );
+        return _latestForSufficientChanges.isValid()
+                ? qBound( lastUpdate.addSecs(minFetchWait(updateFlags)), _latestForSufficientChanges,
+                          lastUpdate.addSecs(30 * 60) )
+                : lastUpdate.addSecs(minFetchWait(updateFlags));
     } else {
         // No realtime data, no need to update existing timetable items,
         // only update to have enough valid items for the data source.
         // With constant time update only at midnight for dynamic date.
         // With dynamic time (eg. the current time) update to have enough items available
         // while old ones get removed as time passes by.
-        return qMax( lastUpdate.addSecs(minFetchWait()), _latestForSufficientChanges );
+        return _latestForSufficientChanges.isValid()
+                ? qMax( lastUpdate.addSecs(minFetchWait()), _latestForSufficientChanges )
+                : lastUpdate.addSecs(minFetchWait());
     }
 }
 
@@ -297,9 +289,4 @@ bool ServiceProvider::useSeparateCityValue() const
 bool ServiceProvider::onlyUseCitiesInList() const
 {
     return m_data->onlyUseCitiesInList();
-}
-
-ServiceProvider::JobInfos::~JobInfos()
-{
-    delete request;
 }

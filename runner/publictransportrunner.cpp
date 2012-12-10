@@ -346,9 +346,14 @@ void PublicTransportRunner::marbleFinished()
 
 AsyncDataEngineUpdater::AsyncDataEngineUpdater( Plasma::DataEngine *engine,
         Plasma::RunnerContext* context, PublicTransportRunner *runner )
-        : QObject(0), m_engine(engine), m_context(context), m_runner(runner)
+        : QObject(0), m_engine(engine), m_context(context), m_runner(runner), m_quit(false)
 {
     m_settings = m_runner->settings();
+}
+
+AsyncDataEngineUpdater::~AsyncDataEngineUpdater()
+{
+    abort();
 }
 
 QList< Result > AsyncDataEngineUpdater::results() const
@@ -365,6 +370,7 @@ void AsyncDataEngineUpdater::abort()
 {
     // Disconnect source
     m_engine->disconnectSource( m_sourceName, this );
+    m_quit = true;
 
     emit finished( false );
 }
@@ -472,6 +478,10 @@ void AsyncDataEngineUpdater::processDepartures( const QString &sourceName,
             ? data["departures"].toList() : data["arrivals"].toList();
     kDebug() << departuresData.count() << "departures to be processed";
     foreach ( const QVariant &departure, departuresData ) {
+        if ( m_quit ) {
+            kDebug() << "Abort processing";
+            return;
+        }
         QVariantHash departureData = departure.toHash();
 
         QList< QTime > routeTimes;
@@ -647,6 +657,10 @@ void AsyncDataEngineUpdater::processJourneys( const QString& sourceName, const P
     kDebug() << "  - " << journeysData.count() << "journeys to be processed";
     int filtered = 0;
     foreach ( const QVariant &journey, journeysData ) {
+        if ( m_quit ) {
+            kDebug() << "Abort processing";
+            return;
+        }
         QVariantHash journeyData = journey.toHash();
 
 //     QList<QTime> routeTimesDeparture, routeTimesArrival;
@@ -839,6 +853,10 @@ void AsyncDataEngineUpdater::processStopSuggestions( const QString& sourceName,
     qreal min = INT_MAX, max = 0;
     QVariantList stops = data["stops"].toList();
     foreach ( const QVariant &stopData, stops ) {
+        if ( m_quit ) {
+            kDebug() << "Abort processing";
+            return;
+        }
         QVariantHash stop = stopData.toHash();
         QString stopName = stop["StopName"].toString();
         QString stopID = stop["StopID"].toString();

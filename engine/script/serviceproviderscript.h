@@ -139,6 +139,12 @@ public:
     /** @brief Gets a list of features that this service provider supports through a script. */
     virtual QList<Enums::ProviderFeature> features() const;
 
+    /** @brief Get the number of currently running requests. */
+    virtual int runningRequests() const { return m_runningJobs.count(); };
+
+    /** @brief Abort all currently running requests. */
+    virtual void abortAllRequests();
+
     /**
      * @brief Request departures as described in @p request.
      * When the departures are completely received departuresReceived() gets emitted.

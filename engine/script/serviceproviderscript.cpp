@@ -79,25 +79,39 @@ ServiceProviderScript::ServiceProviderScript( const ServiceProviderData *data, Q
 
 ServiceProviderScript::~ServiceProviderScript()
 {
-    // Wait for running jobs to finish for proper cleanup
-    if ( !m_runningJobs.isEmpty() ) {
-        foreach ( ScriptJob *job, m_runningJobs ) {
-            // Disconnect all slots connected to the job and then abort it
-            disconnect( job, 0, this, 0 );
-            job->requestAbort();
+    abortAllRequests();
+}
 
-            // Wait for the job to get aborted
-            QEventLoop loop;
-            connect( job, SIGNAL(done(ThreadWeaver::Job*)), &loop, SLOT(quit()) );
+void ServiceProviderScript::abortAllRequests()
+{
+    // Abort all running jobs and wait for them to finish for proper cleanup
+    foreach ( ScriptJob *job, m_runningJobs ) {
+        kDebug() << "Abort job" << job;
+
+        // Create an event loop to wait for the job to finish,
+        // quit the loop when the done() signal gets emitted by the job
+        QEventLoop loop;
+        connect( job, SIGNAL(done(ThreadWeaver::Job*)), &loop, SLOT(quit()) );
+
+        // Disconnect all slots connected to the job and then abort it
+        disconnect( job, 0, this, 0 );
+        job->requestAbort();
+
+        // Wait for the job to get aborted
+        if ( !job->isFinished() ) {
+            // The job is not finished, wait for it, maximally one second
             QTimer::singleShot( 1000, &loop, SLOT(quit()) );
-            if ( !job->isFinished() ) {
-                loop.exec(); // The job is still not finished, wait for it
-            }
-
-            // The job has finished or the timeout was reached
-            job->deleteLater();
+            loop.exec();
         }
+
+        // The job has finished or the timeout was reached
+        if ( !job->isFinished() ) {
+            // The job is still not finished, the timeout was reached before
+            kWarning() << "Job not aborted before timeout, delete it" << job;
+        }
+        job->deleteLater();
     }
+    m_runningJobs.clear();
 }
 
 QStringList ServiceProviderScript::allowedExtensions()
@@ -544,12 +558,11 @@ void ServiceProviderScript::jobStarted( ThreadWeaver::Job* job )
     // but not for additional data requests because they point to existing departure data sources.
     // There may be multiple AdditionalDataJob requests for the same data source but different
     // timetable items in the source.
+    const QString sourceName = scriptJob->request()->sourceName();
     if ( !qobject_cast<AdditionalDataJob*>(scriptJob) &&
-         m_publishedData.contains(scriptJob->request()->sourceName()) &&
-         !m_publishedData[scriptJob->request()->sourceName()].isEmpty() )
+         m_publishedData.contains(sourceName) && !m_publishedData[sourceName].isEmpty() )
     {
-        kWarning() << "Data source already exists for job"
-                   << scriptJob << scriptJob->request()->sourceName();
+        kWarning() << "Data source already exists for job" << scriptJob << sourceName;
     }
 }
 
@@ -558,9 +571,12 @@ void ServiceProviderScript::jobDone( ThreadWeaver::Job* job )
     ScriptJob *scriptJob = qobject_cast< ScriptJob* >( job );
     Q_ASSERT( scriptJob );
 
-    const QString sourceName = scriptJob->request()->sourceName();
-    PublicTransportInfoList results = m_publishedData.take( sourceName );
-
+    if ( scriptJob->request() ) {
+        const QString sourceName = scriptJob->request()->sourceName();
+        m_publishedData.remove( sourceName );
+    } else {
+        kWarning() << "No request for job" << scriptJob << scriptJob->errorString();
+    }
     m_runningJobs.removeOne( scriptJob );
     scriptJob->deleteLater();
 }
