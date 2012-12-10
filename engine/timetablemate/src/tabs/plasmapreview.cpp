@@ -89,8 +89,8 @@ void PlasmaPreview::setSettings( const QString &serviceProviderID, const QString
     // Set settings of the PublicTransport applet using a specific slot
     int index = m_applet->metaObject()->indexOfSlot( "setSettings(QString,QString)" );
     if( index == -1 ) {
-        kDebug() << "Couldn't find slot with signarture setSettings(QString,QString) "
-                 "in the publicTransport applet.";
+        kDebug() << "Could not find a slot with signature setSettings(QString,QString) "
+                 "in the PublicTransport applet.";
         return;
     }
 

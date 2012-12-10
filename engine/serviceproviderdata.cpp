@@ -346,3 +346,19 @@ QString ServiceProviderData::mapCityNameToValue( const QString &city ) const
         return city;
     }
 }
+
+QString ServiceProviderData::changelogString() const
+{
+    QString changelog;
+    foreach ( const ChangelogEntry &entry, m_changelog ) {
+        if ( !changelog.isEmpty() ) {
+            changelog.append( '\n' );
+        }
+        changelog.append( entry.version );
+        if ( !entry.author.isEmpty() ) {
+            changelog.append( " (" + entry.author + ')' );
+        }
+        changelog.append( ": " + entry.description );
+    }
+    return changelog;
+}

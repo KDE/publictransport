@@ -110,6 +110,7 @@
 const QList< Project::ProjectAction > externProjectActions() {
     return QList< Project::ProjectAction >()
             << Project::Save << Project::SaveAs << Project::Install << Project::InstallGlobally
+            << Project::Publish
             << Project::ShowProjectSettings << Project::Close << Project::ShowHomepage
             << Project::RunAllTests << Project::AbortRunningTests << Project::ClearTestResults
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT

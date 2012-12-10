@@ -20,6 +20,7 @@
         <Separator/>
         <Action name="project_install"/>
         <Action name="project_install_global"/>
+        <Action name="project_publish"/>
         <Separator/>
         <Action name="project_choose_active"/>
         <Action name="project_settings"/>
@@ -102,6 +103,7 @@
     <Action name="project_new" />
     <Action name="project_open" />
     <Action name="project_save" />
+    <Action name="project_publish"/>
     <Separator/>
     <!-- Add file operations from eg. the Kate part -->
     <DefineGroup name="file_operations" />

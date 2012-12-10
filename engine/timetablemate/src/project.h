@@ -229,6 +229,7 @@ public:
         Uninstall, /**< Uninstall a locally installed version of the project. */
         InstallGlobally, /**< Install the project globally. */
         UninstallGlobally, /**< Uninstall a globally installed version of the project. */
+        Publish, /**< Publish the provider plugin on opendesktop.org (kde-files.org). */
 
         // UiActionGroup
         ShowProjectSettings, /**< Show a settings dialog for the project. */
@@ -861,6 +862,9 @@ public:
     QList< TestModel::Test > finishedTests() const;
     QList< TestModel::Test > startedTests() const;
 
+    /** @brief Render the PublicTransport applet showing this provider. */
+    QPixmap renderAppletPreview();
+
 signals:
     void providerTypeChanged( Enums::ServiceProviderType newType,
                               Enums::ServiceProviderType oldType );
@@ -976,6 +980,9 @@ public slots:
      * @note Needs root password using KAuth.
      **/
     void uninstallGlobally( QWidget *parent = 0 ) { uninstall(parent, GlobalInstallation); };
+
+    /** @brief Publish the provider plugin at openDesktop.org. */
+    void publish();
 
     /** @brief Emit a request to make this project active. */
     void setAsActiveProject() { emit setAsActiveProjectRequest(); };

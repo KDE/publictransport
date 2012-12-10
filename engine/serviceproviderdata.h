@@ -265,6 +265,7 @@ public:
     QString timeZone() const { return m_timeZone; };
 
     QList<ChangelogEntry> changelog() const { return m_changelog; };
+    QString changelogString() const;
     QString lastChangelogAuthor() const {
         return m_changelog.isEmpty() ? QString() : m_changelog.first().author; };
     QString lastChangelogVersion() const {

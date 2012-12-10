@@ -74,6 +74,10 @@
 #include <KColorScheme>
 #include <KLocale>
 #include <KLocalizedString>
+#include <KZip>
+#include <KTemporaryFile>
+#include <Plasma/Corona>
+#include <knewstuff3/uploaddialog.h>
 #include <KAuth/ActionReply>
 #include <KAuth/Action>
 #include <KTextEditor/Document>
@@ -1111,6 +1115,7 @@ public:
         case Project::Uninstall:
         case Project::InstallGlobally:
         case Project::UninstallGlobally:
+        case Project::Publish:
         case Project::Close:
         case Project::ShowProjectSettings:
         case Project::ShowDashboard:
@@ -2877,6 +2882,8 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
         return "project_install_global";
     case UninstallGlobally:
         return "project_uninstall_global";
+    case Publish:
+        return "project_publish";
     case Close:
         return "project_close";
     case ShowProjectSettings:
@@ -3010,6 +3017,7 @@ QList< QAction* > Project::contextMenuActions( QWidget *parent )
     actions << projectAction(Save) << projectAction(SaveAs)
             << projectAction(Install) << projectAction(InstallGlobally)
             << projectAction(Uninstall) << projectAction(UninstallGlobally)
+            << projectAction(Publish)
             << separator1
             << projectAction(SetAsActiveProject)
             << projectAction(ShowDashboard);
@@ -3218,6 +3226,9 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
     case UninstallGlobally:
         d->connectProjectAction( actionType, action, doConnect, this, SLOT(uninstallGlobally()), flags );
         break;
+    case Publish:
+        d->connectProjectAction( actionType, action, doConnect, this, SLOT(publish()), flags );
+        break;
     case Close:
         d->connectProjectAction( actionType, action, doConnect, this, SIGNAL(closeRequest()), flags );
         break;
@@ -3414,6 +3425,8 @@ QString Project::projectActionText( Project::ProjectAction actionType, const QVa
         return i18nc("@action", "Install &Globally");
     case UninstallGlobally:
         return i18nc("@action", "Uninstall &Globally");
+    case Publish:
+        return i18nc("@action", "&Publish");
     case Close:
         return i18nc("@action", "Close Project");
     case ShowProjectSettings:
@@ -3558,6 +3571,11 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
         action = new KAction( KIcon("edit-delete"), text, parent );
         action->setToolTip( i18nc("@info:tooltip",
                                   "Uninstall a globally installed version of the project") );
+        break;
+    case Publish:
+        action = new KAction( KIcon("svn-commit"), text, parent );
+        action->setToolTip( i18nc("@info:tooltip",
+                                  "Publish the plugin project at openDesktop.org") );
         break;
     case Close:
         action = new KAction( KIcon("project-development-close"), text, parent );
@@ -3992,6 +4010,7 @@ Project::ProjectActionGroup Project::actionGroupFromType( Project::ProjectAction
     case Uninstall:
     case InstallGlobally:
     case UninstallGlobally:
+    case Publish:
         return FileActionGroup;
 
     case ShowProjectSettings:
@@ -4063,7 +4082,7 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
     switch ( group ) {
     case FileActionGroup:
         actionTypes << Save << SaveAs << Install << Uninstall
-                    << InstallGlobally << UninstallGlobally;
+                    << InstallGlobally << UninstallGlobally << Publish;
         break;
     case UiActionGroup:
         actionTypes << ShowProjectSettings << ShowDashboard << ShowHomepage
@@ -5989,6 +6008,152 @@ bool Project::isInstalledGlobally() const
     Q_D( const Project );
     QMutexLocker locker( d->mutex );
     return d->isInstalledGlobally();
+}
+
+QPixmap Project::renderAppletPreview()
+{
+    Q_D( Project );
+
+    // Inform the user about what is going on
+    emit informationMessage( i18nc("@info", "Rendering Provider Preview..."),
+                             KMessageWidget::Information, 1500 );
+
+    // Create the applet in a planar containment (no background)
+    Plasma::Corona corona;
+    Plasma::Containment *containment = corona.addContainment( "planar" );
+    Plasma::Applet *applet = containment->addApplet( "publictransport" );
+    corona.setSceneRect( 0, 0, applet->preferredWidth(), applet->preferredHeight() );
+    containment->setGeometry( 0, 0, applet->preferredWidth(), applet->preferredHeight() );
+    containment->show();
+
+    // Initialize an event loop to wait for departures to be received by the applet
+    QEventLoop loop;
+    connect( applet, SIGNAL(validDepartureDataReceived()), &loop, SLOT(quit()) );
+    connect( applet, SIGNAL(invalidDepartureDataReceived()), &loop, SLOT(quit()) );
+
+    // Set settings of the PublicTransport applet using a specific slot
+    int index = applet->metaObject()->indexOfSlot( "setSettings(QString,QString)" );
+    if( index == -1 ) {
+        kDebug() << "Could not find a slot with signature setSettings(QString,QString) "
+                    "in the PublicTransport applet.";
+        return QPixmap();
+    }
+    bool success = applet->metaObject()->method( index ).invoke( applet,
+            Q_ARG(QString, d->data()->id()),
+            Q_ARG(QString, d->data()->sampleStopNames().isEmpty()
+                           ? QString() : d->data()->sampleStopNames().first()) );
+    if( !success ) {
+        kDebug() << "A call to setSettings in the publicTransport applet wasn't successful.";
+        return QPixmap();
+    }
+
+    // Wait for departures to be received by the applet, maximally one second
+    QTimer::singleShot( 1000, &loop, SLOT(quit()) );
+    loop.exec();
+
+    // Render to the pixmap
+    QPixmap previewPixmap( applet->size().toSize() );
+    previewPixmap.fill( Qt::white );
+    QPainter painter( &previewPixmap );
+    corona.render( &painter );
+    painter.end();
+
+    // Cleanup
+    containment->clearApplets();
+    delete applet;
+    delete containment;
+
+    // Return the pixmap with the rendered applet preview
+    return previewPixmap;
+}
+
+void Project::publish()
+{
+    Q_D( Project );
+
+    // Save a preview image of the PublicTransport applet using this provider plugin
+    KTemporaryFile previewImageFile;
+    previewImageFile.setSuffix( ".png" );
+    if ( !previewImageFile.open() ) {
+        kWarning() << "Could not open temporary file to write Plasma preview image";
+    } else {
+        QPixmap previewPixmap = renderAppletPreview();
+        if ( !previewPixmap.isNull() ) {
+            previewPixmap.save( &previewImageFile );
+        }
+        previewImageFile.close();
+    }
+
+    // Tell the user to only publish tested provider plugins
+    // and what to use as preview images
+    if ( KMessageBox::warningContinueCancel(d->parentWidget(), i18nc("@info",
+            "<title>Publish Your Provider Plugin</title>"
+            "<para>Please make sure your plugin is working and run all tests with it "
+            "before publishing your plugin.</para>"
+            "<para>The first preview image should be a map showing supported regions. "
+            "The second preview should have been generated automatically and show the "
+            "PublicTransport applet using this provider plugin.</para>"),
+            QString(), KStandardGuiItem::cont(), KStandardGuiItem::cancel(),
+            "publish_information") != KMessageBox::Continue )
+    {
+        return;
+    }
+
+    // Create the upload dialog,
+    // to not use "Kate Part" (which might currently be the active component)
+    // for the dialog title/icon, switch to the main component (TimetableMate)
+    // for the UploadDialog constructor
+    const KComponentData activeComponent = KGlobal::activeComponent();
+    KGlobal::setActiveComponent( KGlobal::mainComponent() );
+    KNS3::UploadDialog dialog( "publictransport.knsrc", d->parentWidget() );
+    KGlobal::setActiveComponent( activeComponent );
+
+    // Compress all project files into one and use it for the upload
+    const QString providerId = d->data()->id();
+    const QString sourcePath = QFileInfo( d->filePath ).path();
+    const QString uploadFileName = sourcePath + '/' + providerId + ".zip";
+    KZip zip( uploadFileName );
+    zip.setCompression( KZip::DeflateCompression );
+    if ( !zip.open(QIODevice::WriteOnly) ) {
+        emit informationMessage( i18nc("@info", "Could not create upload file "
+                                       "<filename>%1</filename>", uploadFileName),
+                                 KMessageWidget::Error );
+        return;
+    }
+
+    // Add provider plugin file
+    zip.addLocalFile( d->filePath, providerId + ".pts" );
+
+    // Add other files, eg. scripts
+    switch ( d->data()->type() ) {
+    case Enums::ScriptedProvider:
+        zip.addLocalFile( sourcePath + '/' + d->data()->scriptFileName(),
+                          d->data()->scriptFileName() );
+        break;
+    default:
+        kWarning() << "Invalid provider" << d->data()->type();
+        break;
+    }
+
+    if ( !zip.close() ) {
+        emit informationMessage( i18nc("@info", "Could not create upload file "
+                                       "<filename>%1</filename>", uploadFileName),
+                                 KMessageWidget::Error );
+        return;
+    }
+
+    dialog.setUploadFile( uploadFileName );
+
+    // Set some values from the plugin data
+    const QString countryName = KGlobal::locale()->countryCodeToName( d->data()->country() );
+    dialog.setUploadName( countryName + ", " + d->data()->names()["en"] );
+    dialog.setDescription( d->data()->descriptions()["en"] );
+    dialog.setVersion( d->data()->version() );
+    dialog.setChangelog( d->data()->changelogString() );
+    dialog.setPreviewImageFile( 1, KUrl(previewImageFile.fileName()) );
+
+    // Show the dialog
+    dialog.exec();
 }
 
 QString Project::iconName() const
