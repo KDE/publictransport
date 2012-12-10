@@ -31,9 +31,6 @@ public:
 
     PlasmaPreview *plasmaPreviewWidget() const;
 
-protected slots:
-    void plasmaPreviewLoaded();
-
 private:
     PlasmaPreviewTab( Project *project, QWidget *parent = 0 );
 };

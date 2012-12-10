@@ -78,13 +78,10 @@ bool PlasmaPreview::loadPlasmaPreview()
     }
     m_applet->setFlag( QGraphicsItem::ItemIsMovable, false );
     setAlignment( Qt::AlignLeft | Qt::AlignTop );
-
-    emit plasmaPreviewLoaded();
     return true;
 }
 
-void PlasmaPreview::setSettings( const QString &serviceProviderID,
-        const QString &stopName )
+void PlasmaPreview::setSettings( const QString &serviceProviderID, const QString &stopName )
 {
     if( !m_applet )
         return;

@@ -44,8 +44,10 @@ PlasmaPreviewTab::PlasmaPreviewTab( Project *project, QWidget *parent )
             "Use <interface>File -&gt; Install</interface> to install the plugin locally "
             "or <interface>File -&gt; Install Globally</interface> to install the plugin "
             "globally, ie. for all users.</note></para>") );
-    connect( plasmaPreviewWidget, SIGNAL(plasmaPreviewLoaded()),
-             this, SLOT(plasmaPreviewLoaded()) );
+
+    const ServiceProviderData *data = project->provider()->data();
+    plasmaPreviewWidget->setSettings( data->id(),
+            data->sampleStopNames().isEmpty() ? QString() : data->sampleStopNames().first() );
 }
 
 PlasmaPreviewTab *PlasmaPreviewTab::create( Project *project, QWidget *parent )
@@ -56,9 +58,4 @@ PlasmaPreviewTab *PlasmaPreviewTab::create( Project *project, QWidget *parent )
 PlasmaPreview *PlasmaPreviewTab::plasmaPreviewWidget() const
 {
     return qobject_cast<PlasmaPreview *>( widget() );
-}
-
-void PlasmaPreviewTab::plasmaPreviewLoaded()
-{
-    plasmaPreviewWidget()->setSettings( project()->provider()->data()->id(), QString() );
 }

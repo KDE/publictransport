@@ -42,9 +42,6 @@ public:
     };
     void setSettings( const QString &serviceProviderID, const QString &stopName );
 
-signals:
-    void plasmaPreviewLoaded();
-
 protected:
     virtual void resizeEvent( QResizeEvent *event );
 
