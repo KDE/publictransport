@@ -31,6 +31,7 @@
 #include <QMutex>
 #include <QVariant>
 
+class KArchiveDirectory;
 class QSqlRecord;
 
 /**
@@ -191,6 +192,13 @@ private:
     void setError( State errorState, const QString &errorText );
 
     inline QString decode( const QByteArray &gtfsString ) { return QString::fromUtf8(gtfsString); };
+
+    const KArchiveDirectory *findFeedDataDirectory( const KArchiveDirectory *directory,
+                                                    const QStringList &requiredFiles,
+                                                    QStringList *missingFiles, int level = 0 );
+    static bool checkFileList( const QStringList &requiredFiles,
+                               const QStringList &availableFiles,
+                               QStringList *missingFiles );
 
     State m_state;
     QString m_providerName;

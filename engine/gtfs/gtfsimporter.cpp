@@ -113,6 +113,57 @@ void GtfsImporter::setError( GtfsImporter::State errorState,
     }
 }
 
+bool GtfsImporter::checkFileList( const QStringList &requiredFiles,
+                                  const QStringList &availableFiles,
+                                  QStringList *missingFiles )
+{
+    *missingFiles = requiredFiles;
+    foreach ( const QString &file, availableFiles ) {
+        missingFiles->removeOne( file );
+    }
+    return missingFiles->isEmpty();
+}
+
+const KArchiveDirectory *GtfsImporter::findFeedDataDirectory(
+        const KArchiveDirectory *directory, const QStringList &requiredFiles,
+        QStringList *missingFiles, int level )
+{
+    // Do not recurse too deep
+    if ( level > 10 ) {
+        return 0;
+    }
+
+    // Test if the current directory is the GTFS feed data directory
+    QStringList directoryEntries = directory->entries();
+    if ( checkFileList(requiredFiles, directoryEntries, missingFiles) ) {
+        // The given directory contains all required files
+        return directory;
+    } else if ( missingFiles->count() < requiredFiles.count() ) {
+        // At least one required field has been found,
+        // most probably this is the data directory, but some files are missing
+        return directory;
+    }
+
+    // Test subdirectories
+    foreach ( const QString &directoryEntry, directoryEntries ) {
+        const KArchiveEntry *entry = directory->entry( directoryEntry );
+        if ( entry->isDirectory() ) {
+            kDebug() << "Search GTFS feed data directory in level" << level << entry->name();
+            const KArchiveDirectory *subDirectory =
+                    dynamic_cast< const KArchiveDirectory* >( entry );
+            const KArchiveDirectory *foundDirectory =
+                    findFeedDataDirectory( subDirectory, requiredFiles, missingFiles, level + 1 );
+            if ( foundDirectory ) {
+                // The GTFS data files have been found inside this directory
+                return foundDirectory;
+            }
+        }
+    }
+
+    // Did not find the GTFS feed data directory
+    return 0;
+}
+
 void GtfsImporter::run()
 {
     m_mutex.lock();
@@ -138,52 +189,23 @@ void GtfsImporter::run()
     const QString tmpGtfsDir = KGlobal::dirs()->saveLocation( "tmp",
             QFileInfo(fileName).fileName() + "_dir/" );
 
-    // Cast away constness, to be able to set directory to another directory (but not changing it)
+    // Find the GTFS feed data directory, containing the .txt files, eg. stop_times.txt
     KArchiveDirectory *directory = const_cast<KArchiveDirectory*>( gtfsZipFile.directory() );
-    QStringList directoryEntries = directory->entries();
     QStringList missingFiles;
-    bool feedSubDirectoryFound = false;
-    forever {
-        QStringList currentMissingFiles = requiredFiles;
-        foreach ( const QString &directoryEntry, directoryEntries ) {
-            currentMissingFiles.removeOne( directoryEntry );
-        }
-
-        feedSubDirectoryFound = currentMissingFiles.isEmpty();
-        if ( feedSubDirectoryFound ) {
-            // Required files found or no more directories to look into
-            missingFiles = currentMissingFiles;
-            break;
-        } else {
-            // Use first sub directory in current directory for new directory
-            bool subDirectoryFound = false;
-            foreach ( const QString &directoryEntry, directoryEntries ) {
-                const KArchiveEntry *entry = directory->entry( directoryEntry );
-                if ( entry->isDirectory() ) {
-                    kDebug() << "Going into subdirectory of the zip file:" << entry->name();
-                    directory = const_cast<KArchiveDirectory*>(
-                            dynamic_cast<const KArchiveDirectory*>(entry) );
-                    directoryEntries = directory->entries();
-                    subDirectoryFound = true;
-                    break;
-                }
-            }
-
-            if ( !subDirectoryFound ) {
-                // Required files not found, also not in (first) sub directories
-                kDebug() << "Required files not found, also not in (first) sub directories";
-                break;
-            }
-        }
-    }
-
-    if ( !missingFiles.isEmpty() || !feedSubDirectoryFound ) {
+    const KArchiveDirectory *feedDataDirectory = findFeedDataDirectory(
+            gtfsZipFile.directory(), requiredFiles, &missingFiles );
+    if ( !missingFiles.isEmpty() ) {
         kDebug() << "Required file(s) missing in GTFS feed: " << missingFiles.join(", ");
-        setError( FatalError, "Required file(s) missing in GTFS feed: " + missingFiles.join(", ") ); // TODO i18nc
+        setError( FatalError, i18ncp("@info/plain",
+                                     "Required file missing in GTFS feed: <filename>%1</filename>",
+                                     "Required files missing in GTFS feed: <filename>%1</filename>",
+                                     missingFiles.join(", ")) );
         return;
     }
+    Q_ASSERT( feedDataDirectory );
 
-    directory->copyTo( tmpGtfsDir );
+    // Extract data directory of the GTFS feed
+    feedDataDirectory->copyTo( tmpGtfsDir );
     gtfsZipFile.close();
 
     // Calculate total file size (for progress calculations)
