@@ -324,6 +324,8 @@ ServiceProviderGtfs::AgencyInformation::~AgencyInformation()
     delete timezone;
 }
 
+// NOTE When changing this function, also update ProjectPrivate::gtfsProviderFeatures()
+//      in TimetableMate!
 QList<Enums::ProviderFeature> ServiceProviderGtfs::features() const
 {
     QList<Enums::ProviderFeature> features;

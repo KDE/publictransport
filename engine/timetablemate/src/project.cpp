@@ -50,9 +50,11 @@
 #include <engine/serviceprovider.h>
 #include <engine/serviceproviderdata.h>
 #include <engine/serviceproviderglobal.h>
-#include <engine/script/serviceproviderscript.h>
 #include <engine/request.h>
 #include <engine/global.h>
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    #include <engine/script/serviceproviderscript.h>
+#endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     #include <engine/gtfs/gtfsdatabase.h>
 #endif
@@ -851,14 +853,23 @@ public:
                 q, &xmlComments, &errorMessage );
         if ( readData ) {
             Enums::ServiceProviderType oldType = provider ? provider->type() : Enums::InvalidProvider;
+            switch ( readData->type() ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-            if ( readData->type() == Enums::ScriptedProvider ) {
+            case Enums::ScriptedProvider:
                 provider = new ServiceProviderScript( readData, q );
-            } else
+                break;
 #endif
-            {
-                // Do not create sub class instance for unknown types
+// NOTE Cannot create ServiceProviderGtfs instance, because the GTFS-realtime protocol buffer
+// classes can only be used once with the same name, otherwise there will be crashes when using
+// ServiceProviderGtfs from libprotobuf. Since GTFS-realtime features are not used by TimetableMate
+// and only ServiceProviderGtfs::features() gets actually used, simply copy that function
+// into TimetableMate.
+            default:
+                // Do not create sub class instance for unknown types,
+                // this leads to eg. empty feature lists being inserted into the upload dialog
+                kWarning() << "Unknown provider type" << readData->type();
                 provider = new ServiceProvider( readData, q );
+                break;
             }
 
             if ( provider->type() != oldType ) {
@@ -2454,6 +2465,30 @@ public:
         } else {
             startTests( takeStartableDependentTests(test) );
         }
+    };
+
+    // NOTE This function only exists to automatically use gtfsProviderFeatures() for GTFS providers
+    inline QList< Enums::ProviderFeature > features() const {
+        return data()->type() == Enums::GtfsProvider
+                ? gtfsProviderFeatures() : provider->features();
+    };
+
+    // WARNING This function copies ServiceProviderGtfs::features() and needs to stay in sync.
+    // This is because the ServiceProviderGtfs instances cannot be created by TimetableMate
+    // because of problems with libprotobuf.
+    QList< Enums::ProviderFeature > gtfsProviderFeatures() const {
+        QList<Enums::ProviderFeature> features;
+        features << Enums::ProvidesDepartures << Enums::ProvidesArrivals
+                << Enums::ProvidesStopSuggestions << Enums::ProvidesRouteInformation
+                << Enums::ProvidesStopID << Enums::ProvidesStopGeoPosition;
+                // Enums::ProvidesStopsByGeoPosition TODO
+        if ( !data()->realtimeAlertsUrl().isEmpty() ) {
+            features << Enums::ProvidesNews;
+        }
+        if ( !data()->realtimeTripUpdateUrl().isEmpty() ) {
+            features << Enums::ProvidesDelays;
+        }
+        return features;
     };
 
     Project::State state;
@@ -6051,6 +6086,13 @@ QPixmap Project::renderAppletPreview()
     QTimer::singleShot( 1000, &loop, SLOT(quit()) );
     loop.exec();
 
+    // Wait another 300ms to finish fade in animations of departure items (250ms duration by default)
+    // Use a new event loop to not get finished by the 1s timeout started above
+    QEventLoop loop2;
+    QTimer::singleShot( 300, &loop2, SLOT(quit()) );
+    loop2.exec();
+    qApp->processEvents();
+
     // Render to the pixmap
     QPixmap previewPixmap( applet->size().toSize() );
     previewPixmap.fill( Qt::white );
@@ -6070,6 +6112,83 @@ QPixmap Project::renderAppletPreview()
 void Project::publish()
 {
     Q_D( Project );
+
+    if ( d->isTestRunning() ) {
+        emit informationMessage( i18nc("@ịnfo", "Cannot publish while tests are running"),
+                                 KMessageWidget::Error );
+        return;
+    }
+
+    if ( d->data()->type() == Enums::GtfsProvider ) {
+        switch ( d->gtfsDatabaseState ) {
+            case GtfsDatabaseImportFinished:
+                break;
+            case GtfsDatabaseUpdateAvailable:
+                emit informationMessage( i18nc("@ịnfo", "An updated version of the GTFS feed is "
+                        "available. Please import the new version into the database before "
+                        "publishing your plugin."), KMessageWidget::Error, -1,
+                        QList<QAction*>() << projectAction(ImportGtfsFeed)
+                                          << projectAction(ShowGtfsDatabase) );
+                return;
+            case GtfsDatabaseImportRunning:
+                emit informationMessage( i18nc("@ịnfo", "Wait for the GTFS feed import to finish "
+                        "before publishing your plugin (%1%).", d->gtfsFeedImportProgress),
+                        KMessageWidget::Error, -1,
+                        QList<QAction*>() << projectAction(ShowGtfsDatabase) );
+                return;
+            case GtfsDatabaseError:
+                emit informationMessage( i18nc("@ịnfo", "There was an error importing the GTFS "
+                        "feed: <message>%1</message>. Fix this before publishing your plugin.",
+                        d->gtfsDatabaseErrorString), KMessageWidget::Error, -1,
+                        QList<QAction*>() << projectAction(ShowGtfsDatabase) );
+                return;
+            case GtfsDatabaseImportPending:
+            default:
+                emit informationMessage( i18nc("@ịnfo", "Please import the GTFS feed before "
+                        "publishing your plugin."), KMessageWidget::Error, -1,
+                        QList<QAction*>() << projectAction(ImportGtfsFeed)
+                                          << projectAction(ShowGtfsDatabase) );
+                return;
+        }
+    }
+
+    // Ensure that at least the provider data tests finish successfully
+    d->startTests( TestModel::testsOfTestCase(TestModel::ServiceProviderDataTestCase) );
+
+    // The started test case should run synchronously
+    Q_ASSERT( !d->isTestRunning() );
+
+    // Check the result of the test
+    TestModel::TestState testState =
+            d->testModel->testCaseState( TestModel::ServiceProviderDataTestCase );
+    switch ( testState ) {
+    case TestModel::TestFinishedSuccessfully:
+    case TestModel::TestFinishedWithWarnings:
+        break;
+    case TestModel::TestFinishedWithErrors:
+    default:
+        emit informationMessage(
+                i18nc("@ịnfo", "The %1 test case did not finish successfully. "
+                      "Please fix it using the <interface>Project Settings</interface> dialog "
+                      "before publishing your plugin.",
+                      TestModel::nameForTestCase(TestModel::ServiceProviderDataTestCase)),
+                KMessageWidget::Error, -1,
+                QList<QAction*>() << projectAction(ShowProjectSettings) );
+        return;
+    }
+
+    // Make sure a sample stop name is available
+    // because this is needed for the preview image
+    if ( d->data()->sampleStopNames().isEmpty() ) {
+        emit informationMessage(
+                i18nc("@ịnfo", "A sample stop is needed to generate a preview image of the "
+                      "provider being used in the PublicTransport applet. "
+                      "Please add at least one sample stop using the "
+                      "<interface>Project Settings</interface> dialog before publishing "
+                      "your plugin."), KMessageWidget::Error, -1,
+                QList<QAction*>() << projectAction(ShowProjectSettings) );
+        return;
+    }
 
     // Save a preview image of the PublicTransport applet using this provider plugin
     KTemporaryFile previewImageFile;
@@ -6092,7 +6211,9 @@ void Project::publish()
             "before publishing your plugin.</para>"
             "<para>The first preview image should be a map showing supported regions. "
             "The second preview should have been generated automatically and show the "
-            "PublicTransport applet using this provider plugin.</para>"),
+            "PublicTransport applet using this provider plugin. "
+            "<warning>You need to install the provider and make it ready (eg. import the "
+            "GTFS feed) for the preview image to be generated correctly.</warning></para>"),
             QString(), KStandardGuiItem::cont(), KStandardGuiItem::cancel(),
             "publish_information") != KMessageBox::Continue )
     {
@@ -6142,12 +6263,54 @@ void Project::publish()
         return;
     }
 
-    dialog.setUploadFile( uploadFileName );
+    // Prepare plugin meta data, no i18n, only use english for openDesktop.org
+    QString countryName = d->data()->country() == QLatin1String("international")
+            ? "International" : KGlobal::locale()->countryCodeToName(d->data()->country());
+    if ( countryName.isEmpty() ) {
+        // Unknown country code given
+        countryName = d->data()->country();
+    }
+    QString description = d->data()->descriptions()["en"];
+    if ( !description.isEmpty() ) {
+        description.append( "\n\n" );
+    }
+    const QStringList featureNames = ServiceProviderGlobal::featureNames( d->features() );
+    description.append( "Supported Features: " + featureNames.join(", ") );
+    description.append( "\nProvider Type: " + d->data()->typeName() );
 
-    // Set some values from the plugin data
-    const QString countryName = KGlobal::locale()->countryCodeToName( d->data()->country() );
+    switch ( d->data()->type() ) {
+    case Enums::GtfsProvider:
+        description.append( "\nGTFS Feed Size (download): " +
+                            KGlobal::locale()->formatByteSize(d->gtfsFeedSize) );
+        description.append( "\nGTFS Database Size After Import: " +
+                            KGlobal::locale()->formatByteSize(d->gtfsDatabaseSize) );
+        break;
+    case Enums::ScriptedProvider:
+        description.append( "\nScript Size: " + KGlobal::locale()->formatByteSize(
+                            QFileInfo(d->data()->scriptFileName()).size()) );
+        if ( !d->includedFiles.isEmpty() ) {
+            // Add required/included scripts, but without the path
+            QString requiredScriptText;
+            foreach ( const QString &includedFile, d->includedFiles ) {
+                const QFileInfo info( includedFile );
+                if ( !requiredScriptText.isEmpty() ) {
+                    requiredScriptText.append( ", " );
+                }
+                requiredScriptText.append( info.fileName() );
+            }
+            description.append( "\nRequired Scripts: " + requiredScriptText );
+        }
+        if ( !d->data()->scriptExtensions().isEmpty() ) {
+            description.append( "\nUsed Script Extensions: " +
+                                d->data()->scriptExtensions().join(", ") );
+        }
+        break;
+    }
+
+    // Set the file to upload and some meta data of the plugin
+    dialog.setUploadFile( uploadFileName );
     dialog.setUploadName( countryName + ", " + d->data()->names()["en"] );
-    dialog.setDescription( d->data()->descriptions()["en"] );
+    dialog.setDescription( description );
     dialog.setVersion( d->data()->version() );
     dialog.setChangelog( d->data()->changelogString() );
     dialog.setPreviewImageFile( 1, KUrl(previewImageFile.fileName()) );
