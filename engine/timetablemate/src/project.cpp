@@ -2072,7 +2072,8 @@ public:
         return success;
     };
 
-    bool save( QWidget *parent, const QString &xmlFilePath, bool useAsNewSavePath = true )
+    bool save( QWidget *parent, const QString &xmlFilePath,
+               Project::InstallType installType = Project::NoInstallation )
     {
         Q_Q( Project );
         parent = parentWidget( parent );
@@ -2088,31 +2089,38 @@ public:
         }
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        QString scriptFile = provider->data()->scriptFileName();
-        if ( !scriptFile.isEmpty() && isScriptModified() ) {
-            const QString scriptFilePath =
-                    QFileInfo(_filePath).absolutePath() + '/' + QFileInfo(scriptFile).fileName();
-            QFile file( scriptFilePath );
-            if ( !file.open(QIODevice::WriteOnly) ) {
-                q->emit informationMessage( i18nc("@info", "Could not write the script file to "
-                                                  "<filename>%1</filename>: <message>%2</message>",
-                                                  scriptFilePath, file.errorString() ),
-                                            KMessageWidget::Error );
-//                 KMessageBox::error( parent, i18nc("@info", "Could not write the script file to "
-//                                                   "<filename>%1</filename>.", scriptFilePath) );
-                return false;
+        // Save script file, if any
+        // Only save if the script was modified or if it should be saved somewhere else
+        if ( data()->type() == Enums::ScriptedProvider ) {
+            QString scriptFile = QFileInfo( provider->data()->scriptFileName() ).fileName();
+            const QString savedScriptFile =
+                    QFileInfo(filePath).absolutePath() + '/' + scriptFile;
+            const QString targetScriptFile =
+                    QFileInfo(_filePath).absolutePath() + '/' + scriptFile;
+            if ( !scriptFile.isEmpty() &&
+                (isScriptModified() || targetScriptFile != savedScriptFile) )
+            {
+                kDebug() << "Save script to" << targetScriptFile;
+                QFile file( targetScriptFile );
+                if ( !file.open(QIODevice::WriteOnly) ) {
+                    q->emit informationMessage( i18nc("@info", "Could not write the script file to "
+                                                    "<filename>%1</filename>: <message>%2</message>",
+                                                    targetScriptFile, file.errorString() ),
+                                                KMessageWidget::Error );
+                    return false;
+                }
+
+                file.write( q->scriptText().toUtf8() );
+                file.close();
             }
 
-            file.write( q->scriptText().toUtf8() );
-            file.close();
-        }
-
-        foreach ( ScriptTab *tab, externalScriptTabs ) {
-            tab->save();
+            foreach ( ScriptTab *tab, externalScriptTabs ) {
+                tab->save();
+            }
         }
 #endif
 
-        if ( useAsNewSavePath ) {
+        if ( installType == Project::NoInstallation ) {
             const bool wasModified = isModified();
             const bool wasProjectSourceModified = isProjectSourceModified();
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -2173,11 +2181,11 @@ public:
             // Local installation, find a writable location for Public Transport engine plugins
             const QString saveDir = KGlobal::dirs()->saveLocation( "data",
                     ServiceProviderGlobal::installationSubDirectory() );
-            const QString savePath = saveDir + '/' + xmlFileName;
+            const QString savePath = saveDir + xmlFileName;
 
             if ( install ) {
                 // Install by saving into the found writable location
-                if ( save(parent, savePath, false) ) {
+                if ( save(parent, savePath, installType) ) {
                     // Installation successful
                     q->emit informationMessage( i18nc("@info", "Project successfully installed locally"),
                                                 KMessageWidget::Positive );
