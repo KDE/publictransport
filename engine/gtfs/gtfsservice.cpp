@@ -582,9 +582,7 @@ void ImportGtfsToDatabaseJob::importerFinished(
     if ( state == GtfsImporter::FatalError ) {
         m_state = ErrorReadingFeed;
         kDebug() << "There was an error importing the GTFS feed into the database" << errorText;
-        emit infoMessage( this, i18nc("@info/plain",
-                "There was an error importing the GTFS feed into the database: "
-                "<message>%1</message>", errorText) );
+        emit infoMessage( this, errorText );
     } else {
         m_state = Ready;
         emit infoMessage( this, i18nc("@info/plain", "GTFS feed has been successfully imported") );
