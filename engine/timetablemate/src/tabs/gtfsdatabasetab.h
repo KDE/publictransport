@@ -23,6 +23,8 @@
 #include "abstracttab.h"
 #include "../project.h"
 
+class QSqlQueryModel;
+class KTextEdit;
 class KJob;
 class KTabWidget;
 class KComboBox;
@@ -46,15 +48,19 @@ protected slots:
     void tableChosen( int index );
 
     void gtfsDatabaseStateChanged( Project::GtfsDatabaseState state );
+    void executeQuery();
 
 private:
     GtfsDatabaseTab( Project *project, QWidget *parent = 0 );
 
     QSqlTableModel *m_model;
+    QSqlQueryModel *m_queryModel;
     KTabWidget *m_tabWidget;
     QDeclarativeView *m_qmlView;
     KComboBox *m_tableChooser;
     QTableView *m_tableView;
+    QTableView *m_queryTableView;
+    KTextEdit *m_query;
 };
 
 #endif // Multiple inclusion guard

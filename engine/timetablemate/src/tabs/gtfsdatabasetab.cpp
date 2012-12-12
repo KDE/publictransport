@@ -42,6 +42,7 @@
 #include <Plasma/DataEngineManager>
 #include <Plasma/ServiceJob>
 #include <KStandardDirs>
+#include <KTextEdit>
 #include <kdeclarative.h>
 
 // Qt includes
@@ -50,7 +51,9 @@
 #include <QFormLayout>
 #include <QLabel>
 #include <QProgressBar>
+#include <QToolButton>
 #include <QSqlTableModel>
+#include <QSqlQuery>
 #include <QFileInfo>
 #include <qdeclarative.h>
 #include <QDeclarativeView>
@@ -58,8 +61,8 @@
 #include <QDeclarativeEngine>
 
 GtfsDatabaseTab::GtfsDatabaseTab( Project *project, QWidget *parent )
-        : AbstractTab(project, type(), parent), m_model(0), m_tabWidget(0), m_qmlView(0),
-          m_tableChooser(0), m_tableView(0)
+        : AbstractTab(project, type(), parent), m_model(0), m_queryModel(0), m_tabWidget(0),
+          m_qmlView(0), m_tableChooser(0), m_tableView(0), m_queryTableView(0), m_query(0)
 {
     // Create a tab widget with tabs at the left, because it gets shown in a tab in timetablemate
     m_tabWidget = new KTabWidget( parent );
@@ -117,6 +120,7 @@ GtfsDatabaseTab::GtfsDatabaseTab( Project *project, QWidget *parent )
     QWidget *tableTab = new QWidget( m_tabWidget );
     m_tableView = new QTableView( tableTab );
     m_tableView->setEditTriggers( QAbstractItemView::NoEditTriggers );
+    m_tableView->setSortingEnabled( true );
 
     m_tableChooser = new KComboBox( tableTab );
     m_tableChooser->addItem( KIcon("table"), i18nc("@info/plain", "Agency(s)"), "agency" );
@@ -186,8 +190,31 @@ GtfsDatabaseTab::GtfsDatabaseTab( Project *project, QWidget *parent )
     vboxLayout->addWidget( m_tableChooser );
     vboxLayout->addWidget( m_tableView );
 
+    // Create tab to execute database queries
+    QWidget *queryTab = new QWidget( m_tabWidget );
+    m_query = new KTextEdit( queryTab );
+    m_query->setClickMessage( i18nc("@info/plain", "Enter an SQLite database query...") );
+    m_query->setFixedHeight( m_query->fontMetrics().height() * 4 );
+    QToolButton *runQueryButton = new QToolButton( queryTab );
+    runQueryButton->setIcon( KIcon("system-run") );
+    runQueryButton->setText( i18nc("@info/plain", "&Execute Query") );
+    runQueryButton->setToolButtonStyle( Qt::ToolButtonTextBesideIcon );
+    connect( runQueryButton, SIGNAL(clicked(bool)), this, SLOT(executeQuery()) );
+
+    m_queryTableView = new QTableView( queryTab );
+    m_queryTableView->setEditTriggers( QAbstractItemView::NoEditTriggers );
+    m_queryTableView->setSortingEnabled( true );
+
+    QHBoxLayout *hboxLayoutQuery = new QHBoxLayout();
+    hboxLayoutQuery->addWidget( m_query );
+    hboxLayoutQuery->addWidget( runQueryButton );
+    QVBoxLayout *vboxLayoutQuery = new QVBoxLayout( queryTab );
+    vboxLayoutQuery->addLayout( hboxLayoutQuery );
+    vboxLayoutQuery->addWidget( m_queryTableView );
+
     m_tabWidget->addTab( m_qmlView, KIcon("dashboard-show"), i18nc("@title:tab", "Overview") );
     m_tabWidget->addTab( tableTab, KIcon("server-database"), i18nc("@title:tab", "Database") );
+    m_tabWidget->addTab( queryTab, KIcon("system-run"), i18nc("@title:tab", "Query") );
 
     // Disable database tab, until m_state changes to ImportFinished
     m_tabWidget->setTabEnabled( 1, false );
@@ -204,6 +231,17 @@ GtfsDatabaseTab *GtfsDatabaseTab::create( Project *project, QWidget *parent )
 {
     // Create GTFS database tab
     return new GtfsDatabaseTab( project, parent );
+}
+
+void GtfsDatabaseTab::executeQuery()
+{
+    if ( !m_queryModel ) {
+        kWarning() << "No database connection";
+        return;
+    }
+
+    const QString query = m_query->toPlainText();
+    m_queryModel->setQuery( query, GtfsDatabase::database(project()->data()->id()) );
 }
 
 void GtfsDatabaseTab::tableChosen( int index )
@@ -224,17 +262,23 @@ void GtfsDatabaseTab::gtfsDatabaseStateChanged( Project::GtfsDatabaseState state
     switch ( state ) {
     case Project::GtfsDatabaseImportFinished:
         m_tableView->setModel( 0 );
+        m_queryTableView->setModel( 0 );
         delete m_model;
+        delete m_queryModel;
         m_model = new QSqlTableModel( this,
                 GtfsDatabase::database(project()->data()->id()) );
+        m_queryModel = new QSqlQueryModel( this );
         tableChosen( m_tableChooser->currentIndex() );
         m_tableView->setModel( m_model );
+        m_queryTableView->setModel( m_queryModel );
         m_tabWidget->setTabEnabled( 1, true );
+        m_tabWidget->setTabEnabled( 2, true );
         break;
     case Project::GtfsDatabaseError:
     case Project::GtfsDatabaseImportPending:
     case Project::GtfsDatabaseImportRunning:
         m_tabWidget->setTabEnabled( 1, false );
+        m_tabWidget->setTabEnabled( 2, false );
         break;
     default:
         break;
