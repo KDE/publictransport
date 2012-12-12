@@ -131,7 +131,7 @@ GtfsDatabaseTab::GtfsDatabaseTab( Project *project, QWidget *parent )
             i18nc("@info/plain", "Trips (sequences of two or more stops"), "trips" );
     m_tableChooser->addItem( KIcon("table"), i18nc("@info/plain", "Stop Times"), "stop_times" );
     m_tableChooser->addItem( KIcon("table"),
-            i18nc("@info/plain", "Calendar (service dates with weekly schedule)"), "clendar" );
+            i18nc("@info/plain", "Calendar (service dates with weekly schedule)"), "calendar" );
     m_tableChooser->addItem( KIcon("table"),
             i18nc("@info/plain", "Calendar Dates (exceptions for weekly schedules services)"),
             "calendar_dates" );
