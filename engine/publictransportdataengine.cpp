@@ -182,8 +182,10 @@ void PublicTransportEngine::gtfsServiceJobFinished( Plasma::ServiceJob *job )
     }
 
     // Reset state in "ServiceProviders", "ServiceProvider <id>" data sources
+    // Do not read and give the current feed URL for the provider to updateProviderState(),
+    // because the feed URL should not have changed since the beginning of the feed import
     QVariantHash stateData;
-    const QString state = updateProviderState( providerId, &stateData, "GTFS", false );
+    const QString state = updateProviderState( providerId, &stateData, "GTFS", QString(), false );
     ProvidersDataSource *dataSource = providersDataSource();
     dataSource->setProviderState( providerId, state, stateData );
 
@@ -634,7 +636,7 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const SourceR
         // The provider is valid, update it's state
         QVariantHash stateData;
         const QString state = updateProviderState( providerId, &stateData,
-                                                   providerData["type"].toString() );
+                providerData["type"].toString(), providerData.value("feedUrl").toString() );
 
         // Publish all provider information and add "state", "stateData" and "error"
         setData( data.name, providerData );
@@ -678,7 +680,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
             if ( testServiceProvider(providerId, &providerData, &errorMessage, cache) ) {
                 QVariantHash stateData;
                 const QString state = updateProviderState( providerId, &stateData,
-                                                           providerData["type"].toString() );
+                        providerData["type"].toString(), providerData.value("feedUrl").toString() );
 
                 providerData["error"] = false;
                 providersSource->addProvider( providerId,
@@ -718,6 +720,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
 QString PublicTransportEngine::updateProviderState( const QString &providerId,
                                                     QVariantHash *stateData,
                                                     const QString &providerType,
+                                                    const QString &feedUrl,
                                                     bool readFromCache )
 {
     Q_ASSERT( stateData );
@@ -746,7 +749,7 @@ QString PublicTransportEngine::updateProviderState( const QString &providerId,
         if ( type == Enums::GtfsProvider ) {
             // Update state and add dynamic state data
             const QString state = ServiceProviderGtfs::updateGtfsDatabaseState(
-                    providerId, cache, stateData );
+                    providerId, feedUrl, cache, stateData );
             if ( state != QLatin1String("ready") ) {
                 // The database is invalid/deleted, but the cache says the import was finished
                 deleteProvider( providerId );
@@ -772,7 +775,8 @@ QString PublicTransportEngine::updateProviderState( const QString &providerId,
 
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     if ( type == Enums::GtfsProvider ) {
-        state = ServiceProviderGtfs::updateGtfsDatabaseState( providerId, cache, stateData );
+        state = ServiceProviderGtfs::updateGtfsDatabaseState( providerId, feedUrl,
+                                                              cache, stateData );
     }
 #endif // BUILD_PROVIDER_TYPE_GTFS
 

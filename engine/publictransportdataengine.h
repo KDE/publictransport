@@ -229,7 +229,8 @@ public:
      * @brief Get a hash with information about the current GTFS feed import state.
      **/
     QString updateProviderState( const QString &providerId, QVariantHash *stateData,
-                                 const QString &providerType, bool readFromCache = true );
+                                 const QString &providerType, const QString &feedUrl = QString(),
+                                 bool readFromCache = true );
 
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     /**

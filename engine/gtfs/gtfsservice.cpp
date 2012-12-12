@@ -22,6 +22,7 @@
 #include "serviceprovider.h"
 #include "serviceproviderdata.h"
 #include "serviceproviderglobal.h"
+#include "serviceprovidergtfs.h"
 
 // KDE includes
 #include <KTemporaryFile>
@@ -203,38 +204,34 @@ void ImportGtfsToDatabaseJob::work()
 
 void UpdateGtfsToDatabaseJob::tryToWork()
 {
-    const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
-    KConfigGroup group = config.group( data()->id() );
-    KConfigGroup gtfsGroup = group.group( "gtfs" );
-    bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
-    if ( !importFinished ) {
-        setError( GtfsErrorFeedImportRequired );
-        setErrorText( i18nc("@info/plain", "GTFS feed not imported. "
-                            "Please import it explicitly first.") );
-        setResult( false );
-    } else {
+    QString errorMessage;
+    if ( ServiceProviderGtfs::isGtfsFeedImportFinished(data()->id(), data()->feedUrl(),
+                ServiceProviderGlobal::cache(), &errorMessage) )
+    {
         AbstractGtfsDatabaseJob::tryToWork();
+    } else {
+        setError( GtfsErrorFeedImportRequired );
+        setErrorText( errorMessage );
+        setResult( false );
     }
 }
 
 void UpdateGtfsToDatabaseJob::work()
 {
-    const KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
-    KConfigGroup group = config.group( data()->id() );
-    KConfigGroup gtfsGroup = group.group( "gtfs" );
-    bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
-    if ( !importFinished ) {
-        setError( GtfsErrorFeedImportRequired );
-        setErrorText( i18nc("@info/plain", "GTFS feed not imported. "
-                            "Please import it explicitly first.") );
-        setResult( false );
-    } else {
+    QString errorMessage;
+    if ( ServiceProviderGtfs::isGtfsFeedImportFinished(data()->id(), data()->feedUrl(),
+                ServiceProviderGlobal::cache(), &errorMessage) )
+    {
         // Emit a description about what's done in this job
         emitDescription();
         setCapabilities( Suspendable | Killable );
 
         // Start the job by first requesting GTFS feed information
         statFeed();
+    } else {
+        setError( GtfsErrorFeedImportRequired );
+        setErrorText( errorMessage );
+        setResult( false );
     }
 }
 
@@ -374,17 +371,19 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
 //         qDebug() << ">>>>> GTFS feed was last modified (UTC):" << newLastModified
 //                  << "and it's size is:" << (newSizeInBytes/qreal(1024*1024)) << "MB";
         // Read accessor information cache
-        KConfig config( ServiceProviderGlobal::cacheFileName(), KConfig::SimpleConfig );
-        KConfigGroup group = config.group( data()->id() );
+        QSharedPointer<KConfig> cache = ServiceProviderGlobal::cache();
+        QString errorMessage;
+        const bool importFinished = ServiceProviderGtfs::isGtfsFeedImportFinished(
+                data()->id(), data()->feedUrl(), cache, &errorMessage );
+        KConfigGroup group = cache->group( data()->id() );
         KConfigGroup gtfsGroup = group.group( "gtfs" );
-        bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
         KDateTime lastModified = KDateTime::fromString(
                 gtfsGroup.readEntry("feedModifiedTime", QString()) );
         qulonglong sizeInBytes = gtfsGroup.readEntry( "feedSizeInBytes", qulonglong(-1) );
 
         gtfsGroup.writeEntry( "feedModifiedTime", newLastModified.toString() );
         gtfsGroup.writeEntry( "feedSizeInBytes", newSizeInBytes );
-        gtfsGroup.writeEntry( "feedUrl", m_data->feedUrl() );
+        gtfsGroup.writeEntry( "feedUrl", data()->feedUrl() );
 
         // Stop here for "updateGtfsFeedInfo" operation
         if ( m_onlyGetInformation ) {
@@ -394,7 +393,7 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
         }
 
         if ( !importFinished ) {
-            qDebug() << "Last GTFS feed import did not finish for" << m_data->id();
+            qDebug() << errorMessage << m_data->id();
         }
 //         qDebug() << "Old last modified:" << lastModified
 //                  << "new size:" << (sizeInBytes/qreal(1024*1024)) << "MB";

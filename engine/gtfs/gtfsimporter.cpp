@@ -40,6 +40,18 @@ GtfsImporter::GtfsImporter( const QString &providerName )
     qRegisterMetaType< GtfsImporter::State >( "GtfsImporter::State" );
 
     QMutexLocker locker( &m_mutex );
+
+    // Delete already existing database, if any, to prevent failure due to a corrupted database
+    const QString databasePath = GtfsDatabase::databasePath( m_providerName );
+    if ( QFile::exists(databasePath) ) {
+        // Remove the database file and the connection to it
+        GtfsDatabase::closeDatabase( m_providerName );
+        if ( !QFile::remove(databasePath) ) {
+            kWarning() << "Already existing GTFS database for" << m_providerName
+                       << "could not be removed" << databasePath;
+        }
+    }
+
     if ( !GtfsDatabase::initDatabase(providerName, &m_errorString) ) {
         m_state = FatalError;
         kDebug() << m_errorString;
@@ -418,7 +430,7 @@ bool GtfsImporter::writeGtfsDataToDatabase( QSqlDatabase database,
 
     int counter = 0;
     while ( !file.atEnd() ) {
-        const QByteArray line = file.readLine();
+        const QByteArray line = file.readLine().trimmed();
         QVariantList fieldValues;
         if ( readFields(line, &fieldValues, fieldTypes, fieldNames.count()) ) {
             // Remove values for fields that do not exist in the database
@@ -492,7 +504,13 @@ bool GtfsImporter::writeGtfsDataToDatabase( QSqlDatabase database,
                 QMutexLocker locker( &m_mutex );
                 emit logMessage( query.lastError().text() );
                 kDebug() << query.lastError();
-                kDebug() << "With this query:" << query.executedQuery();
+                kDebug() << "With this query:" << query.lastQuery();
+                const int error = query.lastError().number();
+                if ( error == 10 || error == 11 ) {
+                    // SQLite error codes for malformed database files
+                    setError( FatalError, "Database is corrupted" );
+                    return false;
+                }
                 continue;
             }
 

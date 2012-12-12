@@ -63,7 +63,7 @@ ServiceProviderGtfs::ServiceProviderGtfs(
 #endif
 {
     // Ensure that the GTFS feed was imported and the database is valid
-    if ( updateGtfsDatabaseState(data->id(), cache) == QLatin1String("ready") ) {
+    if ( updateGtfsDatabaseState(data->id(), data->feedUrl(), cache) == QLatin1String("ready") ) {
         m_state = Ready;
 
         // Load agency information from database and request GTFS-realtime data
@@ -92,6 +92,7 @@ ServiceProviderGtfs::~ServiceProviderGtfs()
 }
 
 QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
+                                                      const QString &feedUrl,
                                                       const QSharedPointer< KConfig > &_cache,
                                                       QVariantHash *stateData )
 {
@@ -99,45 +100,46 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
     QSharedPointer< KConfig > cache = _cache.isNull() ? ServiceProviderGlobal::cache() : _cache;
     KConfigGroup group = cache->group( providerId );
     KConfigGroup gtfsGroup = group.group( "gtfs" );
-    bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
+    QString errorMessage;
+    bool importFinished = isGtfsFeedImportFinished( providerId, feedUrl, cache, &errorMessage );
 
-    // Try to initialize the database
-    QString errorText;
-    if ( !GtfsDatabase::initDatabase(providerId, &errorText) ) {
-        kWarning() << "Error initializing the database" << errorText;
-        if ( importFinished ) {
-            // Update 'feedImportFinished' value in the cache
-            gtfsGroup.writeEntry( "feedImportFinished", false );
-
-            // Write to disk now if someone wants to read the value directly after this function
-            gtfsGroup.sync();
-        }
-        if ( stateData ) {
-            stateData->insert( "statusMessage", errorText );
-        }
-        return "gtfs_feed_import_pending";
-    }
-
-    // Database was successfully initialized, test if the import was marked as finished
+    // GTFS feed was successfully imported from the currently used feed URL
     if ( importFinished ) {
         // Import was marked as finished, test if the database file still exists and
         // is not empty (some space is needed for the tables also if they are empty)
         QFileInfo fi( GtfsDatabase::databasePath(providerId) );
         if ( fi.exists() && fi.size() > 10000 ) {
+            // Try to initialize the database
+            if ( !GtfsDatabase::initDatabase(providerId, &errorMessage) ) {
+                kWarning() << "Error initializing the database" << errorMessage;
+
+                // Update 'feedImportFinished' field in the cache
+                gtfsGroup.writeEntry( "feedImportFinished", false );
+
+                // Write to disk now if someone wants to read the value directly after this function
+                gtfsGroup.sync();
+
+                if ( stateData ) {
+                    stateData->insert( "statusMessage", errorMessage );
+                }
+                return "gtfs_feed_import_pending";
+            }
+
+            // Database exists, feed marked as imported and feed URL did not change
+            // since the import, set state data and return state "ready"
             if ( stateData ) {
                 // Insert a status message
                 stateData->insert( "statusMessage",
                                    i18nc("@info/plain", "GTFS feed succesfully imported") );
 
                 // Update GTFS database state fields
-                const QString databasePath =
-                        GtfsDatabase::databasePath( providerId );
+                const QString databasePath = GtfsDatabase::databasePath( providerId );
                 stateData->insert( "gtfsDatabasePath", databasePath );
                 stateData->insert( "gtfsDatabaseSize", QFileInfo(databasePath).size() );
 
                 // Add an 'updatable' field to the state data
                 const bool updatable =
-                        ServiceProviderGtfs::isUpdateAvailable( providerId, cache );
+                        ServiceProviderGtfs::isUpdateAvailable( providerId, feedUrl, cache );
                 stateData->insert( "updatable", updatable );
             }
             return "ready";
@@ -150,27 +152,33 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
 
             // Write to disk now if someone wants to read the value directly after this function
             gtfsGroup.sync();
-        }
-    }
 
-    // The GTFS feed has not been imported successfully yet
-    // or the database file was deleted/corrupted
-    if ( stateData ) {
-        stateData->insert( "statusMessage", i18nc("@info/plain", "GTFS feed not imported") );
+            // The GTFS feed has not been imported successfully yet
+            // or the database file was deleted/corrupted
+            if ( stateData ) {
+                stateData->insert( "statusMessage", i18nc("@info/plain", "GTFS feed not imported") );
+            }
+            return "gtfs_feed_import_pending";
+        }
+    } else {
+        // GTFS feed was not imported or the feed URL has changed since the import
+        if ( stateData ) {
+            stateData->insert( "statusMessage", errorMessage );
+        }
+        return "gtfs_feed_import_pending";
     }
-    return "gtfs_feed_import_pending";
 }
 
-bool ServiceProviderGtfs::isTestResultUnchanged( const QString &providerId,
+bool ServiceProviderGtfs::isTestResultUnchanged( const QString &providerId, const QString &feedUrl,
                                                  const QSharedPointer< KConfig > &cache )
 {
     // The test result changes when the GTFS feed was updated
-    return isUpdateAvailable( providerId, cache );
+    return isUpdateAvailable( providerId, feedUrl, cache );
 }
 
 bool ServiceProviderGtfs::isTestResultUnchanged( const QSharedPointer<KConfig> &cache ) const
 {
-    return isTestResultUnchanged( id(), cache );
+    return isTestResultUnchanged( data()->id(), data()->feedUrl(), cache );
 }
 
 bool ServiceProviderGtfs::runTests( QString *errorMessage ) const
@@ -359,13 +367,55 @@ QTime ServiceProviderGtfs::timeFromSecondsSinceMidnight(
                   secondsSinceMidnight % 60 );
 }
 
-bool ServiceProviderGtfs::isUpdateAvailable( const QString &providerId,
+bool ServiceProviderGtfs::isGtfsFeedImportFinished( const QString &providerId,
+                                                    const QString &feedUrl,
+                                                    const QSharedPointer<KConfig> &_cache,
+                                                    QString *errorMessage )
+{
+    const QSharedPointer<KConfig> &cache = _cache.isNull() ? ServiceProviderGlobal::cache() : _cache;
+
+    // Check if the GTFS feed import is marked as finished in the cache
+    KConfigGroup group = cache->group( providerId );
+    KConfigGroup gtfsGroup = group.group( "gtfs" );
+    if ( gtfsGroup.readEntry("feedImportFinished", false) ) {
+        // GTFS feed import is marked as finished, check if the feed URL has changed since
+        if ( feedUrl.isEmpty() ) {
+            // Feed URL not given, no change expected here (eg. directly after a finished import)
+            return true;
+        }
+
+        const QString importedGtfsFeedUrl = gtfsGroup.readEntry( "feedUrl", QString() );
+        if ( importedGtfsFeedUrl == feedUrl ) {
+            // Feed URL did not change, import is finished
+            return true;
+        } else {
+            // Feed URL was modified, re-import needed,
+            // update "feedImportFinished" field in the cache
+            gtfsGroup.writeEntry( "feedImportFinished", false );
+            gtfsGroup.sync();
+            if ( errorMessage ) {
+                *errorMessage = i18nc("@info/plain", "GTFS feed was imported, but the feed URL "
+                                      "has changed. Please re-import the feed from the new URL.");
+            }
+            return false;
+        }
+    }
+
+    // GTFS feed import is marked as not finished or was not found in the cache
+    if ( errorMessage ) {
+        *errorMessage = i18nc("@info/plain", "GTFS feed not imported. "
+                              "Please import it explicitly first.");
+    }
+    return false;
+}
+
+bool ServiceProviderGtfs::isUpdateAvailable( const QString &providerId, const QString &feedUrl,
                                              const QSharedPointer<KConfig> &_cache )
 {
     const QSharedPointer<KConfig> cache = _cache.isNull() ? ServiceProviderGlobal::cache() : _cache;
     KConfigGroup group = cache->group( providerId );
     KConfigGroup gtfsGroup = group.group( "gtfs" );
-    const bool importFinished = gtfsGroup.readEntry( "feedImportFinished", false );
+    const bool importFinished = isGtfsFeedImportFinished( providerId, feedUrl, cache );
     const QString databasePath = GtfsDatabase::databasePath( providerId );
     const QFileInfo databaseInfo( databasePath );
     const bool databaseReady = importFinished && databaseInfo.exists();

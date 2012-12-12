@@ -103,18 +103,37 @@ public:
      * in the cache.
      *
      * @param providerId The ID of the GTFS provider for which the database state should be updated.
+     * @param feedUrl The GTFS feed URL of the provider. Used to check if an imported GTFS database
+     *   was created from the feed at this URL. If this is an empty/null string, no check is done.
      * @param cache A shared pointer to the provider cache. If an invalid pointer gets passed it
      *   gets received using ServiceProviderGlobal::cache().
      * @param stateData State data gets inserted here, at least a 'statusMessage'.
      * @return The state of the provider. If the GTFS feed was successfully imported and the
      *   database is valid the returned state is "ready", otherwise "gtfs_feed_import_pending".
      **/
-    static QString updateGtfsDatabaseState( const QString &providerId,
+    static QString updateGtfsDatabaseState( const QString &providerId, const QString &feedUrl,
             const QSharedPointer< KConfig > &cache = QSharedPointer<KConfig>(),
             QVariantHash *stateData = 0 );
 
+    /**
+     * @brief Whether or not the GTFS feed import for the provider with @p data is finished.
+     *
+     * @param providerId The ID of the GTFS provider to check.
+     * @param feedUrl The GTFS feed URL of the provider. Used to check if an imported GTFS database
+     *   was created from the feed at this URL. If this is an empty/null string, no check is done.
+     * @param cache A shared pointer to the provider cache, see cache(). If this is an invalid
+     *   pointer it gets created using cache().
+     * @param errorMessage If not @c 0 and @c false gets returned, this gets set to an
+     *   error Message, explaining why the import is not finished.
+     * @return @c True if the GTFS feed has been successfully imported and the feed URL has not
+     *   changed since the import, @c false otherwise.
+     **/
+    static bool isGtfsFeedImportFinished( const QString &providerId, const QString &feedUrl,
+            const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(),
+            QString *errorMessage = 0 );
+
     /** @brief Checks if an updated GTFS feed is available for @p providerId. */
-    static bool isUpdateAvailable( const QString &providerId,
+    static bool isUpdateAvailable( const QString &providerId, const QString &feedUrl,
             const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>() );
 
     /**
@@ -135,12 +154,14 @@ public:
      * @brief Whether or not the cached test result for @p providerId is unchanged.
      *
      * This function tests if an updated GTFS feed is available.
-     * @param providerId The provider to check.
+     * @param providerId The ID of the GTFS provider to check.
+     * @param feedUrl The GTFS feed URL of the provider. Used to check if an imported GTFS database
+     *   was created from the feed at this URL. If this is an empty/null string, no check is done.
      * @param cache A shared pointer to the cache.
      * @see isUpdateAvailable()
      * @see runTests()
      **/
-    static bool isTestResultUnchanged( const QString &providerId,
+    static bool isTestResultUnchanged( const QString &providerId, const QString &feedUrl,
                                        const QSharedPointer<KConfig> &cache );
 
     /**
