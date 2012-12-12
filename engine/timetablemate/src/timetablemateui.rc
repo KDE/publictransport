@@ -20,6 +20,8 @@
         <Separator/>
         <Action name="project_install"/>
         <Action name="project_install_global"/>
+        <Separator/>
+        <Action name="project_fetch"/>
         <Action name="project_publish"/>
         <Separator/>
         <Action name="project_choose_active"/>

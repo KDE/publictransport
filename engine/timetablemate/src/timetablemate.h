@@ -83,6 +83,9 @@ using namespace ScriptApi;
 using namespace Debugger; // Needed for slots to match signals, eg. using Breakpoint instead of Debugger::Breakpoint
 #endif
 
+namespace KNS3 {
+    class DownloadDialog;
+}
 namespace KParts {
     class PartManager;
 }
@@ -144,6 +147,9 @@ public slots:
 
     /** @brief Save all projects. */
     void fileSaveAll();
+
+    /** @brief Fetch a project from openDesktop.org. */
+    void fetchProject();
 
     /** @brief Close the currently active project if any. */
     void closeProject();
@@ -208,6 +214,7 @@ protected slots:
     void removeAllMessageWidgets();
     void testActionTriggered();
     void testCaseActionTriggered();
+    void fetchProjectFinished();
 
     void tabTitleChanged( QWidget *tabWidget, const QString &title, const QIcon &icon );
     void dockLocationChanged( Qt::DockWidgetArea area );
@@ -360,6 +367,8 @@ private:
     QQueue< QPointer<KMessageWidget> > m_messageWidgets;
     QQueue< QPointer<KMessageWidget> > m_autoRemoveMessageWidgets;
     QVBoxLayout *m_messageWidgetLayout;
+
+    KNS3::DownloadDialog *m_downloadDialog;
 };
 
 #endif // _TIMETABLEMATE_H_

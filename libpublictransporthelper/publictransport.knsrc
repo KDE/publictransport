@@ -1,5 +1,4 @@
 [KNewStuff3]
 Categories=Plasma public transport timetable
-UploadCategories=Plasma public transport timetable
 TargetDir=plasma_engine_publictransport/serviceProviders
 Uncompress=archive

@@ -229,7 +229,10 @@ public:
         Uninstall, /**< Uninstall a locally installed version of the project. */
         InstallGlobally, /**< Install the project globally. */
         UninstallGlobally, /**< Uninstall a globally installed version of the project. */
-        Publish, /**< Publish the provider plugin on opendesktop.org (kde-files.org). */
+        Publish, /**< Publish the provider plugin on openDesktop.org (kde-files.org).
+                * NOTE There is no project action to download plugins from openDesktop.org,
+                * because here only project specific actions are listed.
+                * A fetch action is implemented in TimetableMate. */
 
         // UiActionGroup
         ShowProjectSettings, /**< Show a settings dialog for the project. */

@@ -86,6 +86,7 @@
 #include <KStandardAction>
 #include <KRecentFilesAction>
 #include <KToggleAction>
+#include <KNS3/DownloadDialog>
 #include <KParts/PartManager>
 #include <KParts/MainWindow>
 #include <KTextEditor/Document>
@@ -174,7 +175,7 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
         m_variablesDock(0),
 #endif
         m_showDocksAction(0), m_toolbarAction(0), m_statusbarAction(0), m_recentFilesAction(0),
-        m_currentTab(0), m_messageWidgetLayout(new QVBoxLayout())
+        m_currentTab(0), m_messageWidgetLayout(new QVBoxLayout()), m_downloadDialog(0)
 {
     m_partManager = new KParts::PartManager( this );
     m_tabWidget->setDocumentMode( true );
@@ -289,6 +290,7 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
 }
 
 TimetableMate::~TimetableMate() {
+    delete m_downloadDialog;
     delete ui_preferences;
     delete m_progressBar;
 }
@@ -1457,6 +1459,11 @@ void TimetableMate::setupActions() {
     actionCollection()->addAction( QLatin1String("project_open_installed"), openInstalled );
     connect( openInstalled, SIGNAL(triggered(bool)), this, SLOT(fileOpenInstalled()) );
 
+    KAction *fetch = new KAction( KIcon("svn-update"),
+                                  i18nc("@action", "&Fetch Project..."), this );
+    actionCollection()->addAction( QLatin1String("project_fetch"), fetch );
+    connect( fetch, SIGNAL(triggered(bool)), this, SLOT(fetchProject()) );
+
     KSelectAction *chooseActiveProject = new KSelectAction(
             KIcon("edit-select"), i18nc("@action", "&Active Project"), this );
     actionCollection()->addAction( QLatin1String("project_choose_active"), chooseActiveProject );
@@ -1911,6 +1918,74 @@ void TimetableMate::fileOpenInstalled() {
             }
         }
     }
+}
+
+void TimetableMate::fetchProject()
+{
+    // Show the GHNS download dialog, downloads to .../timetablemate/serviceProviders
+    if ( !m_downloadDialog ) {
+        m_downloadDialog = new KNS3::DownloadDialog( "timetablemate.knsrc", this );
+        connect( m_downloadDialog, SIGNAL(accepted()), this, SLOT(fetchProjectFinished()) );
+    }
+    m_downloadDialog->show();
+}
+
+void TimetableMate::fetchProjectFinished()
+{
+    if ( !m_downloadDialog ) {
+        kWarning() << "Download dialog already destroyed";
+        return;
+    }
+
+    // Dialog is done
+    if ( !m_downloadDialog->installedEntries().isEmpty() ) {
+        // At least one project has been newly installed
+        // Get all provider plugin .pts files that have been installed (not eg. the script files)
+        QStringList installedProviderNames;
+        QStringList installedProviderFiles;
+        foreach ( const KNS3::Entry &installedEntry, m_downloadDialog->installedEntries() ) {
+            // Find the provider plugin .pts file
+            const QStringList installedFiles = installedEntry.installedFiles();
+            QString providerFile;
+            foreach ( const QString &installedFile, installedFiles ) {
+                if ( installedFile.endsWith(QLatin1String(".pts")) ||
+                     installedFile.endsWith(QLatin1String(".xml")) )
+                {
+                    providerFile = installedFile;
+                    break;
+                }
+            }
+            if ( providerFile.isEmpty() ) {
+                kWarning() << "No provider plugin file found in installed entry"
+                           << installedEntry.name();
+                continue;
+            }
+
+            installedProviderNames << installedEntry.name();
+            installedProviderFiles << providerFile;
+        }
+
+        // Ask if the just installed provider plugins should get opened now
+        const int result = KMessageBox::questionYesNoList( this,
+                i18nc("@info", "The following provider plugins have been fetched. "
+                      "Do you want to open them now?"), installedProviderNames );
+        if ( result == KMessageBox::Yes ) {
+            // Open clicked, open the installed provider plugins
+            foreach ( const QString &providerFile, installedProviderFiles ) {
+                openProject( providerFile );
+            }
+        }
+
+        // Inform about fetched providers and show the target directory
+        const QString saveDirectory =
+                KGlobal::dirs()->saveLocation( "data", "timetablemate/serviceProviders");
+        infoMessage( i18ncp("@info", "%1 provider plugin has been fetched to %2",
+                                     "%1 provider plugins have been fetched to %2",
+                            installedProviderFiles.count(), saveDirectory) );
+    }
+
+    delete m_downloadDialog;
+    m_downloadDialog = 0;
 }
 
 void TimetableMate::fileSaveAll() {

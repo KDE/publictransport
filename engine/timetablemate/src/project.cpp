@@ -3059,8 +3059,8 @@ QList< QAction* > Project::contextMenuActions( QWidget *parent )
     separator2->setSeparator( true );
     actions << projectAction(Save) << projectAction(SaveAs)
             << projectAction(Install) << projectAction(InstallGlobally)
-            << projectAction(Uninstall) << projectAction(UninstallGlobally)
             << projectAction(Publish)
+            << projectAction(Uninstall) << projectAction(UninstallGlobally)
             << separator1
             << projectAction(SetAsActiveProject)
             << projectAction(ShowDashboard);
@@ -3469,7 +3469,7 @@ QString Project::projectActionText( Project::ProjectAction actionType, const QVa
     case UninstallGlobally:
         return i18nc("@action", "Uninstall &Globally");
     case Publish:
-        return i18nc("@action", "&Publish");
+        return i18nc("@action", "&Publish...");
     case Close:
         return i18nc("@action", "Close Project");
     case ShowProjectSettings:
@@ -6234,7 +6234,7 @@ void Project::publish()
     // for the UploadDialog constructor
     const KComponentData activeComponent = KGlobal::activeComponent();
     KGlobal::setActiveComponent( KGlobal::mainComponent() );
-    KNS3::UploadDialog dialog( "publictransport.knsrc", d->parentWidget() );
+    KNS3::UploadDialog dialog( "timetablemate.knsrc", d->parentWidget() );
     KGlobal::setActiveComponent( activeComponent );
 
     // Compress all project files into one and use it for the upload
@@ -6312,6 +6312,9 @@ void Project::publish()
             description.append( "\nUsed Script Extensions: " +
                                 d->data()->scriptExtensions().join(", ") );
         }
+        break;
+    default:
+        kWarning() << "Unknown provider type" << d->data()->type();
         break;
     }
 
