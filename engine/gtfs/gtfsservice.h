@@ -143,7 +143,7 @@ protected slots:
     void downloadProgress( KJob *job, ulong percent );
     void mimeType( KIO::Job *job, const QString &type );
     void totalSize( KJob *job, qulonglong size );
-    void speed( KJob *job, ulong speed );
+    void slotSpeed( KJob *job, ulong speed );
     void feedReceived( KJob *job );
 
     void importerProgress( qreal progress, const QString &currentTableName = QString() );

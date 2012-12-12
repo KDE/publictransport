@@ -686,7 +686,7 @@ bool GtfsImporter::readFields( const QByteArray &line, QVariantList *fieldValues
         }
 
         // Append the new field value
-        fieldValues->append( GtfsDatabase::convertFieldValue(newField, *fieldType) );
+        fieldValues->append( GtfsDatabase::convertFieldValue(newField.trimmed(), *fieldType) );
         ++fieldType;
 
         if ( pos == line.length() && line[pos - 1] == ',' ) {

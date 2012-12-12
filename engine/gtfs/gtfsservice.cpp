@@ -54,10 +54,12 @@ ImportGtfsToDatabaseJob::ImportGtfsToDatabaseJob( const QString &destination,
 {
     setCapabilities( Suspendable | Killable );
 
-    m_data = ServiceProviderDataReader::read( parameters["serviceProviderId"].toString() );
+    QString errorMessage;
+    m_data = ServiceProviderDataReader::read( parameters["serviceProviderId"].toString(),
+                                              &errorMessage );
     if ( !m_data ) {
         setError( GtfsErrorInvalidProviderId );
-        setErrorText( i18nc("@info/plain", "Error while reading Provider XML.") );
+        setErrorText( errorMessage );
         return;
     }
 
@@ -124,7 +126,7 @@ void AbstractGtfsDatabaseJob::start()
 
 void AbstractGtfsDatabaseJob::tryToWork()
 {
-    if ( error() != 0 ) {
+    if ( error() != NoGtfsError ) {
         kDebug() << error();
         // Error found in constructor, eg. no provider with the given ID found or no GTFS provider
         setResult( false );
@@ -152,6 +154,13 @@ void ImportGtfsToDatabaseJob::registerAtJobTracker()
 
 void ImportGtfsToDatabaseJob::emitDescription()
 {
+    if ( error() != NoGtfsError || !data() ) {
+        kDebug() << error();
+        // Error found in constructor, eg. no provider with the given ID found or no GTFS provider
+        emit description( this, errorString() );
+        return;
+    }
+
     // Emit a description about what's done in this job
     const QPair< QString, QString > field1 =
             qMakePair( i18nc("@info/plain Label for GTFS service provider", "Service Provider"),
@@ -168,6 +177,13 @@ void ImportGtfsToDatabaseJob::emitDescription()
 
 void UpdateGtfsToDatabaseJob::emitDescription()
 {
+    if ( error() != NoGtfsError || !data() ) {
+        kDebug() << error();
+        // Error found in constructor, eg. no provider with the given ID found or no GTFS provider
+        emit description( this, errorString() );
+        return;
+    }
+
     emit description( this, i18nc("@info", "Updating GTFS feed"),
                       qMakePair(i18nc("@info/plain Label for GTFS service provider",
                                       "Service Provider"), data()->name()),
@@ -338,8 +354,8 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
         // If ';' is not included in contentType, QString::left() returns the whole string
         const KMimeType::Ptr mimeType =
                 KMimeType::mimeType( contentType.left(contentType.indexOf(';')) );
-        if ( mimeType && !mimeType->name().isEmpty() ) {
-            if ( mimeType->name() != "application/zip" ) {
+        if ( mimeType && mimeType->isValid() ) {
+            if ( !mimeType->is("application/zip") ) {
                 kDebug() << "Invalid mime type:" << reply->header(QNetworkRequest::ContentTypeHeader).toString();
                 setError( GtfsErrorWrongFeedFormat );
                 setErrorText( i18nc("@info/plain", "Wrong GTFS feed format: %1", mimeType->name()) ); // TODO
@@ -414,12 +430,10 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
     reply->deleteLater();
 }
 
-void ImportGtfsToDatabaseJob::speed( KJob *job, ulong speed )
+void ImportGtfsToDatabaseJob::slotSpeed( KJob *job, ulong speed )
 {
     Q_UNUSED( job );
-    emit infoMessage( this, i18nc("@info/plain %1 is the formatted download amount per second",
-                                  "Downloading GTFS feed with %1/s",
-                                  KGlobal::locale()->formatByteSize(speed)) );
+    emitSpeed( speed );
 }
 
 void ImportGtfsToDatabaseJob::downloadFeed()
@@ -463,7 +477,7 @@ void ImportGtfsToDatabaseJob::downloadFeed()
         connect( job, SIGNAL(percent(KJob*,ulong)), this, SLOT(downloadProgress(KJob*,ulong)) );
         connect( job, SIGNAL(mimetype(KIO::Job*,QString)), this, SLOT(mimeType(KIO::Job*,QString)) );
         connect( job, SIGNAL(totalSize(KJob*,qulonglong)), this, SLOT(totalSize(KJob*,qulonglong)) );
-        connect( job, SIGNAL(speed(KJob*,ulong)), this, SLOT(speed(KJob*,ulong)) );
+        connect( job, SIGNAL(speed(KJob*,ulong)), this, SLOT(slotSpeed(KJob*,ulong)) );
     } else {
         kDebug() << "Could not create a temporary file to download the GTFS feed";
 //         TODO emit error...
@@ -472,11 +486,17 @@ void ImportGtfsToDatabaseJob::downloadFeed()
 
 void ImportGtfsToDatabaseJob::mimeType( KIO::Job *job, const QString &type )
 {
-    if ( !type.endsWith(QLatin1String("zip")) && !type.endsWith(QLatin1String("zip-compressed")) ) {
-        job->kill();
-        setError( GtfsErrorWrongFeedFormat );
-        setErrorText( "GTFS feed in wrong format: " + type /*TODO i18nc("@info/plain", "")*/ );
-        setResult( false );
+    const KMimeType::Ptr mimeType = KMimeType::mimeType( type );
+    if ( mimeType && mimeType->isValid() ) {
+        if ( !mimeType->is("application/zip") ) {
+            kDebug() << "Invalid mime type:" << type;
+            setError( GtfsErrorWrongFeedFormat );
+            setErrorText( i18nc("@info/plain", "Wrong GTFS feed format: %1", mimeType->name()) ); // TODO
+            setResult( false );
+            return;
+        }
+    } else {
+        kDebug() << "Could not create KMimeType object for" << type;
     }
 }
 
