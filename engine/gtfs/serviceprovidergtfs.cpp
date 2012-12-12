@@ -571,10 +571,6 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
         data[ Enums::TransportLine ] = !transportLine.isEmpty() ? transportLine
                          : query.value(routeLongNameColumn).toString();
 
-        const QString tripHeadsign = query.value(tripHeadsignColumn).toString();
-        data[ Enums::Target ] = !tripHeadsign.isEmpty() ? tripHeadsign
-                         : query.value(stopHeadsignColumn).toString();
-
         const QStringList routeStops = query.value(routeStopsColumn).toString().split( routeSeparator );
         if ( routeStops.isEmpty() ) {
             // This happens, if the current departure is actually no departure, but an arrival at
@@ -583,6 +579,13 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
         }
         data[ Enums::RouteStops ] = routeStops;
         data[ Enums::RouteExactStops ] = routeStops.count();
+
+        const QString tripHeadsign = query.value(tripHeadsignColumn).toString();
+        const QString stopHeadsign = query.value(stopHeadsignColumn).toString();
+        data[ Enums::Target ] = !tripHeadsign.isEmpty() ? tripHeadsign
+                : (!stopHeadsign.isEmpty() ? stopHeadsign
+                   : (request->parseMode() == ParseForArrivals
+                      ? routeStops.first() : routeStops.last()));
 
         const QStringList routeTimeValues = query.value(routeTimesColumn).toString().split( routeSeparator );
         QVariantList routeTimes;
