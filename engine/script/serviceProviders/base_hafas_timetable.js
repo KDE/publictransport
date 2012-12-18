@@ -352,7 +352,7 @@ var __hafas_timetable = function(hafas) {
                         var time = helper.matchTime( timeString, options.xmlTimeFormat  );
                         if ( time.error ) {
                             helper.error( "Hafas.timetable.parse(): Cannot parse time",
-                                        node.attributeNode("fpTime").nodeValue() );
+                                          timeString );
                             continue;
                         }
                         var routeDateTime = new Date();
@@ -561,6 +561,10 @@ var __hafas_timetable = function(hafas) {
                             helper.error( "Could not find any traininfo.exe URL" );
                             return {};
                         }
+
+                        // Cleanup 'result' object, filled by the parser,
+                        // but only additional data results should be added here
+                        result.clear();
 
                         // Cache items in the storage
                         storage.write( key, items );

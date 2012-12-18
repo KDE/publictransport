@@ -1808,7 +1808,18 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     // and insert the new data into it
     QVariantHash item = items[ request.itemNumber() ].toHash();
     for ( TimetableData::ConstIterator it = data.constBegin(); it != data.constEnd(); ++it ) {
-        item.insert( Global::timetableInformationToString(it.key()), it.value() );
+        // Check if there already is data in the current additional data field
+        const QString key = Global::timetableInformationToString( it.key() );
+        if ( item.contains(key) ) {
+            // The timetable item already contains data for the current field,
+            // do not allow updates here, only additional data
+            kWarning() << "Cannot update timetable data in additional data requests";
+            kWarning() << "Tried to update field" << key << "to value" << it.value()
+                       << "from value" << item[key] << "in data source" << request.sourceName();
+        } else {
+            // Allow to add the additional data field
+            item.insert( key, it.value() );
+        }
     }
     item[ "IncludesAdditionalData" ] = true;
     item.remove( "WaitingForAdditionalData" );

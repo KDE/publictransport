@@ -276,7 +276,15 @@ void ScriptJob::run()
                 handleError( i18nc("@info/plain", "Did not find any additional data.") );
                 return;
             } else if ( data.count() > 1 ) {
-                kWarning() << "The script added more than one result set, only the first gets used";
+                kWarning() << "The script added more than one result in an additional data request";
+                kDebug() << "All received additional data for item"
+                         << dynamic_cast<const AdditionalDataRequest*>(_request)->itemNumber()
+                         << ':' << data;
+                m_errorString = i18nc("@info/plain", "The script added more than one result in "
+                                      "an additional data request.");
+                m_success = false;
+                cleanup();
+                return;
             }
             emit additionalDataReady( data.first(), m_objects.result->features(),
                     m_objects.result->hints(), m_objects.network->lastUserUrl(), globalInfo,
