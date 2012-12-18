@@ -558,7 +558,7 @@ void ServiceProviderScript::jobStarted( ThreadWeaver::Job* job )
     // but not for additional data requests because they point to existing departure data sources.
     // There may be multiple AdditionalDataJob requests for the same data source but different
     // timetable items in the source.
-    const QString sourceName = scriptJob->request()->sourceName();
+    const QString sourceName = scriptJob->sourceName();
     if ( !qobject_cast<AdditionalDataJob*>(scriptJob) &&
          m_publishedData.contains(sourceName) && !m_publishedData[sourceName].isEmpty() )
     {
@@ -571,12 +571,7 @@ void ServiceProviderScript::jobDone( ThreadWeaver::Job* job )
     ScriptJob *scriptJob = qobject_cast< ScriptJob* >( job );
     Q_ASSERT( scriptJob );
 
-    if ( scriptJob->request() ) {
-        const QString sourceName = scriptJob->request()->sourceName();
-        m_publishedData.remove( sourceName );
-    } else {
-        kWarning() << "No request for job" << scriptJob << scriptJob->errorString();
-    }
+    m_publishedData.remove( scriptJob->sourceName() );
     m_runningJobs.removeOne( scriptJob );
     scriptJob->deleteLater();
 }
@@ -587,7 +582,7 @@ void ServiceProviderScript::jobFailed( ThreadWeaver::Job* job )
     Q_ASSERT( scriptJob );
 
     emit requestFailed( this, ErrorParsingFailed, scriptJob->errorString(),
-                       scriptJob->lastDownloadUrl(), scriptJob->request() );
+                        scriptJob->lastDownloadUrl(), scriptJob->cloneRequest() );
 }
 
 void ServiceProviderScript::requestDepartures( const DepartureRequest &request )

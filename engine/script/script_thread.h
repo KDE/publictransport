@@ -135,9 +135,6 @@ public:
     /** @brief Abort the job. */
     virtual void requestAbort();
 
-    /** @brief Return a pointer to the object containing inforamtion about the request of this job. */
-    virtual const AbstractRequest* request() const = 0;
-
     /** @brief Overwritten from ThreadWeaver::Job to return whether or not the job was successful. */
     virtual bool success() const;
 
@@ -152,6 +149,12 @@ public:
 
     /** @brief Return an URL for the last finished request that should be shown to users. */
     QString lastUserUrl() const;
+
+    /** @brief Get the data source name associated with this job. */
+    QString sourceName() const;
+
+    /** @brief Return a copy of the object containing inforamtion about the request of this job. */
+    const AbstractRequest *cloneRequest() const;
 
 signals:
     /** @brief Signals ready TimetableData items. */
@@ -194,6 +197,9 @@ protected:
     /** @brief Perform the job. */
     virtual void run();
 
+    /** @brief Return a pointer to the object containing inforamtion about the request of this job. */
+    virtual const AbstractRequest* request() const = 0;
+
     /** @brief Load @p script into the engine and insert some objects/functions. */
     bool loadScript( QScriptProgram *script );
 
@@ -202,6 +208,8 @@ protected:
     bool hasDataToBePublished() const;
 
     void handleError( const QString &errorMessage );
+
+    void cleanup();
 
     QScriptEngine *m_engine;
     QMutex *m_mutex;
@@ -226,7 +234,8 @@ public:
 
     virtual ~DepartureJob();
 
-    virtual const AbstractRequest* request() const;
+protected:
+    virtual const AbstractRequest *request() const;
 
 private:
     const DepartureJobPrivate *d;
@@ -242,6 +251,7 @@ public:
 
     virtual ~ArrivalJob();
 
+protected:
     virtual const AbstractRequest* request() const;
 
 private:
@@ -258,6 +268,7 @@ public:
 
     virtual ~JourneyJob();
 
+protected:
     virtual const AbstractRequest* request() const;
 
 private:
@@ -276,6 +287,7 @@ public:
 
     virtual ~StopSuggestionsJob();
 
+protected:
     virtual const AbstractRequest* request() const;
 
 private:
@@ -293,6 +305,7 @@ public:
 
     virtual ~StopsByGeoPositionJob();
 
+protected:
     virtual const AbstractRequest* request() const;
 
 private:
@@ -310,6 +323,7 @@ public:
                                 QObject* parent = 0);
     virtual ~AdditionalDataJob();
 
+protected:
     virtual const AbstractRequest* request() const;
 
 private:
@@ -327,6 +341,7 @@ public:
                            QObject* parent = 0);
     virtual ~MoreItemsJob();
 
+protected:
     virtual const AbstractRequest* request() const;
 
 private:

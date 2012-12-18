@@ -72,14 +72,8 @@ ScriptJob::~ScriptJob()
     // Abort, if still running
     requestAbort();
 
-    // Delete the script engine
-    m_mutex->lock();
-    if ( m_engine ) {
-        m_engine->abortEvaluation();
-        m_engine->deleteLater();
-        m_engine = 0;
-    }
-    m_mutex->unlock();
+    // Do some cleanup if not done already
+    cleanup();
 
     delete m_mutex;
 }
@@ -87,21 +81,40 @@ ScriptJob::~ScriptJob()
 void ScriptJob::requestAbort()
 {
     QMutexLocker locker( m_mutex );
-    if ( m_quit || !m_engine ) {
-        // Is already aborting/finished
+    if ( !m_engine ) {
+        // Is already finished
+        return;
+    } else if ( m_quit ) {
+        // Is already aborting, wait for the script engine to get destroyed
+        QEventLoop loop;
+        connect( m_engine, SIGNAL(destroyed(QObject*)), &loop, SLOT(quit()) );
+        QTimer::singleShot( 1000, &loop, SLOT(quit()) );
+        loop.exec();
         return;
     }
 
+    // Is still running, remember to abort
     m_quit = true;
+
+    // Abort running network requests, if any
+    if ( m_objects.network->hasRunningRequests() ) {
+        m_objects.network->abortAllRequests();
+    }
+
+    // Abort script evaluation
+    if ( m_engine ) {
+        m_engine->abortEvaluation();
+    }
+
+    // Wake waiting event loops
     if ( m_eventLoop ) {
         QEventLoop *loop = m_eventLoop;
         m_eventLoop = 0;
         loop->quit();
     }
 
-    if ( !isFinished() && m_objects.network->hasRunningRequests() ) {
-        m_objects.network->abortAllRequests();
-    }
+    // Wait until signals are processed
+    qApp->processEvents();
 }
 
 ScriptAgent::ScriptAgent( QScriptEngine* engine, QObject *parent )
@@ -195,12 +208,14 @@ void ScriptJob::run()
     // The called function returned, but asynchronous network requests may have been started.
     // Wait for all network requests to finish, because slots in the script may get called
     if ( !waitFor(objects.network.data(), SIGNAL(allRequestsFinished()), WaitForNetwork) ) {
+        cleanup();
         return;
     }
 
     // Wait for script execution to finish
     ScriptAgent agent( engine );
     if ( !waitFor(&agent, SIGNAL(scriptFinished()), WaitForScriptFinish) ) {
+        cleanup();
         return;
     }
 
@@ -217,10 +232,12 @@ void ScriptJob::run()
     // xxxReady() with an empty resultset
     if ( m_published == 0 || m_objects.result->count() > m_published ) {
         const bool couldNeedForcedUpdate = m_published > 0;
+        const AbstractRequest *_request = request();
         const MoreItemsRequest *moreItemsRequest =
-                dynamic_cast< const MoreItemsRequest* >( request() );
-        const AbstractRequest *_request =
-                moreItemsRequest ? moreItemsRequest->request().data() : request();
+                dynamic_cast< const MoreItemsRequest* >( _request );
+        if ( moreItemsRequest ) {
+            _request = moreItemsRequest->request().data();
+        }
         switch ( _request->parseMode() ) {
         case ParseForDepartures:
             emit departuresReady( m_objects.result->data().mid(m_published),
@@ -285,10 +302,19 @@ void ScriptJob::run()
     }
 
     // Cleanup
-    m_engine->deleteLater();
-    m_engine = 0;
-    m_objects.storage->checkLifetime();
-    m_objects.clear();
+    cleanup();
+}
+
+void ScriptJob::cleanup()
+{
+    QMutexLocker locker( m_mutex );
+    if ( !m_objects.storage.isNull() ) {
+        m_objects.storage->checkLifetime();
+    }
+    if ( m_engine ) {
+        m_engine->deleteLater();
+        m_engine = 0;
+    }
 }
 
 void ScriptJob::handleError( const QString &errorMessage )
@@ -297,10 +323,8 @@ void ScriptJob::handleError( const QString &errorMessage )
     kDebug() << "Error:" << errorMessage;
     kDebug() << "Backtrace:" << m_engine->uncaughtExceptionBacktrace().join("\n");
     m_errorString = errorMessage;
-    m_engine->deleteLater();
-    m_objects.clear();
-    m_engine = 0;
     m_success = false;
+    cleanup();
 }
 
 QScriptValue networkRequestToScript( QScriptEngine *engine, const NetworkRequestPtr &request )
@@ -350,11 +374,10 @@ bool ScriptJob::waitFor( QObject *sender, const char *signal, WaitForType type )
     int finishWaitCounter = 0;
 
     m_mutex->lockInline();
-    bool success = m_success;
-    bool quit = m_quit;
-    if ( !success || quit ) {
+    if ( !m_success || m_quit ) {
+        // Job was aborted, do not wait
         m_mutex->unlockInline();
-        return true;
+        return false;
     }
 
     QScriptEngine *engine = m_engine;
@@ -384,9 +407,7 @@ bool ScriptJob::waitFor( QObject *sender, const char *signal, WaitForType type )
         QMutexLocker locker( m_mutex );
         if ( !m_eventLoop || m_quit ) {
             // Job was aborted
-            m_engine = 0;
-            m_objects.clear();
-            engine->deleteLater();
+            m_eventLoop = 0;
             return false;
         }
         m_eventLoop = 0;
@@ -398,6 +419,8 @@ bool ScriptJob::waitFor( QObject *sender, const char *signal, WaitForType type )
         // Script not finished
         engine->abortEvaluation();
     }
+
+    // Return true if the wait condition was met in time
     return finishWaitCounter < 50;
 }
 
@@ -527,8 +550,7 @@ bool ScriptJob::loadScript( QScriptProgram *script )
             m_errorString = i18nc("@info/plain", "Could not load script extension "
                                   "<resource>%1</resource>.", extension);
             m_success = false;
-            m_engine->deleteLater();
-            m_engine = 0;
+            cleanup();
             return false;
         }
     }
@@ -555,9 +577,8 @@ bool ScriptJob::loadScript( QScriptProgram *script )
         m_errorString = i18nc("@info/plain", "Error in script, line %1: <message>%2</message>.",
                               m_engine->uncaughtExceptionLineNumber(),
                               m_engine->uncaughtException().toString());
-        m_engine->deleteLater();
-        m_engine = 0;
         m_success = false;
+        cleanup();
         return false;
     } else {
         return true;
@@ -659,6 +680,16 @@ const AbstractRequest *DepartureJob::request() const
 {
     QMutexLocker locker( m_mutex );
     return &d->request;
+}
+
+QString ScriptJob::sourceName() const
+{
+    return request()->sourceName();
+}
+
+const AbstractRequest *ScriptJob::cloneRequest() const
+{
+    return request()->clone();
 }
 
 class ArrivalJobPrivate {
