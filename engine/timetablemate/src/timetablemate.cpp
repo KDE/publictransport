@@ -92,13 +92,18 @@
 #include <KTextEditor/Document>
 #include <KTextEditor/View>
 #include <ThreadWeaver/WeaverInterface>
+#include <kdeclarative.h>
 
 // Qt includes
+#include <QtDeclarative/QDeclarativeView>
+#include <QtDeclarative/QDeclarativeContext>
+#include <QtDeclarative/QDeclarativeEngine>
+#include <QtDeclarative/qdeclarative.h>
 #include <QtGui/QFormLayout>
 #include <QtGui/QTreeView>
 #include <QtGui/QBoxLayout>
 #include <QtGui/QKeyEvent>
-#include <qprogressbar.h>
+#include <QtGui/QProgressBar>
 #include <QtCore/QTimer>
 #include <QtWebKit/QWebInspector>
 
@@ -166,7 +171,7 @@ void moveContainer( KXMLGUIClient *client, const QString &tagname, const QString
 
 TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpButtonHint ),
         ui_preferences(0), m_projectModel(0), m_partManager(0),
-        m_tabWidget(new KTabWidget(this)),
+        m_tabWidget(new KTabWidget(this)), m_qmlView(0),
         m_leftDockBar(0), m_rightDockBar(0), m_bottomDockBar(0), m_progressBar(0),
         m_documentationDock(0), m_projectsDock(0), m_testDock(0),
         m_webInspectorDock(0), m_networkMonitorDock(0),
@@ -185,11 +190,11 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
 
     QWidget *widget = new QWidget( this );
     widget->setMinimumSize( 220, 200 );
-    QVBoxLayout *mainLayout = new QVBoxLayout( widget );
-    mainLayout->setContentsMargins( 0, 0, 0, 0 );
+    m_mainLayout = new QVBoxLayout( widget );
+    m_mainLayout->setContentsMargins( 0, 0, 0, 0 );
     m_messageWidgetLayout->setContentsMargins( 0, 0, 0, 0 );
-    mainLayout->addWidget( m_tabWidget );
-    mainLayout->addLayout( m_messageWidgetLayout );
+    m_mainLayout->addWidget( m_tabWidget );
+    m_mainLayout->addLayout( m_messageWidgetLayout );
     setCentralWidget( widget );
 
     // Connect signals
@@ -404,6 +409,9 @@ void TimetableMate::readProperties( const KConfigGroup &config )
     const QStringList lastOpenedProjects = config.readEntry( "lastOpenedProjects", QStringList() );
     QStringList failedToOpenProjects;
     foreach ( const QString &lastOpenedProject, lastOpenedProjects ) {
+        // For each project that was opened in the last session a string is stored,
+        // if no tabs of that project were opened, the string only contains the .pts file name.
+        // Otherwise previously opened tabs are encoded after a " ::"
         const int pos = lastOpenedProject.indexOf( QLatin1String(" ::") );
         QString xmlFilePath;
         QList< TabType > openedTabs;
@@ -412,20 +420,27 @@ void TimetableMate::readProperties( const KConfigGroup &config )
             xmlFilePath = lastOpenedProject;
         } else {
             xmlFilePath = lastOpenedProject.left( pos );
+
+            // Get the part of the string that encodes the previously opened projects
             QString openedTabsCode = lastOpenedProject.mid( pos + 3 );
             if ( openedTabsCode.endsWith(QLatin1String(" ::active")) ) {
+                // The current project was the active project
                 isActive = true;
                 openedTabsCode.chop( 9 ); // Cut " ::active"
             }
             if ( !openedTabsCode.isEmpty() ) {
+                // The rest of the string contains the indexes of the previously opened tab types
                 const QStringList openedTabStrings = openedTabsCode.split(',');
                 foreach ( const QString &openedTabString, openedTabStrings ) {
                     openedTabs << static_cast< TabType >( openedTabString.toInt() );
                 }
             }
         }
+
+        // Open the project
         Project *project = openProject( xmlFilePath );
         if ( project ) {
+            // Restore active state and open previously opened tabs of the project
             if ( isActive ) {
                 project->setAsActiveProject();
             }
@@ -443,14 +458,6 @@ void TimetableMate::readProperties( const KConfigGroup &config )
                 i18nc("@info", "The following projects could not be opened"),
                 failedToOpenProjects, i18nc("@title:window", "Failed to Open"),
                 "couldNotOpenLastProjects" );
-    }
-
-    if ( m_projectModel->rowCount() == 0 ) {
-        // Add a new template project if no project was opened
-        fileNew();
-    } else if ( m_tabWidget->count() == 0 ) {
-        // Show dashboard of the active project, if no tabs were restored
-        m_projectModel->activeProject()->showDashboardTab();
     }
 
     if ( m_projectModel->activeProject() && m_projectsDock ) {
@@ -520,9 +527,12 @@ void TimetableMate::initialize()
     if ( settings->config()->hasGroup("last_session") ) {
         KConfigGroup config = settings->config()->group("last_session");
         m_recentFilesAction->loadEntries( config );
+        currentTabChanged( -1 );
         if ( restoreProjects ) {
             readProperties( config );
         }
+    } else {
+        currentTabChanged( -1 );
     }
 }
 
@@ -1270,22 +1280,148 @@ bool TimetableMate::closeAllTabsExcept( Project *project, AbstractTab *except, b
     }
 }
 
+QAction *TimetableMate::qmlAction( const QString &name ) const
+{
+    return action( name.toAscii().constData() );
+}
+
+QStringList TimetableMate::recentProjects() const
+{
+    QStringList projects;
+    foreach ( const KUrl &url, m_recentFilesAction->urls() ) {
+        // Make filenames more pretty
+        QString prettyName;
+        const QString fileName = url.fileName();
+        if ( KStandardDirs::checkAccess(url.path(), W_OK) ) {
+            // File is writable, ie. locally installed
+            prettyName = QFileInfo( url.path() ).baseName();
+        } else {
+            // File isn't writable, ie. globally installed
+            prettyName = i18nc("@info/plain This string is displayed instead of the full path for "
+                            "globally installed service provider plugins.",
+                            "Global: %1", QFileInfo(url.path()).baseName());
+        }
+
+        projects << prettyName;
+    }
+    return projects;
+}
+
+QStringList TimetableMate::recentUrls() const
+{
+    QStringList urls;
+    foreach ( const KUrl &url, m_recentFilesAction->urls() ) {
+        urls << url.path();
+    }
+    return urls;
+}
+
+bool TimetableMate::hasOpenedProjects() const
+{
+    return m_projectModel->rowCount() > 0;
+}
+
+void TimetableMate::showDock( const QString &dockName, bool show )
+{
+    AbstractDockWidget *dock;
+    if ( dockName == m_documentationDock->objectName() ) {
+        dock = m_documentationDock;
+    } else if ( dockName == m_projectsDock->objectName() ) {
+        dock = m_projectsDock;
+    } else if ( dockName == m_testDock->objectName() ) {
+        dock = m_testDock;
+    } else if ( dockName == m_webInspectorDock->objectName() ) {
+        dock = m_webInspectorDock;
+    } else if ( dockName == m_networkMonitorDock->objectName() ) {
+        dock = m_networkMonitorDock;
+#ifdef BUILD_PROVIDER_TYPE_SCRIPT
+    } else if ( dockName == m_backtraceDock->objectName() ) {
+        dock = m_backtraceDock;
+    } else if ( dockName == m_consoleDock->objectName() ) {
+        dock = m_consoleDock;
+    } else if ( dockName == m_outputDock->objectName() ) {
+        dock = m_outputDock;
+    } else if ( dockName == m_breakpointDock->objectName() ) {
+        dock = m_breakpointDock;
+    } else if ( dockName == m_variablesDock->objectName() ) {
+        dock = m_variablesDock;
+#endif
+    } else {
+        kWarning() << "Unknown dock" << dockName;
+        return;
+    }
+
+    dock->setVisible( show );
+    if ( show ) {
+        dock->mainWidget()->setFocus();
+    }
+}
+
 void TimetableMate::currentTabChanged( int index ) {
     // Clear status bar messages
     statusBar()->showMessage( QString() );
 
     AbstractTab *tab = index == -1 ? 0 : qobject_cast<AbstractTab*>(m_tabWidget->widget(index));
-    if ( tab && (tab->isProjectSourceTab() || tab->isScriptTab()) ) { // go to project source or script tab
-        AbstractDocumentTab *documentTab = qobject_cast< AbstractDocumentTab* >( tab );
-        Q_ASSERT( documentTab );
-        if ( documentTab ) {
-            if ( !m_partManager->parts().contains(documentTab->document()) ) {
-                m_partManager->addPart( documentTab->document() );
+    if ( tab ) {
+        // Go to project source or script tab
+        if ( tab->isProjectSourceTab() || tab->isScriptTab() ) {
+            AbstractDocumentTab *documentTab = qobject_cast< AbstractDocumentTab* >( tab );
+            Q_ASSERT( documentTab );
+            if ( documentTab ) {
+                if ( !m_partManager->parts().contains(documentTab->document()) ) {
+                    m_partManager->addPart( documentTab->document() );
+                }
+                documentTab->document()->activeView()->setFocus();
             }
-            documentTab->document()->activeView()->setFocus();
+        }
+
+        // Remove QML view
+        if ( m_qmlView ) {
+            m_mainLayout->removeWidget( m_qmlView );
+            m_mainLayout->removeItem( m_messageWidgetLayout );
+            m_mainLayout->addWidget( m_tabWidget );
+            m_mainLayout->addLayout( m_messageWidgetLayout );
+            m_qmlView->deleteLater();
+            m_qmlView = 0;
         }
     } else {
         m_partManager->setActivePart( 0 );
+
+        if ( index == -1 && !m_qmlView ) {
+            m_qmlView = new QDeclarativeView( this );
+            m_qmlView->setResizeMode( QDeclarativeView::SizeRootObjectToView );
+
+            // Install a KDeclarative instance to allow eg. QIcon("icon"), i18n("translate")
+            KDeclarative *kdeclarative = new KDeclarative();
+            kdeclarative->setDeclarativeEngine( m_qmlView->engine() );
+            kdeclarative->initialize();
+            kdeclarative->setupBindings();
+
+            m_qmlView->rootContext()->setContextProperty( "timetableMate", this );
+
+            // Expose the name of the SVG to use
+            const QString svgFileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.svg" );
+            m_qmlView->rootContext()->setContextProperty( "svgFileName", svgFileName );
+
+            // Add Plasma QML import paths
+            const QStringList importPaths = KGlobal::dirs()->findDirs( "module", "imports" );
+            foreach( const QString &importPath, importPaths ) {
+                m_qmlView->engine()->addImportPath( importPath );
+            }
+
+            // Find the QML file used for the timetablemate dashboard
+            const QString fileName = KGlobal::dirs()->findResource( "data", "timetablemate/timetablemate.qml" );
+            if ( fileName.isEmpty() ) {
+                kWarning() << "timetablemate.qml not found! Check installation";
+            } else {
+                m_qmlView->setSource( fileName );
+            }
+
+            m_mainLayout->removeWidget( m_tabWidget );
+            m_mainLayout->removeItem( m_messageWidgetLayout );
+            m_mainLayout->addWidget( m_qmlView );
+            m_mainLayout->addLayout( m_messageWidgetLayout );
+        }
     }
 
     // Adjust if a dashboard tab was left or newly shown
@@ -1600,13 +1736,81 @@ void TimetableMate::testFinished( bool success )
 
 void TimetableMate::fileNew()
 {
+    const Enums::ServiceProviderType providerType = chooseProviderPluginType();
+    if ( providerType == Enums::InvalidProvider ) {
+        return; // Canceled
+    }
+
     Project *newProject = new Project( m_projectModel->weaver(), this );
     newProject->loadProject();
     m_projectModel->appendProject( newProject );
-    newProject->showDashboardTab();
 
     // Expand new project item
     m_projectsDock->projectsWidget()->expand( m_projectModel->indexFromProject(newProject) );
+
+    // Set the plugin type as chosen
+    ServiceProviderData *data = newProject->data();
+    data->setType( providerType );
+    newProject->setProviderData( data );
+
+    // Show settings of the project
+    newProject->showSettingsDialog( this );
+
+    // Show the dashboard of the new project
+    newProject->showDashboardTab();
+}
+
+Enums::ServiceProviderType TimetableMate::chooseProviderPluginType()
+{
+    if ( ServiceProviderGlobal::availableProviderTypes().count() == 1 ) {
+        // Only one provider plugin type is available, no need to ask the user
+        return ServiceProviderGlobal::availableProviderTypes().first();
+    }
+
+    // Create a dialog with a combo box to choose a provider plugin type
+    QPointer< KDialog > dialog = new KDialog( this );
+    QWidget *container = new QWidget( dialog );
+    KComboBox *pluginType = new KComboBox( container );
+    foreach ( Enums::ServiceProviderType type, ServiceProviderGlobal::availableProviderTypes() ) {
+        pluginType->addItem( ServiceProviderGlobal::typeName(type), static_cast<int>(type) );
+    }
+    QLabel *infoLabel = new QLabel( container );
+    infoLabel->setWordWrap( true );
+    infoLabel->setText( i18nc("@info:whatsthis", "<title>Create New Provider Plugin</title>"
+        "<para>To create a new provider plugin first choose the type of the plugin. "
+        "Currently <emphasize>Scripted</emphasize> and <emphasize>GTFS</emphasize> "
+        "(since version 0.11) types are available. Your version of TimetableMate may be "
+        "compiled without support for one of these types.</para>"
+        "<para>The <emphasize>Scripted</emphasize> type can be used for a variety of providers "
+        "publishing their timetable data in web sites. Helper functions are provided to easily "
+        "parse HTML sites for timetable data in the script (QtScript, ie. JavaScript, by using "
+        "the Kross script extension Python and Ruby are also available). The script extension "
+        "\"qt.xml\" helps parsing XML data sources. For providers using the HAFAS API there "
+        "is a base script available, use <icode>include( \"base_hafas.js\" );</icode></para>"
+        "<para>If a <emphasize>GTFS</emphasize> feed is available a provider plugin can be "
+        "created much easier, ie. without writing a script. Only the URL to the GTFS feed is "
+        "needed. <emphasize>GTFS-realtime</emphasize> TripUpdates and Alerts URLs can also be "
+        "specified.</para>") );
+    QFormLayout *layout = new QFormLayout( container );
+    layout->setContentsMargins( 4, 4, 4, 48 );
+    layout->addRow( infoLabel );
+    layout->addItem( new QSpacerItem(12, 12, QSizePolicy::Preferred, QSizePolicy::Preferred) );
+    layout->addRow( pluginType );
+    layout->addItem( new QSpacerItem(12, 12, QSizePolicy::Preferred, QSizePolicy::Preferred) );
+    dialog->setMainWidget( container );
+    dialog->setWindowTitle( i18nc("@info/plain", "Choose Provider Plugin Type") );
+    dialog->setButtonText( KDialog::Ok, i18nc("@info/plain", "Create Provider Plugin") );
+
+    // Show the dialog
+    const int result = dialog->exec();
+
+    // Get selected provider type
+    const Enums::ServiceProviderType type = static_cast< Enums::ServiceProviderType >(
+            pluginType->itemData(pluginType->currentIndex()).toInt() );
+
+    // Cleanup
+    delete dialog.data();
+    return result == KDialog::Accepted ? type : Enums::InvalidProvider;
 }
 
 void TimetableMate::projectAdded( Project *project )
@@ -1647,6 +1851,8 @@ void TimetableMate::projectAdded( Project *project )
         // Add action to make the project active to the select action
         chooseActiveProject->addAction( action );
     }
+
+    emit hasOpenedProjectsChanged( true );
 }
 
 void TimetableMate::projectAboutToBeRemoved( Project *project )
@@ -1664,6 +1870,10 @@ void TimetableMate::projectAboutToBeRemoved( Project *project )
                 break;
             }
         }
+    }
+
+    if ( m_projectModel->rowCount() == 0 ) {
+        emit hasOpenedProjectsChanged( false );
     }
 }
 
@@ -1823,6 +2033,7 @@ AbstractTab *TimetableMate::showProjectTab( bool addTab, AbstractTab *tab )
 }
 
 void TimetableMate::open( const KUrl &url ) {
+    kDebug() << "OPEN" << url;
     Project *project = openProject( url.path() );
     if ( project ) {
         project->showDashboardTab( this );

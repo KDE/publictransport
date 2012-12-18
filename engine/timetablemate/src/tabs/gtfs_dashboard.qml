@@ -35,38 +35,16 @@ Item { id: root
         z: 10 // Put to the background
         width: container.width + (visible ? 2 * offset : 0)
         height: container.height + (visible ? 2 * offset : 0)
+        visible: container.width >= 500
 
         property int offset: 25
         Behavior on opacity { PropertyAnimation{} }
     }
 
-//     PlasmaCore.DataSource {
-//         id: dataSource
-//         engine: "publictransport"
-//         connectedSources: ["gtfs"]
-//     }
-
-//     function deleteGtfsDatabase() {
-//         var service = dataSource.serviceForSource( "gtfs" );
-//         var operation = service.operationDescription( "deleteGtfsDatabase" );
-//         operation.serviceProviderId = project.data.id();
-//         var job = service.startOperationCall( operation );
-//     }
-//
-//     function importGtfsDatabase() {
-//         var service = dataSource.serviceForSource( "gtfs" );
-//         var operation = service.operationDescription( "importGtfsFeed" );
-//         operation.serviceProviderId = project.data.id();
-//         var job = service.startOperationCall( operation );
-//
-//     //         connect( importJob, SIGNAL(result(KJob*)), this, SLOT(importFinished(KJob*)) );
-//     //         connect( importJob, SIGNAL(percent(KJob*,ulong)), this, SLOT(importProgress(KJob*,ulong)) );
-//     }
-
     Column { id: container
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
-        width: 500
+        width: Math.min( root.width - 15, 500 )
         spacing: 5
         z: 50
 

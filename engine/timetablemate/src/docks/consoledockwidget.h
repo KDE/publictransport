@@ -61,6 +61,7 @@ public:
     QToolButton *cancelButton() const { return m_cancelButton; };
     ProjectModel *projectModel() const { return m_projectModel; };
     State state() const { return m_state; };
+    virtual QWidget *mainWidget() const;
 
 public slots:
     void executeCommand( const QString &command );

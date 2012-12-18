@@ -136,6 +136,15 @@ QModelIndex ProjectModel::parent( const QModelIndex &child ) const
     }
 }
 
+QList< Project* > ProjectModel::projects() const
+{
+    QList< Project* > projects;
+    foreach ( ProjectModelItem *projectItem, m_projects ) {
+        projects << projectItem->project();
+    }
+    return projects;
+}
+
 QString ProjectModelItem::text() const
 {
     switch ( m_type ) {

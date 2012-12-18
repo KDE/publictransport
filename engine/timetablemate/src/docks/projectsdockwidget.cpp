@@ -303,3 +303,7 @@ void ProjectsDockWidget::projectItemContextMenuRequested( const QPoint &pos )
     }
 }
 
+QWidget *ProjectsDockWidget::mainWidget() const {
+    return m_projectsWidget;
+}
+

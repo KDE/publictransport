@@ -110,3 +110,7 @@ void DocumentationDockWidget::documentationUrlChanged( const QUrl &url )
         kDebug() << "Unexpected url format:" << url;
     }
 }
+
+QWidget *DocumentationDockWidget::mainWidget() const {
+    return m_documentationWidget;
+}

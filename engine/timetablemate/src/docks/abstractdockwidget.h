@@ -40,6 +40,7 @@ public:
 
     virtual KIcon icon() const = 0;
     virtual Qt::DockWidgetArea defaultDockArea() const { return Qt::BottomDockWidgetArea; };
+    virtual QWidget *mainWidget() const = 0;
 
 protected:
     virtual void contextMenuEvent( QContextMenuEvent *event );

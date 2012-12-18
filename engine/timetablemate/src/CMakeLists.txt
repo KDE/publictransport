@@ -163,6 +163,10 @@ install( FILES timetablemate.kcfg DESTINATION ${KCFG_INSTALL_DIR} )
 install( FILES timetablemateui.rc katepartui.rc DESTINATION ${DATA_INSTALL_DIR}/timetablemate )
 install( FILES timetablemate.knsrc DESTINATION ${CONFIG_INSTALL_DIR} )
 
+# Install QML files
+install( FILES timetablemate.qml ActionButton.qml ActionToolButton.qml
+         DESTINATION ${DATA_INSTALL_DIR}/timetablemate )
+
 ### KAuth
 kde4_install_auth_actions( org.kde.timetablemate timetablemate.actions )
 

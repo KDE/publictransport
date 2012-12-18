@@ -44,6 +44,7 @@ public:
     virtual KIcon icon() const { return KIcon("utilities-system-monitor"); };
     virtual Qt::DockWidgetArea defaultDockArea() const { return Qt::BottomDockWidgetArea; };
     NetworkMonitorFilterModel *filterModel() const { return m_filterModel; };
+    virtual QWidget *mainWidget() const;
 
 protected slots:
     void activeProjectAboutToChange( Project *project, Project *previousProject );

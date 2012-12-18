@@ -39,6 +39,7 @@ public:
     virtual Qt::DockWidgetArea defaultDockArea() const { return Qt::LeftDockWidgetArea; };
     ProjectModel *model() const { return m_model; };
     QTreeView *projectsWidget() const { return m_projectsWidget; };
+    virtual QWidget *mainWidget() const;
 
 protected slots:
     void projectItemDoubleClicked( const QModelIndex &index );

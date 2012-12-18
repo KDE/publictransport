@@ -298,3 +298,7 @@ bool ConsoleDockWidget::eventFilter( QObject *source, QEvent *event )
 
     return QObject::eventFilter( source, event );
 }
+
+QWidget *ConsoleDockWidget::mainWidget() const {
+    return m_commandLineEdit;
+}

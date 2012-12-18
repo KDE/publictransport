@@ -342,348 +342,301 @@
       <attribute name="title">
        <string>Provider Type</string>
       </attribute>
-      <layout class="QFormLayout" name="formLayout_3">
-       <property name="fieldGrowthPolicy">
-        <enum>QFormLayout::ExpandingFieldsGrow</enum>
-       </property>
-       <item row="0" column="0">
-        <widget class="QLabel" name="lblType">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="text">
-          <string>Provider Plugin &amp;Type:</string>
-         </property>
-         <property name="buddy">
-          <cstring>type</cstring>
-         </property>
-        </widget>
-       </item>
-       <item row="0" column="1">
-        <widget class="KComboBox" name="type">
-         <property name="enabled">
-          <bool>true</bool>
-         </property>
-         <property name="toolTip">
-          <string comment="@info:tooltip">Provider Plugin Type, currently &lt;emphasize&gt;Script&lt;/emphasize&gt; and &lt;emphasize&gt;GTFS&lt;/emphasize&gt; (since version 0.12) types are available</string>
-         </property>
-         <property name="whatsThis">
-          <string comment="@info:whatsthis">&lt;title&gt;Provider Plugin Type&lt;/title&gt;
-&lt;para&gt;Currently &lt;emphasize&gt;Scripted&lt;/emphasize&gt; and &lt;emphasize&gt;GTFS&lt;/emphasize&gt; (since version 0.12) types are available. Your version of TimetableMate may be compiled without support for one of these types.&lt;/para&gt;
-&lt;para&gt;The Script type can be used for a variety of providers publishing their timetable data in web sites. Helper functions are provided to easily parse HTML sites for timetable data in the script (QtScript, ie. JavaScript, by using the Kross script extension Python and Ruby are also available). The script extension &quot;qt.xml&quot; helps parsing XML data sources.&lt;/para&gt;
-&lt;para&gt;If a GTFS feed is available a provider plugin can be created much easier, ie. without writing a script. Only the url to the GTFS feed is needed. GTFS-realtime TripUpdates and Alerts urls can also be specified.&lt;/para&gt;</string>
-         </property>
-         <property name="editable">
-          <bool>false</bool>
-         </property>
-         <property name="autoCompletion">
-          <bool>false</bool>
-         </property>
-        </widget>
-       </item>
-       <item row="1" column="0" colspan="2">
-        <widget class="QGroupBox" name="grpTypeSettings">
-         <property name="title">
-          <string>Type Specific Settings</string>
-         </property>
-         <layout class="QVBoxLayout" name="verticalLayout_2">
-          <item>
-           <widget class="QWidget" name="scriptSettingsWidget" native="true">
-            <layout class="QFormLayout" name="formLayout_7">
-             <property name="fieldGrowthPolicy">
-              <enum>QFormLayout::ExpandingFieldsGrow</enum>
-             </property>
-             <property name="margin">
-              <number>0</number>
-             </property>
-             <item row="0" column="0">
-              <widget class="QLabel" name="lblScriptFile">
-               <property name="text">
-                <string>&amp;Script File:</string>
-               </property>
-               <property name="buddy">
-                <cstring>scriptFile</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <layout class="QHBoxLayout" name="scriptFileLayout">
-               <property name="leftMargin">
-                <number>0</number>
-               </property>
-               <property name="topMargin">
-                <number>0</number>
-               </property>
-               <item>
-                <widget class="KLineEdit" name="scriptFile">
-                 <property name="enabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="toolTip">
-                  <string comment="@info:tooltip">The script file, used to parse documents for departures/arrivals/journeys.</string>
-                 </property>
-                 <property name="whatsThis">
-                  <string comment="@info:whatsthis">&lt;subtitle&gt;Script File&lt;/subtitle&gt;
-&lt;para&gt;The script file, used to parse documents for departures/arrivals/journeys.&lt;/para&gt;
-&lt;para&gt;&lt;note&gt;The script file needs to be in the same directory as the XML file. You need to save the XML file before you can add a new script file.&lt;/note&gt;&lt;/para&gt;</string>
-                 </property>
-                 <property name="inputMask">
-                  <string/>
-                 </property>
-                 <property name="urlDropsEnabled">
-                  <bool>false</bool>
-                 </property>
-                 <property name="clickMessage">
-                  <string>The script file used to parse documents</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QToolButton" name="btnCreateScriptFile">
-                 <property name="toolTip">
-                  <string comment="@info:tooltip">Creates a new script file and attaches it to this provider plugin.</string>
-                 </property>
-                 <property name="text">
-                  <string notr="true">*</string>
-                 </property>
-                 <property name="popupMode">
-                  <enum>QToolButton::InstantPopup</enum>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QToolButton" name="btnDetachScriptFile">
-                 <property name="toolTip">
-                  <string comment="@info:tooltip">Detaches the script file from this provider plugin.</string>
-                 </property>
-                 <property name="text">
-                  <string notr="true">x</string>
-                 </property>
-                 <property name="popupMode">
-                  <enum>QToolButton::InstantPopup</enum>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QToolButton" name="btnBrowseForScriptFile">
-                 <property name="toolTip">
-                  <string comment="@info:tooltip">Attaches an existing script to this provider plugin.</string>
-                 </property>
-                 <property name="text">
-                  <string notr="true">...</string>
-                 </property>
-                 <property name="popupMode">
-                  <enum>QToolButton::InstantPopup</enum>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="lblScriptExtensions">
-               <property name="text">
-                <string>&amp;Script Extensions:</string>
-               </property>
-               <property name="buddy">
-                <cstring>scriptFile</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="KListWidget" name="scriptExtensions">
-               <property name="sizePolicy">
-                <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
-                 <horstretch>0</horstretch>
-                 <verstretch>0</verstretch>
-                </sizepolicy>
-               </property>
-               <property name="whatsThis">
-                <string comment="@info:whatsthis">&lt;title&gt;Script Extensions&lt;/title&gt;Currently these extensions can be used:&lt;list&gt;&lt;item&gt;&lt;emphasize&gt;&quot;kross&quot;&lt;/emphasize&gt;: With the Kross extension you can use Python or Ruby in your script (see the &lt;interface&gt;Documentation&lt;interface&gt; dock).&lt;/item&gt;&lt;item&gt;&lt;emphasize&gt;&quot;qt.xml&quot;&lt;/emphasize&gt;: This extension can be used to parse XML data sources.&lt;/item&gt;&lt;item&gt;&lt;emphasize&gt;&quot;qt.core&quot;&lt;/emphasize&gt;: See Qt documentation.&lt;/item&gt;&lt;item&gt;&lt;emphasize&gt;&quot;qt&quot;&lt;/emphasize&gt;: See Qt documentation.&lt;/item&gt;&lt;/list&gt;</string>
-               </property>
-               <property name="frameShape">
-                <enum>QFrame::StyledPanel</enum>
-               </property>
-               <property name="editTriggers">
-                <set>QAbstractItemView::NoEditTriggers</set>
-               </property>
-               <property name="tabKeyNavigation">
-                <bool>true</bool>
-               </property>
-               <property name="alternatingRowColors">
-                <bool>false</bool>
-               </property>
-               <property name="sortingEnabled">
-                <bool>true</bool>
-               </property>
-               <item>
-                <property name="text">
-                 <string>kross</string>
-                </property>
-                <property name="checkState">
-                 <enum>Unchecked</enum>
-                </property>
-                <property name="flags">
-                 <set>ItemIsSelectable|ItemIsUserCheckable|ItemIsEnabled</set>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>qt</string>
-                </property>
-                <property name="checkState">
-                 <enum>Unchecked</enum>
-                </property>
-                <property name="flags">
-                 <set>ItemIsSelectable|ItemIsUserCheckable|ItemIsEnabled</set>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>qt.core</string>
-                </property>
-                <property name="checkState">
-                 <enum>Unchecked</enum>
-                </property>
-                <property name="flags">
-                 <set>ItemIsSelectable|ItemIsUserCheckable|ItemIsEnabled</set>
-                </property>
-               </item>
-               <item>
-                <property name="text">
-                 <string>qt.xml</string>
-                </property>
-                <property name="checkState">
-                 <enum>Unchecked</enum>
-                </property>
-                <property name="flags">
-                 <set>ItemIsSelectable|ItemIsUserCheckable|ItemIsEnabled</set>
-                </property>
-               </item>
-              </widget>
-             </item>
-            </layout>
+      <layout class="QVBoxLayout" name="verticalLayout_2">
+       <item>
+        <widget class="QWidget" name="scriptSettingsWidget" native="true">
+         <layout class="QFormLayout" name="formLayout_7">
+          <property name="fieldGrowthPolicy">
+           <enum>QFormLayout::ExpandingFieldsGrow</enum>
+          </property>
+          <property name="margin">
+           <number>0</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblScriptFile">
+            <property name="text">
+             <string>&amp;Script File:</string>
+            </property>
+            <property name="buddy">
+             <cstring>scriptFile</cstring>
+            </property>
            </widget>
           </item>
-          <item>
-           <widget class="QWidget" name="gtfsSettingsWidget" native="true">
-            <layout class="QFormLayout" name="formLayout_8">
-             <property name="margin">
-              <number>0</number>
+          <item row="0" column="1">
+           <layout class="QHBoxLayout" name="scriptFileLayout">
+            <property name="leftMargin">
+             <number>0</number>
+            </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <item>
+             <widget class="KLineEdit" name="scriptFile">
+              <property name="enabled">
+               <bool>false</bool>
+              </property>
+              <property name="toolTip">
+               <string comment="@info:tooltip">The script file, used to parse documents for departures/arrivals/journeys.</string>
+              </property>
+              <property name="whatsThis">
+               <string comment="@info:whatsthis">&lt;subtitle&gt;Script File&lt;/subtitle&gt;
+&lt;para&gt;The script file, used to parse documents for departures/arrivals/journeys.&lt;/para&gt;
+&lt;para&gt;&lt;note&gt;The script file needs to be in the same directory as the XML file. You need to save the XML file before you can add a new script file.&lt;/note&gt;&lt;/para&gt;</string>
+              </property>
+              <property name="inputMask">
+               <string/>
+              </property>
+              <property name="urlDropsEnabled">
+               <bool>false</bool>
+              </property>
+              <property name="clickMessage">
+               <string>The script file used to parse documents</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QToolButton" name="btnCreateScriptFile">
+              <property name="toolTip">
+               <string comment="@info:tooltip">Creates a new script file and attaches it to this provider plugin.</string>
+              </property>
+              <property name="text">
+               <string notr="true">*</string>
+              </property>
+              <property name="popupMode">
+               <enum>QToolButton::InstantPopup</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QToolButton" name="btnDetachScriptFile">
+              <property name="toolTip">
+               <string comment="@info:tooltip">Detaches the script file from this provider plugin.</string>
+              </property>
+              <property name="text">
+               <string notr="true">x</string>
+              </property>
+              <property name="popupMode">
+               <enum>QToolButton::InstantPopup</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QToolButton" name="btnBrowseForScriptFile">
+              <property name="toolTip">
+               <string comment="@info:tooltip">Attaches an existing script to this provider plugin.</string>
+              </property>
+              <property name="text">
+               <string notr="true">...</string>
+              </property>
+              <property name="popupMode">
+               <enum>QToolButton::InstantPopup</enum>
+              </property>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblScriptExtensions">
+            <property name="text">
+             <string>&amp;Script Extensions:</string>
+            </property>
+            <property name="buddy">
+             <cstring>scriptFile</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="KListWidget" name="scriptExtensions">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="whatsThis">
+             <string comment="@info:whatsthis">&lt;title&gt;Script Extensions&lt;/title&gt;Currently these extensions can be used:&lt;list&gt;&lt;item&gt;&lt;emphasize&gt;&quot;kross&quot;&lt;/emphasize&gt;: With the Kross extension you can use Python or Ruby in your script (see the &lt;interface&gt;Documentation&lt;interface&gt; dock).&lt;/item&gt;&lt;item&gt;&lt;emphasize&gt;&quot;qt.xml&quot;&lt;/emphasize&gt;: This extension can be used to parse XML data sources.&lt;/item&gt;&lt;item&gt;&lt;emphasize&gt;&quot;qt.core&quot;&lt;/emphasize&gt;: See Qt documentation.&lt;/item&gt;&lt;item&gt;&lt;emphasize&gt;&quot;qt&quot;&lt;/emphasize&gt;: See Qt documentation.&lt;/item&gt;&lt;/list&gt;</string>
+            </property>
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="editTriggers">
+             <set>QAbstractItemView::NoEditTriggers</set>
+            </property>
+            <property name="tabKeyNavigation">
+             <bool>true</bool>
+            </property>
+            <property name="alternatingRowColors">
+             <bool>false</bool>
+            </property>
+            <property name="sortingEnabled">
+             <bool>true</bool>
+            </property>
+            <item>
+             <property name="text">
+              <string>kross</string>
              </property>
-             <item row="0" column="0">
-              <widget class="QLabel" name="lblGtfsFeed">
-               <property name="text">
-                <string>Feed URL:</string>
-               </property>
-               <property name="buddy">
-                <cstring>scriptFile</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="0" column="1">
-              <widget class="KLineEdit" name="gtfsFeed">
-               <property name="inputMask">
-                <string/>
-               </property>
-               <property name="clickMessage">
-                <string>URL to the GTFS feed (*.zip-file)</string>
-               </property>
-               <property name="showClearButton" stdset="0">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="0">
-              <widget class="QLabel" name="lblGtfsTripUpdates">
-               <property name="text">
-                <string>Realtime Updates URL:</string>
-               </property>
-               <property name="buddy">
-                <cstring>scriptFile</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="1" column="1">
-              <widget class="KLineEdit" name="gtfsTripUpdates">
-               <property name="toolTip">
-                <string comment="@info:tooltip">This can be used by applets to provide a link to the service provider's home page.</string>
-               </property>
-               <property name="whatsThis">
-                <string/>
-               </property>
-               <property name="inputMask">
-                <string/>
-               </property>
-               <property name="clickMessage">
-                <string>URL to GTFS-realtime TripUpdates</string>
-               </property>
-               <property name="showClearButton" stdset="0">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="0">
-              <widget class="QLabel" name="lblGtfsAlerts">
-               <property name="text">
-                <string>Realtime Alerts URL:</string>
-               </property>
-               <property name="buddy">
-                <cstring>scriptFile</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="2" column="1">
-              <widget class="KLineEdit" name="gtfsAlerts">
-               <property name="toolTip">
-                <string comment="@info:tooltip">This can be used by applets to provide a link to the service provider's home page.</string>
-               </property>
-               <property name="whatsThis">
-                <string/>
-               </property>
-               <property name="inputMask">
-                <string/>
-               </property>
-               <property name="clickMessage">
-                <string>URL to GTFS-realtime Alerts</string>
-               </property>
-               <property name="showClearButton" stdset="0">
-                <bool>true</bool>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="0">
-              <widget class="QLabel" name="lblTimeZone">
-               <property name="text">
-                <string>Default Timezone:</string>
-               </property>
-               <property name="buddy">
-                <cstring>scriptFile</cstring>
-               </property>
-              </widget>
-             </item>
-             <item row="3" column="1">
-              <widget class="KTimeZoneWidget" name="timeZone">
-               <property name="toolTip">
-                <string comment="@info:tooltip">The selected timezone only gets used if it cannot be read from the agency table of the GTFS feed</string>
-               </property>
-               <column>
-                <property name="text">
-                 <string notr="true">1</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string notr="true">2</string>
-                </property>
-               </column>
-               <column>
-                <property name="text">
-                 <string notr="true">3</string>
-                </property>
-               </column>
-              </widget>
-             </item>
-            </layout>
+             <property name="checkState">
+              <enum>Unchecked</enum>
+             </property>
+             <property name="flags">
+              <set>ItemIsSelectable|ItemIsUserCheckable|ItemIsEnabled</set>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>qt</string>
+             </property>
+             <property name="checkState">
+              <enum>Unchecked</enum>
+             </property>
+             <property name="flags">
+              <set>ItemIsSelectable|ItemIsUserCheckable|ItemIsEnabled</set>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>qt.core</string>
+             </property>
+             <property name="checkState">
+              <enum>Unchecked</enum>
+             </property>
+             <property name="flags">
+              <set>ItemIsSelectable|ItemIsUserCheckable|ItemIsEnabled</set>
+             </property>
+            </item>
+            <item>
+             <property name="text">
+              <string>qt.xml</string>
+             </property>
+             <property name="checkState">
+              <enum>Unchecked</enum>
+             </property>
+             <property name="flags">
+              <set>ItemIsSelectable|ItemIsUserCheckable|ItemIsEnabled</set>
+             </property>
+            </item>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QWidget" name="gtfsSettingsWidget" native="true">
+         <layout class="QFormLayout" name="formLayout_8">
+          <property name="margin">
+           <number>0</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="lblGtfsFeed">
+            <property name="text">
+             <string>Feed URL:</string>
+            </property>
+            <property name="buddy">
+             <cstring>scriptFile</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="KLineEdit" name="gtfsFeed">
+            <property name="inputMask">
+             <string/>
+            </property>
+            <property name="clickMessage">
+             <string>URL to the GTFS feed (*.zip-file)</string>
+            </property>
+            <property name="showClearButton" stdset="0">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="lblGtfsTripUpdates">
+            <property name="text">
+             <string>Realtime Updates URL:</string>
+            </property>
+            <property name="buddy">
+             <cstring>scriptFile</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="KLineEdit" name="gtfsTripUpdates">
+            <property name="toolTip">
+             <string comment="@info:tooltip">This can be used by applets to provide a link to the service provider's home page.</string>
+            </property>
+            <property name="whatsThis">
+             <string/>
+            </property>
+            <property name="inputMask">
+             <string/>
+            </property>
+            <property name="clickMessage">
+             <string>URL to GTFS-realtime TripUpdates</string>
+            </property>
+            <property name="showClearButton" stdset="0">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="lblGtfsAlerts">
+            <property name="text">
+             <string>Realtime Alerts URL:</string>
+            </property>
+            <property name="buddy">
+             <cstring>scriptFile</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="KLineEdit" name="gtfsAlerts">
+            <property name="toolTip">
+             <string comment="@info:tooltip">This can be used by applets to provide a link to the service provider's home page.</string>
+            </property>
+            <property name="whatsThis">
+             <string/>
+            </property>
+            <property name="inputMask">
+             <string/>
+            </property>
+            <property name="clickMessage">
+             <string>URL to GTFS-realtime Alerts</string>
+            </property>
+            <property name="showClearButton" stdset="0">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="lblTimeZone">
+            <property name="text">
+             <string>Default Timezone:</string>
+            </property>
+            <property name="buddy">
+             <cstring>scriptFile</cstring>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="KTimeZoneWidget" name="timeZone">
+            <property name="toolTip">
+             <string comment="@info:tooltip">The selected timezone only gets used if it cannot be read from the agency table of the GTFS feed</string>
+            </property>
+            <column>
+             <property name="text">
+              <string notr="true">1</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string notr="true">2</string>
+             </property>
+            </column>
+            <column>
+             <property name="text">
+              <string notr="true">3</string>
+             </property>
+            </column>
            </widget>
           </item>
          </layout>
@@ -948,7 +901,6 @@
   <tabstop>url</tabstop>
   <tabstop>btnUrlOpen</tabstop>
   <tabstop>shortUrl</tabstop>
-  <tabstop>type</tabstop>
   <tabstop>scriptFile</tabstop>
   <tabstop>btnCreateScriptFile</tabstop>
   <tabstop>btnDetachScriptFile</tabstop>

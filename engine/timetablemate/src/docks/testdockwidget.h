@@ -42,6 +42,7 @@ public:
     virtual Qt::DockWidgetArea defaultDockArea() const { return Qt::RightDockWidgetArea; };
     TestModel *testModel() const { return m_testModel; };
     QTreeView *testWidget() const { return m_testWidget; };
+    virtual QWidget *mainWidget() const;
 
 signals:
     void clickedTestErrorItem( const QString &fileName, int lineNumber, const QString &errorMessage );

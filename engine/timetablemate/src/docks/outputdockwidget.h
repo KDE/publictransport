@@ -39,6 +39,7 @@ public:
     virtual KIcon icon() const { return KIcon("system-run"); };
     virtual Qt::DockWidgetArea defaultDockArea() const { return Qt::BottomDockWidgetArea; };
     QPlainTextEdit *outputWidget() const { return m_outputWidget; };
+    virtual QWidget *mainWidget() const;
 
 protected slots:
     void setOutput( const QString &html );

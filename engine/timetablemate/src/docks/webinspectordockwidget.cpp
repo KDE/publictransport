@@ -62,3 +62,7 @@ void WebInspectorDockWidget::setWebTab( WebTab *webTab )
         m_webInspector->show();
     }
 }
+
+QWidget *WebInspectorDockWidget::mainWidget() const {
+    return m_webInspector;
+}

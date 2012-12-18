@@ -57,6 +57,7 @@ public:
     virtual Qt::DockWidgetArea defaultDockArea() const { return Qt::BottomDockWidgetArea; };
     ProjectModel *projectModel() const { return m_projectModel; };
     QTreeView *backtraceWidget() const { return m_backtraceWidget; };
+    virtual QWidget *mainWidget() const;
 
 signals:
     void activeFrameDepthChanged( int depth );

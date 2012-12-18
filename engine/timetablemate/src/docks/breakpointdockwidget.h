@@ -49,6 +49,7 @@ public:
     virtual Qt::DockWidgetArea defaultDockArea() const { return Qt::BottomDockWidgetArea; };
     ProjectModel *projectModel() const { return m_projectModel; };
     QTreeView *breakpointWidget() const { return m_breakpointWidget; };
+    virtual QWidget *mainWidget() const;
 
 protected slots:
     /** @brief An item in the breakpoint widget was clicked. */

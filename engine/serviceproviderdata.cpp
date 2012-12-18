@@ -296,7 +296,14 @@ QString ServiceProviderData::shortAuthorFromAuthor( const QString &authorName )
 
         // Add family name completely
         shortAuthor += names.last();
-        return shortAuthor;
+
+        return shortAuthor.replace( QString::fromUtf8("ü"), QLatin1String("ue") )
+                          .replace( QString::fromUtf8("ö"), QLatin1String("oe") )
+                          .replace( QString::fromUtf8("ä"), QLatin1String("ae") )
+                          .replace( QString::fromUtf8("Ü"), QLatin1String("Ue") )
+                          .replace( QString::fromUtf8("Ö"), QLatin1String("Oe") )
+                          .replace( QString::fromUtf8("Ä"), QLatin1String("Ae") )
+                          .replace( QString::fromUtf8("ß"), QLatin1String("ss") );
     } else {
         return QString();
     }

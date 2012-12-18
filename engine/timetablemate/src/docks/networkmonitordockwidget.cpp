@@ -273,3 +273,7 @@ void NetworkMonitorDockWidget::initModel()
     header->setResizeMode( static_cast<int>(NetworkMonitorModel::UrlColumn), QHeaderView::Interactive );
     header->setResizeMode( static_cast<int>(NetworkMonitorModel::DataColumn), QHeaderView::Stretch );
 }
+
+QWidget *NetworkMonitorDockWidget::mainWidget() const {
+    return m_widget;
+}

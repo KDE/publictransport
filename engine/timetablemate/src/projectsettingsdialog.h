@@ -113,7 +113,6 @@ protected slots:
     void slotChanged( QWidget *changedWidget );
     void languageActivated( const QString &languageCode );
 
-    void providerTypeChanged( int newProviderTypeIndex );
     void authorEdited( const QString &newAuthor );
     void shortAuthorEdited( const QString &shortAuthor );
     void urlEdited( const QString &newUrl );
@@ -139,9 +138,6 @@ private:
     int compareVersions( const QString &version1, const QString &version2 );
     bool testWidget( QWidget *widget );
     void appendMessageWidgetAfter( QWidget *after, const QString &errorMessage );
-
-    Enums::ServiceProviderType providerTypeFromComboBoxIndex( int index ) const;
-    int providerTypeToComboBoxIndex( Enums::ServiceProviderType providerType ) const;
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     QStringList scriptExtensionsFromWidget() const;

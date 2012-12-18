@@ -245,3 +245,7 @@ void VariablesDockWidget::activeProjectAboutToChange( Project *project, Project 
                  this, SLOT(debuggerStateChanged(DebuggerState,DebuggerState)) );
     }
 }
+
+QWidget *VariablesDockWidget::mainWidget() const {
+    return m_variablesWidget;
+}

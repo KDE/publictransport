@@ -44,6 +44,7 @@ public:
     virtual Qt::DockWidgetArea defaultDockArea() const { return Qt::BottomDockWidgetArea; };
     QWebInspector *webInspector() const { return m_webInspector; };
     void setWebTab( WebTab *webTab );
+    virtual QWidget *mainWidget() const;
 
 private:
     QWebInspector *m_webInspector;

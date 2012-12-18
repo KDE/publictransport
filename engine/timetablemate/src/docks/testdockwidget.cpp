@@ -211,3 +211,7 @@ void TestDockWidget::contextMenu( const QPoint &pos )
     }
     delete menu.data();
 }
+
+QWidget *TestDockWidget::mainWidget() const {
+    return m_testWidget;
+}

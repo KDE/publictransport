@@ -179,6 +179,9 @@ public:
     ProjectModel( QObject *parent = 0 );
     ~ProjectModel();
 
+    /** @brief Get a list of all ProjectModelItem objects in this model. */
+    Q_INVOKABLE QList< Project* > projects() const;
+
     virtual int columnCount( const QModelIndex &parent = QModelIndex() ) const {
         Q_UNUSED( parent );
         return 1;

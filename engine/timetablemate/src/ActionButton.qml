@@ -19,15 +19,17 @@
 
 import QtQuick 1.0
 import org.kde.plasma.components 0.1 as PlasmaComponents
-import TimetableMate 1.0
 
-PlasmaComponents.ToolButton {
-    property variant action: defaultAction
-    onActionChanged: defaultAction = action
+PlasmaComponents.Button {
+    property variant action
 
-    // HACK Prepend some space for the label
-    text: "  " + action.text.replace("&", "")
+    // HACK Pre-/append some space for the label
+    text: " " + action.text.replace("&", "") + " "
     enabled: action.enabled
     visible: action.visible
-    iconSource: project.nameFromIcon( action.icon )
+    checkable: action.checkable
+    checked: action.checked
+    iconSource: (typeof(project) == 'undefined' ? timetableMate : project).nameFromIcon( action.icon )
+
+    onClicked: action.trigger()
 }

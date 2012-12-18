@@ -185,3 +185,7 @@ void BreakpointDockWidget::clickedBreakpointItem( const QModelIndex &index )
         tab->goToLine( breakpoint->lineNumber() );
     }
 }
+
+QWidget *BreakpointDockWidget::mainWidget() const {
+    return m_breakpointWidget;
+}

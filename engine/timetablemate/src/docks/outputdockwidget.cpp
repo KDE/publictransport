@@ -105,3 +105,6 @@ void OutputDockWidget::setOutput( const QString &html )
     m_outputWidget->document()->setHtml( html );
     m_outputWidget->ensureCursorVisible();
 }
+QWidget *OutputDockWidget::mainWidget() const {
+    return m_outputWidget;
+}

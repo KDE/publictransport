@@ -96,6 +96,7 @@ class KUrl;
 class KTabWidget;
 class KMessageWidget;
 
+class QDeclarativeView;
 class QProgressBar;
 class QModelIndex;
 class QVBoxLayout;
@@ -124,6 +125,7 @@ class QScriptValue;
 class TimetableMate : public KParts::MainWindow
 {
     Q_OBJECT
+    Q_PROPERTY( bool hasOpenedProjects READ hasOpenedProjects NOTIFY hasOpenedProjectsChanged )
 
 public:
     /** @brief Constructor */
@@ -132,12 +134,26 @@ public:
     /** @brief Destructor */
     virtual ~TimetableMate();
 
+    Q_INVOKABLE QAction *qmlAction( const QString &name ) const;
+
+    Q_INVOKABLE static QString nameFromIcon( const QIcon &icon ) { return icon.name(); };
+
+    Q_INVOKABLE QStringList recentProjects() const;
+    Q_INVOKABLE QStringList recentUrls() const;
+    Q_INVOKABLE void showDock( const QString &dockName, bool show = true );
+    Q_INVOKABLE bool hasOpenedProjects() const;
+
+signals:
+    void hasOpenedProjectsChanged( bool has );
+
 public slots:
     /** @brief Create a new project. */
     void fileNew();
 
     /** @brief Open project from @p url. */
     void open( const KUrl &url );
+
+    void open( const QString &url ) { open(KUrl(url)); };
 
     /** @brief Open a file dialog to select a project to open. */
     void fileOpen();
@@ -302,6 +318,8 @@ private:
     void populateTestMenu();
     void connectTestMenuWithProject( Project *project, bool doConnect = true );
 
+    Enums::ServiceProviderType chooseProviderPluginType();
+
     /** @brief Open project from @p fileName. */
     Project *openProject( const QString &fileName );
 
@@ -333,6 +351,8 @@ private:
     ProjectModel *m_projectModel; // Contains all opened projects
     KParts::PartManager *m_partManager;
     KTabWidget *m_tabWidget;
+    QDeclarativeView *m_qmlView;
+    QVBoxLayout *m_mainLayout;
 
     // Fixed tool bars showing docks on the left/right/bottom dock area
     DockToolBar *m_leftDockBar;

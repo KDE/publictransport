@@ -1034,10 +1034,8 @@ public:
             }
 
             if ( oldServiceProviderId != serviceProviderID ) {
-                q->emit nameChanged( projectName() );
-                q->emit iconNameChanged( iconName() );
-                q->emit iconChanged( projectIcon() );
-                q->emit dataChanged( data() );
+                // Read again to update the provider ID in provider->data->id()
+                readProjectSourceDocument( filePath );
             }
         }
     };
@@ -4301,6 +4299,12 @@ void Project::importGtfsFeed()
         return;
     }
 
+    if ( !isInstalledGlobally() && !isInstalledLocally() ) {
+        emit informationMessage( i18nc("@ịnfo", "The provider must be installed before "
+                                       "the GTFS feed can be imported."), KMessageWidget::Error );
+        return;
+    }
+
     d->updateGtfsDatabaseState();
     if ( d->gtfsDatabaseState == GtfsDatabaseError ) {
         kWarning() << "Cannot import GTFS feed" << d->gtfsDatabaseErrorString;
@@ -5346,6 +5350,10 @@ AbstractTab *Project::tab( TabType type ) const
     case Tabs::Script:
         return scriptTab();
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case Tabs::GtfsDatabase:
+        return gtfsDatabaseTab();
+#endif
     case Tabs::Web:
         return webTab();
     case Tabs::PlasmaPreview:
@@ -5366,6 +5374,10 @@ AbstractTab *Project::showTab( TabType type, QWidget *parent )
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Tabs::Script:
         return showScriptTab( parent );
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case Tabs::GtfsDatabase:
+        return showGtfsDatabaseTab( parent );
 #endif
     case Tabs::Web:
         return showWebTab( parent );
@@ -5390,6 +5402,10 @@ bool Project::isTabOpened( TabType type ) const
     case Tabs::Script:
         return d->scriptTab;
 #endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case Tabs::GtfsDatabase:
+        return d->gtfsDatabaseTab;
+#endif
     case Tabs::Web:
         return d->webTab;
     case Tabs::PlasmaPreview:
@@ -5412,6 +5428,10 @@ AbstractTab *Project::createTab( TabType type, QWidget *parent )
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Tabs::Script:
         return createScriptTab( parent );
+#endif
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+    case Tabs::GtfsDatabase:
+        return createGtfsDatabaseTab( parent );
 #endif
     case Tabs::Web:
         return createWebTab( parent );
@@ -5694,6 +5714,11 @@ void Project::setProviderData( const ServiceProviderData *providerData )
 
     // Recreate service provider plugin with new info
     Enums::ServiceProviderType oldType = d->provider ? d->provider->type() : Enums::InvalidProvider;
+    if ( providerData == d->provider->data() ) {
+        // If the ServiceProviderData object belongs to the old provider,
+        // create a clone before deleting it with the provider
+        providerData = providerData->clone( this );
+    }
     delete d->provider;
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     if ( providerData->type() == Enums::ScriptedProvider ) {
@@ -6121,6 +6146,12 @@ void Project::publish()
 {
     Q_D( Project );
 
+    if ( !isInstalledGlobally() && !isInstalledLocally() ) {
+        emit informationMessage( i18nc("@ịnfo", "The provider must be installed before "
+                                       "publishing it."), KMessageWidget::Error );
+        return;
+    }
+
     if ( d->isTestRunning() ) {
         emit informationMessage( i18nc("@ịnfo", "Cannot publish while tests are running"),
                                  KMessageWidget::Error );
@@ -6290,8 +6321,10 @@ void Project::publish()
     case Enums::GtfsProvider:
         description.append( "\nGTFS Feed Size (download): " +
                             KGlobal::locale()->formatByteSize(d->gtfsFeedSize) );
-        description.append( "\nGTFS Database Size After Import: " +
-                            KGlobal::locale()->formatByteSize(d->gtfsDatabaseSize) );
+        description.append( QString("\nGTFS Database Size After Import: %1 (as of %2)")
+                            .arg(KGlobal::locale()->formatByteSize(d->gtfsDatabaseSize))
+                            .arg(KGlobal::locale()->formatDate(d->gtfsDatabaseModifiedTime.date(),
+                                                               KLocale::ShortDate)) );
         break;
     case Enums::ScriptedProvider:
         description.append( "\nScript Size: " + KGlobal::locale()->formatByteSize(

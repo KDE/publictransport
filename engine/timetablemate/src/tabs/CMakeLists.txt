@@ -21,8 +21,7 @@ endif ( BUILD_PROVIDER_TYPE_GTFS )
 set( timetablemate_SRCS ${timetablemate_SRCS} ${tab_SRCS} PARENT_SCOPE )
 
 # Install QML files
-install( FILES dashboard.qml ActionButton.qml ActionToolButton.qml
-         DESTINATION ${DATA_INSTALL_DIR}/timetablemate )
+install( FILES dashboard.qml DESTINATION ${DATA_INSTALL_DIR}/timetablemate )
 
 if ( BUILD_PROVIDER_TYPE_GTFS )
     install( FILES gtfs_dashboard.qml

@@ -36,6 +36,7 @@ public:
     virtual Qt::DockWidgetArea defaultDockArea() const { return Qt::RightDockWidgetArea; };
     KComboBox *documentationChooser() const { return m_documentationChooser; };
     KWebView *documentationWidget() const { return m_documentationWidget; };
+    virtual QWidget *mainWidget() const;
 
 protected slots:
     void documentationChosen( int index = 0 );

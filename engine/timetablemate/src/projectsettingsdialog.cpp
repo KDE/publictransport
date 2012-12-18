@@ -36,6 +36,8 @@
 #include <engine/global.h>
 
 // KDE includes
+#include <KUser>
+#include <KEMailSettings>
 #include <KFileDialog>
 #include <KMessageBox>
 #include <KInputDialog>
@@ -84,15 +86,6 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     setButtons( KDialog::Ok | KDialog::Cancel | KDialog::User1 );
     setButtonIcon( KDialog::User1, KIcon("dialog-ok-apply") );
     setButtonText( KDialog::User1, i18nc("@info/plain", "Check") );
-
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    ui_provider->type->addItem( ServiceProviderGlobal::typeName(Enums::ScriptedProvider),
-                                static_cast<int>(Enums::ScriptedProvider) );
-#endif
-#ifdef BUILD_PROVIDER_TYPE_GTFS
-    ui_provider->type->addItem( ServiceProviderGlobal::typeName(Enums::GtfsProvider),
-                                static_cast<int>(Enums::GtfsProvider)  );
-#endif
 
     QToolBar *notesToolBar = new QToolBar( "notesToolBar", ui_provider->tabNotes );
     QToolBar *notesToolBar2 = new QToolBar( "notesToolBar2", ui_provider->tabNotes );
@@ -270,13 +263,8 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     layout->addRow( i18nc("@info", "Sample &Latitude:"), ui_sampleLatitude );
 #endif
 
-    providerTypeChanged( ui_provider->type->currentIndex() );
-    connect( ui_provider->type, SIGNAL(currentIndexChanged(int)),
-             this, SLOT(providerTypeChanged(int)) );
-
     // Connect all change signals of the widgets to the changed() signal
     m_mapper = new QSignalMapper( this );
-    connect( ui_provider->type, SIGNAL(currentIndexChanged(int)), m_mapper, SLOT(map()) );
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     connect( ui_provider->scriptFile, SIGNAL(textChanged(QString)), m_mapper, SLOT(map()) );
     connect( ui_provider->scriptExtensions, SIGNAL(itemChanged(QListWidgetItem*)), m_mapper, SLOT(map()) );
@@ -319,7 +307,6 @@ ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
     connect( m_changelog, SIGNAL(removed(QWidget*,int)), m_mapper, SLOT(map()) );
     connect( m_changelog, SIGNAL(changed()), m_mapper, SLOT(map()) );
     // TODO Map changes in the changelog, ie. changing the version or message text
-    m_mapper->setMapping( ui_provider->type, ui_provider->type );
     m_mapper->setMapping( ui_provider->name, ui_provider->name );
     m_mapper->setMapping( ui_provider->description, ui_provider->description );
     m_mapper->setMapping( ui_provider->version, ui_provider->version );
@@ -568,9 +555,6 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
     }
 
     // Update values that can be edited in this dialog
-    const Enums::ServiceProviderType providerType =
-            providerTypeFromComboBoxIndex( ui_provider->type->currentIndex() );
-    m_providerData->setType( providerType );
     m_providerData->setNames( names );
     m_providerData->setDescriptions( descriptions );
     m_providerData->setVersion( ui_provider->version->text() );
@@ -594,7 +578,7 @@ void ProjectSettingsDialog::fillValuesFromWidgets()
 #endif
     m_providerData->setNotes( ui_provider->notes->textOrHtml() );
 
-    switch ( providerType ) {
+    switch ( m_providerData->type() ) {
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     case Enums::ScriptedProvider:
         m_providerData->setScriptFile( ui_provider->scriptFile->text(),
@@ -637,22 +621,6 @@ void ProjectSettingsDialog::checkScriptExtensionsInWidget( const QStringList &sc
 }
 #endif
 
-void ProjectSettingsDialog::providerTypeChanged( int newProviderTypeIndex )
-{
-    // Show settings widgets specific to the chosen provider type
-    const Enums::ServiceProviderType providerType = providerTypeFromComboBoxIndex( newProviderTypeIndex );
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    ui_provider->scriptSettingsWidget->setVisible( providerType == Enums::ScriptedProvider );
-#else
-    ui_provider->scriptSettingsWidget->hide();
-#endif
-#ifdef BUILD_PROVIDER_TYPE_GTFS
-    ui_provider->gtfsSettingsWidget->setVisible( providerType == Enums::GtfsProvider );
-#else
-    ui_provider->gtfsSettingsWidget->hide();
-#endif
-}
-
 void ProjectSettingsDialog::changelogEntryWidgetAdded( ChangelogEntryWidget *entryWidget )
 {
     const int comparison = ServiceProviderData::compareVersions(
@@ -666,6 +634,17 @@ void ProjectSettingsDialog::changelogEntryWidgetAdded( ChangelogEntryWidget *ent
             // Yes clicked, update version value
             ui_provider->version->setText( entryWidget->version() );
         }
+    }
+
+    // Use short author name as author is none is set
+    if ( entryWidget->author().isEmpty() ) {
+        entryWidget->setAuthor( ui_provider->shortAuthor->text() );
+    }
+
+    // Use "Initial version" as default changelog text for the first entry
+    if ( m_changelog->entryWidgets().count() == 1 ) {
+        entryWidget->setDescription( i18nc("@info/plain Default changelog entry for the "
+                                           "first version", "Initial version") );
     }
 }
 
@@ -887,7 +866,10 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *data,
 
     m_providerData = data->clone( data->parent() );
     m_openedPath = fileName;
-    ui_provider->type->setCurrentIndex( providerTypeToComboBoxIndex(data->type()) );
+
+    // Show settings widgets specific to the provider type
+    ui_provider->scriptSettingsWidget->setVisible( data->type() == Enums::ScriptedProvider );
+    ui_provider->gtfsSettingsWidget->setVisible( data->type() == Enums::GtfsProvider );
 
     if ( data->fileFormatVersion() != QLatin1String("1.1") ) {
         KMessageBox::information( this, i18nc("@info",
@@ -934,9 +916,25 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *data,
     ui_provider->shortUrl->setText( data->shortUrl() );
     ui_provider->credit->setText( data->credit() );
     ui_provider->minFetchWait->setValue( data->minFetchWait() );
-    ui_provider->author->setText( data->author() );
     ui_provider->shortAuthor->setText( data->shortAuthor() );
-    ui_provider->email->setText( data->email() );
+    if ( data->author().isEmpty() ) {
+        // Insert user name if empty (and if set in global KDE settings)
+        ui_provider->author->setText( KUser().property(KUser::FullName).toString() );
+
+        // If no short author string was chosen create one from the full name
+        if ( data->shortAuthor().isEmpty() ) {
+            ui_provider->shortAuthor->setText(
+                    ServiceProviderData::shortAuthorFromAuthor(ui_provider->author->text()) );
+        }
+    } else {
+        ui_provider->author->setText( data->author() );
+    }
+    if ( data->email().isEmpty() ) {
+        // Insert user email if empty (and if set in global KDE settings)
+        ui_provider->email->setText( KEMailSettings().getSetting(KEMailSettings::EmailAddress) );
+    } else {
+        ui_provider->email->setText( data->email() );
+    }
     int defaultVehicleTypeIndex =
             ui_provider->defaultVehicleType->findData( Enums::toString(data->defaultVehicleType()) );
     ui_provider->defaultVehicleType->setCurrentIndex(
@@ -975,21 +973,6 @@ void ProjectSettingsDialog::setProviderData( const ServiceProviderData *data,
 void ProjectSettingsDialog::settingsChanged()
 {
     emit signalChangeStatusbar( i18n("Settings changed") );
-}
-
-int ProjectSettingsDialog::providerTypeToComboBoxIndex( Enums::ServiceProviderType providerType ) const
-{
-    for ( int index = 0; index < ui_provider->type->count(); ++index ) {
-        if ( providerTypeFromComboBoxIndex(index) == providerType ) {
-            return index;
-        }
-    }
-    return -1;
-}
-
-Enums::ServiceProviderType ProjectSettingsDialog::providerTypeFromComboBoxIndex( int index ) const
-{
-    return static_cast< Enums::ServiceProviderType >( ui_provider->type->itemData(index).toInt() );
 }
 
 #include "projectsettingsdialog.moc"

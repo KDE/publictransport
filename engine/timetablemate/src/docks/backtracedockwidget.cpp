@@ -170,3 +170,7 @@ void BacktraceDockWidget::clickedBacktraceItem( const QModelIndex &index )
     const int depth = index.row();
     emit activeFrameDepthChanged( depth );
 }
+
+QWidget *BacktraceDockWidget::mainWidget() const {
+    return m_backtraceWidget;
+}

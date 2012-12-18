@@ -52,6 +52,7 @@ public:
     virtual Qt::DockWidgetArea defaultDockArea() const { return Qt::LeftDockWidgetArea; };
     VariableModel *variableModel() const { return m_variableModel; };
     QTreeView *variablesWidget() const { return m_variablesWidget; };
+    virtual QWidget *mainWidget() const;
 
 public slots:
     void setSearchString( const QString &searchString );
