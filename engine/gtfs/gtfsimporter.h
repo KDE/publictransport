@@ -44,7 +44,7 @@ class QSqlRecord;
  * has more differentiation for errors, ie. @ref FatalError or @ref FinishedWithErrors.
  *
  * GTFS (General Transit Feed Specification) defines the following files:
- * @li @em cre.txt (Required): This file contains information about one or more transit
+ * @li @em agency.txt (Required): This file contains information about one or more transit
  *     agencies that provide the data in this feed.
  * @li @em stops.txt (Required): This file contains information about individual locations where
  *     vehicles pick up or drop off passengers.

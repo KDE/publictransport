@@ -19,6 +19,8 @@
 
 #include "gtfsimporter.h"
 #include "gtfsdatabase.h"
+#include "serviceproviderdatareader.h"
+#include "serviceproviderdata.h"
 
 #include <KZip>
 #include <KStandardDirs>
@@ -106,7 +108,7 @@ void GtfsImporter::setError( GtfsImporter::State errorState,
 {
     m_mutex.lock();
     if ( errorState <= m_state ) {
-        // A more fatal error is already recorded
+        // A more or equally fatal error is already recorded
         m_mutex.unlock();
         return;
     }
@@ -308,9 +310,10 @@ void GtfsImporter::run()
         emit logMessage( i18nc("@info/plain GTFS feed import logbook entry",
                              "Import finished successfully") );
     }
+    const QString errorString = m_errorString;
     m_mutex.unlock();
 
-    emit finished( errors ? FinishedWithErrors : FinishedSuccessfully );
+    emit finished( errors ? FinishedWithErrors : FinishedSuccessfully, errorString );
     return;
 }
 
@@ -383,7 +386,10 @@ bool GtfsImporter::writeGtfsDataToDatabase( QSqlDatabase database,
     }
 
     QStringList dbFieldNames = fieldNames;
+    QStringList missingRequiredFields; // Fields that are required and missing, but available in provider data
     if ( tableName == QLatin1String("calendar") ) {
+        // All day fields in GTFS feeds get combined into "weekdays" in the database
+        // (a string with "1" or "0" for each day)
         dbFieldNames.removeOne( "monday" );
         dbFieldNames.removeOne( "tuesday" );
         dbFieldNames.removeOne( "wednesday" );
@@ -392,7 +398,20 @@ bool GtfsImporter::writeGtfsDataToDatabase( QSqlDatabase database,
         dbFieldNames.removeOne( "saturday" );
         dbFieldNames.removeOne( "sunday" );
         dbFieldNames.append( "weekdays" );
+    } else if ( tableName == QLatin1String("agency") ) {
+        const QStringList requiredAgencyFields = QStringList()
+                << "agency_name" << "agency_url" << "agency_timezone";
+        foreach ( const QString &requiredAgencyField, requiredAgencyFields ) {
+            if ( !fieldNames.contains(requiredAgencyField) ) {
+                missingRequiredFields << requiredAgencyField;
+            }
+        }
+        if ( !missingRequiredFields.isEmpty() ) {
+            dbFieldNames = QStringList()
+                    << "agency_id" << "agency_name" << "agency_url" << "agency_timezone";
+        }
     }
+
     QString placeholder( '?' );
     for ( int i = 1; i < dbFieldNames.count(); ++i ) {
         placeholder += ",?";
@@ -426,14 +445,16 @@ bool GtfsImporter::writeGtfsDataToDatabase( QSqlDatabase database,
 
     // Prepare an INSERT query to be used for each dataset to be inserted
     query.prepare( QString("INSERT OR REPLACE INTO %1 (%2) VALUES (%3)")
-                .arg(tableName, dbFieldNames.join(","), placeholder) );
+                   .arg(tableName, dbFieldNames.join(","), placeholder) );
 
     int counter = 0;
-    while ( !file.atEnd() ) {
+    while ( missingRequiredFields.isEmpty() && !file.atEnd() ) {
         const QByteArray line = file.readLine().trimmed();
         QVariantList fieldValues;
         if ( readFields(line, &fieldValues, fieldTypes, fieldNames.count()) ) {
-            // Remove values for fields that do not exist in the database
+            // Remove values for fields that do not exist in the database, but in the GTFS feed,
+            // eg. when multiple values of the feed get combined into a single value in the
+            // database, for example "monday", "tuesday", ... get combined to "weekdays".
             for ( int i = 0; i < unavailableFieldIndices.count(); ++i ) {
                 fieldValues.removeAt( unavailableFieldIndices[i] );
             }
@@ -576,6 +597,41 @@ bool GtfsImporter::writeGtfsDataToDatabase( QSqlDatabase database,
         }
     }
 
+    if ( !missingRequiredFields.isEmpty() ) {
+        // Only insert one row into the database, because the GTFS feed did not include this data
+        // Currently only used for the "agency" table
+        Q_ASSERT( tableName == QLatin1String("agency") );
+        const ServiceProviderData *providerData =
+                ServiceProviderDataReader::read( m_providerName, &m_errorString );
+        if ( !providerData ) {
+            m_state = FatalError;
+            kDebug() << m_errorString;
+        } else {
+            kDebug() << "Missing required fields, that get filled with data of the provider plugin"
+                    << missingRequiredFields;
+            QVariantList fieldValues = QVariantList() << 0 // agency_id
+                    << providerData->name() << providerData->url() << providerData->timeZone();
+            foreach ( const QVariant &fieldValue, fieldValues ) {
+                query.addBindValue( fieldValue );
+            }
+            // FIXME
+            kDebug() << fieldValues.count() << query.boundValues().count();
+            if ( query.exec() ) {
+                ++counter;
+            } else {
+                QMutexLocker locker( &m_mutex );
+                emit logMessage( query.lastError().text() );
+                kDebug() << query.lastError();
+                kDebug() << "With this query:" << query.lastQuery();
+                const int error = query.lastError().number();
+                if ( error == 10 || error == 11 ) {
+                    // SQLite error codes for malformed database files
+                    setError( FatalError, "Database is corrupted" );
+                }
+            }
+        }
+    }
+
     // End transaction, restore synchronous=FULL
     if ( !database.driver()->commitTransaction() ) {
         qDebug() << database.lastError();
@@ -613,7 +669,7 @@ bool GtfsImporter::readHeader( const QString &header, QStringList *fieldNames,
     // Only allow alphanumerical characters as field names (and prevent SQL injection).
     QRegExp regExp( "[^A-Z0-9_]", Qt::CaseInsensitive );
     foreach ( const QString &fieldName, names ) {
-        QString name = fieldName;
+        QString name = fieldName.trimmed();
         if ( (name.startsWith('"') && name.endsWith('"')) ||
              (name.startsWith('\'') && name.endsWith('\'')) )
         {
@@ -623,6 +679,8 @@ bool GtfsImporter::readHeader( const QString &header, QStringList *fieldNames,
             emit logMessage( i18nc("@info", "Field name <emphasis>%1</emphasis> contains "
                                    "a disallowed character <emphasis>%2</emphasis>' at %3",
                                    fieldName, regExp.cap(), regExp.pos()) );
+            kWarning() << "Field name" << fieldName << "contains a disallowed character"
+                       << regExp.cap() << "at" << regExp.pos();
         } else {
             fieldNames->append( name );
         }
@@ -632,11 +690,17 @@ bool GtfsImporter::readHeader( const QString &header, QStringList *fieldNames,
     foreach ( const QString &requiredField, requiredFields ) {
         if ( !fieldNames->contains(requiredField) ) {
             emit logMessage( i18nc("@info", "Required field '%1' is missing", requiredField) );
-            kDebug() << "Required field missing:" << requiredField;
+            kDebug() << "Required field missing:" << requiredField << *fieldNames;
 
-            if ( requiredField == "agency_timezone" ) {
-                kDebug() << "Will use default timezone";
-                fieldNames->append( "agency_timezone" );
+            if ( requiredField == QLatin1String("agency_name") ) {
+                kDebug() << "Will use agency name from plugin";
+//                 fieldNames->append( "agency_name" );
+            } else if ( requiredField == QLatin1String("agency_url") ) {
+                kDebug() << "Will use agency URL from plugin";
+//                 fieldNames->append( "agency_url" );
+            } else if ( requiredField == QLatin1String("agency_timezone") ) {
+                kDebug() << "Will use timezone from plugin";
+//                 fieldNames->append( "agency_timezone" );
             } else {
                 setError( FatalError, "Required field missing: " + requiredField );
                 kDebug() << "in this header line:" << header;
@@ -707,7 +771,7 @@ bool GtfsImporter::readFields( const QByteArray &line, QVariantList *fieldValues
         fieldValues->append( GtfsDatabase::convertFieldValue(newField.trimmed(), *fieldType) );
         ++fieldType;
 
-        if ( pos == line.length() && line[pos - 1] == ',' ) {
+        if ( pos == line.length() && line[pos - 1] == ',' && fieldType != fieldTypes.constEnd() ) {
             // The current line ends after a ','. Add another empty field:
             fieldValues->append( GtfsDatabase::convertFieldValue(QByteArray(), *fieldType) );
             ++fieldType;
