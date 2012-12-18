@@ -352,10 +352,10 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
         const KMimeType::Ptr mimeType =
                 KMimeType::mimeType( contentType.left(contentType.indexOf(';')) );
         if ( mimeType && mimeType->isValid() ) {
-            if ( !mimeType->is("application/zip") ) {
+            if ( !mimeType->is("application/zip") && !mimeType->is("application/octet-stream") ) {
                 kDebug() << "Invalid mime type:" << reply->header(QNetworkRequest::ContentTypeHeader).toString();
                 setError( GtfsErrorWrongFeedFormat );
-                setErrorText( i18nc("@info/plain", "Wrong GTFS feed format: %1", mimeType->name()) ); // TODO
+                setErrorText( i18nc("@info/plain", "Wrong GTFS feed format: %1", mimeType->name()) );
                 setResult( false );
                 return;
             }
@@ -487,10 +487,10 @@ void ImportGtfsToDatabaseJob::mimeType( KIO::Job *job, const QString &type )
 {
     const KMimeType::Ptr mimeType = KMimeType::mimeType( type );
     if ( mimeType && mimeType->isValid() ) {
-        if ( !mimeType->is("application/zip") ) {
+        if ( !mimeType->is("application/zip") && !mimeType->is("application/octet-stream") ) {
             kDebug() << "Invalid mime type:" << type;
             setError( GtfsErrorWrongFeedFormat );
-            setErrorText( i18nc("@info/plain", "Wrong GTFS feed format: %1", mimeType->name()) ); // TODO
+            setErrorText( i18nc("@info/plain", "Wrong GTFS feed format: %1", mimeType->name()) );
             setResult( false );
             return;
         }
