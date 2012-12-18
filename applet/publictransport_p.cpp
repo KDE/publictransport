@@ -601,8 +601,8 @@ void PublicTransportAppletPrivate::createTooltip()
             foreach( const DepartureItem * item, currentGroup ) {
                 infoStrings << i18nc( "@info Text for one departure for the tooltip (%1: line string, "
                                       "%2: target)",
-                                      "Line <emphasis strong='1'>%1<emphasis> "
-                                      "to <emphasis strong='1'>%2<emphasis>",
+                                      "Line <emphasis strong='1'>%1</emphasis> "
+                                      "to <emphasis strong='1'>%2</emphasis>",
                                       item->departureInfo()->lineString(),
                                       item->departureInfo()->target() );
             }
