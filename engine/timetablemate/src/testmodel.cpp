@@ -176,6 +176,10 @@ int TestModel::rowCount( const QModelIndex &parent ) const
         }
     } else {
         // Do not show test cases without applicable tests
+        if ( !project() ) {
+            return InvalidTestCase;
+        }
+
         int count = TestCaseCount;
         if ( !isTestCaseApplicableTo(ScriptExecutionTestCase, project()->data()) ) {
             --count;
@@ -196,6 +200,10 @@ TestModel::TestCase TestModel::testCaseFromIndex( const QModelIndex &testCaseInd
         return InvalidTestCase;
     } else {
         // Do not show test cases without applicable tests
+        if ( !project() ) {
+            return InvalidTestCase;
+        }
+
         int testCase = testCaseIndex.row();
         if ( testCase >= ScriptExecutionTestCase &&
             !isTestCaseApplicableTo(ScriptExecutionTestCase, project()->data()) )
@@ -227,6 +235,10 @@ QModelIndex TestModel::indexFromTestCase( TestModel::TestCase testCase, int colu
     if ( testCase >= TestCaseCount ) {
         return QModelIndex();
     } else {
+        if ( !project() ) {
+            return QModelIndex();
+        }
+
         int row = static_cast< int >( testCase );
         if ( row >= ScriptExecutionTestCase &&
             !isTestCaseApplicableTo(ScriptExecutionTestCase, project()->data()) )
@@ -808,7 +820,7 @@ QList< TestModel::Test > TestModel::finishedTests() const
 
 QList< TestModel::Test > TestModel::startedTests() const
 {
-    return project()->startedTests();
+    return project() ? project()->startedTests() : QList< TestModel::Test >();
 }
 
 QList< TestModel::Test > TestModel::allTests()
