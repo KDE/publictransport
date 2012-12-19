@@ -570,19 +570,28 @@ void PublicTransportApplet::handleDataError( const QString& /*sourceName*/,
     }
 }
 
-void PublicTransportApplet::processStopSuggestions( const QString &/*sourceName*/,
-                                              const Plasma::DataEngine::Data &data )
+void PublicTransportApplet::processStopSuggestions( const QString &sourceName,
+                                                    const Plasma::DataEngine::Data &data )
 {
     Q_D( PublicTransportApplet );
+    Q_UNUSED( sourceName )
 
+    // Test what data was requested
     bool journeyData = data["parseMode"].toString() == QLatin1String("journeys");
     if ( journeyData || data["parseMode"].toString() == QLatin1String("stopSuggestions") ) {
         if ( journeyData ) {
+            // Journey data was requested, but got stop suggestions,
+            // ie. invalid journey data because of ambiguous stop name(s)
             emit invalidJourneyDataReceived();
         }
 
-        d->listStopSuggestions->updateStopSuggestionItems( data );
-    } else if ( data["parseMode"].toString() == QLatin1String("departures") /*&& m_currentMessage == MessageNone TODO*/ ) {
+        // Update stop suggestions in the journey search widget, if still in journey search state
+        if ( d->listStopSuggestions ) {
+            d->listStopSuggestions->updateStopSuggestionItems( data );
+        }
+    } else if ( data["parseMode"].toString() == QLatin1String("departures") ) {
+        // Departure/arrival data was requested, but got stop suggestions,
+        // ie. invalid departure data because of an ambiguous stop name
         emit invalidDepartureDataReceived();
         d->clearDepartures();
         setConfigurationRequired( true, i18nc("@info", "The stop name is ambiguous.") );
@@ -968,8 +977,6 @@ void PublicTransportApplet::showJourneyList()
              this, SLOT(processAlarmCreationRequest(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)) );
     connect( d->journeyTimetable, SIGNAL(requestAlarmDeletion(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)),
              this, SLOT(processAlarmDeletionRequest(QDateTime,QString,VehicleType,QString,QGraphicsWidget*)) );
-    connect( d->states["journeyView"], SIGNAL(exited()),
-             d->journeyTimetable, SLOT(deleteLater()) );
     connect( d->journeyTimetable, SIGNAL(requestEarlierItems()), this, SLOT(requestEarlierJourneys()) );
     connect( d->journeyTimetable, SIGNAL(requestLaterItems()), this, SLOT(requestLaterJourneys()) );
     d->journeyTimetable->setZoomFactor( d->settings.sizeFactor() );
@@ -1005,8 +1012,6 @@ void PublicTransportApplet::showJourneySearch()
     d->listStopSuggestions->attachLineEdit( journeySearch );
     connect( d->listStopSuggestions, SIGNAL(journeySearchLineChanged(QString,QDateTime,bool,bool)),
              this, SLOT(journeySearchLineChanged(QString,QDateTime,bool,bool)) );
-    connect( d->states["journeySearch"], SIGNAL(exited()),
-             d->listStopSuggestions, SLOT(deleteLater()) );
 
     // Hide journey search action, because it switches to the currently active state
     action("searchJourneys")->setVisible( false );
@@ -1230,14 +1235,23 @@ void PublicTransportApplet::showMainWidget( QGraphicsWidget* mainWidget )
             Qt::Vertical, d->mainGraphicsWidget );
     layoutMainNew->setContentsMargins( 0, 0, 0, 0 );
     layoutMainNew->setSpacing( 0 );
-    d->timetable->setVisible( d->isStateActive("departureView") ||
-                              d->isStateActive("intermediateDepartureView") );
 
     // Add widgets to new layout
     layoutMainNew->addItem( d->titleWidget );
     layoutMainNew->addItem( mainWidget );
     layoutMainNew->addItem( d->labelInfo );
     layoutMainNew->setAlignment( d->labelInfo, Qt::AlignRight | Qt::AlignVCenter );
+
+    // Cleanup previously used main widget, but never delete the departure/arrival timetable
+    d->timetable->setVisible( d->isStateActive("departureView") ||
+                              d->isStateActive("intermediateDepartureView") );
+    if ( !d->isStateActive("journeyView") ) {
+        d->journeyTimetable->deleteLater();
+        d->journeyTimetable = 0;
+    } else if ( !d->isStateActive("journeySearch") ) {
+        d->listStopSuggestions->deleteLater();
+        d->listStopSuggestions = 0;
+    }
 }
 
 void PublicTransportApplet::oldItemAnimationFinished()
