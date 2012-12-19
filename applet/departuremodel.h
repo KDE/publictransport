@@ -731,9 +731,7 @@ public:
      * @brief Removes @p count items beginning at @p row from @p parent.
      *
      * @param row The row of the first item to be removed.
-     *
      * @param count The number of items to be removed, beginning at @p row.
-     *
      * @param parent The QModelIndex parent which child items should be removed or an invalid
      *   model index to remove toplevel items. Defaults to QModelIndex().
      *

@@ -1512,9 +1512,7 @@ bool JourneyModel::removeRows( int row, int count, const QModelIndex& parent )
         emit itemsAboutToBeRemoved( m_items.mid(row, count) );
 
         for ( int i = 0; i < count; ++i ) {
-            JourneyItem *item = static_cast<JourneyItem*>( m_items[row] );
-
-            m_items.removeAt( row );
+            JourneyItem *item = static_cast<JourneyItem*>( m_items.takeAt(row) );
             m_infoToItem.remove( item->journeyInfo()->hash() );
             if ( m_nextItem == item ) {
                 m_nextItem = findNextItem();
@@ -1566,8 +1564,9 @@ void JourneyModel::sort( int column, Qt::SortOrder order )
     emit layoutAboutToBeChanged();
 
     QVector< QPair<JourneyItem*, int> > sortable/*( m_items.count() )*/;
-    for ( int row = 0; row < m_items.count(); ++row )
+    for ( int row = 0; row < m_items.count(); ++row ) {
         sortable.append( QPair<JourneyItem*, int>(static_cast<JourneyItem*>(m_items[row]), row) );
+    }
 
     if ( order == Qt::AscendingOrder ) {
         JourneyModelLessThan lt( static_cast<Columns>(column) );
@@ -2041,9 +2040,7 @@ bool DepartureModel::removeRows( int row, int count, const QModelIndex& parent )
         emit itemsAboutToBeRemoved( m_items.mid(row, count) );
 
         for ( int i = 0; i < count; ++i ) {
-            DepartureItem *item = static_cast<DepartureItem*>( m_items[row] );
-
-            m_items.removeAt( row );
+            DepartureItem *item = static_cast<DepartureItem*>( m_items.takeAt(row) );
             item->removeChildren( 0, item->childCount() ); // Needed?
             m_infoToItem.remove( item->departureInfo()->hash() );
             if ( item->hasAlarm() ) {
