@@ -44,7 +44,7 @@
 
 ConsoleDockWidget::ConsoleDockWidget( ProjectModel *projectModel, KActionMenu *showDocksAction,
                                       QWidget *parent )
-        : AbstractDockWidget( i18nc("@window:title Dock title", "Console"), showDocksAction, parent ),
+        : AbstractDockWidget( i18nc("@title:window Dock title", "Console"), showDocksAction, parent ),
           m_consoleWidget(0), m_commandLineEdit(0), m_cancelButton(0), m_consoleHistoryIndex(-1),
           m_projectModel(projectModel), m_state(WaitingForInput)
 {

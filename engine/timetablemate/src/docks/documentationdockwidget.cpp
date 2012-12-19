@@ -37,7 +37,7 @@
 #include <QMouseEvent>
 
 DocumentationDockWidget::DocumentationDockWidget( KActionMenu *showDocksAction, QWidget *parent )
-        : AbstractDockWidget( i18nc("@window:title Dock title", "Documentation"),
+        : AbstractDockWidget( i18nc("@title:window Dock title", "Documentation"),
                              showDocksAction, parent )
 {
     setObjectName( "documentation" );

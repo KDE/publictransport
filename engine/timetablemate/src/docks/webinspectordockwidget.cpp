@@ -33,7 +33,7 @@
 #include <QLabel>
 
 WebInspectorDockWidget::WebInspectorDockWidget( KActionMenu *showDocksAction, QWidget *parent )
-        : AbstractDockWidget( i18nc("@window:title Dock title", "Web Inspector"),
+        : AbstractDockWidget( i18nc("@title:window Dock title", "Web Inspector"),
                              showDocksAction, parent ),
           m_webInspector(0), m_placeholder(0)
 {

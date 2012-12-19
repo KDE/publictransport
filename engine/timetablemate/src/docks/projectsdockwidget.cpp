@@ -47,7 +47,7 @@
 
 ProjectsDockWidget::ProjectsDockWidget( ProjectModel *model, KActionMenu *showDocksAction,
                                         QWidget *parent )
-        : AbstractDockWidget( i18nc("@window:title Dock title", "Projects"),
+        : AbstractDockWidget( i18nc("@title:window Dock title", "Projects"),
                              showDocksAction, parent ),
           m_model(model), m_projectsWidget(0), m_searchLine(0),
           m_proxyModel(new QSortFilterProxyModel(this))

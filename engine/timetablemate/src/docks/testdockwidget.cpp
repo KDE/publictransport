@@ -40,7 +40,7 @@
 
 TestDockWidget::TestDockWidget( ProjectModel *projectModel, KActionMenu *showDocksAction,
                                 QWidget *parent )
-        : AbstractDockWidget( i18nc("@window:title Dock title", "Test"), showDocksAction, parent ),
+        : AbstractDockWidget( i18nc("@title:window Dock title", "Test"), showDocksAction, parent ),
           m_projectModel(projectModel), m_testModel(0), m_testWidget(new QTreeView(this))
 {
     setObjectName( "test" );

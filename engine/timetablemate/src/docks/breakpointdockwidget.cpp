@@ -45,7 +45,7 @@
 
 BreakpointDockWidget::BreakpointDockWidget( ProjectModel *projectModel,
                                             KActionMenu *showDocksAction, QWidget *parent )
-        : AbstractDockWidget( i18nc("@window:title Dock title", "Breakpoints"),
+        : AbstractDockWidget( i18nc("@title:window Dock title", "Breakpoints"),
                              showDocksAction, parent ),
           m_projectModel(projectModel), m_breakpointWidget(new QTreeView(this))
 {

@@ -37,7 +37,7 @@
 
 BacktraceDockWidget::BacktraceDockWidget( ProjectModel *projectModel, KActionMenu *showDocksAction,
                                           QWidget *parent )
-        : AbstractDockWidget( i18nc("@window:title Dock title", "Backtrace"),
+        : AbstractDockWidget( i18nc("@title:window Dock title", "Backtrace"),
                              showDocksAction, parent ),
           m_projectModel(projectModel), m_backtraceWidget(new QTreeView(this))
 {

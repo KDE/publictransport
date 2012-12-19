@@ -47,7 +47,7 @@
 
 VariablesDockWidget::VariablesDockWidget( ProjectModel *projectModel, KActionMenu *showDocksAction,
                                           QWidget *parent )
-        : AbstractDockWidget( i18nc("@window:title Dock title", "Variables"),
+        : AbstractDockWidget( i18nc("@title:window Dock title", "Variables"),
                              showDocksAction, parent ),
           m_projectModel(projectModel), m_variableModel(0), m_variablesWidget(new QTreeView(this)),
           m_searchLine(new KLineEdit(this)), m_proxyModel(new VariableFilterProxyModel(this))

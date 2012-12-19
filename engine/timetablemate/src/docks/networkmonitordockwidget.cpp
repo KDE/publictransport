@@ -41,7 +41,7 @@
 
 NetworkMonitorDockWidget::NetworkMonitorDockWidget( ProjectModel *projectModel,
                                                     KActionMenu *showDocksAction, QWidget *parent )
-        : AbstractDockWidget( i18nc("@window:title Dock title", "Network Monitor"),
+        : AbstractDockWidget( i18nc("@title:window Dock title", "Network Monitor"),
                              showDocksAction, parent ),
           m_widget(new QTreeView(this)), m_filterModel(new NetworkMonitorFilterModel(this))
 {

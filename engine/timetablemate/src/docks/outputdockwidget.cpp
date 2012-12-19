@@ -35,7 +35,7 @@
 
 OutputDockWidget::OutputDockWidget( ProjectModel *projectModel, KActionMenu *showDocksAction,
                                     QWidget *parent )
-        : AbstractDockWidget( i18nc("@window:title Dock title", "Output"), showDocksAction, parent ),
+        : AbstractDockWidget( i18nc("@title:window Dock title", "Output"), showDocksAction, parent ),
           m_projectModel(projectModel)
 {
     setObjectName( "output" );
