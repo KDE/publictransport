@@ -49,6 +49,7 @@
 #include <QDBusConnection>
 
 const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
+const int PublicTransportEngine::PROVIDER_CLEANUP_TIMEOUT = 10000; // 10 seconds
 
 Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
 {
@@ -223,7 +224,7 @@ void PublicTransportEngine::gtfsImportJobPercent( KJob *job, ulong percent )
 
 PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantList& args )
         : Plasma::DataEngine( parent, args ),
-        m_fileSystemWatcher(0), m_providerUpdateDelayTimer(0)
+        m_fileSystemWatcher(0), m_providerUpdateDelayTimer(0), m_cleanupTimer(0)
 {
     // We ignore any arguments - data engines do not have much use for them
     Q_UNUSED( args )
@@ -270,7 +271,7 @@ PublicTransportEngine::~PublicTransportEngine()
 {
     if ( !m_runningSources.isEmpty() || !m_providers.isEmpty() ) {
         kDebug() << m_runningSources.count() << "data sources are still being updated,"
-                 << m_providers.count() << "providers cached, abort and delete all providers";
+                 << m_providers.count() << "providers used, abort and delete all providers";
         QStringList providerIds = m_providers.keys();
         foreach ( const QString &providerId, providerIds ) {
             deleteProvider( providerId );
@@ -281,6 +282,9 @@ PublicTransportEngine::~PublicTransportEngine()
     delete m_providerUpdateDelayTimer;
     qDeleteAll( m_dataSources );
     m_dataSources.clear();
+
+    // Providers cached in m_cachedProviders get deleted automatically (QSharedPointer)
+    // and need no special handling, since they are not used currently
 }
 
 QStringList PublicTransportEngine::sources() const
@@ -380,15 +384,41 @@ void PublicTransportEngine::slotSourceRemoved( const QString &sourceName )
         if ( dataSource->data().contains("serviceProvider") ) {
             const QString providerId = dataSource->value("serviceProvider").toString();
             if ( !providerId.isEmpty() && !isProviderUsed(providerId) ) {
-                // Remove provider from the list,
-                // if no other ProviderPointer to that provider exists, this deletes the provider
-                m_providers.remove( providerId );
+                // Move provider from the list of used providers to the list of cached providers
+                m_cachedProviders.insert( providerId, m_providers.take(providerId) );
             }
         }
+
+        // Start the cleanup timer, will delete cached providers after a timeout
+        startCleanupLater();
 
         // The data source is no longer used, delete it
         delete dataSource;
     }
+}
+
+void PublicTransportEngine::startCleanupLater()
+{
+    // Create the timer if it is not currently running
+    if ( !m_cleanupTimer ) {
+        m_cleanupTimer = new QTimer( this );
+        m_cleanupTimer->setInterval( PROVIDER_CLEANUP_TIMEOUT );
+        connect( m_cleanupTimer, SIGNAL(timeout()), this, SLOT(cleanup()) );
+    }
+
+    // (Re)start the timer
+    m_cleanupTimer->start();
+}
+
+void PublicTransportEngine::cleanup()
+{
+    // Delete the timer
+    delete m_cleanupTimer;
+    m_cleanupTimer = 0;
+
+    // Remove all shared pointers of unused cached providers,
+    // ie. delete the provider objects
+    m_cachedProviders.clear();
 }
 
 QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProvider *provider )
@@ -555,13 +585,24 @@ PublicTransportEngine::ProviderPointer PublicTransportEngine::providerFromId(
         const QString &id, bool *newlyCreated )
 {
     if ( m_providers.contains(id) ) {
-        // The provider with the given ID is already created
+        // The provider was already created and is currently used by the engine
         if ( newlyCreated ) {
             *newlyCreated = false;
         }
         return m_providers[ id ];
+    } else if ( m_cachedProviders.contains(id) ) {
+        // The provider was already created, is now unused by the engine,
+        // but is still cached (cleanup timeout not reached yet)
+        if ( newlyCreated ) {
+            *newlyCreated = false;
+        }
+
+        // Move provider back from the list of cached providers to the list of used providers
+        const ProviderPointer provider = m_cachedProviders.take( id );
+        m_providers.insert( id, provider );
+        return provider;
     } else {
-        // Provider not already created
+        // Provider not currently used or cached
         if ( newlyCreated ) {
             *newlyCreated = true;
         }
@@ -817,10 +858,13 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
                                                  QVariantHash *providerData, QString *errorMessage,
                                                  const QSharedPointer<KConfig> &_cache )
 {
-    if ( m_providers.contains(providerId) ) {
+    const bool providerUsed = m_providers.contains( providerId );
+    const bool providerCached = m_cachedProviders.contains( providerId );
+    if ( providerUsed || providerCached ) {
         // The provider is cached in the engine, ie. it is valid,
         // use it's ServiceProviderData object
-        const ProviderPointer provider = m_providers[ providerId ];
+        const ProviderPointer provider = providerUsed
+                ? m_providers[providerId] : m_cachedProviders[providerId];
         *providerData = serviceProviderData( provider.data() );
         errorMessage->clear();
         return true;
@@ -1313,6 +1357,7 @@ void PublicTransportEngine::reloadChangedProviders()
             // and remove the provider object (deletes it)
             delete m_dataSources.take( cachedSource );
             m_providers.remove( providerId );
+            m_cachedProviders.remove( providerId );
             m_erroneousProviders.remove( providerId );
         }
     }

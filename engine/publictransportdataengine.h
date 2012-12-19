@@ -250,6 +250,18 @@ public:
      **/
     static const int DEFAULT_TIME_OFFSET;
 
+    /**
+     * @brief The (minimal) time in milliseconds for unused providers to stay cached.
+     *
+     * When a provider is not used any longer, it is not destroyed immediately, but gets cached.
+     * After this timeout still unused cached providers get destroyed. If an unused provider
+     * gets used again before this timeout it will not get destroyed.
+     *
+     * This timeout can be some seconds long, only the ServiceProvider instance gets cached.
+     * Can prevent too many recreations of providers.
+     **/
+    static const int PROVIDER_CLEANUP_TIMEOUT;
+
 signals:
     /**
      * @brief Emitted when a request for additional data has been finished.
@@ -288,6 +300,9 @@ protected slots:
 
     /** @brief The update timeout for a timetable data source was reached. */
     void updateTimeout();
+
+    /** @brief Do some cleanup, eg. deleting unused cached providers after a while. */
+    void cleanup();
 
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     /** @brief A @p job of the GTFS service has finished. */
@@ -719,14 +734,16 @@ private:
 
     bool enoughDataAvailable( DataSource *dataSource, const SourceRequestData &sourceData ) const;
 
-    QHash< QString, ProviderPointer > m_providers; // Already loaded service providers by ID
-    QVariantHash m_erroneousProviders; // List of erroneous service provider IDs as keys
-                                       // and error messages as values
+    void startCleanupLater();
+
+    QHash< QString, ProviderPointer > m_providers; // Currently used providers by ID
+    QHash< QString, ProviderPointer > m_cachedProviders; // Unused but still cached providers by ID
+    QVariantHash m_erroneousProviders; // Error messages for erroneous providers by ID
     QHash< QString, DataSource* > m_dataSources; // Data objects for data sources, stored by
                                                  // unambiguous data source name
-    QFileSystemWatcher *m_fileSystemWatcher; // Watch the service provider directory
-
-    QTimer *m_providerUpdateDelayTimer;
+    QFileSystemWatcher *m_fileSystemWatcher; // Watches provider installation directories
+    QTimer *m_providerUpdateDelayTimer; // Delays updates after changes in installation directories
+    QTimer *m_cleanupTimer; // Cleanup cached providers after PROVIDER_CLEANUP_TIMEOUT
     QStringList m_runningSources; // Sources which are currently being processed
 };
 
