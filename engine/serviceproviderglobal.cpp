@@ -73,25 +73,19 @@ bool ServiceProviderGlobal::isProviderTypeAvailable( Enums::ServiceProviderType 
 QString ServiceProviderGlobal::defaultProviderForLocation( const QString &location,
                                                            const QStringList &dirs )
 {
-    // Get the filename of the default service provider plugin for the given location
-    const QStringList _dirs = !dirs.isEmpty() ? dirs
-            : KGlobal::dirs()->findDirs( "data", installationSubDirectory() );
-    QString filePath = QString( "%1_default" ).arg( location );
-    foreach( const QString &dir, _dirs ) {
-        foreach ( const QString &extension, fileExtensions() ) {
-            if ( QFile::exists(dir + filePath + '.' + extension) ) {
-                filePath = dir + filePath + '.' + extension;
-                break;
-            }
-        }
+    QStringList locationProviders;
+    const QString subDirectory = installationSubDirectory();
+    foreach ( const QString &pattern, filePatterns() ) {
+        locationProviders << KGlobal::dirs()->findAllResources(
+                "data", subDirectory + location + '_' + pattern );
+    }
+    if ( locationProviders.isEmpty() ) {
+        kWarning() << "Couldn't find any providers for location" << location;
+        return QString();
     }
 
-    // Get the real filename the "xx_default.pts/xml"-symlink links to
-    filePath = QFileInfo( filePath ).canonicalFilePath();
-    if ( filePath.isEmpty() ) {
-        kDebug() << "Couldn't find the default service provider for location" << location;
-    }
-    return filePath;
+    // Simply return first found provider as default provider
+    return locationProviders.first();
 }
 
 QString ServiceProviderGlobal::cacheFileName()
@@ -218,15 +212,6 @@ QStringList ServiceProviderGlobal::installedProviders()
     const QString subDirectory = installationSubDirectory();
     foreach ( const QString &pattern, filePatterns() ) {
         providers << KGlobal::dirs()->findAllResources( "data", subDirectory + pattern );
-
-        // Remove symlinks to default providers from the list
-        for ( int i = providers.count() - 1; i >= 0; --i ) {
-            const QString &provider = providers[i];
-            const QFileInfo fileInfo( provider );
-            if ( fileInfo.isSymLink() && fileInfo.baseName().endsWith(QLatin1String("_default")) ) {
-                providers.removeAt( i );
-            }
-        }
     }
     return providers;
 }

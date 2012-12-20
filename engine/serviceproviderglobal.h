@@ -138,9 +138,7 @@ public:
 
     /**
      * @brief Get the file paths of all installed service provider plugins.
-     * If invalid provider plugins are installed, they also get returned here. Symlinks to the
-     * default providers for the different supported countries won't get returned (symlinks with
-     * this pattern: "[country-code]_default.pts"), only the file being point to.
+     * If invalid provider plugins are installed, they also get returned here.
      **/
     static QStringList installedProviders();
 };

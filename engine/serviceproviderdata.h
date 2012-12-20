@@ -316,9 +316,8 @@ public:
     /**
      * @brief Set the name of the XML file that was parsed to get this ServiceProviderData object.
      *
-     * If @p fileName is a symlink the real file name gets retrieved (using
-     * KStandardDirs::realFilePath, eg. for the default service providers ending with
-     * "_default.pts" or "_default.xml").
+     * If @p fileName is a symlink the real file name gets retrieved
+     * (using KStandardDirs::realFilePath).
      **/
     void setFileName( const QString &fileName );
 

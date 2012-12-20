@@ -10,5 +10,5 @@ set ( script_SRCS
 # Add sources of this directory to the sources list of the parent directories CMakeLists.txt
 set ( publictransport_engine_SRCS ${publictransport_engine_SRCS} ${script_SRCS} PARENT_SCOPE )
 
-# Add scripted provider plugins
+# Add base script provider plugins
 add_subdirectory( serviceProviders )
