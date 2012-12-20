@@ -6287,8 +6287,8 @@ void Project::publish()
     // Add other files, eg. scripts
     switch ( d->data()->type() ) {
     case Enums::ScriptedProvider:
-        zip.addLocalFile( sourcePath + '/' + d->data()->scriptFileName(),
-                          d->data()->scriptFileName() );
+        zip.addLocalFile( d->data()->scriptFileName(),
+                          QFileInfo(d->data()->scriptFileName()).fileName() );
         break;
     default:
         kWarning() << "Invalid provider" << d->data()->type();
