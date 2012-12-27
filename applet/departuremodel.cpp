@@ -2217,12 +2217,13 @@ RouteStopFlags DepartureItem::routeStopFlags( int routeStopIndex, int *minsFromF
     }
 
     // Get time information
-    int _minsFromFirstRouteStop = -1;
+    bool isFirstZeroMinuteStop = false;
     if ( routeStopIndex < m_departureInfo.routeTimes().count()
         && m_departureInfo.routeTimes()[routeStopIndex].isValid() )
     {
         const QTime time = m_departureInfo.routeTimes()[routeStopIndex];
-        _minsFromFirstRouteStop = qCeil( m_departureInfo.departure().time().secsTo(time) / 60.0 );
+        int _minsFromFirstRouteStop =
+                qCeil( m_departureInfo.departure().time().secsTo(time) / 60.0 );
 
         // Fix number of minutes if the date changes between route stops
         // NOTE This only works if the route extends over less than three days
@@ -2239,17 +2240,30 @@ RouteStopFlags DepartureItem::routeStopFlags( int routeStopIndex, int *minsFromF
                 _minsFromFirstRouteStop += 24 * 60;
             }
         }
+
+        if ( _minsFromFirstRouteStop == 0 ) {
+            if ( routeStopIndex == 0 ) {
+                isFirstZeroMinuteStop = true;
+            } else {
+                // Check if the previous stop has the same departure time
+                const QTime previousTime = m_departureInfo.routeTimes()[routeStopIndex - 1];
+                isFirstZeroMinuteStop = previousTime != time;
+            }
+        }
+
+        if ( minsFromFirstRouteStop ) {
+            *minsFromFirstRouteStop = _minsFromFirstRouteStop;
+        }
+    } else if ( minsFromFirstRouteStop ) {
+        *minsFromFirstRouteStop = -1;
     }
-    if ( m_model->info().homeStop == stopName || _minsFromFirstRouteStop == 0 ) {
+    if ( m_model->info().homeStop == stopName || isFirstZeroMinuteStop ) {
         routeStopFlags |= RouteStopIsHomeStop;
     }
     if ( m_model->info().highlightedStop == stopName ) {
         routeStopFlags |= RouteStopIsHighlighted;
     }
 
-    if ( minsFromFirstRouteStop ) {
-        *minsFromFirstRouteStop = _minsFromFirstRouteStop;
-    }
     return routeStopFlags;
 }
 
