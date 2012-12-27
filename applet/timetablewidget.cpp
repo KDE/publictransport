@@ -256,13 +256,24 @@ void PublicTransportGraphicsItem::capturePixmap()
 
 qreal PublicTransportGraphicsItem::padding() const
 {
-    return 4.0 * m_parent->zoomFactor();
+    return padding( m_parent->zoomFactor() );
+}
+
+qreal PublicTransportGraphicsItem::padding( qreal zoomFactor )
+{
+    return 4.0 * zoomFactor;
 }
 
 qreal PublicTransportGraphicsItem::unexpandedHeight() const
 {
-    return qMax( m_parent->iconSize() * 1.1,
-                 (qreal)QFontMetrics(font()).lineSpacing() * m_parent->maxLineCount() + padding() );
+    return unexpandedHeight( m_parent->iconSize(), padding(),
+                             QFontMetrics(font()).lineSpacing(), m_parent->maxLineCount() );
+}
+
+qreal PublicTransportGraphicsItem::unexpandedHeight( qreal iconSize, qreal padding,
+                                                     int lineSpacing, int maxLineCount )
+{
+    return qMax( iconSize * 1.1, lineSpacing * maxLineCount + padding );
 }
 
 bool PublicTransportGraphicsItem::hasExtraIcon( Columns column ) const
@@ -1391,7 +1402,18 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
     }
 }
 
-qreal JourneyGraphicsItem::expandAreaHeight() const
+qreal PublicTransportGraphicsItem::expandAreaHeight() const
+{
+    // Round expand area height to multiples of unexpandedHeight(),
+    // because this is used for the snap size of the ScrollWidget to stop scrolling
+    // at the top of an item (cannot set individual scroll stop positions)
+    const qreal height = expandAreaHeightMinimum();
+    const qreal heightUnit = unexpandedHeight();
+    const int factor = qCeil( height / heightUnit );
+    return heightUnit * factor * m_expandStep;
+}
+
+qreal JourneyGraphicsItem::expandAreaHeightMinimum() const
 {
     if ( !m_item || qFuzzyIsNull(m_expandStep) ) {
         return 0.0;
@@ -1428,10 +1450,10 @@ qreal JourneyGraphicsItem::expandAreaHeight() const
         height += extraInformationHeight + padding();
     }
 
-    return height * m_expandStep;
+    return height;
 }
 
-qreal DepartureGraphicsItem::expandAreaHeight() const
+qreal DepartureGraphicsItem::expandAreaHeightMinimum() const
 {
     if ( !m_item || qFuzzyIsNull(m_expandStep) ) {
         return 0.0;
@@ -1468,7 +1490,7 @@ qreal DepartureGraphicsItem::expandAreaHeight() const
         height += extraInformationHeight + padding();
     }
 
-    return height * m_expandStep;
+    return height;
 }
 
 qreal DepartureGraphicsItem::expandAreaIndentation() const
@@ -1526,13 +1548,34 @@ PublicTransportWidget::PublicTransportWidget( Options options, QGraphicsItem* pa
     QGraphicsWidget *container = new QGraphicsWidget( this );
     QGraphicsLinearLayout *l = new QGraphicsLinearLayout( Qt::Vertical, container );
     l->setSpacing( 0.0 );
+    l->setContentsMargins( 0, 0, 0, 0 );
     container->setLayout( l );
     setWidget( container );
-    setFlag( ItemClipsChildrenToShape );
 
     m_maxLineCount = 2;
     m_iconSize = 32;
     m_zoomFactor = 1.0;
+    updateSnapSize();
+}
+
+QPainterPath PublicTransportGraphicsItem::shape() const
+{
+    // Get the viewport geometry of the ScrollWidget in local coordinates
+    // and adjusted to clip some pixels of children at the top/bottom
+    // for the ScrollWidget overflow border
+    QPainterPath parentPath;
+    QRectF viewport = publicTransportWidget()->viewportGeometry();
+    if ( publicTransportWidget()->overflowBordersVisible() ) {
+        viewport.adjust( 0, 2, 0, -1 );
+    }
+    parentPath.addRect( viewport );
+    parentPath = mapFromItem( publicTransportWidget(), parentPath );
+
+    // Intersect the parent shape with the shape of this item
+    // and return it as visible shape
+    QPainterPath path;
+    path.addRect( boundingRect() );
+    return path.intersected( parentPath );
 }
 
 void PublicTransportWidget::setupActions()
@@ -1556,6 +1599,13 @@ void PublicTransportWidget::setOptions( PublicTransportWidget::Options options )
 {
     m_options = options;
     update();
+}
+
+void PublicTransportWidget::updateSnapSize()
+{
+    setSnapSize( QSizeF(0, PublicTransportGraphicsItem::unexpandedHeight(m_iconSize,
+            PublicTransportGraphicsItem::padding(m_zoomFactor), QFontMetrics(font()).lineSpacing(),
+            m_maxLineCount)) );
 }
 
 void PublicTransportWidget::setPrefixItem( TimetableListItem *prefixItem )
@@ -1705,6 +1755,7 @@ void PublicTransportWidget::setZoomFactor( qreal zoomFactor )
     }
     updateGeometry();
     updateItemGeometries();
+    updateSnapSize();
     update();
 }
 

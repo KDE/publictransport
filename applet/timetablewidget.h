@@ -111,6 +111,15 @@ public:
     /** @brief The height of route items. */
     static const qreal ROUTE_ITEM_HEIGHT;
 
+    /**
+     * @brief Get the visible part of the shape of this item.
+     *
+     * PublicTransportGraphicsItem's by default clip to their shape, ie. to the painter path
+     * returned by this function. It intersects the items shape with the currently visible area
+     * of the PublicTransportWidget that contains this item.
+     **/
+    virtual QPainterPath shape() const;
+
     /** @brief A pointer to the containing PublicTransportWidget. */
     PublicTransportWidget *publicTransportWidget() const { return m_parent; };
 
@@ -135,10 +144,20 @@ public:
      *
      * If you overwrite this method you should remember to add @ref padding.
      **/
-    virtual qreal unexpandedHeight() const;
+    qreal unexpandedHeight() const;
 
-    /** @brief Overwrite to calculate the height of the expand area. */
-    virtual qreal expandAreaHeight() const = 0;
+    static qreal unexpandedHeight( qreal iconSize, qreal padding,
+                                   int lineSpacing, int maxLineCount );
+
+    /**
+     * @brief Get the height of the expand area.
+     *
+     * Uses the function expandAreaHeightMinimum() which gets overwritten by deriving classes
+     * and rounds it to multiples of unexpandedHeight(). It also applies the current expanding
+     * animation step, ie. 0 gets returned at the start of the animation and the full expand
+     * area height at the end.
+     **/
+    qreal expandAreaHeight() const;
 
     /**
      * @brief Overwrite to calculate the indentation of the expand area.
@@ -158,9 +177,11 @@ public:
     /**
      * @brief The padding to the borders of this widget
      *
-     * The default implementation scales with @ref PublicTransportWidget::zoomFactor.
+     * Scales with @ref PublicTransportWidget::zoomFactor.
      **/
     inline qreal padding() const;
+
+    static qreal padding( qreal zoomFactor );
 
     /**
      * @brief Checks whether or not there is a extra icon in the model in the given @p column.
@@ -315,6 +336,9 @@ protected:
     virtual void drawFadeOutLeftAndRight( QPainter *painter, const QRect &rect, int fadeWidth = 40 );
     virtual void drawAlarmBackground( QPainter *painter, const QRect &rect );
 
+    /** @brief The minimum size of the expand area. */
+    virtual qreal expandAreaHeightMinimum() const = 0;
+
     QPointer<TopLevelItem> m_item;
     PublicTransportWidget *m_parent;
     bool m_expanded;
@@ -377,9 +401,6 @@ public:
 
     /** @brief Whether or not this item is valid, ie. it has data for painting. */
     virtual bool isValid() const { return m_infoTextDocument && m_timeTextDocument; };
-
-    /** @brief The size of the expand area. */
-    virtual qreal expandAreaHeight() const;
 
     /** @brief The indentation of the expand area. */
     virtual qreal expandAreaIndentation() const;
@@ -469,6 +490,9 @@ protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
     virtual QGraphicsWidget *routeItem() const;
 
+    /** @brief The minimum size of the expand area. */
+    virtual qreal expandAreaHeightMinimum() const;
+
 private:
     QTextDocument *m_infoTextDocument;
     QTextDocument *m_timeTextDocument;
@@ -520,9 +544,6 @@ public:
 
     /** @brief Whether or not this item is valid, ie. it has data for painting. */
     virtual bool isValid() const { return m_infoTextDocument; };
-
-    /** @brief The size of the expand area. */
-    virtual qreal expandAreaHeight() const;
 
     /** @brief The indentation of the expand area. */
     virtual qreal expandAreaIndentation() const;
@@ -593,6 +614,9 @@ protected:
     virtual void contextMenuEvent( QGraphicsSceneContextMenuEvent *event );
     virtual void updateTextLayouts();
     virtual QGraphicsWidget *routeItem() const;
+
+    /** @brief The minimum size of the expand area. */
+    virtual qreal expandAreaHeightMinimum() const;
 
 private:
     QTextDocument *m_infoTextDocument;
@@ -706,6 +730,7 @@ protected:
     virtual void setupActions();
     void setPrefixItem( TimetableListItem *prefixItem );
     void setPostfixItem( TimetableListItem *postfixItem );
+    void updateSnapSize();
 
     Options m_options;
     PublicTransportModel *m_model;
