@@ -1025,6 +1025,12 @@ void PublicTransportApplet::showJourneySearch()
 
 void PublicTransportApplet::exitJourneySearch()
 {
+    Q_D( PublicTransportApplet );
+    if ( d->listStopSuggestions ) {
+        d->listStopSuggestions->deleteLater();
+        d->listStopSuggestions = 0;
+    }
+
     // Show journey search action again
     action("searchJourneys")->setVisible( true );
 }
