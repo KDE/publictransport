@@ -805,7 +805,10 @@ void PublicTransportApplet::showActionButtons()
     d->overlay->setLayout( layout );
 
     // Create a fade in animation for the whole overlay
-    GlobalApplet::fadeAnimation( d->overlay, 1 )->start( QAbstractAnimation::DeleteWhenStopped );
+    Plasma::Animation *animation = GlobalApplet::fadeAnimation( d->overlay, 1 );
+    if ( animation ) {
+        animation->start( QAbstractAnimation::DeleteWhenStopped );
+    }
 }
 
 void PublicTransportApplet::setCurrentStopIndex( QAction* stopAction )
