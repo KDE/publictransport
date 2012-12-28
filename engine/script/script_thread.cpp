@@ -80,14 +80,18 @@ ScriptJob::~ScriptJob()
 
 void ScriptJob::requestAbort()
 {
-    QMutexLocker locker( m_mutex );
+    m_mutex->lock();
     if ( !m_engine ) {
         // Is already finished
+        m_mutex->unlock();
         return;
     } else if ( m_quit ) {
         // Is already aborting, wait for the script engine to get destroyed
         QEventLoop loop;
         connect( m_engine, SIGNAL(destroyed(QObject*)), &loop, SLOT(quit()) );
+        m_mutex->unlock();
+
+        // Run the event loop, waiting for the engine to get destroyed or a 1 second timeout
         QTimer::singleShot( 1000, &loop, SLOT(quit()) );
         loop.exec();
         return;
@@ -112,6 +116,7 @@ void ScriptJob::requestAbort()
         m_eventLoop = 0;
         loop->quit();
     }
+    m_mutex->unlock();
 
     // Wait until signals are processed
     qApp->processEvents();
@@ -139,7 +144,7 @@ void ScriptAgent::checkExecution()
 void ScriptJob::run()
 {
     m_mutex->lock();
-    if ( !loadScript(&m_data.program) ) {
+    if ( !loadScript(m_data.program) ) {
         kDebug() << "Script could not be loaded correctly";
         m_mutex->unlock();
         return;
@@ -319,6 +324,7 @@ void ScriptJob::cleanup()
     if ( !m_objects.storage.isNull() ) {
         m_objects.storage->checkLifetime();
     }
+    disconnect( m_objects.result.data(), 0, this, 0 );
     if ( m_engine ) {
         m_engine->deleteLater();
         m_engine = 0;
@@ -548,8 +554,13 @@ quint16 maxIncludeLine( const QString &program )
     return programBegin.count( '\n' );
 }
 
-bool ScriptJob::loadScript( QScriptProgram *script )
+bool ScriptJob::loadScript( const QSharedPointer< QScriptProgram > &script )
 {
+    if ( !script ) {
+        kDebug() << "Invalid script data";
+        return false;
+    }
+
     // Create script engine
     QMutexLocker locker( m_mutex );
     m_engine = new QScriptEngine();
@@ -692,11 +703,13 @@ const AbstractRequest *DepartureJob::request() const
 
 QString ScriptJob::sourceName() const
 {
+    QMutexLocker locker( m_mutex );
     return request()->sourceName();
 }
 
 const AbstractRequest *ScriptJob::cloneRequest() const
 {
+    QMutexLocker locker( m_mutex );
     return request()->clone();
 }
 

@@ -99,6 +99,62 @@ QSharedPointer< KConfig > ServiceProviderGlobal::cache()
     return QSharedPointer< KConfig >( new KConfig(cacheFileName(), KConfig::SimpleConfig) );
 }
 
+void ServiceProviderGlobal::cleanupCache( const QSharedPointer< KConfig > &_cache )
+{
+    QSharedPointer< KConfig > cache = _cache.isNull() ? ServiceProviderGlobal::cache() : _cache;
+    const QStringList installedProviderPaths = ServiceProviderGlobal::installedProviders();
+    QStringList installedProviderIDs;
+    foreach ( const QString &installedProviderPath, installedProviderPaths ) {
+        installedProviderIDs << idFromFileName( installedProviderPath );
+    }
+
+    foreach ( const QString &group, cache->groupList() ) {
+        if ( group != QLatin1String("script") && group != QLatin1String("gtfs") &&
+             !installedProviderIDs.contains(group) )
+        {
+            // Found a group for a provider that is no longer installed
+            kDebug() << "Cleanup cache data for no longer installed provider" << group;
+            clearCache( group, cache, false );
+        }
+    }
+    cache->sync();
+}
+
+void ServiceProviderGlobal::clearCache( const QString &providerId,
+                                        const QSharedPointer< KConfig > &_cache, bool syncCache )
+{
+    QSharedPointer< KConfig > cache = _cache.isNull() ? ServiceProviderGlobal::cache() : _cache;
+    if ( !cache->hasGroup(providerId) ) {
+        // No data cached for the provider
+        return;
+    }
+
+    // Remove all data for the provider from the cache
+    cache->deleteGroup( providerId );
+
+    // Remove provider from "usingProviders" lists for included script files
+    KConfigGroup globalScriptGroup = cache->group( "script" );
+    const QStringList globalScriptGroupNames = globalScriptGroup.groupList();
+    foreach ( const QString &globalScriptGroupName, globalScriptGroupNames ) {
+        if ( !globalScriptGroupName.startsWith(QLatin1String("include_")) ) {
+            continue;
+        }
+
+        // Check if the provider to remove from the cache is listed as using the current include
+        KConfigGroup includeFileGroup = globalScriptGroup.group( globalScriptGroupName );
+        QStringList usingProviders = includeFileGroup.readEntry( "usingProviders", QStringList() );
+        if ( usingProviders.contains(providerId) ) {
+            // Remove provider from the list of providers using the current include script file
+            usingProviders.removeOne( providerId );
+            includeFileGroup.writeEntry( "usingProviders", usingProviders );
+        }
+    }
+
+    if ( syncCache ) {
+        cache->sync();
+    }
+}
+
 QString ServiceProviderGlobal::idFromFileName( const QString &serviceProviderFileName )
 {
     // Get the service provider substring from the XML filename, ie. "/path/to/xml/<id>.pts/xml"

@@ -492,7 +492,7 @@ bool DebuggerJob::waitFor( QObject *sender, const char *signal, WaitForType type
 void LoadScriptJob::debuggerRun()
 {
     m_mutex->lockInline();
-    QScriptSyntaxCheckResult syntax = QScriptEngine::checkSyntax( m_data.program.sourceCode() );
+    QScriptSyntaxCheckResult syntax = QScriptEngine::checkSyntax( m_data.program->sourceCode() );
     if ( syntax.state() == QScriptSyntaxCheckResult::Error ) {
         DEBUG_JOBS("Syntax error at" << syntax.errorLineNumber() << syntax.errorColumnNumber()
                    << syntax.errorMessage());
@@ -530,7 +530,7 @@ void LoadScriptJob::debuggerRun()
     agent->setDebugFlags( debugFlags );
     agent->setExecutionControlType( debugFlags.testFlag(InterruptAtStart)
                                     ? ExecuteInterrupt : ExecuteRun );
-    agent->engine()->evaluate( data.program );
+    agent->engine()->evaluate( *data.program );
     Q_ASSERT_X( !objects.network->hasRunningRequests() || !agent->engine()->isEvaluating(),
                 "LoadScriptJob::debuggerRun()",
                 "Evaluating the script should not start any asynchronous requests, bad script" );
@@ -716,7 +716,7 @@ void ForeignAgentJob::debuggerRun()
         engine = agent->engine();
 
         // Load script
-        engine->evaluate( data.program );
+        engine->evaluate( *data.program );
         Q_ASSERT_X( !engine->isEvaluating(), "CallScriptFunctionJob::debuggerRun()",
                     "Evaluating the script should not start any asynchronous requests, bad script" );
         m_engineSemaphore->release();

@@ -31,17 +31,18 @@ class QScriptEngine;
 struct ScriptData {
     /** @brief Read script data from the engine's global object. */
     static ScriptData fromEngine( QScriptEngine *engine,
-                                  const QScriptProgram &scriptProgram = QScriptProgram() );
+                                  const QSharedPointer< QScriptProgram > &scriptProgram =
+                                        QSharedPointer< QScriptProgram >() );
 
     ScriptData();
-    ScriptData( const ServiceProviderData *data, const QScriptProgram &scriptProgram );
+    ScriptData( const ScriptData &scriptData );
+    ScriptData( const ServiceProviderData *data,
+                const QSharedPointer< QScriptProgram > &scriptProgram );
 
-    bool isValid() const {
-        return provider.isValid() && !program.isNull();
-    };
+    bool isValid() const { return provider.isValid() && program; };
 
     ServiceProviderData provider;
-    QScriptProgram program;
+    QSharedPointer< QScriptProgram > program;
 };
 Q_DECLARE_METATYPE( ScriptData )
 
@@ -50,9 +51,11 @@ struct ScriptObjects {
     static ScriptObjects fromEngine( QScriptEngine *engine );
 
     ScriptObjects();
+    ScriptObjects( const ScriptObjects &other );
 
     void clear();
-    void createObjects( const ServiceProviderData *data, const QScriptProgram &scriptProgram );
+    void createObjects( const ServiceProviderData *data,
+                        const QSharedPointer< QScriptProgram > &scriptProgram );
     void createObjects( const ScriptData &data = ScriptData() );
     bool attachToEngine( QScriptEngine *engine, const ScriptData &data );
     void moveToThread( QThread *thread );

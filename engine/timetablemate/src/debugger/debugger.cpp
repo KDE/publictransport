@@ -471,7 +471,7 @@ LoadScriptJob *Debugger::getLoadScriptJob( const QString &program, const Service
     }
 
     if ( m_lastScriptError == NoScriptError &&
-         !m_data.program.isNull() && m_data.program.sourceCode() == program &&
+         m_data.program && m_data.program->sourceCode() == program &&
          (!m_data.provider.isValid() || m_data.provider == *data) )
     {
         // Script code and provider data unchanged
@@ -480,7 +480,8 @@ LoadScriptJob *Debugger::getLoadScriptJob( const QString &program, const Service
 
     // The script was modified or not loaded before
     m_state = ScriptModified;
-    m_data = ScriptData( data, QScriptProgram(program, data->scriptFileName()) );
+    m_data = ScriptData( data, QSharedPointer< QScriptProgram >(
+                new QScriptProgram(program, data->scriptFileName())) );
     m_lastScriptError = InitializingScript;
     return createLoadScriptJob( debugFlags );
 }

@@ -301,6 +301,9 @@ protected slots:
     /** @brief The update timeout for a timetable data source was reached. */
     void updateTimeout();
 
+    /** @brief The cleanup timeout for a timetable data source was reached. */
+    void cleanupTimeout();
+
     /** @brief Do some cleanup, eg. deleting unused cached providers after a while. */
     void cleanup();
 
@@ -636,11 +639,18 @@ private:
      **/
     ProviderPointer providerFromId( const QString &providerId, bool *newlyCreated = 0 );
 
-    /** @brief Delete the provider with the given @p providerId and clears all cached data. */
-    void deleteProvider( const QString &providerId );
+    /**
+     * @brief Delete the provider with the given @p providerId and clears all cached data.
+     *
+     * The provider to delete is considered invalid and will not be cached.
+     * Data sources using the provider will be deleted if @p keepProviderDataSources is @c false,
+     * which is @em not the default.
+     **/
+    void deleteProvider( const QString &providerId, bool keepProviderDataSources = true );
 
     /** @brief Publish the data of @p dataSource under it's data source name. */
-    void publishData( DataSource *dataSource );
+    void publishData( DataSource *dataSource,
+                      const QString &newlyRequestedProviderId = QString() );
 
     /**
      * @brief Get a pointer to the ProvidersDataSource object of service provider data source(s).
@@ -687,29 +697,6 @@ private:
     /** @brief If @p providerId is empty return the default provider for the users country. */
     static QString fixProviderId( const QString &providerId );
 
-    inline static uint hashForDeparture( const QVariantHash &departure ) {
-        return hashForDeparture( departure[Enums::toString(Enums::DepartureDateTime)].toDateTime(),
-                static_cast<Enums::VehicleType>(departure[Enums::toString(Enums::TypeOfVehicle)].toInt()),
-                departure[Enums::toString(Enums::TransportLine)].toString(),
-                departure[Enums::toString(Enums::Target)].toString() );
-    };
-
-    inline static uint hashForDeparture( const TimetableData &departure ) {
-        return hashForDeparture( departure[Enums::DepartureDateTime].toDateTime(),
-                static_cast<Enums::VehicleType>(departure[Enums::TypeOfVehicle].toInt()),
-                departure[Enums::TransportLine].toString(),
-                departure[Enums::Target].toString() );
-    };
-
-    static uint hashForDeparture( const QDateTime &departure, Enums::VehicleType vehicleType,
-                                  const QString &lineString, const QString &target )
-    {
-        return qHash( QString("%1%2%3%4").arg(departure.toString("dMMyyhhmmss"))
-                      .arg(static_cast<int>(vehicleType))
-                      .arg(lineString)
-                      .arg(target.trimmed().toLower()) );
-    };
-
     /**
      * @brief Get the service provider with the given @p serviceProviderId, if any.
      *
@@ -732,9 +719,18 @@ private:
     /** @brief Get the timetable data source that uses the given @p timer. */
     TimetableDataSource *dataSourceFromTimer( QTimer *timer ) const;
 
+    /**
+     * @brief Update all provider data including the provider state.
+     *
+     * Uses updateProviderState() to update the state of the provider.
+     **/
+    bool updateProviderData( const QString &providerId,
+                             const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(0) );
+
     bool enoughDataAvailable( DataSource *dataSource, const SourceRequestData &sourceData ) const;
 
     void startCleanupLater();
+    void startDataSourceCleanupLater( TimetableDataSource *dataSource );
 
     QHash< QString, ProviderPointer > m_providers; // Currently used providers by ID
     QHash< QString, ProviderPointer > m_cachedProviders; // Unused but still cached providers by ID

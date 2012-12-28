@@ -201,7 +201,7 @@ protected:
     virtual const AbstractRequest* request() const = 0;
 
     /** @brief Load @p script into the engine and insert some objects/functions. */
-    bool loadScript( QScriptProgram *script );
+    bool loadScript( const QSharedPointer< QScriptProgram > &script );
 
     bool waitFor( QObject *sender, const char *signal, WaitForType type );
 

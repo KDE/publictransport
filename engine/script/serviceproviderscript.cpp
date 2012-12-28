@@ -133,7 +133,8 @@ bool ServiceProviderScript::lazyLoadScript()
     const QString scriptContents = QString::fromUtf8( ba );
 
     // Initialize the script
-    m_scriptData = ScriptData( m_data, QScriptProgram(scriptContents, m_data->scriptFileName()) );
+    m_scriptData = ScriptData( m_data, QSharedPointer< QScriptProgram >(
+            new QScriptProgram(scriptContents, m_data->scriptFileName())) );
 
     return true;
 }
@@ -269,7 +270,7 @@ QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
             objects.createObjects( m_scriptData );
             objects.attachToEngine( &engine, m_scriptData );
 
-            engine.evaluate( m_scriptData.program );
+            engine.evaluate( *m_scriptData.program );
             QVariantList result;
             if ( !engine.hasUncaughtException() ) {
                 result = engine.globalObject().property(

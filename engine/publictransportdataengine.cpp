@@ -76,9 +76,18 @@ Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
     return 0;
 }
 
-void PublicTransportEngine::publishData( DataSource *dataSource )
+void PublicTransportEngine::publishData( DataSource *dataSource,
+                                         const QString &newlyRequestedProviderId )
 {
     Q_ASSERT( dataSource );
+    TimetableDataSource *timetableDataSource = dynamic_cast< TimetableDataSource* >( dataSource );
+    if ( timetableDataSource ) {
+        foreach ( const QString &usingDataSource, timetableDataSource->usingDataSources() ) {
+            setData( usingDataSource, timetableDataSource->data() );
+        }
+        return;
+    }
+
     setData( dataSource->name(), dataSource->data() );
 
     ProvidersDataSource *providersSource = dynamic_cast< ProvidersDataSource* >( dataSource );
@@ -96,6 +105,13 @@ void PublicTransportEngine::publishData( DataSource *dataSource )
                 removeAllData( providerSource );
                 setData( providerSource, providersSource->providerData(changedProviderId) );
             }
+        }
+
+        if ( !newlyRequestedProviderId.isEmpty() ) {
+            const QString providerSource =
+                    sourceTypeKeyword(ServiceProviderSource) + ' ' + newlyRequestedProviderId;
+            removeAllData( providerSource );
+            setData( providerSource, providersSource->providerData(newlyRequestedProviderId) );
         }
     }
 }
@@ -234,6 +250,11 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
     // 60 seconds should be enough, departure / arrival times have minute precision (except for GTFS).
     setMinimumPollingInterval( 60000 );
 
+    // Cleanup the cache from obsolete data for providers that were uninstalled
+    // while the engine was not running
+    ServiceProviderGlobal::cleanupCache();
+
+    // Get notified when data sources are no longer used
     connect( this, SIGNAL(sourceRemoved(QString)), this, SLOT(slotSourceRemoved(QString)) );
 
     // Get notified when the network state changes to update data sources,
@@ -274,7 +295,7 @@ PublicTransportEngine::~PublicTransportEngine()
                  << m_providers.count() << "providers used, abort and delete all providers";
         QStringList providerIds = m_providers.keys();
         foreach ( const QString &providerId, providerIds ) {
-            deleteProvider( providerId );
+            deleteProvider( providerId, false );
         }
     }
 
@@ -394,6 +415,31 @@ void PublicTransportEngine::slotSourceRemoved( const QString &sourceName )
 
         // The data source is no longer used, delete it
         delete dataSource;
+    } else if ( nonAmbiguousName.startsWith(sourceTypeKeyword(ServiceProviderSource)) ) {
+        // A "ServiceProvider xx_xx" data source was removed, data for these sources
+        // is stored in the "ServiceProviders" data source object in m_dataSources.
+        // Remove not installed providers also from the "ServiceProviders" data source.
+        const QString providerId = nonAmbiguousName.mid(
+                QString(sourceTypeKeyword(ServiceProviderSource)).length() + 1 );
+        if ( !providerId.isEmpty() && !isProviderUsed(providerId) ) {
+            // Test if the provider is installed
+            const QStringList providerPaths = ServiceProviderGlobal::installedProviders();
+            bool isInstalled = false;
+            foreach ( const QString &providerPath, providerPaths ) {
+                const QString &installedProviderId =
+                        ServiceProviderGlobal::idFromFileName( providerPath );
+                if ( providerId == installedProviderId ) {
+                    isInstalled = true;
+                    break;
+                }
+            }
+            if ( !isInstalled ) {
+                kDebug() << "Remove provider" << providerId;
+                // Provider is not installed, remove it from the "ServiceProviders" data source
+                providersDataSource()->removeProvider( providerId );
+                removeData( sourceTypeKeyword(ServiceProvidersSource), providerId );
+            }
+        }
     }
 }
 
@@ -664,40 +710,46 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const SourceR
         QVariantHash locationCountry = locations[ data.defaultParameter.toLower() ].toHash();
         QString defaultProvider = locationCountry[ "defaultProvider" ].toString();
         if ( defaultProvider.isEmpty() ) {
+            // No provider for the location found
             return false;
         }
 
         providerId = defaultProvider;
     }
 
-    // Test if the provider is valid
+    updateProviderData( providerId );
+    publishData( providersDataSource(), providerId );
+    return true;
+}
+
+bool PublicTransportEngine::updateProviderData( const QString &providerId,
+                                                const QSharedPointer<KConfig> &cache )
+{
     QVariantHash providerData;
     QString errorMessage;
-    if ( testServiceProvider(providerId, &providerData, &errorMessage) ) {
-        // The provider is valid, update it's state
+    ProvidersDataSource *providersSource = providersDataSource();
+
+    // Test if the provider is valid
+    if ( testServiceProvider(providerId, &providerData, &errorMessage, cache) ) {
         QVariantHash stateData;
         const QString state = updateProviderState( providerId, &stateData,
                 providerData["type"].toString(), providerData.value("feedUrl").toString() );
-
-        // Publish all provider information and add "state", "stateData" and "error"
-        setData( data.name, providerData );
-        setData( data.name, "state", state );
-        setData( data.name, "stateData", stateData );
-        setData( data.name, "error", false );
+        providerData["error"] = false;
+        providersSource->addProvider( providerId,
+                ProvidersDataSource::ProviderData(providerData, state, stateData) );
+        return true;
     } else {
-        // The provider is erroneous
-        setData( data.name, providerData );
-        setData( data.name, "id", providerId );
-        setData( data.name, "error", true );
-        setData( data.name, "errorMessage", errorMessage );
-
-        // Also add error information as state
+        // Invalid provider
+        providerData["id"] = providerId;
+        providerData["error"] = true;
+        providerData["errorMessage"] = errorMessage;
         QVariantHash stateData;
         stateData[ "statusMessage" ] = errorMessage;
-        setData( data.name, "state", "error" );
-        setData( data.name, "stateData", stateData );
+
+        providersSource->addProvider( providerId,
+                ProvidersDataSource::ProviderData(providerData, "error", stateData) );
+        return false;
     }
-    return true;
 }
 
 bool PublicTransportEngine::updateServiceProviderSource()
@@ -708,46 +760,39 @@ bool PublicTransportEngine::updateServiceProviderSource()
         const QStringList providers = ServiceProviderGlobal::installedProviders();
         if ( providers.isEmpty() ) {
             kWarning() << "Could not find any service provider plugins";
-            return false;
-        }
+        } else {
+            QStringList loadedProviders;
+            m_erroneousProviders.clear();
+            QSharedPointer<KConfig> cache = ServiceProviderGlobal::cache();
+            foreach( const QString &provider, providers ) {
+                const QString providerId =
+                        ServiceProviderGlobal::idFromFileName( KUrl(provider).fileName() );
+                if ( updateProviderData(providerId, cache) ) {
+                    loadedProviders << providerId;
+                }
+            }
 
-        QStringList loadedProviders;
-        m_erroneousProviders.clear();
-        QSharedPointer<KConfig> cache = ServiceProviderGlobal::cache();
-        foreach( const QString &provider, providers ) {
-            QString providerId = ServiceProviderGlobal::idFromFileName( KUrl(provider).fileName() );
-            QVariantHash providerData;
-            QString errorMessage;
-            if ( testServiceProvider(providerId, &providerData, &errorMessage, cache) ) {
-                QVariantHash stateData;
-                const QString state = updateProviderState( providerId, &stateData,
-                        providerData["type"].toString(), providerData.value("feedUrl").toString() );
-
-                providerData["error"] = false;
-                providersSource->addProvider( providerId,
-                        ProvidersDataSource::ProviderData(providerData, state, stateData) );
-                loadedProviders << providerId;
-            } else {
-                // Invalid provider
-                providerData["id"] = providerId;
-                providerData["error"] = true;
-                providerData["errorMessage"] = errorMessage;
-                QVariantHash stateData;
-                stateData[ "statusMessage" ] = errorMessage;
-
-                providersSource->addProvider( providerId,
-                        ProvidersDataSource::ProviderData(providerData, "error", stateData) );
+            // Print information about loaded/erroneous providers
+            kDebug() << "Loaded" << loadedProviders.count() << "service providers";
+            if ( !m_erroneousProviders.isEmpty() ) {
+                kWarning() << "Erroneous service provider plugins, that could not be loaded:"
+                           << m_erroneousProviders;
             }
         }
 
-        // Print information about loaded/erroneous providers
-        kDebug() << "Loaded" << loadedProviders.count() << "service providers";
-        if ( !m_erroneousProviders.isEmpty() ) {
-            kWarning() << "Erroneous service provider plugins, that could not be loaded:"
-                       << m_erroneousProviders;
+        // Mark and update all providers that are no longer installed
+        QSharedPointer< KConfig > cache = ServiceProviderGlobal::cache();
+        const QStringList uninstalledProviderIDs = providersSource->markUninstalledProviders();
+        foreach ( const QString &uninstalledProviderID, uninstalledProviderIDs ) {
+            // Clear all values stored in the cache for the provider
+            ServiceProviderGlobal::clearCache( uninstalledProviderID, cache );
+
+            // Delete the provider and update it's state and other data
+            deleteProvider( uninstalledProviderID );
+            updateProviderData( uninstalledProviderID, cache );
         }
 
-        // Insert the data source, providersData );
+        // Insert the data source
         m_dataSources.insert( name, providersSource );
     }
 
@@ -1145,6 +1190,7 @@ void PublicTransportEngine::requestAdditionalData( const QString &sourceName, in
                                             "Additional data is already included" );
         return;
     } else if ( item["WaitingForAdditionalData"].toBool() ) {
+        kDebug() << "Additional data for" << itemNumber << "already requested, please wait";
         emit additionalDataRequestFinished( QVariantHash(), false,
                                             "Additional data already was requested, please wait" );
         return;
@@ -1300,26 +1346,40 @@ void PublicTransportEngine::serviceProviderDirChanged( const QString &path )
     m_providerUpdateDelayTimer->start( 250 );
 }
 
-void PublicTransportEngine::deleteProvider( const QString &providerId )
+void PublicTransportEngine::deleteProvider( const QString &providerId,
+                                            bool keepProviderDataSources )
 {
     // Clear all cached data
     const QStringList cachedSources = m_dataSources.keys();
     foreach( const QString &cachedSource, cachedSources ) {
         const QString currentProviderId = providerIdFromSourceName( cachedSource );
         if ( currentProviderId == providerId ) {
-            // Disconnect provider and abort all running requests
+            // Disconnect provider and abort all running requests,
+            // take provider from the provider list without caching it
             ProviderPointer provider = m_providers.take( providerId );
             if ( provider ) {
                 disconnect( provider.data(), 0, this, 0 );
                 provider->abortAllRequests();
             }
-
-            // Remove data source for the current provider,
-            // the provider object was already taken from m_providers and gets deleted
-            // once the shared provider pointer gets destroyed
-            delete m_dataSources.take( cachedSource );
-            m_erroneousProviders.remove( providerId );
             m_runningSources.removeOne( cachedSource );
+
+            if ( keepProviderDataSources ) {
+                // Update data source for the provider
+                TimetableDataSource *timetableSource =
+                        dynamic_cast< TimetableDataSource* >( m_dataSources[cachedSource] );
+                if ( timetableSource ) {
+                    // Stop automatic updates
+                    timetableSource->stopUpdateTimer();
+
+                    // Update manually
+                    foreach ( const QString &sourceName, timetableSource->usingDataSources() ) {
+                        updateTimetableDataSource( SourceRequestData(sourceName) );
+                    }
+                }
+            } else {
+                // Delete data source for the provider
+                delete m_dataSources.take( cachedSource );
+            }
         }
     }
 }
@@ -1353,12 +1413,23 @@ void PublicTransportEngine::reloadChangedProviders()
 #endif
             ) )
         {
-            // Remove data source for the current provider
-            // and remove the provider object (deletes it)
-            delete m_dataSources.take( cachedSource );
             m_providers.remove( providerId );
             m_cachedProviders.remove( providerId );
             m_erroneousProviders.remove( providerId );
+
+            updateProviderData( providerId, cache );
+
+            TimetableDataSource *timetableSource =
+                    dynamic_cast< TimetableDataSource* >( m_dataSources[cachedSource] );
+            if ( timetableSource ) {
+                // Stop automatic updates
+                timetableSource->stopUpdateTimer();
+
+                // Update manually
+                foreach ( const QString &sourceName, timetableSource->usingDataSources() ) {
+                    updateTimetableDataSource( SourceRequestData(sourceName) );
+                }
+            }
         }
     }
 
@@ -1722,7 +1793,6 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
     QVariantList departuresData;
     const QString itemKey = isDepartureData ? "departures" : "arrivals";
 
-    QHash< uint, TimetableData > stillUsedAdditionalData;
     foreach( const DepartureInfoPtr &departureInfo, items ) {
         QVariantHash departureData;
         TimetableData departure = departureInfo->data();
@@ -1738,25 +1808,35 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
         departureData.insert( "Expressline", departureInfo->isExpressLine() );
 
         // Add existing additional data
-        const uint hash = hashForDeparture( departure );
+        const uint hash = TimetableDataSource::hashForDeparture( departure, isDepartureData );
         if ( dataSource->additionalData().contains(hash) ) {
             // Found already downloaded additional data, add it to the updated departure data
             const TimetableData additionalData = dataSource->additionalData( hash );
-            for ( TimetableData::ConstIterator it = additionalData.constBegin();
-                  it != additionalData.constEnd(); ++it )
-            {
-                departureData.insert( Global::timetableInformationToString(it.key()), it.value() );
+            if ( !additionalData.isEmpty() ) {
+                bool hasAdditionalData = false;
+                for ( TimetableData::ConstIterator it = additionalData.constBegin();
+                      it != additionalData.constEnd(); ++it )
+                {
+                    if ( it.key() != Enums::RouteDataUrl ) {
+                        hasAdditionalData = true;
+                    }
+                    departureData.insert( Global::timetableInformationToString(it.key()), it.value() );
+                }
+                departureData[ "IncludesAdditionalData" ] = hasAdditionalData;
+                departureData.remove( "WaitingForAdditionalData" );
             }
-            departureData[ "IncludesAdditionalData" ] = true;
+        }
 
-            stillUsedAdditionalData.insert( hash, additionalData );
+        if ( !departureData.contains("IncludesAdditionalData") ) {
+            departureData[ "IncludesAdditionalData" ] = false;
         }
 
         departuresData << departureData;
     }
 
-    // Store still used additional data, ie. remove no longer used additional data
-    dataSource->setAdditionalData( stillUsedAdditionalData );
+    // Cleanup the data source later
+    startDataSourceCleanupLater( dataSource );
+
     dataSource->setValue( itemKey, departuresData );
 
 //     if ( deleteDepartureInfos ) {
@@ -1788,7 +1868,7 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
     dataSource->setValue( "minManualUpdateTime", minManualUpdateTime );
 
     // Publish the data source and cache it
-    setData( sourceName, dataSource->data() );
+    publishData( dataSource );
     m_dataSources[ nonAmbiguousName ] = dataSource;
 
     int msecsUntilUpdate = dateTime.msecsTo( nextUpdateTime );
@@ -1801,6 +1881,17 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
         dataSource->setUpdateTimer( updateTimer );
     }
     dataSource->updateTimer()->start( msecsUntilUpdate );
+}
+
+void PublicTransportEngine::startDataSourceCleanupLater( TimetableDataSource *dataSource )
+{
+    if ( !dataSource->cleanupTimer() ) {
+        QTimer *cleanupTimer = new QTimer( this );
+        cleanupTimer->setInterval( 2500 );
+        connect( cleanupTimer, SIGNAL(timeout()), this, SLOT(cleanupTimeout()) );
+        dataSource->setCleanupTimer( cleanupTimer );
+    }
+    dataSource->cleanupTimer()->start();
 }
 
 void PublicTransportEngine::updateTimeout()
@@ -1820,6 +1911,23 @@ void PublicTransportEngine::updateTimeout()
     foreach ( const QString &sourceName, dataSource->usingDataSources() ) {
         updateTimetableDataSource( SourceRequestData(sourceName) );
     }
+}
+
+void PublicTransportEngine::cleanupTimeout()
+{
+    // Find the timetable data source to which the timer belongs which timeout() signal was emitted
+    QTimer *timer = qobject_cast< QTimer* >( sender() );
+    TimetableDataSource *dataSource = dataSourceFromTimer( timer );
+    if ( !dataSource ) {
+        // No data source found that started the timer,
+        // should not happen the data source should have deleted the timer on destruction
+        kWarning() << "Timeout received from an unknown cleanup timer";
+        return;
+    }
+
+    // Found the timetable data source of the timer
+    dataSource->cleanup();
+    dataSource->setCleanupTimer( 0 ); // Deletes the timer
 }
 
 void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
@@ -1851,11 +1959,13 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
 
     // Get the timetable item for which additional data was received
     // and insert the new data into it
+    bool newDataInserted = false;
     QVariantHash item = items[ request.itemNumber() ].toHash();
     for ( TimetableData::ConstIterator it = data.constBegin(); it != data.constEnd(); ++it ) {
         // Check if there already is data in the current additional data field
         const QString key = Global::timetableInformationToString( it.key() );
-        if ( item.contains(key) ) {
+        const bool isRouteDataUrl = key == Enums::toString(Enums::RouteDataUrl);
+        if ( item.contains(key) && item[key].isValid() && !isRouteDataUrl ) {
             // The timetable item already contains data for the current field,
             // do not allow updates here, only additional data
             kWarning() << "Cannot update timetable data in additional data requests";
@@ -1864,10 +1974,22 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
         } else {
             // Allow to add the additional data field
             item.insert( key, it.value() );
+            if ( !isRouteDataUrl ) {
+                newDataInserted = true;
+            }
         }
     }
-    item[ "IncludesAdditionalData" ] = true;
+
     item.remove( "WaitingForAdditionalData" );
+    if ( !newDataInserted ) {
+        emit additionalDataRequestFinished( QVariantHash(), false, "No additional data found" );
+        item[ "IncludesAdditionalData" ] = false;
+        items[ request.itemNumber() ] = item;
+        dataSource->setTimetableItems( items );
+        return;
+    }
+
+    item[ "IncludesAdditionalData" ] = true;
 
     // Store the changed item back into the item list of the data source
     items[ request.itemNumber() ] = item;
@@ -1875,8 +1997,10 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
 
     // Also store received additional data separately
     // to not loose additional data after updating the data source
-    const uint hash = hashForDeparture( item );
+    const uint hash = TimetableDataSource::hashForDeparture( item,
+            dataSource->timetableItemKey() != QLatin1String("arrivals") );
     dataSource->setAdditionalData( hash, data );
+    startDataSourceCleanupLater( dataSource );
 
     QTimer *updateDelayTimer;
     if ( dataSource->updateAdditionalDataDelayTimer() ) {
@@ -1910,7 +2034,8 @@ TimetableDataSource *PublicTransportEngine::dataSourceFromTimer( QTimer *timer )
     {
         TimetableDataSource *dataSource = dynamic_cast< TimetableDataSource* >( *it );
         if ( dataSource && (dataSource->updateAdditionalDataDelayTimer() == timer ||
-                            dataSource->updateTimer() == timer) )
+                            dataSource->updateTimer() == timer ||
+                            dataSource->cleanupTimer() == timer) )
         {
             return dataSource;
         }
@@ -2074,9 +2199,38 @@ void PublicTransportEngine::requestFailed( ServiceProvider *provider,
         const QUrl &requestUrl, const AbstractRequest *request )
 {
     Q_UNUSED( provider );
-    kDebug() << "Error while parsing" << requestUrl //<< request->serviceProvider
-             << "\n  sourceName =" << request->sourceName() << request->parseMode();
-    kDebug() << errorCode << errorMessage;
+    kDebug() << errorCode << errorMessage << "- Requested URL:" << requestUrl;
+
+    const AdditionalDataRequest *additionalDataRequest =
+            dynamic_cast< const AdditionalDataRequest* >( request );
+    if ( additionalDataRequest ) {
+        // A request for additional data failed
+        emit additionalDataRequestFinished( QVariantHash(), false, errorMessage );
+
+        // Check if the destination data source exists
+        const QString nonAmbiguousName = disambiguateSourceName( request->sourceName() );
+        if ( m_dataSources.contains(nonAmbiguousName) ) {
+            // Get the list of timetable items from the existing data source
+            TimetableDataSource *dataSource =
+                    dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
+            Q_ASSERT( dataSource );
+            QVariantList items = dataSource->timetableItems();
+            if ( additionalDataRequest->itemNumber() < items.count() ) {
+                // Found the item for which the request failed,
+                // reset additional data included/waiting fields
+                QVariantHash item = items[ additionalDataRequest->itemNumber() ].toHash();
+                item[ "IncludesAdditionalData" ] = false;
+                item.remove( "WaitingForAdditionalData" );
+
+                items[ additionalDataRequest->itemNumber() ] = item;
+                dataSource->setTimetableItems( items );
+            }
+        }
+
+        // Do not mark the whole timetable data source as erroneous
+        // when a request for additional data has failed
+        return;
+    }
 
     // Remove erroneous source from running sources list
     m_runningSources.removeOne( disambiguateSourceName(request->sourceName()) );

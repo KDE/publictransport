@@ -207,6 +207,9 @@ public:
     /** @brief Called when the provider plugin installation directory was changed. */
     void providersHaveChanged() { m_dirty = true; };
 
+    /** @brief Mark providers that can no longer be found in an installation directory. */
+    QStringList markUninstalledProviders();
+
 private:
     bool mayProviderBeNewlyChanged( const QString &providerId ) const {
         return !m_changedProviders.contains(providerId) && m_providerData.contains(providerId);
@@ -225,6 +228,9 @@ public:
                          const QVariantHash &data = QVariantHash() );
     virtual ~TimetableDataSource();
 
+    /** @brief Remove obsolete cached data, eg. additional data for previous departures. */
+    void cleanup();
+
     void addUsingDataSource( const QSharedPointer<AbstractRequest> &request,
                              const QString &sourceName, const QDateTime &dateTime, int count );
     void removeUsingDataSource( const QString &sourceName );
@@ -241,6 +247,9 @@ public:
 
     /** @brief Whether or not this data source always contains timetable items for the same time. */
     bool hasConstantTime() const { return m_name.contains(QLatin1String("date=")); };
+
+    /** @brief Whether or not this data source had an error in the data engine. */
+    bool hasError() const { return m_data["error"].toBool(); };
 
     /** @brief Get flags for this data source, see UpdateFlags. */
     UpdateFlags updateFlags() const;
@@ -278,7 +287,8 @@ public:
      * This replaces all previously set additional timetable data.
      **/
     void setAdditionalData( const QHash< uint, TimetableData > &additionalData ) {
-        m_additionalData = additionalData;
+        // Cache all additional data for some time TODO
+        m_additionalData.unite( additionalData );
     };
 
     /** @brief Get additional data for the item with @p departureHash. */
@@ -300,7 +310,11 @@ public:
     /** @brief Timer to delay updates to additional timetable data of timetable items. */
     QTimer *updateAdditionalDataDelayTimer() const { return m_updateAdditionalDataDelayTimer; };
 
+    /** @brief Timer to cleanup cached additional data after some time. */
+    QTimer *cleanupTimer() const { return m_cleanupTimer; };
+
     void setUpdateAdditionalDataDelayTimer( QTimer *timer );
+    void setCleanupTimer( QTimer *timer );
 
     /**
      * @brief The time at which new downloads will have sufficient changes.
@@ -315,6 +329,31 @@ public:
 
     QSharedPointer< AbstractRequest > request( const QString &sourceName ) const;
 
+    inline static uint hashForDeparture( const QVariantHash &departure, bool isDeparture = true ) {
+        return hashForDeparture( departure[Enums::toString(Enums::DepartureDateTime)].toDateTime(),
+                static_cast<Enums::VehicleType>(departure[Enums::toString(Enums::TypeOfVehicle)].toInt()),
+                departure[Enums::toString(Enums::TransportLine)].toString(),
+                departure[Enums::toString(Enums::Target)].toString(), isDeparture );
+    };
+
+    inline static uint hashForDeparture( const TimetableData &departure, bool isDeparture = true ) {
+        return hashForDeparture( departure[Enums::DepartureDateTime].toDateTime(),
+                static_cast<Enums::VehicleType>(departure[Enums::TypeOfVehicle].toInt()),
+                departure[Enums::TransportLine].toString(),
+                departure[Enums::Target].toString(), isDeparture );
+    };
+
+    static uint hashForDeparture( const QDateTime &departure, Enums::VehicleType vehicleType,
+                                  const QString &lineString, const QString &target,
+                                  bool isDeparture = true )
+    {
+        return qHash( QString("%1%2%3%4%5").arg(departure.toString("dMMyyhhmmss"))
+                      .arg(static_cast<int>(vehicleType))
+                      .arg(lineString)
+                      .arg(target.trimmed().toLower())
+                      .arg(isDeparture ? "D" : "A") );
+    };
+
 private:
     struct SourceData {
         SourceData( const QSharedPointer<AbstractRequest> &request = QSharedPointer<AbstractRequest>(),
@@ -328,6 +367,7 @@ private:
 
     QHash< uint, TimetableData > m_additionalData;
     QTimer *m_updateTimer;
+    QTimer *m_cleanupTimer;
     QTimer *m_updateAdditionalDataDelayTimer;
     QDateTime m_nextDownloadTimeProposal;
     QHash< QString, SourceData > m_dataSources; // Connected data sources ("ambiguous" ones)

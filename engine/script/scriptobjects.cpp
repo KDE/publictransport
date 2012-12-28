@@ -37,11 +37,23 @@ ScriptObjects::ScriptObjects()
 {
 }
 
+ScriptObjects::ScriptObjects( const ScriptObjects &other )
+        : storage(other.storage), network(other.network), result(other.result),
+          helper(other.helper), lastError(other.lastError)
+{
+}
+
 ScriptData::ScriptData()
 {
 }
 
-ScriptData::ScriptData( const ServiceProviderData *data, const QScriptProgram &scriptProgram )
+ScriptData::ScriptData( const ScriptData &scriptData )
+        : provider(scriptData.provider), program(scriptData.program)
+{
+}
+
+ScriptData::ScriptData( const ServiceProviderData *data,
+                        const QSharedPointer< QScriptProgram > &scriptProgram )
         : provider(data ? *data : ServiceProviderData()), program(scriptProgram)
 {
 }
@@ -55,7 +67,7 @@ void ScriptObjects::clear()
 }
 
 void ScriptObjects::createObjects( const ServiceProviderData *data,
-                                   const QScriptProgram &scriptProgram )
+                                   const QSharedPointer< QScriptProgram > &scriptProgram )
 {
     createObjects( ScriptData(data, scriptProgram) );
 }
@@ -76,7 +88,8 @@ void ScriptObjects::createObjects( const ScriptData &data )
     }
 }
 
-ScriptData ScriptData::fromEngine( QScriptEngine *engine, const QScriptProgram &scriptProgram )
+ScriptData ScriptData::fromEngine( QScriptEngine *engine,
+                                   const QSharedPointer< QScriptProgram > &scriptProgram )
 {
     ServiceProviderData *data = qobject_cast< ServiceProviderData* >(
             engine->globalObject().property("provider").toQObject() );
@@ -122,7 +135,7 @@ bool ScriptObjects::attachToEngine( QScriptEngine *engine, const ScriptData &dat
 {
     if ( !isValid() ) {
         kDebug() << "Attaching invalid objects" << helper << network << result << storage;
-    } else if ( data.program.isNull() ) {
+    } else if ( !data.program ) {
         kDebug() << "Attaching invalid data";
     }
 
@@ -149,9 +162,9 @@ bool ScriptObjects::attachToEngine( QScriptEngine *engine, const ScriptData &dat
     if ( !includeFunction.isValid() ) {
         includeFunction = engine->newFunction( include, 1 );
     }
-    if ( !data.program.isNull() ) {
+    if ( data.program ) {
         QVariantHash includeData;
-        includeData[ data.program.fileName() ] = maxIncludeLine( data.program.sourceCode() );
+        includeData[ data.program->fileName() ] = maxIncludeLine( data.program->sourceCode() );
         includeFunction.setData( qScriptValueFromValue(engine, includeData) );
     }
     engine->globalObject().setProperty( "include", includeFunction, flags );

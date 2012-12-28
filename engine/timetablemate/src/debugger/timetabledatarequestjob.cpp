@@ -309,7 +309,7 @@ void CallScriptFunctionJob::debuggerRun()
     m_mutex->unlock();
 
     // Load script
-    engine->evaluate( data.program );
+    engine->evaluate( *data.program );
     Q_ASSERT_X( !objects.network->hasRunningRequests() || !agent->engine()->isEvaluating(),
                 "LoadScriptJob::debuggerRun()",
                 "Evaluating the script should not start any asynchronous requests, bad script" );

@@ -20,6 +20,7 @@
 // Own includes
 #include "datasource.h"
 #include "serviceprovider.h"
+#include "serviceproviderglobal.h"
 
 // KDE includes
 #include <KDebug>
@@ -48,13 +49,15 @@ SimpleDataSource::SimpleDataSource( const QString &dataSource, const QVariantHas
 }
 
 TimetableDataSource::TimetableDataSource( const QString &dataSource, const QVariantHash &data )
-        : SimpleDataSource(dataSource, data), m_updateTimer(0), m_updateAdditionalDataDelayTimer(0)
+        : SimpleDataSource(dataSource, data), m_updateTimer(0), m_cleanupTimer(0),
+          m_updateAdditionalDataDelayTimer(0)
 {
 }
 
 TimetableDataSource::~TimetableDataSource()
 {
     delete m_updateTimer;
+    delete m_cleanupTimer;
     delete m_updateAdditionalDataDelayTimer;
 }
 
@@ -175,6 +178,37 @@ void TimetableDataSource::setUpdateAdditionalDataDelayTimer( QTimer *timer )
     m_updateAdditionalDataDelayTimer = timer;
 }
 
+void TimetableDataSource::setCleanupTimer( QTimer *timer )
+{
+    // Delete old timer (if any) and replace with the new timer
+    delete m_cleanupTimer;
+    m_cleanupTimer = timer;
+}
+
+void TimetableDataSource::cleanup()
+{
+    // Get a list of hash values for all currently available timetable items
+    QList< uint > itemHashes;
+    const QVariantList items = timetableItems();
+    const bool isDeparture = timetableItemKey() != QLatin1String("arrivals");
+    foreach ( const QVariant &item, items ) {
+        itemHashes << hashForDeparture( item.toHash(), isDeparture );
+    }
+
+    // Remove cached additional data for no longer present timetable items
+    QHash< uint, TimetableData >::Iterator it = m_additionalData.begin();
+    while ( it != m_additionalData.end() ) {
+        if ( itemHashes.contains(it.key()) ) {
+            // The associated timetable item is still available
+            ++it;
+        } else {
+            // The cached additional data is for a no longer present timetable item, remove it
+            kDebug() << "Discard old additional data" << it.key();
+            it = m_additionalData.erase( it );
+        }
+    }
+}
+
 QSharedPointer< AbstractRequest > TimetableDataSource::request( const QString &sourceName ) const
 {
     return m_dataSources[ sourceName ].request;
@@ -183,10 +217,16 @@ QSharedPointer< AbstractRequest > TimetableDataSource::request( const QString &s
 void ProvidersDataSource::addProvider( const QString &providerId,
                                        const ProvidersDataSource::ProviderData &providerData )
 {
-    if ( mayProviderBeNewlyChanged(providerId) ) {
-        // Provider data available and not marked as changed alraedy
-        if ( m_providerData[providerId].data() != providerData.data() ) {
-            // The provider data has changed
+    if ( !m_changedProviders.contains(providerId) ) {
+        // Provider was not already marked as changed
+        if ( m_providerData.contains(providerId) ) {
+            // Provider data is already available
+            if ( m_providerData[providerId].data() != providerData.data() ) {
+                // Provider data has changed
+                m_changedProviders << providerId;
+            }
+        } else {
+            // No provider data available
             m_changedProviders << providerId;
         }
     }
@@ -198,6 +238,28 @@ void ProvidersDataSource::removeProvider( const QString &providerId )
 {
     m_changedProviders << providerId;
     m_providerData.remove( providerId );
+}
+
+QStringList ProvidersDataSource::markUninstalledProviders()
+{
+    // Get a list of provider IDs for all installed providers
+    const QStringList installedProviderPaths = ServiceProviderGlobal::installedProviders();
+    QStringList installedProviderIDs;
+    foreach ( const QString &installedProviderPath, installedProviderPaths ) {
+        installedProviderIDs << ServiceProviderGlobal::idFromFileName( installedProviderPath );
+    }
+
+    QStringList providerIDs;
+    QHash<QString, ProviderData>::ConstIterator it = m_providerData.constBegin();
+    while ( it != m_providerData.constEnd() ) {
+        if ( !installedProviderIDs.contains(it.key()) ) {
+            // Provider was uninstalled, ie. removed from the installation directory
+            m_changedProviders << it.key();
+            providerIDs << it.key();
+        }
+        ++it;
+    }
+    return providerIDs;
 }
 
 QVariantHash ProvidersDataSource::providerData( const QString &providerId ) const

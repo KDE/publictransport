@@ -119,6 +119,18 @@ public:
      **/
     static QString cacheFileName();
 
+    /** @brief Cleanup the cache from old entries for no longer installed providers. */
+    static void cleanupCache( const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>() );
+
+    /**
+     * @brief Clear all values for the provider with the given @p providerId from the @p cache.
+     *
+     * Should be called when a provider was uninstalled.
+     **/
+    static void clearCache( const QString &providerId,
+                            const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>(),
+                            bool syncCache = true );
+
     /** @brief Get the sub directory for service provider plugins for the data engine. */
     static QString installationSubDirectory() {
             return "plasma_engine_publictransport/serviceProviders/"; };
