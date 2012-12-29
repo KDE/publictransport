@@ -48,7 +48,7 @@ public:
         IsChanged               = 0x000001, /**< This flag is set if something has changed.
                 * If another change flag is set (except for NothingChanged), this flag is also
                 * set. This flag also gets set for changes not covered by the other change flags. */
-        ChangedServiceProvider  = 0x0002, /**< Service provider settings have been changed
+        ChangedServiceProvider  = 0x000002, /**< Service provider settings have been changed
                                             * (stop name, service provider, ...). */ // TODO
         ChangedDepartureArrivalListType
                                 = 0x000004, /**< Changed from showing departures to arrivals
@@ -87,6 +87,9 @@ public:
                                 = 0x010000, /**< Settings for how to display the departure time
                 * have been changed, eg. whether or not to show the departure time, whether or not
                 * to display it bold or whether or not remaining minutes should be displayed. */
+        ChangedAdditionalDataRequestSettings
+                                = 0x02000, /**< Changed when additional timetable data should
+                * be requested. */
 
         ChangedCurrentFilterSettings = ChangedCurrentStop || ChangedCurrentStopSettings ||
                 ChangedFilterSettings

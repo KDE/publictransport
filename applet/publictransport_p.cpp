@@ -26,6 +26,7 @@
 #include <Plasma/Animation>
 #include <Plasma/Theme>
 #include <Plasma/ToolTipManager>
+#include <Plasma/ServiceJob>
 
 // KDE includes
 #include <KColorScheme>
@@ -41,6 +42,7 @@
 #include <QToolButton>
 #include <QPainter>
 #include <QGraphicsScene>
+#include <QApplication>
 #include <QList>
 #include <qmath.h>
 
@@ -120,10 +122,13 @@ void PublicTransportAppletPrivate::onSettingsChanged( const Settings &_settings,
 
     // If stop settings have changed the whole model gets cleared and refilled.
     // Therefore the other change flags can be in 'else' parts
-    if ( changed.testFlag(SettingsIO::ChangedServiceProvider) ||
-         changed.testFlag(SettingsIO::ChangedCurrentStopSettings) ||
-         changed.testFlag(SettingsIO::ChangedCurrentStop) )
-    {
+    const bool reloadTimetableData =
+            changed.testFlag(SettingsIO::ChangedServiceProvider) ||
+            changed.testFlag(SettingsIO::ChangedCurrentStopSettings) ||
+            changed.testFlag(SettingsIO::ChangedCurrentStop);
+    if ( reloadTimetableData ) {
+        clearDepartures();
+
         if ( changed.testFlag(SettingsIO::ChangedCurrentStopSettings) ) {
             // Apply first departure settings to the worker thread
             const StopSettings stop = settings.currentStop();
@@ -141,7 +146,6 @@ void PublicTransportAppletPrivate::onSettingsChanged( const Settings &_settings,
         updateInfoText();
 
         settings.adjustColorGroupSettingsCount();
-        clearDepartures();
         onServiceProviderSettingsChanged();
     } else if ( changed.testFlag(SettingsIO::ChangedFilterSettings) ||
                 changed.testFlag(SettingsIO::ChangedColorGroupSettings) )
@@ -155,6 +159,40 @@ void PublicTransportAppletPrivate::onSettingsChanged( const Settings &_settings,
         // Refill model to recompute item sizehints
         model->clear();
         fillModel( mergedDepartureList() );
+    }
+
+    if ( !reloadTimetableData &&
+         changed.testFlag(SettingsIO::ChangedAdditionalDataRequestSettings) )
+    {
+        // Request additional data for all timetable items
+        if ( settings.additionalDataRequestType() == Settings::RequestAdditionalDataDirectly ) {
+            foreach ( const QString &currentSource, currentSources ) {
+                Plasma::Service *service =
+                        q->dataEngine("publictransport")->serviceForSource( currentSource );
+                if ( !service ) {
+                    kWarning() << "No Timetable Service!";
+                    return;
+                }
+
+                int itemBegin = 999999999;
+                int itemEnd = 0;
+                foreach ( const DepartureInfo departure, model->departureInfos() ) {
+                    if ( !departure.includesAdditionalData() ) {
+                        const int index = departure.index();
+                        itemBegin = qMin( itemBegin, index );
+                        itemEnd = qMax( itemEnd, index );
+                    }
+                }
+
+                if ( itemBegin < 999999999 ) {
+                    KConfigGroup op = service->operationDescription("requestAdditionalDataRange");
+                    op.writeEntry( "itemnumberbegin", itemBegin );
+                    op.writeEntry( "itemnumberend", itemEnd );
+                    Plasma::ServiceJob *additionDataJob = service->startOperationCall( op );
+                    q->connect( additionDataJob, SIGNAL(finished(KJob*)), service, SLOT(deleteLater()) );
+                }
+            }
+        }
     }
 
     if ( changed.testFlag(SettingsIO::ChangedCurrentJourneySearchLists) ||
@@ -331,6 +369,8 @@ void PublicTransportAppletPrivate::onServiceProviderSettingsChanged()
             reconnectJourneySource();
         }
     } else {
+        clearDepartures();
+
         // Missing configuration, eg. no home stop
         q->setConfigurationRequired( true, i18nc( "@info/plain", "Please check your configuration." ) );
 
@@ -358,15 +398,6 @@ void PublicTransportAppletPrivate::providerDataUpdated( const QVariantHash &data
     q->action( "journeys" )->setEnabled( journeysSupported );
     titleWidget->setJourneysSupported( journeysSupported );
 
-    // Check if arrivals are currently shown but not supported by the new provider
-    if ( !currentServiceProviderFeatures.contains("ProvidesArrivals", Qt::CaseInsensitive) &&
-         settings.departureArrivalListType() == ArrivalList )
-    {
-        Settings newSettings = settings;
-        newSettings.setDepartureArrivalListType( DepartureList );
-        q->setSettings( newSettings );
-    }
-
     // Check provider state
     const QString state = data[ "state" ].toString();
     if ( state == QLatin1String("ready") ) {
@@ -382,6 +413,15 @@ void PublicTransportAppletPrivate::providerDataUpdated( const QVariantHash &data
         q->emit providerNotReady();
         clearDepartures();
         clearJourneys();
+    }
+
+    // Check if arrivals are currently shown but not supported by the new provider
+    if ( !currentServiceProviderFeatures.contains("ProvidesArrivals", Qt::CaseInsensitive) &&
+         settings.departureArrivalListType() == ArrivalList )
+    {
+        Settings newSettings = settings;
+        newSettings.setDepartureArrivalListType( DepartureList );
+        q->setSettings( newSettings );
     }
 
     // Show error message in the departure/arrival view, if any
@@ -683,7 +723,7 @@ void PublicTransportAppletPrivate::fillModel( const QList<DepartureInfo> &depart
             model->removeItem( model->itemFromInfo( departureInfo ) );
         } else {
             // Departure isn't filtered out => Update associated item in the model
-            DepartureItem *item = dynamic_cast<DepartureItem *>( model->itemFromIndex( index ) );
+            DepartureItem *item = dynamic_cast< DepartureItem* >( model->itemFromIndex(index) );
             model->updateItem( item, departureInfo );
         }
     }
@@ -874,7 +914,6 @@ QList<DepartureInfo> PublicTransportAppletPrivate::mergedDepartureList( bool inc
 void PublicTransportAppletPrivate::reconnectSource()
 {
     Q_Q( PublicTransportApplet );
-    disconnectSources();
 
     // Get a list of stops (or stop IDs if available) which results are currently shown
     StopSettings stopSettings = settings.currentStop();
@@ -923,6 +962,14 @@ void PublicTransportAppletPrivate::reconnectSource()
         sources << currentSource;
     }
 
+    if ( sources == currentSources ) {
+        // Sources did not change
+        return;
+    }
+
+    QStringList previousSources = currentSources;
+    currentSources.clear();
+
     // Notify that new departure/arrival data gets requested now
     emit q->requestedNewDepartureData();
 
@@ -936,7 +983,17 @@ void PublicTransportAppletPrivate::reconnectSource()
         // later, ie. when the interval has finished. Instead let the data engine push new data
         // when available and let it decide itself when to update timetable data for connected
         // sources. Manual updates are possible through the timetable service.
-        q->dataEngine( "publictransport" )->connectSource( currentSource, q );
+        if ( !previousSources.removeOne(currentSource) ) {
+            // Source is not connected
+            kDebug() << "Connect data source" << currentSource;
+            q->dataEngine( "publictransport" )->connectSource( currentSource, q );
+        }
+    }
+
+    // Disconnect no longer used sources
+    foreach( const QString &previousSource, previousSources ) {
+        kDebug() << "Disconnect data source" << previousSource;
+        q->dataEngine( "publictransport" )->disconnectSource( previousSource, q );
     }
 }
 
@@ -944,7 +1001,7 @@ void PublicTransportAppletPrivate::disconnectSources()
 {
     Q_Q( PublicTransportApplet );
     if ( !currentSources.isEmpty() ) {
-        foreach( const QString & currentSource, currentSources ) {
+        foreach( const QString &currentSource, currentSources ) {
             kDebug() << "Disconnect data source" << currentSource;
             q->dataEngine( "publictransport" )->disconnectSource( currentSource, q );
         }

@@ -339,7 +339,7 @@ SettingsIO::ChangedFlags SettingsIO::writeSettings( const Settings &settings,
 
     if ( settings.additionalDataRequestType() != oldSettings.additionalDataRequestType() ) {
         cg.writeEntry( "additionalDataRequestType", static_cast<int>(settings.additionalDataRequestType()) );
-        changed |= IsChanged | ChangedServiceProvider;
+        changed |= IsChanged | ChangedAdditionalDataRequestSettings;
     }
 
     if ( settings.maximalNumberOfDepartures() != oldSettings.maximalNumberOfDepartures() ) {
