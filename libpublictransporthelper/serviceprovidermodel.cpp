@@ -35,12 +35,10 @@ public:
         data = _data;
         name = data["name"].toString();
         if ( name.isEmpty() ) {
-            name = i18nc("@info/plain", "<warning>Provider <emphasis>%1</emphasis> "
-                         "not found!</warning>", data["id"].toString() );
-        }
-        if ( data["error"].toBool() ) {
-            name = i18nc("@info/plain", "<warning>Invalid provider "
-                         "<emphasis>%1</emphasis>!</warning>", name);
+            name = i18nc("@info/plain", "<warning>Provider %1 not found!</warning>",
+                         data["id"].toString() );
+        } else if ( data["error"].toBool() ) {
+            name = i18nc("@info/plain", "<warning>Invalid provider %1!</warning>", name);
             formattedText = QString( "%1<br /><b>Error:</b> %2" )
                     .arg( name ).arg( data["errorMessage"].toString() );
         } else {
