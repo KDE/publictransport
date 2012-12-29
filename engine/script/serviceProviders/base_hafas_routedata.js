@@ -49,34 +49,72 @@ var __hafas_routedata = function(hafas) {
                     return {};
                 }
 
-                // Find all <St> tags, which contain information about an intermediate stop
+                // Find all <St> tags, which contain information about intermediate stops
                 var stopNodes = docElement.elementsByTagName("St");
-                var count = stopNodes.count();
                 var routeData = { RouteStops: [], RouteTimes: [] };
                 var inRange = firstTime == undefined;
-                for ( var i = 0; i < count; ++i ) {
+                var lastTime;
+                for ( var i = 0; i < stopNodes.count(); ++i ) {
+                    // Get the <St> tag for the current intermediate stop
                     var node = stopNodes.at( i ).toElement();
+
+                    // Read information about the current stop from attributes
                     var routeStop = helper.decodeHtmlEntities( node.attributeNode("name").nodeValue() );
                     var arrival = node.attributeNode("arrTime").nodeValue();
                     var departure = node.attributeNode("depTime").nodeValue();
-                    var timeString = arrival.length < 5 ? departure : arrival;
+                    var arrivalDelay = parseInt( node.attributeNode("adelay").nodeValue() );
+                    var departureDelay = parseInt( node.attributeNode("ddelay").nodeValue() );
+                    if ( isNaN(arrivalDelay) ) {
+                        arrivalDelay = -1;
+                    }
+                    if ( isNaN(departureDelay) ) {
+                        departureDelay = -1;
+                    }
+                    var timeString = departure.length < 5 ? arrival : departure;
+                    var delay = departure.length < 5 ? arrivalDelay : departureDelay;
                     var timeValue;
+                    var validTimeFound = false;
                     if ( timeString.length < 5 ) {
-                        // No time given for the current intermediate stop,
-                        // the HTML versions simply do not show such stops,
-                        // create an invalid Date object for the stop here
-                        timeValue = new Date( "unknown" );
+                        // No time given for the current intermediate stop
+                        if ( i == 0 && firstTime != undefined ) {
+                            // Use "first time" for the first route stop if available
+                            timeValue = firstTime;
+                        } else {
+                            // The HTML versions simply do not show such stops,
+                            // create an invalid Date object for the stop here
+                            timeValue = new Date( "unknown" );
+                        }
                     } else {
                         time = helper.matchTime( timeString, "hh:mm" );
                         if ( time.error ) {
                             helper.warning( "Hafas.routeData.parseXml(): Could not match route time: '" + timeString + "'", timeString );
                             continue;
                         }
-                        timeValue = new Date( firstTime.getFullYear(), firstTime.getMonth(),
-                                              firstTime.getDate(), time.hour, time.minute, 0, 0 );
+                        if ( firstTime == undefined ) {
+                            timeValue = new Date();
+                            timeValue.setHours( time.hour, time.minute, 0, 0 );
+                        } else {
+                            timeValue = new Date( firstTime.getFullYear(), firstTime.getMonth(),
+                                                  firstTime.getDate(), time.hour, time.minute, 0, 0 );
+                        }
+                        if ( typeof(lastTime) != 'undefined' && timeValue < lastTime ) {
+                            // Add one day
+                            timeValue.setTime( timeValue.getTime() + 24 * 60 * 60 * 1000 );
+                        }
+
+                        // Simply add delays to the time value,
+                        // route stop delays are currently only supported for journeys
+                        if ( delay > 0 ) {
+                            timeValue.setTime( timeValue.getTime() + delay * 60 * 1000 );
+                        }
+
+                        validTimeFound = true;
+                        lastTime = timeValue;
                     }
 
-                    if ( inRange || routeStop == stop || firstTime.getTime() <= timeValue.getTime() ) {
+                    if ( inRange || routeStop == stop ||
+                         (validTimeFound && timeValue.getTime() >= firstTime.getTime()) )
+                    {
                         inRange = true;
                         routeData.RouteStops.push( routeStop );
                         routeData.RouteTimes.push( timeValue );
@@ -110,6 +148,8 @@ var __hafas_routedata = function(hafas) {
 
                 var routeData = { RouteStops: [], RouteTimes: [] };
                 var trainRow = { position: -1 };
+                var inRange = firstTime == undefined;
+                var lastTime;
                 while ( (trainRow = helper.findFirstHtmlTag(trainBlock.contents, "tr",
                     {position: trainRow.position + 1})).found )
                 {
@@ -147,10 +187,24 @@ var __hafas_routedata = function(hafas) {
                         helper.error( "Hafas.routeData.parseHtml(): Could not match route time", timeString );
                         continue;
                     }
-                    timeValue = new Date();
-                    timeValue.setHours( time.hour, time.minute, 0, 0 );
+                    var timeValue;
+                    if ( firstTime == undefined ) {
+                        timeValue = new Date();
+                        timeValue.setHours( time.hour, time.minute, 0, 0 );
+                    } else {
+                        timeValue = new Date( firstTime.getFullYear(), firstTime.getMonth(),
+                                              firstTime.getDate(), time.hour, time.minute, 0, 0 );
+                    }
+                    if ( typeof(lastTime) != 'undefined' && timeValue < lastTime ) {
+                        // Add one day
+                        timeValue.setTime( timeValue.getTime() + 24 * 60 * 60 * 1000 );
+                    }
+                    lastTime = timeValue;
 
-                    if ( firstTime == undefined || timeValue >= firstTime ) {
+                    if ( inRange || routeStop == stop ||
+                         timeValue.getTime() >= firstTime.getTime() )
+                    {
+                        inRange = true;
                         routeData.RouteStops.push( helper.stripTags(columns["station"].contents) );
                         routeData.RouteTimes.push( timeValue );
                     }
