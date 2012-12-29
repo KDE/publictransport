@@ -39,6 +39,7 @@
 // #define USE_KCATEGORYVIEW // Remove the comment to use KCategoryView for the service provider combobox
 #endif
 
+class QModelIndex;
 class KLineEdit;
 class DynamicLabeledLineEditList;
 
@@ -440,6 +441,8 @@ protected Q_SLOTS:
      * @param index The index of the newly selected service provider.
      **/
     void serviceProviderChanged( int index );
+
+    void providerDataChanged( const QModelIndex &topLeft, const QModelIndex &bottomRight );
 
     /**
      * @brief The city name has been changed.

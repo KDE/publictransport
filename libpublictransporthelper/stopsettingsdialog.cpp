@@ -101,6 +101,8 @@ public:
         // Create location and service provider models
         modelLocations = new LocationModel( q );
         modelServiceProviders = new ServiceProviderModel( q );
+        q->connect( modelServiceProviders, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+                    q, SLOT(providerDataChanged(QModelIndex,QModelIndex)) );
     };
 
     ~StopSettingsDialogPrivate() {
@@ -588,6 +590,11 @@ StopSettingsDialog::StopSettingsDialog( QWidget *parent, const StopSettings &sto
 {
     Q_D( StopSettingsDialog );
     d->init( stopSettings, filterConfigurations );
+
+    // If no providers are available, show the GHNS download dialog
+    if ( d->modelServiceProviders->rowCount() == 0 ) {
+        downloadServiceProvidersClicked();
+    }
 }
 
 StopSettingsDialog::~StopSettingsDialog()
@@ -680,12 +687,14 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
                 stopSettings[ServiceProviderSetting].toString(), 1, Qt::MatchFixedString );
         if ( !indices.isEmpty() ) {
             serviceProviderIndex = indices.first();
-        } else if ( d->uiStop.serviceProvider->model()->rowCount() == 0 ) {
-            kDebug() << "No service providers in the model! This may not work...";
         } else {
-            kDebug() << "Service provider not found" << stopSettings.get<QString>(ServiceProviderSetting)
-                    << "maybe the wrong location is used for that service provider?";
-            serviceProviderIndex = d->uiStop.serviceProvider->model()->index( 0, 0 );
+            // Service provider not found for the currently selected location.
+            // Use the first provider for that location
+            kDebug() << "Provider plugin" << stopSettings.get<QString>(ServiceProviderSetting)
+                     << "was not found";
+            if ( d->uiStop.serviceProvider->model()->rowCount() > 0 ) {
+                serviceProviderIndex = d->uiStop.serviceProvider->model()->index( 0, 0 );
+            }
         }
     }
 
@@ -697,8 +706,11 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
             break;
         }
         case ServiceProviderSetting: {
-            if ( serviceProviderIndex.isValid() && d->options.testFlag(ShowProviderConfiguration) ) {
+            if ( d->options.testFlag(ShowProviderConfiguration) ) {
                 d->uiStop.serviceProvider->setCurrentIndex( serviceProviderIndex.row() );
+                if ( serviceProviderIndex.row() == 0 ) {
+                    serviceProviderChanged( 0 );
+                }
             }
             break;
         }
@@ -766,11 +778,13 @@ StopSettings StopSettingsDialog::stopSettings() const
     Q_D( const StopSettingsDialog );
 
     StopSettings stopSettings;
-    QVariantHash serviceProviderData = d->uiStop.serviceProvider->itemData(
+    const QVariantHash serviceProviderData = d->uiStop.serviceProvider->itemData(
             d->uiStop.serviceProvider->currentIndex(), ServiceProviderDataRole ).toHash();
-    stopSettings.set( ServiceProviderSetting, serviceProviderData["id"].toString() );
-    stopSettings.set( LocationSetting, d->uiStop.location->itemData(
-            d->uiStop.location->currentIndex(), LocationCodeRole).toString() );
+    const QString providerId = serviceProviderData["id"].toString();
+    const int pos = providerId.indexOf( '_' );
+    const QString location = pos == -1 ? "international" : providerId.left(pos);
+    stopSettings.set( ServiceProviderSetting, providerId );
+    stopSettings.set( LocationSetting, location );
 
     if ( d->options.testFlag(ShowStopInputField) ) {
         stopSettings.setStops( d->stopList->lineEditTexts() );
@@ -929,7 +943,8 @@ void StopSettingsDialog::serviceProviderChanged( int index )
 //     m_ui.showDepartures->setChecked( true );
 
     if ( d->options.testFlag(ShowStopInputField) ) {
-        bool useSeparateCityValue = serviceProviderData["useSeparateCityValue"].toBool();
+        bool useSeparateCityValue = index != -1 &&
+                serviceProviderData["useSeparateCityValue"].toBool();
         if ( useSeparateCityValue ) {
             d->uiStop.city->clear();
             QStringList cities = serviceProviderData["cities"].toStringList();
@@ -945,6 +960,27 @@ void StopSettingsDialog::serviceProviderChanged( int index )
         d->uiStop.lblCity->setVisible( useSeparateCityValue );
         d->uiStop.city->setVisible( useSeparateCityValue );
         d->stopList->setServiceProvider( modelIndex.data(ServiceProviderIdRole).toString() );
+
+        // Disable widgets if the provider could not be found or is invalid
+        const bool enabledState = index != -1 && !serviceProviderData["error"].toBool();
+        if ( !enabledState ) {
+            d->uiStop.lblCity->hide();
+            d->uiStop.city->hide();
+        }
+        d->uiStop.btnServiceProviderInfo->setEnabled( enabledState );
+        d->uiStop.stops->setEnabled( enabledState );
+    }
+}
+
+void StopSettingsDialog::providerDataChanged( const QModelIndex &topLeft,
+                                              const QModelIndex &bottomRight )
+{
+    Q_D( StopSettingsDialog );
+    QModelIndex index = d->uiStop.serviceProvider->model()->index(
+            d->uiStop.serviceProvider->currentIndex(), 0 );
+    if ( index.isValid() && index.row() >= topLeft.row() && index.row() <= bottomRight.row() ) {
+        // The currently selected provider has changed
+        serviceProviderChanged( d->uiStop.serviceProvider->currentIndex() );
     }
 }
 
