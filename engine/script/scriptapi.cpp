@@ -369,7 +369,7 @@ QNetworkRequest* NetworkRequest::request() const
 
 Network::Network( const QByteArray &fallbackCharset, QObject* parent )
         : QObject(parent), m_mutex(new QMutex(QMutex::Recursive)),
-          m_fallbackCharset(fallbackCharset), m_manager(new QNetworkAccessManager(this)),
+          m_fallbackCharset(fallbackCharset), m_manager(new QNetworkAccessManager()),
           m_quit(false), m_lastDownloadAborted(false)
 {
     qRegisterMetaType< NetworkRequest* >( "NetworkRequest*" );
@@ -394,6 +394,7 @@ Network::~Network()
     }
 
     delete m_mutex;
+    m_manager->deleteLater();
 }
 
 NetworkRequest* Network::createRequest( const QString& url, const QString &userUrl )
