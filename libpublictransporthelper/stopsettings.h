@@ -184,7 +184,7 @@ public:
     /** @brief Constructor. */
     StopSettings();
 
-    /** @brief Constructor for convertsion from QHash. */
+    /** @brief Constructor for conversion from QHash. */
     StopSettings(const QHash<int, QVariant> &data);
 
     /** @brief Copy constructor. */

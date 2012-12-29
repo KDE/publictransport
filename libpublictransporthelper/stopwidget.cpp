@@ -106,8 +106,8 @@ public:
                 // Provider with the providerId not found but the ID is valid
                 kWarning() << "Didn't find service provider" << id;
             }
-            provider->setText( i18nc("@info/plain", "<warning>Provider <emphasis>%1</emphasis> "
-                                     "not found!</warning>", id) );
+            provider->setText( i18nc("@info/plain",
+                                     "<warning>Provider %1 not found!</warning>", id) );
         } else {
             provider->setText( index.data().toString() );
         }
