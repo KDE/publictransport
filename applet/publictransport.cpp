@@ -539,8 +539,8 @@ void PublicTransportApplet::departuresProcessed( const QString& sourceName,
     }
 }
 
-void PublicTransportApplet::handleDataError( const QString& /*sourceName*/,
-                                       const Plasma::DataEngine::Data& data )
+void PublicTransportApplet::handleDataError( const QString &sourceName,
+                                             const Plasma::DataEngine::Data &data )
 {
     Q_D( PublicTransportApplet );
 
@@ -549,7 +549,7 @@ void PublicTransportApplet::handleDataError( const QString& /*sourceName*/,
 
         // Set associated application url
         d->urlJourneys = data["requestUrl"].toUrl();
-        kDebug() << "Errorneous journey url" << d->urlJourneys;
+        kDebug() << "Erroneous journey url" << d->urlJourneys;
         if ( d->isStateActive("journeyView") ) {
             setAssociatedApplicationUrlForJourneys();
         }
@@ -558,7 +558,7 @@ void PublicTransportApplet::handleDataError( const QString& /*sourceName*/,
 
         // Set associated application url
         d->urlDeparturesArrivals = data["requestUrl"].toUrl();
-        kDebug() << "Errorneous departure/arrival url" << d->urlDeparturesArrivals;
+        kDebug() << "Erroneous departure/arrival url" << d->urlDeparturesArrivals;
         if ( d->isStateActive("departureView") || d->isStateActive("journeySearch") ||
              d->isStateActive("journeysUnsupportedView") )
         {
@@ -567,6 +567,8 @@ void PublicTransportApplet::handleDataError( const QString& /*sourceName*/,
 
         d->timetable->setNoItemsText( i18nc("@info/plain",
                 "There was an error:<nl/><message>%1</message>", data["errorMessage"].toString()) );
+    } else {
+        kWarning() << "Error" << data["errorMessage"].toString() << "in source" << sourceName;
     }
 }
 
