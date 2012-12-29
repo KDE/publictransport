@@ -36,7 +36,7 @@ Item { id: root
         height: container.height + (visible ? 2 * offset : 0)
         visible: container.width >= 500
 
-        property int offset: 25
+        property int offset: 35
         Behavior on opacity { PropertyAnimation{} }
     }
 
@@ -147,6 +147,12 @@ Item { id: root
                             "providers that get used by the PublicTransport data engine.")
             }
 
+            // Open abritrary project
+            ActionButton { action: timetableMate.qmlAction("project_open") }
+            Text { id: open; wrapMode: Text.WordWrap; width: 300
+                text: i18nc("@info", "Open a service provider plugin file.")
+            }
+
             // Fetch project
             ActionButton { action: timetableMate.qmlAction("project_fetch") }
             Text { id: fetchProject; wrapMode: Text.WordWrap; width: 300
@@ -159,7 +165,7 @@ Item { id: root
     // Background gradient
     Rectangle { id: gradient
         anchors.centerIn: container
-        width: Math.max(container.width, container.height) * 2; height: width
+        width: Math.max(container.width, container.height) * 3; height: width
         gradient: Gradient {
             GradientStop { position: 0.0; color: "white"; }
             GradientStop { position: 1.0; color: "#d8e8c2"; } // Oxygen "forest green1"

@@ -129,7 +129,7 @@ Flickable { id: flickable
         width: container.width + (visible ? 2 * offset : 0)
         height: container.height + (visible ? 2 * offset : 0)
 
-        property int offset: 25
+        property int offset: 35
         Behavior on opacity { PropertyAnimation{} }
     }
     // The main element, containing a title with an icon, a set of buttons connected to
@@ -250,6 +250,7 @@ Flickable { id: flickable
             }
             ActionButton { action: project.projectAction(Project.AbortRunningTests) }
 
+            ActionButton { action: project.projectAction(Project.Publish) }
             ActionButton { action: project.projectAction(Project.Install) }
             ActionButton { action: project.projectAction(Project.InstallGlobally) }
             ActionButton { action: project.projectAction(Project.Uninstall)
