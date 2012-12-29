@@ -58,6 +58,25 @@ public:
         stateData = data["stateData"].toHash();
         uiProviderData.state->setText( stateData["statusMessage"].toString() );
 
+        // Hide all widgets except for the status message for erroneous providers
+        // because the other fields are empty
+        const bool hasError = state == QLatin1String("error");
+        uiProviderData.icon->setVisible( !hasError );
+        uiProviderData.version->setVisible( !hasError );
+        uiProviderData.line->setVisible( !hasError );
+        uiProviderData.lblUrl->setVisible( !hasError );
+        uiProviderData.url->setVisible( !hasError );
+        uiProviderData.lblAuthor->setVisible( !hasError );
+        uiProviderData.author->setVisible( !hasError );
+        uiProviderData.lblType->setVisible( !hasError );
+        uiProviderData.type->setVisible( !hasError );
+        uiProviderData.lblFileName->setVisible( !hasError );
+        uiProviderData.fileName->setVisible( !hasError );
+        uiProviderData.lblFeatures->setVisible( !hasError );
+        uiProviderData.features->setVisible( !hasError );
+        uiProviderData.lblDescription->setVisible( !hasError );
+        uiProviderData.description->setVisible( !hasError );
+
         const QString type = data["type"].toString();
         if ( type != QLatin1String("GTFS") ) {
             uiProviderData.lblGtfsFeed->hide();
