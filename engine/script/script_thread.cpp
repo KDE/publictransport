@@ -26,7 +26,7 @@
 #include "script/serviceproviderscript.h"
 #include "serviceproviderdata.h"
 #include "request.h"
-#include <serviceproviderglobal.h>
+#include "serviceproviderglobal.h"
 
 // KDE includes
 #include <ThreadWeaver/Thread>

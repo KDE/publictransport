@@ -135,6 +135,7 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
         ${KDE4_KDEWEBKIT_LIBS} # For the web main view tab
         ${KDE4_PLASMA_LIBS} # For the Plasma preview main view tab
         ${KDE4_THREADWEAVER_LIBS} # For the debugger and for includes from the engine
+        ${KDE4_KNEWSTUFF3_LIBS} # For plugin upload (publish)
         ${QT_QTDECLARATIVE_LIBRARY} # For the dashboard main view tabs
         kdeclarative # For KDeclarative, no ${KDE4_KDECLARATIVE_LIBS} available..
         publictransporthelper

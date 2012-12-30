@@ -4,6 +4,7 @@ set( include_dirs
     ${PUBLICTRANSPORTHELPER_INCLUDES} # For "lib_config.h"
     ${CMAKE_CURRENT_BINARY_DIR} # For "debug_config.h"
 )
+
 if ( MARBLE_FOUND )
     list ( APPEND include_dirs ${MARBLE_INCLUDE_DIR} )
 endif ( MARBLE_FOUND )
@@ -56,9 +57,17 @@ add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongener
             --out_completion ${CMAKE_CURRENT_BINARY_DIR}
             --out_doc ${CMAKE_CURRENT_SOURCE_DIR}/../doc
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scriptapi.h
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scriptapi-doc.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../enums.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../engine-doc.h
             ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator )
+
+# FIXME Manually add file dependencies to wait until javascriptcompletiongeneric.h/.cpp are ready.
+# Somehow it does not work without this and tries to build TimetableMate sources before
+# completiongenerator is ready.
+set_source_files_properties(
+    javascriptcompletionmodel.cpp javascriptparser.cpp
+    PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.h )
 
 qt4_wrap_cpp( timetablemate_MOC_SRCS ../../enums.h tabs/tabs.h )
 set( timetablemate_SRCS
@@ -77,7 +86,8 @@ set( timetablemate_SRCS
    networkmonitormodel.cpp
    linkchecker.cpp
 
-   ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
+    ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.h
+    ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
 
    # Use files directly from the data engine
    ../../global.cpp

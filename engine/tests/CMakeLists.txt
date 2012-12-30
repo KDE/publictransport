@@ -53,12 +53,37 @@ add_test( ScriptApiTest ScriptApiTest )
 target_link_libraries( ScriptApiTest ${QT_QTTEST_LIBRARY} ${KDE4_PLASMA_LIBS}
         ${QT_QTNETWORK_LIBRARY} ${QT_QTSCRIPT_LIBRARY} z )
 
+qt4_wrap_cpp( GeneralTransitTest_MOC_SRCS
+    ../serviceprovider.h
+    ../serviceproviderdata.h
+    ../enums.h
+    ../script/script_thread.h
+    ../script/serviceproviderscript.h
+)
 set( GeneralTransitTest_SRCS GeneralTransitTest.cpp
     ../gtfs/gtfsimporter.cpp
     ../gtfs/gtfsdatabase.cpp
+    ../serviceproviderdata.cpp
+    ../serviceproviderdatareader.cpp
+    ../serviceproviderglobal.cpp
+    ../serviceprovidertestdata.cpp
+    ../enums.h
+    ../departureinfo.cpp
+    ../request.cpp
+    ../global.cpp
+    ../serviceprovider.cpp
+    ../script/serviceproviderscript.cpp
+    ../script/script_thread.cpp
+    ../script/scriptapi.cpp
+    ../script/scriptobjects.cpp
+
+    ${GeneralTransitTest_MOC_SRCS}
 )
 qt4_automoc( ${GeneralTransitTest_SRCS} )
+
 add_executable( GeneralTransitTest ${GeneralTransitTest_SRCS} )
 add_test( GeneralTransitTest GeneralTransitTest )
 target_link_libraries( GeneralTransitTest ${QT_QTTEST_LIBRARY} ${KDE4_CORE_LIBS} ${KDE4_KUTILS_LIBS}
-                                          ${QT_QTSQL_LIBRARY} )
+        ${QT_QTSQL_LIBRARY} ${KDE4_KIO_LIBS} ${KDE4_THREADWEAVER_LIBS} ${QT_QTNETWORK_LIBRARY}
+        ${QT_QTSCRIPT_LIBRARY} ${QT_QTXML_LIBRARY} z )
+
