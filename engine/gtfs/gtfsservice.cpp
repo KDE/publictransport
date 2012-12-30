@@ -485,6 +485,7 @@ void ImportGtfsToDatabaseJob::downloadFeed()
 
 void ImportGtfsToDatabaseJob::mimeType( KIO::Job *job, const QString &type )
 {
+    Q_UNUSED( job );
     const KMimeType::Ptr mimeType = KMimeType::mimeType( type );
     if ( mimeType && mimeType->isValid() ) {
         if ( !mimeType->is("application/zip") && !mimeType->is("application/octet-stream") ) {

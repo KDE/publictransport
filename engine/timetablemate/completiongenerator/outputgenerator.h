@@ -161,7 +161,7 @@ protected:
     TableOfContentsEntries m_tableOfContents;
     QHash< QString, QString > m_enumerableReferences;
 };
-Q_DECLARE_OPERATORS_FOR_FLAGS( AbstractGenerator::ReferenceTypes );
+Q_DECLARE_OPERATORS_FOR_FLAGS( AbstractGenerator::ReferenceTypes )
 
 class DocumentationOutputGenerator : public AbstractGenerator {
 public:

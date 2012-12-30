@@ -85,8 +85,7 @@ public:
     static QString fileNameFromId( const QString &serviceProviderId );
 
     /** @brief Get the file path of the default service provider XML for the given @p location. */
-    static QString defaultProviderForLocation( const QString &location,
-                                               const QStringList &dirs = QStringList() );
+    static QString defaultProviderForLocation( const QString &location );
 
     /**
      * @brief Whether or not the provider source file (.pts) was modified.

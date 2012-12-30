@@ -33,8 +33,7 @@ var __hafas_timetable = function(hafas) {
             HafasPrivate.checkValues( values,
                     {required: {stop: 'string'},
                      optional: {dateTime: 'object', count: 'number'}} );
-            var options = HafasPrivate.prepareOptions( options,
-		    processor.options, hafas.options );
+            var options = HafasPrivate.prepareOptions( options, processor.options, hafas.options );
             var url = processor.url( values, options );
             var userUrl = processor.userUrl( values, options );
             var request = network.createRequest( url, userUrl );
@@ -562,7 +561,7 @@ var __hafas_timetable = function(hafas) {
                             return {};
                         }
 
-                        // Cleanup 'result' object, filled by the parser,
+                        // Cleanup 'result' object, may have been filled by the parser,
                         // but only additional data results should be added here
                         result.clear();
 

@@ -27,10 +27,10 @@
 
 namespace Plasma {
     class Label;
-};
+}
 namespace PublicTransport {
     class StopLineEdit;
-};
+}
 class FlightDepartureList;
 
 // Define our plasma Applet

@@ -26,6 +26,8 @@
 #include <KDebug>
 #include <KStandardDirs>
 #include <KLocale>
+
+// Qt includes
 #include <QUrl>
 
 class ChangelogEntryGreaterThan

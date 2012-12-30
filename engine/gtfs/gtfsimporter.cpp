@@ -204,7 +204,6 @@ void GtfsImporter::run()
             QFileInfo(fileName).fileName() + "_dir/" );
 
     // Find the GTFS feed data directory, containing the .txt files, eg. stop_times.txt
-    KArchiveDirectory *directory = const_cast<KArchiveDirectory*>( gtfsZipFile.directory() );
     QStringList missingFiles;
     const KArchiveDirectory *feedDataDirectory = findFeedDataDirectory(
             gtfsZipFile.directory(), requiredFiles, &missingFiles );
@@ -614,8 +613,7 @@ bool GtfsImporter::writeGtfsDataToDatabase( QSqlDatabase database,
             foreach ( const QVariant &fieldValue, fieldValues ) {
                 query.addBindValue( fieldValue );
             }
-            // FIXME
-            kDebug() << fieldValues.count() << query.boundValues().count();
+
             if ( query.exec() ) {
                 ++counter;
             } else {
@@ -693,14 +691,11 @@ bool GtfsImporter::readHeader( const QString &header, QStringList *fieldNames,
             kDebug() << "Required field missing:" << requiredField << *fieldNames;
 
             if ( requiredField == QLatin1String("agency_name") ) {
-                kDebug() << "Will use agency name from plugin";
-//                 fieldNames->append( "agency_name" );
+                kDebug() << "Will use agency name from plugin data";
             } else if ( requiredField == QLatin1String("agency_url") ) {
-                kDebug() << "Will use agency URL from plugin";
-//                 fieldNames->append( "agency_url" );
+                kDebug() << "Will use agency URL from plugin data";
             } else if ( requiredField == QLatin1String("agency_timezone") ) {
-                kDebug() << "Will use timezone from plugin";
-//                 fieldNames->append( "agency_timezone" );
+                kDebug() << "Will use timezone from plugin data";
             } else {
                 setError( FatalError, "Required field missing: " + requiredField );
                 kDebug() << "in this header line:" << header;

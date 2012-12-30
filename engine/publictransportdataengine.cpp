@@ -574,8 +574,6 @@ QVariantHash PublicTransportEngine::locations()
 {
     QVariantHash ret;
     const QStringList providers = ServiceProviderGlobal::installedProviders();
-    const QStringList dirs = KGlobal::dirs()->findDirs( "data",
-            ServiceProviderGlobal::installationSubDirectory() );
 
     // Update ServiceProviders source to fill m_erroneousProviders
     updateServiceProviderSource();
@@ -602,7 +600,7 @@ QVariantHash PublicTransportEngine::locations()
                 // Location is not already added to [ret]
                 // Get the filename of the default provider for the current location
                 const QString defaultProviderFileName =
-                        ServiceProviderGlobal::defaultProviderForLocation( location, dirs );
+                        ServiceProviderGlobal::defaultProviderForLocation( location );
 
                 // Extract service provider ID from the filename
                 const QString defaultProviderId =

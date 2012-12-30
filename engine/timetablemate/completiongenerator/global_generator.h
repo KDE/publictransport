@@ -91,7 +91,7 @@ enum DoxygenCommandType {
     DoxygenBeginCode,
     DoxygenEndCode,
     DoxygenBeginVerbatim,
-    DoxygenEndVerbatim,
+    DoxygenEndVerbatim
 };
 
 DoxygenCommandType endTypeFromBeginType( DoxygenCommandType beginType );

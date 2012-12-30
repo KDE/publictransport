@@ -37,11 +37,11 @@ namespace Plasma {
     class Applet;
     class Containment;
     class Corona;
-};
+}
 namespace PublicTransport {
     class StopListWidget;
     class FilterListWidget;
-};
+}
 using namespace PublicTransport;
 
 class PublicTransportAppletTest : public QObject
@@ -99,6 +99,6 @@ private:
     QToolButton *m_removeFilterConfiguration;
 };
 
-Q_DECLARE_METATYPE( QList<int> );
+Q_DECLARE_METATYPE( QList<int> )
 
 #endif // PublicTransportAppletTest_H

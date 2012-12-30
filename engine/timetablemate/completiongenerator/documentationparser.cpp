@@ -146,6 +146,8 @@ QString DocumentationParser::cToQtScriptTypeName( const QString &cTypeName )
         return "number";
     } else if( cTypeName == QLatin1String("void") || cTypeName.isEmpty() ) {
         return "void";
+    } else if( cTypeName == QLatin1String("Helper::ErrorSeverity") ) {
+        return "ErrorSeverity";
     } else {
         qWarning() << "Type unknown " << cTypeName;
         return cTypeName;

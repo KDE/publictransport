@@ -70,8 +70,7 @@ bool ServiceProviderGlobal::isProviderTypeAvailable( Enums::ServiceProviderType 
     }
 }
 
-QString ServiceProviderGlobal::defaultProviderForLocation( const QString &location,
-                                                           const QStringList &dirs )
+QString ServiceProviderGlobal::defaultProviderForLocation( const QString &location )
 {
     QStringList locationProviders;
     const QString subDirectory = installationSubDirectory();
