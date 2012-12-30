@@ -592,8 +592,20 @@ StopSettingsDialog::StopSettingsDialog( QWidget *parent, const StopSettings &sto
     d->init( stopSettings, filterConfigurations );
 
     // If no providers are available, show the GHNS download dialog
-    if ( d->modelServiceProviders->rowCount() == 0 ) {
+    int providers = d->modelServiceProviders->rowCount();
+    if ( providers == 0 ) {
+        // No providers found
         downloadServiceProvidersClicked();
+    } else if ( providers == 1 ) {
+        // One provider in the model, check if it is installed
+        const QModelIndex index = d->modelServiceProviders->index( 0 );
+        const QVariantHash providerData =
+                d->modelServiceProviders->data( index, ServiceProviderDataRole ).toHash();
+        if ( providerData["error"].toBool() &&
+             !providerData["stateData"].toHash()["isInstalled"].toBool() )
+        {
+            downloadServiceProvidersClicked();
+        }
     }
 }
 

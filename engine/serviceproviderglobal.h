@@ -153,6 +153,11 @@ public:
      * If invalid provider plugins are installed, they also get returned here.
      **/
     static QStringList installedProviders();
+
+    /**
+     * @brief Wether or not the provider with the given @p providerId is installed.
+     **/
+    static bool isProviderInstalled( const QString &providerId );
 };
 
 #endif // Multiple inclusion guard

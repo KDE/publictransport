@@ -743,8 +743,13 @@ bool PublicTransportEngine::updateProviderData( const QString &providerId,
         providerData["id"] = providerId;
         providerData["error"] = true;
         providerData["errorMessage"] = errorMessage;
+
+        // Prepare state data with the error message and a boolean whether or not the provider
+        // is installed or could not be found (only possible if the provider data source was
+        // manually requested)
         QVariantHash stateData;
-        stateData[ "statusMessage" ] = errorMessage;
+        stateData["statusMessage"] = errorMessage;
+        stateData["isInstalled"] = ServiceProviderGlobal::isProviderInstalled( providerId );
 
         providersSource->addProvider( providerId,
                 ProvidersDataSource::ProviderData(providerData, "error", stateData) );

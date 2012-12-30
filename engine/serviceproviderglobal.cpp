@@ -272,6 +272,22 @@ QStringList ServiceProviderGlobal::installedProviders()
     return providers;
 }
 
+bool ServiceProviderGlobal::isProviderInstalled( const QString &providerId )
+{
+    const QString subDirectory = installationSubDirectory();
+    foreach ( const QString &extension, fileExtensions() ) {
+        const QString providerFile = KGlobal::dirs()->findResource(
+                "data", subDirectory + providerId + '.' + extension );
+        if ( !providerFile.isEmpty() ) {
+            // Found the provider plugin source file in an installation directory
+            return true;
+        }
+    }
+
+    // Provider is not installed
+    return false;
+}
+
 bool ServiceProviderGlobal::isSourceFileModified( const QString &providerId,
                                                   const QSharedPointer<KConfig> &cache )
 {
