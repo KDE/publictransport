@@ -3055,11 +3055,14 @@ QList< QAction* > Project::contextMenuActions( QWidget *parent )
     separator1->setSeparator( true );
     KAction *separator2 = new KAction( parent );
     separator2->setSeparator( true );
+    KAction *separator3 = new KAction( parent );
+    separator3->setSeparator( true );
     actions << projectAction(Save) << projectAction(SaveAs)
             << projectAction(Install) << projectAction(InstallGlobally)
             << projectAction(Publish)
-            << projectAction(Uninstall) << projectAction(UninstallGlobally)
             << separator1
+            << projectAction(Uninstall) << projectAction(UninstallGlobally)
+            << separator2
             << projectAction(SetAsActiveProject)
             << projectAction(ShowDashboard);
 
@@ -3076,7 +3079,7 @@ QList< QAction* > Project::contextMenuActions( QWidget *parent )
 #endif
 
     actions << testSubMenuAction(parent)
-            << separator2
+            << separator3
             << projectAction(ShowProjectSettings)
             << projectAction(Close);
     return actions;
