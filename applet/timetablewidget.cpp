@@ -47,9 +47,8 @@
 #include <QPropertyAnimation>
 #include <QParallelAnimationGroup>
 #include <QStyleOption>
+#include <QAbstractTextDocumentLayout>
 #include <qmath.h>
-
-const qreal PublicTransportGraphicsItem::ROUTE_ITEM_HEIGHT = 60.0;
 
 PublicTransportGraphicsItem::PublicTransportGraphicsItem(
         PublicTransportWidget *publicTransportWidget, QGraphicsItem *parent,
@@ -129,6 +128,12 @@ void PublicTransportGraphicsItem::setExpanded( bool expand )
     updateGeometry();
 
     emit expandedStateChanged( this, expand );
+
+    if ( expand ) {
+        QRectF rect = geometry();
+        rect.setHeight( rect.height() + expandAreaHeightMaximum() );
+        m_parent->ensureRectVisible( rect );
+    }
 }
 
 void PublicTransportGraphicsItem::resizeAnimationFinished()
@@ -274,6 +279,11 @@ qreal PublicTransportGraphicsItem::unexpandedHeight( qreal iconSize, qreal paddi
                                                      int lineSpacing, int maxLineCount )
 {
     return qMax( iconSize * 1.1, lineSpacing * maxLineCount + padding );
+}
+
+qreal PublicTransportGraphicsItem::routeItemHeight() const
+{
+    return 3 * unexpandedHeight();
 }
 
 bool PublicTransportGraphicsItem::hasExtraIcon( Columns column ) const
@@ -447,7 +457,7 @@ void DepartureGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent* event )
         QRectF _infoRect = infoRect( rect(), 0 );
         m_routeItem->setGeometry( _infoRect.left(), rect().top() + unexpandedHeight() + padding(),
                                   rect().width() - padding() - _infoRect.left(),
-                                  ROUTE_ITEM_HEIGHT * m_parent->zoomFactor() );
+                                  routeItemHeight() );
     }
 }
 
@@ -562,8 +572,8 @@ DepartureGraphicsItem::DepartureGraphicsItem( PublicTransportWidget* publicTrans
         StopAction *newFilterViaStopAction, KPixmapCache *pixmapCache )
         : PublicTransportGraphicsItem( publicTransportWidget, parent, copyStopToClipboardAction,
                                        showInMapAction ),
-        m_infoTextDocument(0), m_timeTextDocument(0), m_routeItem(0), m_highlighted(false),
-        m_leavingAnimation(0), m_showDeparturesAction(showDeparturesAction),
+        m_infoTextDocument(0), m_timeTextDocument(0), m_othersTextDocument(0), m_routeItem(0),
+        m_highlighted(false), m_leavingAnimation(0), m_showDeparturesAction(showDeparturesAction),
         m_highlightStopAction(highlightStopAction), m_newFilterViaStopAction(newFilterViaStopAction),
         m_pixmapCache(pixmapCache)
 {
@@ -578,6 +588,7 @@ DepartureGraphicsItem::~DepartureGraphicsItem()
 
     delete m_infoTextDocument;
     delete m_timeTextDocument;
+    delete m_othersTextDocument;
 }
 
 JourneyGraphicsItem::JourneyGraphicsItem( PublicTransportWidget* publicTransportWidget,
@@ -649,6 +660,46 @@ void DepartureGraphicsItem::updateTextLayouts()
         m_infoTextDocument = TextDocumentHelper::createTextDocument( html, _infoRect.size(),
                                                                      textOption, font() );
     }
+
+    qreal height = rect.height() - unexpandedHeight();
+    if ( m_routeItem ) {
+        height -= m_routeItem->geometry().height() - padding();
+    }
+    QSizeF othersSize( rect.width() - expandAreaIndentation(), height );
+    if ( !m_othersTextDocument || (m_othersTextDocument->pageSize() != othersSize) ) {
+        delete m_othersTextDocument;
+        textOption.setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
+
+        QString html;
+        ChildItem *delayItem = m_item->childByType( DelayItem );
+        ChildItem *platformItem = m_item->childByType( PlatformItem );
+        ChildItem *operatorItem = m_item->childByType( OperatorItem );
+        ChildItem *journeyNewsItem = m_item->childByType( JourneyNewsItem );
+        if ( delayItem ) {
+            html.append( delayItem->formattedText() );
+        }
+        if ( platformItem ) {
+            if ( !html.isEmpty() ) {
+                html.append("<br />");
+            }
+            html.append( platformItem->formattedText() );
+        }
+        if ( operatorItem ) {
+            if ( !html.isEmpty() ) {
+                html.append("<br />");
+            }
+            html.append( operatorItem->formattedText() );
+        }
+        if ( journeyNewsItem ) {
+            if ( !html.isEmpty() ) {
+                html.append("<br />");
+            }
+            html.append( journeyNewsItem->formattedText() );
+        }
+
+        m_othersTextDocument = TextDocumentHelper::createTextDocument( html, othersSize,
+                                                                       textOption, font() );
+    }
 }
 
 void JourneyGraphicsItem::updateTextLayouts()
@@ -718,7 +769,7 @@ void JourneyGraphicsItem::updateData( JourneyItem* item, bool updateLayouts )
             m_routeItem->setZoomFactor( m_parent->zoomFactor() );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
-                                m_routeItem->size().height() );
+                                 m_routeItem->size().height() );
             m_routeItem->updateData( item );
         }
     } else if ( m_routeItem ) {
@@ -761,7 +812,7 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
             m_routeItem->setZoomFactor( m_parent->zoomFactor() );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
-                                 ROUTE_ITEM_HEIGHT * m_parent->zoomFactor() );
+                                 routeItemHeight() );
         }
     } else if ( m_routeItem ) {
         delete m_routeItem;
@@ -1239,6 +1290,7 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
         _font.setItalic( manuallyHighlighted );
         m_infoTextDocument->setDefaultFont( _font );
         m_timeTextDocument->setDefaultFont( _font );
+        m_othersTextDocument->setDefaultFont( _font );
         setFont( _font );
         m_highlighted = manuallyHighlighted;
     }
@@ -1343,74 +1395,40 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
     const bool drawShadowsOrHalos = m_parent->isOptionEnabled( PublicTransportWidget::DrawShadowsOrHalos );
     const bool drawHalos = drawShadowsOrHalos && qGray(_textColor.rgb()) < 192;
 
-    qreal y = rect.top() - padding();
+    qreal y = rect.top();
     if ( m_routeItem ) {
-        y += m_routeItem->size().height() /*+ padding()*/;
+        y += m_routeItem->size().height() + padding();
     }
 
     if ( y > rect.bottom() ) {
         return; // Currently not expanded enough to show more information (is animating)
     }
 
-    // Draw other inforamtion items
-    QString html;
-    ChildItem *delayItem = m_item->childByType( DelayItem );
-    ChildItem *platformItem = m_item->childByType( PlatformItem );
-    ChildItem *operatorItem = m_item->childByType( OperatorItem );
-    ChildItem *journeyNewsItem = m_item->childByType( JourneyNewsItem );
-    if ( delayItem ) {
-        html.append( delayItem->formattedText() );
-    }
-    if ( platformItem ) {
-        if ( !html.isEmpty() ) {
-            html.append("<br />");
-        }
-        html.append( platformItem->formattedText() );
-    }
-    if ( operatorItem ) {
-        if ( !html.isEmpty() ) {
-            html.append("<br />");
-        }
-        html.append( operatorItem->formattedText() );
-    }
-    if ( journeyNewsItem ) {
-        if ( !html.isEmpty() ) {
-            html.append("<br />");
-        }
-        html.append( journeyNewsItem->formattedText() );
-    }
-
-    if ( !html.isEmpty() ) {
+    if ( m_othersTextDocument ) {
         QFontMetrics fm( font() );
         QRectF htmlRect( rect.left(), y, rect.width(), rect.bottom() - y );
 
-        // Create layout for the departure time column
-        QTextDocument additionalInformationTextDocument;
-        additionalInformationTextDocument.setDefaultFont( font() );
-        QTextOption textOption( Qt::AlignVCenter | Qt::AlignLeft );
-        additionalInformationTextDocument.setDefaultTextOption( textOption );
-        additionalInformationTextDocument.setDocumentMargin( 0 );
-        additionalInformationTextDocument.setPageSize( htmlRect.size() );
-        additionalInformationTextDocument.setHtml( html );
-        additionalInformationTextDocument.documentLayout();
-
         painter->setPen( _textColor );
-        TextDocumentHelper::drawTextDocument( painter, option, &additionalInformationTextDocument,
+        TextDocumentHelper::drawTextDocument( painter, option, m_othersTextDocument,
                 htmlRect.toRect(), drawShadowsOrHalos
                 ? (drawHalos ? TextDocumentHelper::DrawHalos : TextDocumentHelper::DrawShadows)
                 : TextDocumentHelper::DoNotDrawShadowOrHalos);
     }
 }
 
-qreal PublicTransportGraphicsItem::expandAreaHeight() const
+qreal PublicTransportGraphicsItem::expandAreaHeightTarget() const
 {
     // Round expand area height to multiples of unexpandedHeight(),
     // because this is used for the snap size of the ScrollWidget to stop scrolling
     // at the top of an item (cannot set individual scroll stop positions)
     const qreal height = expandAreaHeightMinimum();
     const qreal heightUnit = unexpandedHeight();
-    const int factor = qCeil( height / heightUnit );
-    return heightUnit * factor * m_expandStep;
+    return qCeil(height / heightUnit) * heightUnit;
+}
+
+qreal PublicTransportGraphicsItem::expandAreaHeight() const
+{
+    return expandAreaHeightTarget() * m_expandStep;
 }
 
 qreal JourneyGraphicsItem::expandAreaHeightMinimum() const
@@ -1462,35 +1480,28 @@ qreal DepartureGraphicsItem::expandAreaHeightMinimum() const
     qreal height = padding();
     const DepartureInfo *info = departureItem()->departureInfo();
     if ( info->routeStops().count() >= 2 ) {
-        height += ROUTE_ITEM_HEIGHT * m_parent->zoomFactor() + padding();
+        height += routeItemHeight() + padding();
     }
-
-    qreal extraInformationHeight = 0.0;
-    QFontMetrics fm( font() );
-    ChildItem *delayItem = m_item->childByType( DelayItem );
-    if ( delayItem ) {
-        extraInformationHeight += 2 * fm.height();
+    if ( m_othersTextDocument ) {
+        height += m_othersTextDocument->documentLayout()->documentSize().height() + padding();
     }
-
-    ChildItem *operatorItem = m_item->childByType( OperatorItem );
-    if ( operatorItem ) {
-        extraInformationHeight += fm.height();
-    }
-
-    ChildItem *platformItem = m_item->childByType( PlatformItem );
-    if ( platformItem ) {
-        extraInformationHeight += fm.height();
-    }
-
-    ChildItem *journeyNewsItem = m_item->childByType( JourneyNewsItem );
-    if ( journeyNewsItem ) {
-        extraInformationHeight += 3 * fm.height();
-    }
-    if ( extraInformationHeight != 0.0 ) {
-        height += extraInformationHeight + padding();
-    }
-
     return height;
+}
+
+qreal DepartureGraphicsItem::expandAreaHeightMaximum() const
+{
+    if ( !m_item ) {
+        return 0.0;
+    }
+
+    qreal height = padding();
+    const DepartureInfo *info = departureItem()->departureInfo();
+    height += routeItemHeight() + padding();
+    if ( m_othersTextDocument ) {
+        height += m_othersTextDocument->documentLayout()->documentSize().height() + padding();
+    }
+    const qreal heightUnit = unexpandedHeight();
+    return qCeil(height / heightUnit) * heightUnit;
 }
 
 qreal DepartureGraphicsItem::expandAreaIndentation() const

@@ -108,9 +108,6 @@ public:
                                           StopAction *showInMapAction = 0 );
     virtual ~PublicTransportGraphicsItem();
 
-    /** @brief The height of route items. */
-    static const qreal ROUTE_ITEM_HEIGHT;
-
     /**
      * @brief Get the visible part of the shape of this item.
      *
@@ -148,6 +145,12 @@ public:
 
     static qreal unexpandedHeight( qreal iconSize, qreal padding,
                                    int lineSpacing, int maxLineCount );
+
+    /**
+     * @brief The height of route items.
+     * @return A multiple of unexpandedHeight().
+     **/
+    qreal routeItemHeight() const;
 
     /**
      * @brief Get the height of the expand area.
@@ -339,6 +342,17 @@ protected:
     /** @brief The minimum size of the expand area. */
     virtual qreal expandAreaHeightMinimum() const = 0;
 
+    /**
+     * @brief The maximum size of the expand area.
+     * Used when an item gets expanded to ensure the expanded area is visible, including data that
+     * may get added later, eg. route data.
+     **/
+    virtual qreal expandAreaHeightMaximum() const { return expandAreaHeightMinimum(); };
+
+    /** @brief Used by expandAreaHeight(), here without animation step applied. */
+    qreal expandAreaHeightTarget() const;
+
+
     QPointer<TopLevelItem> m_item;
     PublicTransportWidget *m_parent;
     bool m_expanded;
@@ -493,9 +507,13 @@ protected:
     /** @brief The minimum size of the expand area. */
     virtual qreal expandAreaHeightMinimum() const;
 
+    /** @brief The maximum size of the expand area. */
+    virtual qreal expandAreaHeightMaximum() const;
+
 private:
     QTextDocument *m_infoTextDocument;
     QTextDocument *m_timeTextDocument;
+    QTextDocument *m_othersTextDocument;
     RouteGraphicsItem *m_routeItem; // Pointer to the route item or 0 if no route data is available
     bool m_highlighted;
 

@@ -157,6 +157,9 @@ public:
     /** @brief Get the ID of the provider used for the source with the given @p sourceName. */
     static QString providerIdFromSourceName( const QString &sourceName );
 
+    /** @brief Remove words from the beginning/end of stop names that occur in most names. */
+    static QStringList removeCityNameFromStops( const QStringList &stopNames );
+
     /** @brief Reimplemented to add some always visible default sources. */
     virtual QStringList sources() const;
 

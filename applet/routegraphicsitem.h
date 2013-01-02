@@ -235,6 +235,25 @@ public:
 
     void updateData( DepartureItem *item );
 
+    /**
+     * @brief The minimal distance between two stop items.
+     * If not all route stops fit into the route item, some stops in the middle are left out.
+     **/
+    static int minStopDistance( const QFontMetrics &fontMetrics );
+
+    /**
+     * @brief Compute text angle for route stop names.
+     * The text angle gets chosen so that the stop names do not overlap when using a font with
+     * the given @p fontMetrics.
+     **/
+    static qreal textAngle( const QFontMetrics &fontMetrics, qreal zoomFactor = 1.0 );
+
+    /**
+     * @brief Compute maximal text width for the computed angle.
+     * so that the stop name won't go outside of routeRect.
+     **/
+    qreal maxTextWidth( qreal height, int fontHeight ) const;
+
     void setZoomFactor( qreal zoomFactor = 1.0 );
     qreal zoomFactor() const { return m_zoomFactor; };
     inline qreal padding() const { return 5.0; };
@@ -246,8 +265,12 @@ public:
 
 protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
-    void arrangeStopItems();
     virtual inline void showEvent( QShowEvent* ) { arrangeStopItems(); };
+    void arrangeStopItems();
+
+    /** @brief Get the position for stop text (before rotation) from the stop marker position. */
+    QPointF stopTextPosition( const QFontMetrics &fontMetrics,
+                              const QPointF &stopMarkerPosition ) const;
 
 private:
     QPointer<DepartureItem> m_item;

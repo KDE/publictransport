@@ -2225,22 +2225,6 @@ RouteStopFlags DepartureItem::routeStopFlags( int routeStopIndex, int *minsFromF
         int _minsFromFirstRouteStop =
                 qCeil( m_departureInfo.departure().time().secsTo(time) / 60.0 );
 
-        // Fix number of minutes if the date changes between route stops
-        // NOTE This only works if the route extends over less than three days
-        if ( m_departureInfo.isArrival() ) {
-            // Number of minutes should always be negative for arrivals
-            // (time from home stop back in time to stop X)
-            while ( _minsFromFirstRouteStop > 0 ) {
-                _minsFromFirstRouteStop -= 24 * 60;
-            }
-        } else {
-            // Number of minutes should always be positive for departures
-            // (time from home stop to stop X)
-            while ( _minsFromFirstRouteStop < 0 ) {
-                _minsFromFirstRouteStop += 24 * 60;
-            }
-        }
-
         if ( _minsFromFirstRouteStop == 0 ) {
             if ( routeStopIndex == 0 ) {
                 isFirstZeroMinuteStop = true;

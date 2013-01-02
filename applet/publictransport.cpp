@@ -1500,6 +1500,9 @@ void PublicTransportApplet::departureContextMenuRequested( PublicTransportGraphi
                 QString stopText;
                 if ( minsFromFirstRouteStop == 0 || !time.isValid() ) {
                     stopText = stopNameShortened;
+                } else if ( minsFromFirstRouteStop < 0 ) {
+                    stopText = QString("%1 (-%2)").arg(stopNameShortened)
+                        .arg(KGlobal::locale()->prettyFormatDuration(-minsFromFirstRouteStop * 60000));
                 } else {
                     stopText = QString("%1 (%2)").arg(stopNameShortened)
                         .arg(KGlobal::locale()->prettyFormatDuration(minsFromFirstRouteStop * 60000));

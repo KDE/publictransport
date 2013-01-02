@@ -54,7 +54,7 @@ RouteGraphicsItem::RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item
 {
     setFlag( ItemClipsToShape );
     m_zoomFactor = 1.0;
-    m_textAngle = 15.0;
+    m_textAngle = 30.0;
     m_maxTextWidth = 100.0;
     updateData( item );
 }
@@ -83,6 +83,42 @@ void JourneyRouteStopGraphicsItem::setZoomFactor( qreal zoomFactor )
     update();
 }
 
+int RouteGraphicsItem::minStopDistance( const QFontMetrics &fontMetrics )
+{
+    return 2 * fontMetrics.height();
+}
+
+qreal RouteGraphicsItem::textAngle( const QFontMetrics &fontMetrics, qreal zoomFactor )
+{
+    // Padding is the distance in pixels of two text base lines at the nearest point
+    const int padding = 4 * zoomFactor;
+
+    // Compute text angle between 30 and 70 degrees. Use the same angle for all route items to
+    // prevent visual clutter when multiple route items get shown with different text angles.
+    // Use a text angle that does not produce overlapping text for the case that the stop
+    // distance is minimal (many route stops). This angle will also not produce overlapping text
+    // for higher stop distances.
+    const qreal angle = qAsin(qreal(fontMetrics.lineSpacing() + padding) /
+                              minStopDistance(fontMetrics)) * 180.0 / 3.14159;
+    return qBound( 30.0, angle, 70.0 );
+}
+
+qreal RouteGraphicsItem::maxTextWidth( qreal height, int fontHeight ) const
+{
+    // Compute maximal text width for the computed angle,
+    // so that the stop name won't go outside of routeRect
+    const qreal angle = m_textAngle * 3.14159 / 180.0;
+    return (height - 10 * m_zoomFactor) / qSin(angle) - fontHeight / qTan(angle);
+}
+
+QPointF RouteGraphicsItem::stopTextPosition( const QFontMetrics &fontMetrics,
+                                             const QPointF &stopMarkerPosition ) const
+{
+    // Position the stop text under the stop marker center
+    return QPointF( stopMarkerPosition.x() - fontMetrics.height() / 3.0,
+                    stopMarkerPosition.y() + (6 + padding()) * m_zoomFactor );
+}
+
 void RouteGraphicsItem::arrangeStopItems()
 {
     if ( !m_item ) {
@@ -107,35 +143,33 @@ void RouteGraphicsItem::arrangeStopItems()
         QFontMetrics fm( routeFont );
         QFontMetrics fmBold( boldRouteFont );
         const QRectF routeRect = rect();
-        const qreal routeStopAreaWidth = routeRect.width() - 20 * m_zoomFactor;
+        const qreal routeStopAreaWidth = routeRect.width() - 45 * m_zoomFactor;
 
         // Width of the route line (on which the stop items are displayed)
         const qreal routeLineWidth = 4.0 * m_zoomFactor;
 
         // The position of the first stop item
-        const QPointF startStopPos( 2 * padding() * m_zoomFactor,
+        const QPointF startStopPos( padding() * m_zoomFactor,
                                     padding() * m_zoomFactor + routeLineWidth / 2.0 );
 
         // Distance between two stop items
-        if ( (routeRect.width() - 4 * padding() * m_zoomFactor) / count < 2 * fm.height() ) {
-            count = qFloor( routeRect.width() / (2 * fm.height()) );
+        const int minStep = minStopDistance( fm );
+        if ( (routeRect.width() - 4 * padding() * m_zoomFactor) / count < minStep ) {
+            count = qFloor( routeRect.width() / minStep );
         }
         const qreal step = routeStopAreaWidth / count;
+        const qreal height = routeRect.height() - startStopPos.y();
 
-        // Compute minimal text angle between 15 and 90 degrees,
-        // so that the stop names don't overlap
-        m_textAngle = qBound( 15.0, qAtan(fm.height() / step) * 180.0 / 3.14159, 90.0 );
+        // Compute text angle so that the stop names don't overlap
+        m_textAngle = textAngle( fm, m_zoomFactor );
 
         // Compute maximal text width for the computed angle,
         // so that the stop name won't go outside of routeRect
-        const qreal height = routeRect.height() - startStopPos.y();
-        const qreal angle = m_textAngle * 3.14159 / 180.0;
-        m_maxTextWidth = height / qSin(angle) - fm.height() / qTan(angle);
+        m_maxTextWidth = maxTextWidth( height, fm.height() );
 
         for ( int i = 0; i < count; ++i ) {
-            const QPointF stopMarkerPos( startStopPos.x() + i * step, startStopPos.y() );
-            const QPointF stopTextPos( stopMarkerPos.x() - 4 * m_zoomFactor,
-                                 stopMarkerPos.y() + 6.0 * m_zoomFactor );
+            QPointF stopMarkerPos( startStopPos.x() + i * step, startStopPos.y() );
+            const QPointF stopTextPos = stopTextPosition( fm, stopMarkerPos );
             const QString stopName = info->routeStops()[i];
             const QString stopNameShortened = info->routeStopsShortened()[i];
             QFontMetrics *fontMetrics;
@@ -147,6 +181,15 @@ void RouteGraphicsItem::arrangeStopItems()
                 font = &routeFont;
                 fontMetrics = &fm;
             }
+
+            // Move the last stop marker a bit further to the right (more space for the arrow)
+            // But do not move the stop text
+            if ( i == count - 1 ) {
+                stopMarkerPos.setX( stopMarkerPos.x() + 4 * m_zoomFactor );
+            }
+
+            RouteStopMarkerGraphicsItem *markerItem = m_markerItems[ i ];
+            markerItem->setPos( stopMarkerPos );
 
             // Get time information
             QTime time;
@@ -182,9 +225,6 @@ void RouteGraphicsItem::arrangeStopItems()
                 baseSize = m_maxTextWidth;
             }
 
-            RouteStopMarkerGraphicsItem *markerItem = m_markerItems[ i ];
-            markerItem->setPos( stopMarkerPos );
-
             // Create sub item, that displays a single stop name
             // and automatically elides it and stretches it on hover to show hidden text
             RouteStopTextGraphicsItem *textItem = m_textItems[ i ];
@@ -194,7 +234,9 @@ void RouteGraphicsItem::arrangeStopItems()
             textItem->setPos( stopTextPos );
             textItem->setBaseSize( baseSize );
             textItem->resize( baseSize + 10, fontMetrics->height() );
-            textItem->rotate( m_textAngle );
+            const qreal half = textItem->geometry().height() / 2;
+            textItem->setTransformOriginPoint( half, half );
+            textItem->setRotation( m_textAngle );
         }
     }
 }
@@ -230,8 +272,8 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
         const QRectF routeRect = rect();
         const qreal routeLineWidth = 4.0 * m_zoomFactor;
         const QPointF startStopPos( (10 /*- 4*/) * m_zoomFactor,  padding() + routeLineWidth / 2.0 );
-        const qreal routeStopAreaWidth = routeRect.width() - 20 * m_zoomFactor;
-        const qreal minStep = fm.height() * 3.0;
+        const qreal routeStopAreaWidth = routeRect.width() - 45 * m_zoomFactor;
+        const qreal minStep = fm.height() * 1.5; // This controls how close route stops get shown
 
         // Compute number of route stop items
         // without using more space than routeStopAreaWidth
@@ -242,16 +284,14 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
 
         // Compute distance between two route stop items
         const qreal step = routeStopAreaWidth / count;
+        const qreal height = routeRect.height() - startStopPos.y();
 
-        // Compute minimal text angle between 15 and 90 degrees,
-        // so that the stop names don't overlap
-        m_textAngle = qBound( 15.0, qAtan(fm.height() / step) * 180.0 / 3.14159, 90.0 );
+        // Compute text angle so that the stop names don't overlap
+        m_textAngle = textAngle( fm, m_zoomFactor );
 
         // Compute maximal text width for the computed angle,
         // so that the stop name won't go outside of routeRect
-        m_maxTextWidth = (routeRect.height() - startStopPos.y() /*- 10*/ - 6.0 * m_zoomFactor
-                - qCos(m_textAngle * 3.14159 / 180.0) * fm.height())
-                / qSin(m_textAngle * 3.14159 / 180.0);
+        m_maxTextWidth = maxTextWidth( height, fm.height() );
 
         // TODO: Ensure the highlighted stop name gets shown (not omitted)
         int omitCount = info->routeStops().count() - count;
@@ -279,7 +319,7 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
         }
 
         for ( int positionIndex = 0; positionIndex < count; ++positionIndex ) {
-            const QPointF stopMarkerPos( startStopPos.x() + positionIndex * step, startStopPos.y() );
+            QPointF stopMarkerPos( startStopPos.x() + positionIndex * step, startStopPos.y() );
             int index = -1;
             if ( positionIndex == omitIndex ) { // Currently at first omitted stop
                 // Create intermediate marker item
@@ -328,13 +368,18 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                 index = positionIndex;
             }
 
-            const QPointF stopTextPos( stopMarkerPos.x() - 4 * m_zoomFactor,
-                                       stopMarkerPos.y() + 6.0 * m_zoomFactor );
+            const QPointF stopTextPos = stopTextPosition( fm, stopMarkerPos );
             QString stopName = info->routeStops()[index];
             QString stopNameShortened = info->routeStopsShortened()[index];
             QString stopText = stopNameShortened;
             QFontMetrics *fontMetrics;
             QFont *font;
+
+            // Move the last stop marker a bit further to the right (more space for the arrow)
+            // But do not move the stop text
+            if ( positionIndex == count - 1 ) {
+                stopMarkerPos.setX( stopMarkerPos.x() + 4 * m_zoomFactor );
+            }
 
             const bool manuallyHighlighted =
                     model->routeItemFlags(stopName).testFlag(RouteItemHighlighted);
@@ -379,7 +424,9 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                     minsFromFirstRouteStop, routeStopFlags );
             textItem->setPos( stopTextPos );
             textItem->resize( baseSize + 10, fontMetrics->height() );
-            textItem->rotate( m_textAngle );
+            const qreal half = textItem->geometry().height() / 2;
+            textItem->setTransformOriginPoint( half, half );
+            textItem->setRotation( m_textAngle );
             QList<QAction*> actions;
             if ( routeStopFlags.testFlag(RouteStopIsHomeStop) ) {
                 if ( m_showInMapAction ) {
@@ -465,7 +512,8 @@ void RouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem
     const qreal timelineBottom = timelineTop + routeLineWidth;
     const qreal timelineLeft = routeRect.left() + routeLineWidth * 3.0;
     const qreal timelineRight = (m_markerItems.isEmpty() ? routeRect.right()
-            : m_markerItems.last()->pos().x() - m_markerItems.last()->size().width() / 2.0) - arrowWidth;
+            : m_markerItems.last()->pos().x() - m_markerItems.last()->size().width() / 2.0)
+              + 1 * m_zoomFactor - arrowWidth;
     const QPointF points[7] = {
             QPointF(timelineLeft, timelineBottom),
             QPointF(timelineLeft, timelineTop),
@@ -780,8 +828,13 @@ void RouteStopTextGraphicsItem::paint( QPainter* painter,
     rect.setTop( 0 );
     QString stopText = fm.elidedText( m_stopText, Qt::ElideRight, rect.width() );
 
+    // Create an a bit bigger rectangle to not clip the halo/shadow
+    const int hHaloPad = 10;
+    const int vHaloPad = 5;
+    QRect paddedRect = rect.adjusted( -hHaloPad, -vHaloPad, hHaloPad, vHaloPad );
+
     // Prepare a pixmap and a painter drawing to that pixmap
-    QPixmap pixmap( rect.size() );
+    QPixmap pixmap( paddedRect.size() );
     pixmap.fill( Qt::transparent );
     QPainter p( &pixmap );
     p.setRenderHints( QPainter::Antialiasing );
@@ -789,13 +842,13 @@ void RouteStopTextGraphicsItem::paint( QPainter* painter,
     p.setPen( Qt::NoPen ); // No text outline
 
     if ( drawHalos ) {
-        Plasma::PaintUtils::drawHalo( &p, QRectF(rect.left(), rect.top(),//-fm.ascent(), TODO Move f.ascent to setPos()?
-                                      fm.width(stopText), fm.height()) );
+        Plasma::PaintUtils::drawHalo( &p, QRectF(hHaloPad, vHaloPad,
+                                                 fm.width(stopText), fm.height()) );
     }
 
     // Use a QPainterPath to draw the text, because it's better antialiased then
     QPainterPath path;
-    path.addText( 0, fm.ascent(), font(), stopText );
+    path.addText( hHaloPad, vHaloPad + fm.ascent(), font(), stopText );
     p.drawPath( path );
     p.end();
 
@@ -803,11 +856,11 @@ void RouteStopTextGraphicsItem::paint( QPainter* painter,
         // Create and draw a shadow
         QImage shadow = pixmap.toImage();
         Plasma::PaintUtils::shadowBlur( shadow, 3, Qt::black );
-        painter->drawImage( rect.topLeft() + QPoint(1, 2), shadow );
+        painter->drawImage( paddedRect.topLeft() + QPoint(1, 2), shadow );
     }
 
     // Draw the route pixmap
-    painter->drawPixmap( rect.topLeft(), pixmap );
+    painter->drawPixmap( paddedRect.topLeft(), pixmap );
 }
 
 JourneyRouteStopGraphicsItem::JourneyRouteStopGraphicsItem( JourneyRouteGraphicsItem* parent,
