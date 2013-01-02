@@ -1277,7 +1277,7 @@ void PublicTransportApplet::expandedStateChanged( PublicTransportGraphicsItem *i
     // When an item gets expanded for the first time, try to load additional data
     // using the timetable service of the PublicTransport engine
     DepartureGraphicsItem *departureItem = qobject_cast< DepartureGraphicsItem* >( item );
-    if ( expanded && departureItem &&
+    if ( expanded && departureItem && departureItem->departureItem() &&
          !departureItem->departureItem()->includesAdditionalData() &&
          (d->settings.additionalDataRequestType() == Settings::RequestAdditionalDataWhenNeeded ||
           d->settings.additionalDataRequestType() == Settings::RequestAdditionalDataDirectly) )
