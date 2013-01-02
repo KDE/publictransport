@@ -149,6 +149,8 @@ Enums::TimetableInformation Global::timetableInformationFromString(
         return Enums::FlightNumber;
     } else if ( sInfo == QLatin1String("target") ) {
         return Enums::Target;
+    } else if ( sInfo == QLatin1String("targetshortened") ) {
+        return Enums::TargetShortened;
     } else if ( sInfo == QLatin1String("platform") ) {
         return Enums::Platform;
     } else if ( sInfo == QLatin1String("delay") ) {
@@ -165,6 +167,8 @@ Enums::TimetableInformation Global::timetableInformationFromString(
         return Enums::Status;
     } else if ( sInfo == QLatin1String("routestops") ) {
         return Enums::RouteStops;
+    } else if ( sInfo == QLatin1String("routestopsshortened") ) {
+        return Enums::RouteStopsShortened;
     } else if ( sInfo == QLatin1String("routetimes") ) {
         return Enums::RouteTimes;
     } else if ( sInfo == QLatin1String("routetimesdeparture") ) {
