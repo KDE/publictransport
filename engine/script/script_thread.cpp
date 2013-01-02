@@ -499,7 +499,7 @@ QScriptValue include( QScriptContext *context, QScriptEngine *engine )
     QFile scriptFile( filePath );
     if ( !scriptFile.open(QIODevice::ReadOnly) ) {
         context->throwError( i18nc("@info/plain", "Cannot find file to be included: "
-                                   "<filename>%1</filename>", filePath) );
+                                   "<filename>%1</filename>", fileName) );
         return engine->undefinedValue();
     }
 
