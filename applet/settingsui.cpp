@@ -797,8 +797,7 @@ void SettingsUiManager::setValuesOfFilterConfig()
             m_uiFilter.filters->addFilter( filter );
         }
 
-        int added = m_uiFilter.filters->setWidgetCountRange( minWidgetCount, maxWidgetCount );
-        setFilterConfigurationChanged( added != 0 );
+        m_uiFilter.filters->setWidgetCountRange( minWidgetCount, maxWidgetCount );
     }
 }
 
