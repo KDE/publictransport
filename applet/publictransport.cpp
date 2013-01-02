@@ -61,7 +61,7 @@ PublicTransportApplet::PublicTransportApplet( QObject *parent, const QVariantLis
     setBackgroundHints( StandardBackground );
     setAspectRatioMode( Plasma::IgnoreAspectRatio );
     setHasConfigurationInterface( true );
-    setPreferredSize( 400, 300 );
+    setPreferredSize( 400, 350 );
 }
 
 PublicTransportApplet::~PublicTransportApplet()

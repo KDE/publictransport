@@ -517,7 +517,7 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
                     "should not be created somewhere else." );
         graphicsWidget = new QGraphicsWidget( q );
         graphicsWidget->setMinimumSize( 150, 150 ); // TODO allow smaller sizes, if zoom factor is small
-        graphicsWidget->setPreferredSize( 400, 300 );
+        graphicsWidget->setPreferredSize( q->preferredSize() );
         q->connect( graphicsWidget, SIGNAL(geometryChanged()), q, SLOT(appletResized()) );
 
         // Create a child graphics widget, eg. to apply a blur effect to it
