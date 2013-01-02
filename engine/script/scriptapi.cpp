@@ -47,6 +47,7 @@
 #include <QMutex>
 #include <QFileInfo>
 #include <QBuffer>
+#include <QApplication>
 
 // Other includes
 #include <zlib.h>
@@ -370,7 +371,7 @@ QNetworkRequest* NetworkRequest::request() const
 Network::Network( const QByteArray &fallbackCharset, QObject* parent )
         : QObject(parent), m_mutex(new QMutex(QMutex::Recursive)),
           m_fallbackCharset(fallbackCharset), m_manager(new QNetworkAccessManager()),
-          m_quit(false), m_lastDownloadAborted(false)
+          m_quit(false), m_synchronousRequestCount(0), m_lastDownloadAborted(false)
 {
     qRegisterMetaType< NetworkRequest* >( "NetworkRequest*" );
     qRegisterMetaType< NetworkRequest::Ptr >( "NetworkRequest::Ptr" );
@@ -383,13 +384,16 @@ Network::~Network()
     m_quit = true;
     m_mutex->unlock();
 
+    // Notify about the abort request to abort running synchronous requests
+    abortSynchronousRequests();
+    qApp->processEvents(); // Handle the signal
+
     const QList< NetworkRequest::Ptr > _runningRequests = runningRequests();
     if ( !_runningRequests.isEmpty() ) {
         kWarning() << "Deleting Network object with" << _runningRequests.count()
                    << "running requests";
         foreach ( const NetworkRequest::Ptr &request, _runningRequests ) {
             request->abort();
-//             request->deleteLater();
         }
     }
 
@@ -573,6 +577,14 @@ void Network::abortAllRequests()
         // Calling abort automatically removes the aborted request from m_createdRequests
         requests[i]->abort();
     }
+
+    // Notify about the abort request to abort running synchronous requests
+    abortSynchronousRequests();
+}
+
+void Network::abortSynchronousRequests()
+{
+    emit doAbortSynchronousRequests();
 }
 
 QByteArray Network::getSynchronous( const QString &url, const QString &userUrl, int timeout )
@@ -583,6 +595,7 @@ QByteArray Network::getSynchronous( const QString &url, const QString &userUrl, 
 
     m_mutex->lockInline();
     QNetworkReply *reply = m_manager->get( request );
+    ++m_synchronousRequestCount;
     m_lastUrl = url;
     m_lastUserUrl = userUrl.isEmpty() ? url : userUrl;
     m_lastDownloadAborted = false;
@@ -598,7 +611,7 @@ QByteArray Network::getSynchronous( const QString &url, const QString &userUrl, 
         // ie. make netAccess.download() synchronous for scripts
         QEventLoop eventLoop;
         connect( reply, SIGNAL(finished()), &eventLoop, SLOT(quit()) );
-        connect( this, SIGNAL(allRequestsFinished()), &eventLoop, SLOT(quit()) );
+        connect( this, SIGNAL(doAbortSynchronousRequests()), &eventLoop, SLOT(quit()) );
         if ( timeout > 0 ) {
             QTimer::singleShot( timeout, &eventLoop, SLOT(quit()) );
         }
@@ -613,7 +626,7 @@ QByteArray Network::getSynchronous( const QString &url, const QString &userUrl, 
         // Check if the timeout occured before the request finished
         if ( quit ) {
             DEBUG_NETWORK("Cancelled, destroyed or timeout while downloading" << url);
-            emit synchronousRequestFinished( url, QByteArray(), true );
+            emitSynchronousRequestFinished( url, QByteArray(), true );
             return QByteArray();
         }
 
@@ -621,8 +634,8 @@ QByteArray Network::getSynchronous( const QString &url, const QString &userUrl, 
             ++redirectCount;
             if ( redirectCount > maxRedirections ) {
                 reply->deleteLater();
-                emit synchronousRequestFinished( url, QByteArray("Too many redirections"), true,
-                                                 200, start.msecsTo(QTime::currentTime()) );
+                emitSynchronousRequestFinished( url, QByteArray("Too many redirections"), true,
+                                                200, start.msecsTo(QTime::currentTime()) );
                 return QByteArray();
             }
 
@@ -655,12 +668,27 @@ QByteArray Network::getSynchronous( const QString &url, const QString &userUrl, 
     reply->deleteLater();
     if ( data.isEmpty() ) {
         kWarning() << "Error downloading" << url << reply->errorString();
-        emit synchronousRequestFinished( url, QByteArray(), true, statusCode, time );
+        emitSynchronousRequestFinished( url, QByteArray(), true, statusCode, time );
         return QByteArray();
     } else {
         QMutexLocker locker( m_mutex );
-        emit synchronousRequestFinished( url, data, false, statusCode, time, data.size() );
+        emitSynchronousRequestFinished( url, data, false, statusCode, time, data.size() );
         return data;
+    }
+}
+
+void Network::emitSynchronousRequestFinished( const QString &url, const QByteArray &data,
+                                              bool cancelled, int statusCode, int waitTime,
+                                              int size )
+{
+    m_mutex->lock();
+    --m_synchronousRequestCount;
+    m_mutex->unlock();
+
+    emit synchronousRequestFinished( url, data, cancelled, statusCode, waitTime, size );
+
+    if ( !hasRunningRequests() ) {
+        emit allRequestsFinished();
     }
 }
 
@@ -2027,12 +2055,18 @@ bool Network::lastDownloadAborted() const
 bool Network::hasRunningRequests() const
 {
     QMutexLocker locker( m_mutex );
+    if ( m_synchronousRequestCount > 0 ) {
+        // There is a synchronous request running
+        return true;
+    }
+
     foreach ( const NetworkRequest::Ptr &request, m_requests ) {
         if ( request->isRunning() ) {
-            // Found a running request
+            // Found a running asynchronous request
             return true;
         }
     }
+
     // No running request found
     return false;
 }
@@ -2051,7 +2085,8 @@ QList< NetworkRequest::Ptr > Network::runningRequests() const
 
 int Network::runningRequestCount() const
 {
-    return runningRequests().count();
+    QMutexLocker locker( m_mutex );
+    return runningRequests().count() + m_synchronousRequestCount;
 }
 
 QByteArray Network::fallbackCharset() const

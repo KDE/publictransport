@@ -381,21 +381,27 @@ public:
     };
 
     /**
-     * @brief Returns whether or not there are asynchronous requests running in the background.
+     * @brief Returns whether or not there are network requests running in the background.
      * @see runningRequests
      **/
     Q_INVOKABLE bool hasRunningRequests() const;
 
     /**
-     * @brief Returns a list of all NetworkRequest objects, representing all running requests.
+     * @brief Get a list of all running asynchronous requests.
      *
      * If hasRunningRequests() returns @c false, this will return an empty list.
+     * If hasRunningRequests() returns @c true, this @em may return a non-empty list (maybe only
+     * a synchronous request is running).
      * @see hasRunningRequests
      **/
     Q_INVOKABLE QList< NetworkRequest::Ptr > runningRequests() const;
 
     /**
      * @brief Returns the number of currently running requests.
+     *
+     * @note This includes running synchronous requests. The number of request objects returned
+     *   by runningRequests() may be less than the number returned here, because it only returns
+     *   running asynchronous requests.
      **/
     Q_INVOKABLE int runningRequestCount() const;
 
@@ -473,10 +479,10 @@ Q_SIGNALS:
     void synchronousRequestRedirected( const QString &url );
 
     /**
-     * @brief Emitted when all requests are finished.
+     * @brief Emitted when all running requests are finished.
      *
-     * This signal gets emitted just after emitting requestFinished(), if there are no more running
-     * requests.
+     * Emitted when a request finishes and there are no more running requests,
+     * ie. hasRunningRequests() returns @c false.
      **/
     void allRequestsFinished();
 
@@ -488,11 +494,23 @@ Q_SIGNALS:
      **/
     void requestAborted( const NetworkRequest::Ptr &request );
 
+    /**
+     * @brief Emitted to abort all running synchronous requests.
+     *
+     * This signal gets emitted by abortSynchronousRequests().
+     **/
+    void doAbortSynchronousRequests();
+
 public Q_SLOTS:
     /**
-     * @brief Aborts all running (asynchronous) downloads.
+     * @brief Abort all running requests (synchronous and asynchronous).
      **/
     void abortAllRequests();
+
+    /**
+     * @brief Abort all running synchronous requests.
+     **/
+    void abortSynchronousRequests();
 
 protected Q_SLOTS:
     void slotRequestStarted();
@@ -505,12 +523,16 @@ protected Q_SLOTS:
 protected:
     bool checkRequest( NetworkRequest *request );
     NetworkRequest::Ptr getSharedRequest( NetworkRequest *request ) const;
+    void emitSynchronousRequestFinished( const QString &url, const QByteArray &data = QByteArray(),
+                                         bool cancelled = false, int statusCode = 200,
+                                         int waitTime = 0, int size = 0 );
 
 private:
     QMutex *m_mutex;
     const QByteArray m_fallbackCharset;
     QNetworkAccessManager *m_manager;
     bool m_quit;
+    int m_synchronousRequestCount;
     QString m_lastUrl;
     QString m_lastUserUrl;
     bool m_lastDownloadAborted;
