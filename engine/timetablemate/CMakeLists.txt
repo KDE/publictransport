@@ -11,6 +11,8 @@ include_directories(
         ${CMAKE_CURRENT_BINARY_DIR}/../
          )
 
+set( DOCUMENTATION_DIR ${DATA_INSTALL_DIR}/timetablemate/doc )
+
 add_subdirectory( completiongenerator )
 add_subdirectory( src )
 add_subdirectory( doc )

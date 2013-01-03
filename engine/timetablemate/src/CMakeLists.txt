@@ -37,30 +37,28 @@ endif ( ENABLE_DEBUGGER_JOB_SYNCHRONIZATION )
 # Create debug_config.h from debug_config.h.in, ie. create #define's for each enabled variable from above
 configure_file( debug_config.h.in debug_config.h )
 
-# Generate completion data class files and HTML documentation from scriptapi.h.
-# Rerun when the source file (scriptapi.h) or the tool changes.
-# Put the generated class files into the binary directory
-# and the HTML documentation into the sources.
-add_custom_command( OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.h
-                           ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.cpp
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/index.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/helper.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/network.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/networkrequest.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/resultobject.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/storage.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/datastream.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/enums.html
-                           ${CMAKE_CURRENT_SOURCE_DIR}/../doc/default.css
-    COMMAND ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator
-            --verbose
+# Generate completion data class files and HTML documentation from source code documentation.
+# Gets rerun automatically when the source files change or completiongenerator gets rebuild.
+# Output files are put into the current binary directory (file names need to match exactly,
+# otherwise the command gets rerun every time).
+add_custom_command( OUTPUT javascriptcompletiongeneric.h
+                           javascriptcompletiongeneric.cpp
+                           index.html
+                           helper.html
+                           network.html
+                           networkrequest.html
+                           resultobject.html
+                           storage.html
+                           datastreamprototype.html
+                           enums.html
+                           default.css
+    COMMAND completiongenerator # --verbose
             --out_completion ${CMAKE_CURRENT_BINARY_DIR}
-            --out_doc ${CMAKE_CURRENT_SOURCE_DIR}/../doc
+            --out_doc ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scriptapi.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scriptapi-doc.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../enums.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/../../engine-doc.h
-            ${CMAKE_BINARY_DIR}/engine/timetablemate/completiongenerator/completiongenerator )
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../engine-doc.h )
 
 # FIXME Manually add file dependencies to wait until javascriptcompletiongeneric.h/.cpp are ready.
 # Somehow it does not work without this and tries to build TimetableMate sources before
@@ -176,6 +174,11 @@ install( FILES timetablemate.knsrc DESTINATION ${CONFIG_INSTALL_DIR} )
 # Install QML files
 install( FILES timetablemate.qml ActionButton.qml ActionToolButton.qml
          DESTINATION ${DATA_INSTALL_DIR}/timetablemate )
+
+# Install generated documentation files, images get installed by ../doc/CMakeLists.txt
+file( GLOB files "${CMAKE_CURRENT_BINARY_DIR}/*.html"
+                 "${CMAKE_CURRENT_BINARY_DIR}/*.css" )
+install( FILES ${files} DESTINATION ${DOCUMENTATION_DIR} )
 
 ### KAuth
 kde4_install_auth_actions( org.kde.timetablemate timetablemate.actions )
