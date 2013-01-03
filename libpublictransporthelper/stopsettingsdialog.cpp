@@ -573,8 +573,6 @@ public:
     ColumnResizer *resizer;
 
     int stopIndex; // The index of the edited stop settings, if in a StopSettingsList
-    QHash< QString, QVariant > stopToStopID; // A hash with stop names as keys and the
-                                             // corresponding stop IDs as values.
 
 protected:
     StopSettingsDialog* const q_ptr;
@@ -799,7 +797,7 @@ StopSettings StopSettingsDialog::stopSettings() const
     stopSettings.set( LocationSetting, location );
 
     if ( d->options.testFlag(ShowStopInputField) ) {
-        stopSettings.setStops( d->stopList->lineEditTexts() );
+        stopSettings.setStops( d->stopList->selectedStops() );
 
         if ( serviceProviderData["useSeparateCityValue"].toBool() ) {
             stopSettings.set( CitySetting, d->currentCityValue() );
@@ -809,12 +807,9 @@ StopSettings StopSettingsDialog::stopSettings() const
         stopSettings.set( CitySetting, d->oldStopSettings[CitySetting] );
     }
 
-    QStringList stopIDs;
     foreach( const QString &stop, stopSettings.stops() ) {
-        if ( d->stopToStopID.contains(stop) ) {
-            stopSettings.setIdOfStop( stop, d->stopToStopID[stop].toString() );
-        } else if ( d->oldStopSettings.stops().contains(stop) ) {
-            int index = d->oldStopSettings.stops().indexOf(stop);
+        if ( d->oldStopSettings.stops().contains(stop) ) {
+            int index = d->oldStopSettings.stops().indexOf( stop );
             stopSettings.setIdOfStop( stop, d->oldStopSettings.stop(index).id );
         }
     }

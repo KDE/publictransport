@@ -113,6 +113,14 @@ public:
     /** @brief Gets the city that is used for stop name suggestions. */
     QString city() const;
 
+    /**
+     * @brief Get data for the currently used stop, eg. a stop ID.
+     *
+     * If the currently used stop name is not a valid stop for the used provider the returned
+     * Stop object only contains the stop name and no additional data.
+     **/
+    Stop selectedStop() const;
+
 protected Q_SLOTS:
     /** @brief Stop suggestion data or provider (state) data arrived from the data engine. */
     void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data &data );
@@ -193,6 +201,14 @@ public:
                       const QString& labelText = "Item %1:" );
 
     virtual KLineEdit* createLineEdit();
+
+    /**
+     * @brief Get data for the currently used stops.
+     * @see StopLineEdit::selectedStop()
+     **/
+    QList<Stop> selectedStops() const;
+
+    QList< StopLineEdit* > stopLineEditWidgets() const;
 
     /**
      * @brief Sets the service provider to be used for stop name suggestions

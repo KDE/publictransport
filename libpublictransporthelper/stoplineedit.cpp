@@ -105,7 +105,7 @@ public:
     };
 
     StopLineEditPrivate( const QString &serviceProvider, StopLineEdit *q )
-            : importJob(0), q_ptr(q)
+            : stopIndex(-1), importJob(0), q_ptr(q)
     {
         state = Ready;
         progress = 0;
@@ -251,7 +251,21 @@ public:
         engine->connectSource( sourceName, q );
     };
 
+    int stopIndexFromName( const QString &stopName ) {
+        for ( int i = 0; i < stops.count(); ++i ) {
+            const Stop &stop = stops[i];
+            if ( stop.name.compare(stopName, Qt::CaseInsensitive) == 0 ) {
+                // Found a matching suggestion item return stop index
+                return i;
+            }
+        }
+
+        // No matching suggestion found
+        return -1;
+    };
+
     StopList stops;
+    int stopIndex; // The index of the current stop in stops if one was selected, -1 otherwise
     QString city;
     QString serviceProvider;
     QString providerType;
@@ -296,6 +310,12 @@ StopLineEdit::StopLineEdit( QWidget* parent, const QString &serviceProvider,
 StopLineEdit::~StopLineEdit()
 {
     delete d_ptr;
+}
+
+Stop StopLineEdit::selectedStop() const
+{
+    Q_D( const StopLineEdit );
+    return d->stopIndex == -1 ? Stop(text()) : d->stops[d->stopIndex];
 }
 
 #ifdef MARBLE_FOUND
@@ -419,8 +439,17 @@ void StopLineEdit::changed( const QString &newText )
     if ( newText.isEmpty() ) {
         kDebug() << "Empty, hide map";
         d->mapPopup->hide();
+        d->stopIndex = -1;
     } else if ( d->mapPopup->isVisible() ) {
         d->mapPopup->publicTransportLayer()->setSelectedStop( newText );
+        d->stopIndex = d->stopIndexFromName( newText );
+        if ( d->stopIndex == -1 ) {
+            // The stop is not a suggestion for the line edit but was loaded
+            // by the popup map, add data of that stop and use it's stop index
+            const Stop stop = d->mapPopup->publicTransportLayer()->selectedStop();
+            d->stops << stop;
+            d->stopIndex = d->stops.count() - 1;
+        }
     }
 #endif
 }
@@ -438,12 +467,12 @@ void StopLineEdit::edited( const QString& newText )
     // Don't request new suggestions if newText is one of the suggestions, ie. most likely a
     // suggestion was selected. To allow choosing another suggestion with arrow keys the old
     // suggestions shouldn't be removed in this case and no update is needed.
-    foreach ( const Stop &stop, d->stops ) {
-        if ( stop.name.compare(newText, Qt::CaseInsensitive) == 0 ) {
-            return; // Don't update suggestions
-        }
+    d->stopIndex = d->stopIndexFromName( newText );
+    if ( d->stopIndex != -1 ) {
+        return; // Don't update suggestions
     }
 
+    // No matching suggestion found, request new suggestions
     d->connectStopsSource( newText );
 }
 
@@ -930,6 +959,25 @@ StopLineEditList::StopLineEditList( QWidget* parent,
 KLineEdit* StopLineEditList::createLineEdit()
 {
     return new StopLineEdit( this );
+}
+
+QList< Stop > StopLineEditList::selectedStops() const
+{
+    QList< Stop > stops;
+    foreach ( StopLineEdit *stopLineEdit, stopLineEditWidgets() ) {
+        Q_ASSERT( stopLineEdit );
+        stops << stopLineEdit->selectedStop();
+    }
+    return stops;
+}
+
+QList< StopLineEdit* > StopLineEditList::stopLineEditWidgets() const
+{
+    QList< StopLineEdit* > stopWidgets;
+    foreach ( QWidget *widget, lineEditWidgets() ) {
+        stopWidgets << qobject_cast< StopLineEdit* >( widget );
+    }
+    return stopWidgets;
 }
 
 void StopLineEditList::setCity(const QString& city)
