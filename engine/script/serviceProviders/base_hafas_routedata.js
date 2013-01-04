@@ -72,7 +72,7 @@ var __hafas_routedata = function(hafas) {
                     }
                     var timeString = departure.length < 5 ? arrival : departure;
                     var delay = departure.length < 5 ? arrivalDelay : departureDelay;
-                    var timeValue;
+                    var timeValue, timeValueWithDelay;
                     var validTimeFound = false;
                     if ( timeString.length < 5 ) {
                         // No time given for the current intermediate stop
@@ -84,6 +84,7 @@ var __hafas_routedata = function(hafas) {
                             // create an invalid Date object for the stop here
                             timeValue = new Date( "unknown" );
                         }
+                        timeValueWithDelay = timeValue;
                     } else {
                         time = helper.matchTime( timeString, "hh:mm" );
                         if ( time.error ) {
@@ -104,8 +105,9 @@ var __hafas_routedata = function(hafas) {
 
                         // Simply add delays to the time value,
                         // route stop delays are currently only supported for journeys
+                        timeValueWithDelay = timeValue;
                         if ( delay > 0 ) {
-                            timeValue.setTime( timeValue.getTime() + delay * 60 * 1000 );
+                            timeValueWithDelay.setTime( timeValue.getTime() + delay * 60 * 1000 );
                         }
 
                         validTimeFound = true;
@@ -117,9 +119,10 @@ var __hafas_routedata = function(hafas) {
                     {
                         inRange = true;
                         routeData.RouteStops.push( routeStop );
-                        routeData.RouteTimes.push( timeValue );
+                        routeData.RouteTimes.push( timeValueWithDelay );
                     }
                 }
+
                 return routeData;
             },
 
@@ -201,11 +204,12 @@ var __hafas_routedata = function(hafas) {
                     }
                     lastTime = timeValue;
 
+                    var routeStop = helper.stripTags( columns["station"].contents );
                     if ( inRange || routeStop == stop ||
                          timeValue.getTime() >= firstTime.getTime() )
                     {
                         inRange = true;
-                        routeData.RouteStops.push( helper.stripTags(columns["station"].contents) );
+                        routeData.RouteStops.push( routeStop );
                         routeData.RouteTimes.push( timeValue );
                     }
                 }
