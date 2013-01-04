@@ -1848,13 +1848,13 @@ public:
                 switch ( test ) {
                 case TestModel::DepartureTest:
                     request = new DepartureRequest( "TEST_DEPARTURES",
-                            data()->sampleStopNames().first(), QDateTime::currentDateTime(),
-                            testItemCount, data()->sampleCity() );
+                            data()->sampleStopNames().first(), QString(),
+                            QDateTime::currentDateTime(), testItemCount, data()->sampleCity() );
                     break;
                 case TestModel::ArrivalTest: {
                     request = new ArrivalRequest( "TEST_ARRIVALS",
-                            data()->sampleStopNames().first(), QDateTime::currentDateTime(),
-                            testItemCount, data()->sampleCity() );
+                            data()->sampleStopNames().first(), QString(),
+                            QDateTime::currentDateTime(), testItemCount, data()->sampleCity() );
                     break;
                 }
                 case TestModel::AdditionalDataTest: {
@@ -1866,7 +1866,7 @@ public:
                     Q_ASSERT( departureRequest );
                     const TimetableData result = results.first();
                     request = new AdditionalDataRequest( "TEST_ADDITIONAL_DATA",
-                            0, departureRequest->stop(),
+                            0, departureRequest->stop(), QString(),
                             result[Enums::DepartureDateTime].toDateTime(),
                             result[Enums::TransportLine].toString(),
                             result[Enums::Target].toString(),
@@ -1884,7 +1884,8 @@ public:
                     break;
                 case TestModel::JourneyTest:
                     request = new JourneyRequest( "TEST_JOURNEYS",
-                            data()->sampleStopNames().first(), data()->sampleStopNames()[1],
+                            data()->sampleStopNames().first(), QString(),
+                            data()->sampleStopNames()[1], QString(),
                             QDateTime::currentDateTime(), testItemCount, QString(),
                             data()->sampleCity() );
                     break;

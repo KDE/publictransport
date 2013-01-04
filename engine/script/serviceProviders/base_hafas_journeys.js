@@ -28,10 +28,10 @@ var __hafas_journeys = function(hafas) {
         addPostData: function( request, values, options ) {
             var postData = '<?xml version="1.0" encoding="' +
                 (provider.fallbackCharset != null ? provider.fallbackCharset.toString()
-                                                    : 'iso-8859-1') + '"?>';
+                                                  : 'iso-8859-1') + '"?>';
             postData += '<ReqC ver="1.1" prod="hafas" lang="DE">';
             postData += '<ConReq deliverPolyline="1">';
-            postData += '<Start><Station externalId="' + values.originStop + '" />' + //externalId="' + id + ';
+            postData += '<Start><Station externalId="' + values.originStop + '" />' +
                 '<Prod prod="' + HafasPrivate.createProductBitString(options.productBits) + '" ' +
                 'bike="0" couchette="0" direct="0" sleeper="0" /></Start>';
             postData += '<Dest><Station externalId="' + values.targetStop + '" /></Dest>';
@@ -77,8 +77,16 @@ var __hafas_journeys = function(hafas) {
             if ( values.moreItemsDirection == undefined ||
                  values.moreItemsDirection == PublicTransport.RequestedItems )
             {
-                query = "S=" + values.originStop + "!" +
-                    "&Z=" + values.targetStop + "!" +
+                var originStopString = values.originStop;
+                if ( !values.originStopIsId ) {
+                    originStopString += "!"; // Add a "!" to the end if no ID is given
+                }
+                var targetStopString = values.targetStop;
+                if ( !values.targetStopIsId ) {
+                    targetStopString += "!"; // Add a "!" to the end if no ID is given
+                }
+                query = "S=" + originStopString +
+                    "&Z=" + targetStopString +
                     "&date=" + helper.formatDateTime(values.dateTime, options.urlDateFormat) +
                     "&time=" + helper.formatDateTime(values.dateTime, options.urlTimeFormat) +
                     "&REQ0HafasSearchForw=" + (values.dataType == "arrivals" ? "0" : "1") +

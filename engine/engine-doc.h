@@ -271,49 +271,58 @@ KIcon icon = KIcon( vehicleData["iconName"].toString() );
 @section usage_departures_sec Receiving Departures or Arrivals
 To get a list of departures/arrivals you need to construct the name of the data source. For
 departures it begins with "Departures", for arrivals it begins with "Arrivals". Next comes a
-space (" "), then the ID of the service provider to use, e.g. "de_db" for db.de, a service provider
+space (" "), then the ID of the service provider to use, e.g. "de_db" for a service provider
 for germany ("Deutsche Bahn"). The following parameters are separated by "|" and start with the
 parameter name followed by "=" and the value. The sorting of the additional parameters doesn't
-matter. The parameter <i>stop</i> is needed and can be the stop name or the stop ID. If the service
-provider has useSeparateCityValue set to @c true (see @ref usage_serviceproviders_sec), the
-parameter <i>city</i> is also needed (otherwise it is ignored).
-You can leave the service provider ID away, the data engine then uses the default service provider
-for the users country.<br />
+matter. One of the parameters @em stopid and @em stop is required. If the service provider has
+useSeparateCityValue set to @c true (see @ref usage_serviceproviders_sec), the parameter @em city
+is also required (otherwise it is ignored). You can leave the service provider ID away, the data
+engine then uses the default service provider for the users country.<br />
 @note All parameter names need to be completely lower case.
 The following parameters are allowed:<br />
 <table>
-<tr><td><i>stop</i></td> <td>The name or ID of the stop to get departures/arrivals for.</td></tr>
-<tr><td><i>city</i></td> <td>The city to get departures/arrivals for, if needed.</td></tr>
-<tr><td><i>count</i></td> <td>The number of departures/arrivals to get.
+<tr><td>@em stopid </td> <td>The ID of the stop to get departures/arrivals for. This is preferred
+over @em stop. You can retrieve the stop ID for a stop name (part) using the stop suggestions data
+source, see @ref usage_stopList_sec. </td></tr>
+<tr><td>@em stop </td> <td>The name of the stop to get departures/arrivals for. Use this only if
+no ID is available.</td></tr>
+<tr><td>@em city </td> <td>The city to get departures/arrivals for, if needed.</td></tr>
+<tr><td>@em count </td> <td>The number of departures/arrivals to get.
  @note This is just a hint for the provider.</td></tr>
-<tr><td><i>timeoffset</i></td> <td>The offset in minutes from now for the first departure /
+<tr><td>@em timeoffset </td> <td>The offset in minutes from now for the first departure /
 arrival to get.</td></tr>
-<tr><td><i>time</i></td> <td>The time of the first departure/arrival to get ("hh:mm"). This uses
+<tr><td>@em time </td> <td>The time of the first departure/arrival to get ("hh:mm"). This uses
 the current date. To use another date use 'datetime'.</td></tr>
-<tr><td><i>datetime</i></td> <td>The date and time of the first departure/arrival to get (use
+<tr><td>@em datetime </td> <td>The date and time of the first departure/arrival to get (use
 QDateTime::toString()).</td></tr>
 </table>
 <br />
 
 <b>Examples:</b><br />
+<b>"Departures de_db|stopid=000776455"</b><br />
+Gets departures for the stop with the ID "000776455" using the service provider de_db.<br /><br />
+
 <b>"Departures de_db|stop=Pappelstraße, Bremen"</b><br />
-Gets departures for the stop "Pappelstraße, Bremen" using the service provider db.de.<br /><br />
+Gets departures for the stop "Pappelstraße, Bremen" using the service provider de_db.
+If possible use a stop ID instead of a stop name (@em stopid parameter, like in the previous
+example).<br /><br />
 
 <b>"Arrivals de_db|stop=Leipzig|timeoffset=5|count=99"</b><br />
-Gets arrivals for the stop "Leipzig" using db.de, the first possible arrival is in five minutes
-from now, the maximum arrival count is 99.<br /><br />
+Gets arrivals for the stop "Leipzig" using de_db, the first possible arrival is in five minutes
+from now, the number of arrivals to request is 99.<br /><br />
 
 <b>"Departures de_rmv|stop=Frankfurt (Main) Speyerer Straße|time=08:00"</b><br />
-Gets departures for the stop "Frankfurt (Main) Speyerer Straße" using rmv.de, the first possible
+Gets departures for the stop "Frankfurt (Main) Speyerer Straße" using de_rmv, the first possible
 departure is at eight o'clock.<br /><br />
 
-<b>"Departures de_rmv|stop=3000019|count=20|timeoffset=1"</b><br />
+<b>"Departures de_rmv|stopid=3000019|count=20|timeoffset=1"</b><br />
 Gets departures for the stop with the ID "3000019", the first possible departure is in one minute
-from now, the maximum departure count is 20.<br /><br />
+from now, the number of departures to request is 20.<br /><br />
 
 <b>"Departures stop=Hauptbahnhof"</b><br />
 Gets departures for the stop "Hauptbahnhof" using the default service provider for the users
-country, if there is one.<br /><br />
+country, if there is one. Using a stop ID without specifying a provider is not recommended,
+because IDs are provider specific.<br /><br />
 
 Once you have the data source name, you can connect your applet to that data source from the data
 engine. Here is an example of how to do this:
@@ -423,35 +432,45 @@ The route stop list is not complete from the last exact route stop.</td></tr>
 To get a list of journeys from one stop to antoher you need to construct the name of the data
 source (much like the data source for departures / arrivals). The data source name begins with
 "Journeys". Next comes a space (" "), then the ID of the service provider to use, e.g. "de_db"
-for db.de, a service provider for germany ("Deutsche Bahn").
+for a service provider for germany ("Deutsche Bahn").
 The following parameters are separated by "|" and start with the parameter name followed by "=".
-The sorting of the additional parameters doesn't matter. The parameters <i>originstop</i> and
-<i>targetstop</i> are needed and can be the stop names or the stop IDs. If the service provider
+The sorting of the additional parameters doesn't matter. The parameters @em originstopid or
+@em originstop and @em targetstopid or @em targetstop are required. If the service provider
 has useSeparateCityValue set to @c true (see @ref usage_serviceproviders_sec), the parameter
-<i>city</i> is also needed (otherwise it is ignored).<br />
+@em city is also needed (otherwise it is ignored).<br />
 @note All parameter names need to be completely lower case.
 The following parameters are allowed:<br />
 <table>
-<tr><td><i>originstop</i></td> <td>The name or ID of the origin stop.</td></tr>
-<tr><td><i>targetstop</i></td> <td>The name or ID of the target stop.</td></tr>
-<tr><td><i>city</i></td> <td>The city to get journeys for, if needed.</td></tr>
-<tr><td><i>count</i></td> <td>The number of journeys to get.
+<tr><td>@em originstopid </td> <td>The ID of the origin stop. This is preferred over
+@em originstop. You can retrieve the stop ID for a stop name (part) using the stop suggestions
+data source, see @ref usage_stopList_sec. </td></tr>
+<tr><td>@em originstop </td> <td>The name of the origin stop.</td></tr>
+<tr><td>@em targetstopId </td> <td>The ID of the target stop. This is preferred over
+@em targetstop. </td></tr>
+<tr><td>@em targetstop </td> <td>The name of the target stop.</td></tr>
+<tr><td>@em city </td> <td>The city to get journeys for, if needed.</td></tr>
+<tr><td>@em count </td> <td>The number of journeys to get.
  @note This is just a hint for the provider</td></tr>
-<tr><td><i>timeoffset</i></td>
+<tr><td>@em timeoffset </td>
 <td>The offset in minutes from now for the first journey to get.</td></tr>
-<tr><td><i>time</i></td> <td>The time for the first journey to get (in format "hh:mm").</td></tr>
-<tr><td><i>datetime</i></td> <td>The date and time for the first journey to get
+<tr><td>@em time </td> <td>The time for the first journey to get (in format "hh:mm").</td></tr>
+<tr><td>@em datetime </td> <td>The date and time for the first journey to get
 (QDateTime::fromString() is used with default parameters to parse the date).</td></tr>
 </table>
 <br />
 
 <b>Examples:</b><br />
+<b>"Journeys de_db|originstop=000776455|targetstop=000776465"</b><br />
+Gets journeys from the stop with the ID "000776455" to the stop with the ID "000776465"
+using the service provider de_db.<br /><br />
+
 <b>"Journeys de_db|originstop=Pappelstraße, Bremen|targetstop=Kirchweg, Bremen"</b><br />
 Gets journeys from stop "Pappelstraße, Bremen" to stop "Kirchweg, Bremen"
-using the service provider db.de.<br /><br />
+using the service provider de_db.
+If possible use stop IDs instead of stop names (like in the previous example).<br /><br />
 
 <b>"Journeys de_db|originstop=Leipzig|targetstop=Hannover|timeoffset=5|count=99"</b><br />
-Gets journeys from stop "Leipzig" to stop "Hannover" using db.de, the first
+Gets journeys from stop "Leipzig" to stop "Hannover" using de_db, the first
 possible journey departs in five minutes from now, the maximum journey count is 99.<br /><br />
 
 Once you have the data source name, you can connect your applet to that

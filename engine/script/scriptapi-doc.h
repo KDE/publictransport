@@ -86,6 +86,7 @@
  *
  *   The only argument contains information about the request with these properties:
  *   @li @em stop: The name/ID of the stop to get departures/arrivals for.
+ *   @li @em stopIsId: @c True, if @em stop contains an ID, @c false otherwise.
  *   @li @em dateTime: A Date object with the date and time of the earliest departure/arrival to get.
  *   @li @em dataType: This can be "arrivals" or "departures".
  *   @li @em city: If used, this contains the city name to get departures/arrivals for. Only some
@@ -123,6 +124,8 @@
  *   The only argument contains information about the request with these properties:
  *   @li @em originStop: The name/ID of the start/origin stop, also available as 'stop' property.
  *   @li @em targetStop: The name/ID of the target/destination stop.
+ *   @li @em originStopIsId: @c True, if @em originStop contains an ID, @c false otherwise.
+ *   @li @em targetStopIsId: @c True, if @em targetStop contains an ID, @c false otherwise.
  *   @li @em dateTime: A Date object with the date and time of the earliest journey to get.
  *   @li @em dataType: This can be "journeys"/"journeysDep" (journeys departing at the given @em dateTime)
  *     or "journeysArr" (journeys arriving at the given @em dateTime).
@@ -143,7 +146,7 @@
  *   HAFAS base script uses this to get route information for departures/arrivals, which are not
  *   available otherwise. The only argument contains information about the timetable item for which
  *   to get additional data for and has these properties:
- *   @li @em stop: The name/ID of the stop, that was used to get the timetable item.
+ *   @li @em stop: The name of the stop, that was used to get the timetable item.
  *   @li @em city: If used, this contains the city name that was used to get the timetable item.
  *     Only some service providers need a separate city value, most are happy with a stop
  *     name/stop ID.

@@ -190,6 +190,9 @@ public:
     /** @brief Gets the size in bytes of the database containing the GTFS data. */
     qint64 databaseSize() const;
 
+    /** @brief Get the ID for the stop with the given @p stopName. */
+    uint stopIdFromName( const QString &stopName, bool *ok = 0 );
+
 protected slots:
 #ifdef BUILD_GTFS_REALTIME
     /**

@@ -1222,8 +1222,8 @@ void PublicTransportEngine::requestAdditionalData( const QString &sourceName, in
     // Found data of the timetable item to update
     const SourceRequestData sourceData( sourceName );
     provider->requestAdditionalData( AdditionalDataRequest(sourceName, itemNumber,
-            sourceData.request->stop(), dateTime, transportLine, target, sourceData.request->city(),
-            routeDataUrl) );
+            sourceData.request->stop(), sourceData.request->stopId(), dateTime, transportLine,
+            target, sourceData.request->city(), routeDataUrl) );
 }
 
 QString PublicTransportEngine::fixProviderId( const QString &providerId )
@@ -1306,6 +1306,9 @@ QString PublicTransportEngine::disambiguateSourceName( const QString &sourceName
     }
     if ( parameters.contains(QLatin1String("stop")) ) {
         ret += "|stop=" + parameters["stop"];
+    }
+    if ( parameters.contains(QLatin1String("stopid")) ) {
+        ret += "|stopid=" + parameters["stopid"];
     }
     if ( parameters.contains(QLatin1String("originstop")) ) {
         ret += "|originstop=" + parameters["originstop"];
@@ -1569,18 +1572,36 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                     request->setCity( parameterValue );
                 } else if ( parameterName == QLatin1String("stop") ) {
                     request->setStop( parameterValue );
+                } else if ( parameterName == QLatin1String("stopid") ) {
+                    request->setStopId( parameterValue );
                 } else if ( parameterName == QLatin1String("targetstop") ) {
                     JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
                     if ( !journeyRequest ) {
                         kWarning() << "The 'targetstop' parameter is only used for journey requests";
+                    } else {
+                        journeyRequest->setTargetStop( parameterValue );
                     }
-                    journeyRequest->setTargetStop( parameterValue );
+                } else if ( parameterName == QLatin1String("targetstopid") ) {
+                    JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
+                    if ( !journeyRequest ) {
+                        kWarning() << "The 'targetstopId' parameter is only used for journey requests";
+                    } else {
+                        journeyRequest->setTargetStopId( parameterValue );
+                    }
                 } else if ( parameterName == QLatin1String("originstop") ) {
                     JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
                     if ( !journeyRequest ) {
                         kWarning() << "The 'originstop' parameter is only used for journey requests";
+                    } else {
+                        journeyRequest->setStop( parameterValue );
                     }
-                    journeyRequest->setStop( parameterValue );
+                } else if ( parameterName == QLatin1String("originstopid") ) {
+                    JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
+                    if ( !journeyRequest ) {
+                        kWarning() << "The 'originstopId' parameter is only used for journey requests";
+                    } else {
+                        journeyRequest->setStopId( parameterValue );
+                    }
                 } else if ( parameterName == QLatin1String("timeoffset") ) {
                     request->setDateTime(
                             QDateTime::currentDateTime().addSecs(parameterValue.toInt() * 60) );
@@ -1632,18 +1653,6 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
             request->setDateTime( QDateTime::currentDateTime().addSecs(DEFAULT_TIME_OFFSET * 60) );
         }
 
-        if ( parseMode == ParseForJourneysByArrivalTime ||
-             parseMode == ParseForJourneysByDepartureTime )
-        {
-            // Use "stop" parameter as "originStop"/"targetStop" if it is not set
-            JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
-            if ( !journeyRequest->stop().isEmpty() ) {
-                journeyRequest->setStop( journeyRequest->stop() );
-            } else if ( !journeyRequest->targetStop().isEmpty() ) {
-                journeyRequest->setTargetStop( journeyRequest->stop() );
-            }
-        }
-
         // The default parameter is the provider ID for data requesting sources,
         // use the default provider for the users country if no ID is given
         defaultParameter = PublicTransportEngine::fixProviderId( defaultParameter );
@@ -1667,9 +1676,9 @@ bool PublicTransportEngine::SourceRequestData::isValid() const
 
     if ( isDataRequestingSourceType(type) ) {
         if ( parseMode == ParseForDepartures || parseMode == ParseForArrivals ) {
-            // Check if the stop name is missing
-            if ( !request || request->stop().isEmpty() ) {
-                kWarning() << "Stop name is missing in data source name" << name;
+            // Check if the stop name/ID is missing
+            if ( !request || (request->stop().isEmpty() && request->stopId().isEmpty()) ) {
+                kWarning() << "No stop ID or name in data source name" << name;
                 return false;
             }
         } else if ( parseMode == ParseForStopSuggestions ) {
@@ -1677,19 +1686,27 @@ bool PublicTransportEngine::SourceRequestData::isValid() const
             if ( !request || (!dynamic_cast<StopsByGeoPositionRequest*>(request) &&
                               request->stop().isEmpty()) )
             {
-                kWarning() << "Stop name is missing in data source name" << name;
+                kWarning() << "Stop name (part) is missing in data source name" << name;
                 return false;
             }
         } else if ( parseMode == ParseForJourneysByArrivalTime ||
                     parseMode == ParseForJourneysByDepartureTime )
         {
-            // Make sure non empty originStop and targetStop parameters are filled
+            // Make sure non empty originstop(id) and targetstop(id) parameters are available
             JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
-            if ( !journeyRequest || journeyRequest->stop().isEmpty() ||
-                 journeyRequest->targetStop().isEmpty() )
+            if ( !journeyRequest ) {
+                kWarning() << "Internal error: Not a JourneyRequest object but parseMode is"
+                           << parseMode;
+                return false;
+            }
+            if ( journeyRequest->stop().isEmpty() && journeyRequest->stopId().isEmpty() ) {
+                kWarning() << "No stop ID or name for the origin stop in data source name" << name;
+                return false;
+            }
+            if ( journeyRequest->targetStop().isEmpty() &&
+                 journeyRequest->targetStopId().isEmpty() )
             {
-                kWarning() << "Origin and/or target stop names are missing in data source name"
-                           << name;
+                kWarning() << "No stop ID or name for the target stop in data source name" << name;
                 return false;
             }
         }

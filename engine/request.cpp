@@ -54,8 +54,10 @@ QString AbstractRequest::parseModeName( ParseDocumentMode parseMode )
 
 QString DepartureRequest::argumentsString() const
 {
-    return QString("{stop: \"%1\", city: \"%2\", count: %3, dateTime: %4, dataType: %5}")
-            .arg(m_stop, m_city).arg(m_count)
+    return QString("{stop: \"%1\", stopIsId: \"%2\", city: \"%3\", count: %4, "
+                   "dateTime: %5, dataType: %6}")
+            .arg(m_stopId.isEmpty() ? m_stop : m_stopId)
+            .arg(!m_stopId.isEmpty()).arg(m_city).arg(m_count)
             .arg(m_dateTime.toString(Qt::SystemLocaleShortDate), parseModeName());
 }
 
@@ -85,10 +87,15 @@ QString AdditionalDataRequest::argumentsString() const
 
 QString JourneyRequest::argumentsString() const
 {
-    return QString("{stop: \"%1\", city: \"%2\", count: %3, originStop: \"%4\", "
-                   "targetStop: \"%5\", dateTime: %6}")
-            .arg(m_stop, m_city).arg(m_count)
-            .arg(m_stop, m_targetStop, m_dateTime.toString(Qt::SystemLocaleShortDate));
+    return QString("{city: \"%1\", count: %2, "
+                   "originStop: \"%3\", originStopIsId: \"%4\", "
+                   "targetStop: \"%5\", targetStopIsId: \"%6\", dateTime: %7}")
+            .arg(m_city).arg(m_count)
+            .arg(m_stopId.isEmpty() ? m_stop : m_stopId)
+            .arg(!m_stopId.isEmpty())
+            .arg(m_targetStopId.isEmpty() ? m_targetStop : m_targetStopId)
+            .arg(!m_targetStopId.isEmpty())
+            .arg(m_dateTime.toString(Qt::SystemLocaleShortDate));
 }
 
 QString MoreItemsRequest::argumentsString() const
@@ -140,7 +147,8 @@ QScriptValue StopsByGeoPositionRequest::toScriptValue( QScriptEngine *engine ) c
 QScriptValue DepartureRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();
-    value.setProperty( QLatin1String("stop"), m_stop );
+    value.setProperty( QLatin1String("stop"), m_stopId.isEmpty() ? m_stop : m_stopId );
+    value.setProperty( QLatin1String("stopIsId"), !m_stopId.isEmpty() );
     value.setProperty( QLatin1String("city"), m_city );
     value.setProperty( QLatin1String("count"), m_count );
     value.setProperty( QLatin1String("dateTime"), engine->newDate(m_dateTime) );
@@ -159,11 +167,17 @@ QScriptValue ArrivalRequest::toScriptValue( QScriptEngine *engine ) const
 QScriptValue JourneyRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();
-    value.setProperty( QLatin1String("stop"), m_stop );
+    value.setProperty( QLatin1String("stop"), m_stopId.isEmpty() ? m_stop : m_stopId );
+    value.setProperty( QLatin1String("stopIsId"), !m_stopId.isEmpty() );
     value.setProperty( QLatin1String("city"), m_city );
     value.setProperty( QLatin1String("count"), m_count );
-    value.setProperty( QLatin1String("originStop"), m_stop ); // Already in argument as "stop"
-    value.setProperty( QLatin1String("targetStop"), m_targetStop );
+    value.setProperty( QLatin1String("originStop"),
+                       m_stopId.isEmpty() ? m_stop : m_stopId ); // Already in argument as "stop"
+    value.setProperty( QLatin1String("originStopIsId"),
+                       !m_stopId.isEmpty() ); // Already in argument as "stopId"
+    value.setProperty( QLatin1String("targetStop"),
+                       m_targetStopId.isEmpty() ? m_targetStop : m_targetStopId );
+    value.setProperty( QLatin1String("targetStopIsId"), !m_targetStopId.isEmpty() );
     value.setProperty( QLatin1String("dateTime"), engine->newDate(m_dateTime) );
     value.setProperty( QLatin1String("moreItemsDirection"), Enums::RequestedItems );
     return value;
@@ -172,7 +186,8 @@ QScriptValue JourneyRequest::toScriptValue( QScriptEngine *engine ) const
 QScriptValue AdditionalDataRequest::toScriptValue( QScriptEngine *engine ) const
 {
     QScriptValue value = engine->newObject();
-    value.setProperty( QLatin1String("stop"), m_stop );
+    value.setProperty( QLatin1String("stop"), m_stopId.isEmpty() ? m_stop : m_stopId );
+    value.setProperty( QLatin1String("stopIsId"), !m_stop.isEmpty() );
     value.setProperty( QLatin1String("city"), m_city );
     value.setProperty( QLatin1String("dataType"),
             m_sourceName.startsWith(QLatin1String("Arrivals"), Qt::CaseInsensitive)

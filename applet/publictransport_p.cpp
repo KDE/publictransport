@@ -915,47 +915,50 @@ void PublicTransportAppletPrivate::reconnectSource()
 {
     Q_Q( PublicTransportApplet );
 
-    // Get a list of stops (or stop IDs if available) which results are currently shown
+    // Get current stop data
     StopSettings stopSettings = settings.currentStop();
-    QStringList stops = stopSettings.stops();
-    QStringList stopIDs = stopSettings.stopIDs();
-    if ( stopIDs.isEmpty() ) {
-        if ( stops.isEmpty() ) {
-            // Currently no stops configured
-            return;
-        }
-        stopIDs = stops;
+    if ( stopSettings.stopList().isEmpty() ) {
+        // Currently no stops configured
+        return;
     }
 
     // Build source names for each (combined) stop for the publictransport data engine
-    kDebug() << "Connect" << settings.currentStopIndex() << stops;
     const QString providerId = stopSettings.get< QString >( ServiceProviderSetting );
     const QString city = stopSettings.get< QString >( CitySetting );
     const FirstDepartureConfigMode firstDepartureMode = static_cast< FirstDepartureConfigMode >(
                 stopSettings.get<int>(FirstDepartureConfigModeSetting) );
     QStringList sources;
     stopIndexToSourceName.clear();
-    for( int i = 0; i < stops.count(); ++i ) {
-        QString stopValue = stopIDs[i].isEmpty() ? stops[i] : stopIDs[i];
-        QString currentSource = QString( "%4 %1|stop=%2|count=%3" )
-                .arg( providerId ).arg( stopValue ).arg( settings.maximalNumberOfDepartures() )
+    const StopList stopList = stopSettings.stopList();
+    for ( int i = 0; i < stopList.count(); ++i ) {
+        QString currentSource = QString( "%3 %1|count=%2" )
+                .arg( providerId ).arg( settings.maximalNumberOfDepartures() )
                 .arg( settings.departureArrivalListType() == ArrivalList
                         ? "Arrivals" : "Departures" );
+
+        const Stop &stop = stopList[i];
+        if ( stop.id.isEmpty() ) {
+            currentSource += "|stop=" + stop.name;
+        } else {
+            currentSource += "|stopid=" + stop.id;
+        }
+
         switch ( firstDepartureMode ) {
         case RelativeToCurrentTime:
-            currentSource += QString( "|timeoffset=%1" ).arg(
-                                 stopSettings.get<int>(TimeOffsetOfFirstDepartureSetting) );
+            currentSource += "|timeoffset=" +
+                    stopSettings.get<int>(TimeOffsetOfFirstDepartureSetting);
             break;
         case AtCustomTime:
-            currentSource += QString( "|time=%1" ).arg(
-                                 stopSettings.get<QTime>(TimeOfFirstDepartureSetting).toString("hh:mm") );
+            currentSource += "|time=%1" +
+                    stopSettings.get<QTime>(TimeOfFirstDepartureSetting).toString("hh:mm");
             break;
         default:
             kWarning() << "Unknown FirstDepartureConfigMode" << firstDepartureMode;
             break;
         }
+
         if ( !city.isEmpty() ) {
-            currentSource += QString( "|city=%1" ).arg( city );
+            currentSource += "|city=" + city;
         }
 
         stopIndexToSourceName[ i ] = currentSource;
@@ -1050,14 +1053,27 @@ void PublicTransportAppletPrivate::reconnectJourneySource( const QString &target
                                .arg( settings.currentStop().get<QString>(ServiceProviderSetting) )
                                .arg( _targetStopName );
     } else {
-        currentJourneySource = QString( stopIsTarget
-                                        ? "%5 %1|originstop=%2|targetstop=%3|datetime=%4"
-                                        : "%5 %1|originstop=%3|targetstop=%2|datetime=%4" )
+        // Get current stop data
+        StopSettings stopSettings = settings.currentStop();
+        if ( stopSettings.stopList().isEmpty() ) {
+            // Currently no stops configured
+            return;
+        }
+
+        currentJourneySource = QString( stopIsTarget ? "%4 %1|targetstop=%2|datetime=%3"
+                                                     : "%4 %1|originstop=%2|datetime=%3" )
                                .arg( settings.currentStop().get<QString>(ServiceProviderSetting) )
-                               .arg( settings.currentStop().stop(0).nameOrId() )
                                .arg( _targetStopName )
                                .arg( _dateTime.toString() )
                                .arg( timeIsDeparture ? "Journeys" : "JourneysArr" );
+
+        const Stop stop = stopSettings.stop( 0 );
+        if ( stop.id.isEmpty() ) {
+            currentJourneySource += (stopIsTarget ? "|originstop=" : "|targetstop=") + stop.name;
+        } else {
+            currentJourneySource += (stopIsTarget ? "|originstopid=" : "|targetstopid=") + stop.id;
+        }
+
         QString currentStop = settings.currentStop().stops().first();
         journeyTitleText = stopIsTarget
                            ? i18nc( "@info", "From %1<nl/>to <emphasis strong='1'>%2</emphasis>",

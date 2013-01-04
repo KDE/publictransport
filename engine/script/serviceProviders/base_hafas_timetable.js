@@ -73,8 +73,12 @@ var __hafas_timetable = function(hafas) {
                 throw TypeError("Hafas.timetable.url(): The option baseUrl must be a non-empty string");
             }
 
+            var stopString = values.stop;
+            if ( !values.stopIsId ) {
+                stopString += options.stopPostfix; // Add postfix only if no ID is given
+            }
             var query = "rt=1" + // Enable realtime data
-                "&input=" + values.stop + options.stopPostfix +
+                "&input=" + stopString +
                 "&boardType=" + (values.dataType == "arrivals" ? "arr" : "dep");
             if ( values.dateTime != undefined ) {
                 query += "&date=" + helper.formatDateTime(values.dateTime, options.urlDateFormat) +

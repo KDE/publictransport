@@ -434,6 +434,47 @@ bool ServiceProviderGtfs::isUpdateAvailable( const QString &providerId, const QS
     return false;
 }
 
+uint ServiceProviderGtfs::stopIdFromName( const QString &stopName, bool *ok )
+{
+    // Try to get the ID for the given stop name. Only select stops, no stations (with one or
+    // more sub stops) by requiring 'location_type=0', location_type 1 is for stations.
+    // It's fast, because 'stop_name' is part of a compound index in the database.
+    QString stopValue = stopName;
+    stopValue.replace( '\'', "\'\'" );
+
+    QSqlQuery query( QSqlDatabase::database(m_data->id()) );
+    query.setForwardOnly( true ); // Don't cache records
+    if ( !query.exec("SELECT stops.stop_id FROM stops WHERE stop_name='" + stopValue + "' "
+                     "AND (location_type IS NULL OR location_type=0)") )
+    {
+        kWarning() << query.lastError();
+        kDebug() << query.executedQuery();
+        if ( ok ) {
+            *ok = false;
+        }
+        return 0;
+    }
+
+    QSqlRecord stopRecord = query.record();
+    if ( query.next() ) {
+        if ( ok ) {
+            *ok = true;
+        }
+        return query.value( query.record().indexOf("stop_id") ).toUInt();
+    } else {
+        bool _ok;
+        const uint stopId = stopName.toUInt( &_ok );
+        if ( ok ) {
+            *ok = _ok;
+        }
+        if ( !_ok ) {
+            kDebug() << "No stop with the given name found (needs the exact name):" << stopName;
+            return 0;
+        }
+        return stopId;
+    }
+}
+
 void ServiceProviderGtfs::requestDepartures( const DepartureRequest &request )
 {
     requestDeparturesOrArrivals( &request );
@@ -446,45 +487,30 @@ void ServiceProviderGtfs::requestArrivals( const ArrivalRequest &request )
 
 void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *request )
 {
-    QSqlQuery query( QSqlDatabase::database(m_data->id()) );
-    query.setForwardOnly( true ); // Don't cache records
-
-    // TODO If it is known that [stop] contains a stop ID testing for it's ID in stop_times is not necessary!
-    // Try to get the ID for the given stop (fails, if it already is a stop ID). Only select
-    // stops, no stations (with one or more sub stops) by requiring 'location_type=0',
-    // location_type 1 is for stations.
-    // It's fast, because 'stop_name' is part of a compound index in the database.
     uint stopId;
-    QString stopValue = request->stop();
-    stopValue.replace( '\'', "\'\'" );
-    if ( !query.exec("SELECT stops.stop_id FROM stops "
-                     "WHERE stop_name='" + stopValue + "' "
-                     "AND (location_type IS NULL OR location_type=0)") )
-    {
-        // Check of the error is a "disk I/O error", ie. the database file may have been deleted
-        checkForDiskIoError( query.lastError(), request );
-
-        kDebug() << query.lastError();
-        kDebug() << query.executedQuery();
-        return;
-    }
-
-    QSqlRecord stopRecord = query.record();
-    if ( query.next() ) {
-        stopId = query.value( query.record().indexOf("stop_id") ).toUInt();
-    } else {
+    if ( !request->stopId().isEmpty() ) {
+        // A stop ID is available, testing for it's ID in stop_times is not necessary
         bool ok;
-        stopId = request->stop().toUInt( &ok );
+        stopId = request->stopId().toUInt( &ok );
         if ( !ok ) {
-            kDebug() << "No stop with the given name or id found (needs the exact name):"
-                     << request->stop();
+            kWarning() << "Invalid stop ID" << request->stopId() << "only numeric IDs allowed";
+            return;
+        }
+    } else {
+        // Try to get the ID for the given stop name.
+        bool ok;
+        stopId = stopIdFromName( request->stop(), &ok );
+        if ( !ok ) {
             emit requestFailed( this, ErrorParsingFailed /*TODO*/,
-                    "No stop with the given name or id found (needs the exact name): "
+                    "No stop with the given name found (needs the exact name or an ID): "
                     + request->stop(),
                     QUrl(), request );
             return;
         }
     }
+
+    QSqlQuery query( QSqlDatabase::database(m_data->id()) );
+    query.setForwardOnly( true ); // Don't cache records
 
 // This creates a temporary table to calculate min/max fares for departures.
 // These values should be added into the db while importing, doing it here takes too long
@@ -529,7 +555,7 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
                        "INNER JOIN routes USING (route_id) "
                        "LEFT JOIN calendar USING (service_id) "
                        "LEFT JOIN calendar_dates ON (trips.service_id=calendar_dates.service_id "
-                                                    "AND strftime('%Y%m%d')=calendar_dates.date) "
+                                                    "AND strftime('%Y%m%d') LIKE calendar_dates.date) "
             "WHERE stop_id=%1 AND departure_time>%2 "
                   "AND (calendar_dates.date IS NULL " // No matching record in calendar_dates table for today
                        "OR NOT (calendar_dates.exception_type=2)) " // Journey is not removed today

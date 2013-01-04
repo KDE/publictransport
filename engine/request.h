@@ -87,14 +87,14 @@ public:
                                   ParseDocumentMode parseMode = ParseInvalid )
             : AbstractRequest(sourceName, parseMode), m_count(20) {};
     AbstractTimetableItemRequest( const QString &sourceName, const QString &stop,
-                                  const QDateTime &dateTime, int count,
+                                  const QString &stopId, const QDateTime &dateTime, int count,
                                   const QString &city = QString(),
                                   ParseDocumentMode parseMode = ParseInvalid )
             : AbstractRequest(sourceName, parseMode),
-              m_dateTime(dateTime), m_stop(stop), m_count(count), m_city(city) {};
+              m_dateTime(dateTime), m_stop(stop), m_stopId(stopId), m_count(count), m_city(city) {};
     AbstractTimetableItemRequest( const AbstractTimetableItemRequest &other )
             : AbstractRequest(other), m_dateTime(other.m_dateTime), m_stop(other.m_stop),
-              m_count(other.m_count), m_city(other.m_city) {};
+              m_stopId(other.m_stopId), m_count(other.m_count), m_city(other.m_city) {};
 
     virtual ~AbstractTimetableItemRequest() {};
 
@@ -114,6 +114,9 @@ public:
     /** @brief The stop name of the request. */
     QString stop() const { return m_stop; };
 
+    /** @brief The stop ID of the request. */
+    QString stopId() const { return m_stopId; };
+
     /**
      * @brief The number of timetable items to request, eg. departures or stop suggestions.
      * @note This is just a hint for the provider
@@ -128,6 +131,7 @@ public:
 
     void setDateTime( const QDateTime &dateTime ) { m_dateTime = dateTime; };
     void setStop( const QString &stop ) { m_stop = stop; };
+    void setStopId( const QString &stopId ) { m_stopId = stopId; };
     void setCity( const QString &city ) { m_city = city; };
     void setCount( int count ) { m_count = count; };
 
@@ -135,6 +139,7 @@ protected:
     /** @brief The date and time to get results for. */
     QDateTime m_dateTime;
     QString m_stop;
+    QString m_stopId;
     int m_count;
     QString m_city;
 };
@@ -147,7 +152,8 @@ public:
     StopSuggestionRequest( const QString &sourceName, const QString &stop,
                            int count, const QString &city = QString(),
                            ParseDocumentMode parseMode = ParseForStopSuggestions )
-        : AbstractTimetableItemRequest(sourceName, stop, QDateTime(), count, city, parseMode) {};
+        : AbstractTimetableItemRequest(sourceName, stop, QString(), QDateTime(),
+                                       count, city, parseMode) {};
     StopSuggestionRequest( const StopSuggestionRequest &other )
         : AbstractTimetableItemRequest(other) {};
 
@@ -209,11 +215,11 @@ public:
     DepartureRequest( const QString &sourceName = QString(),
                       ParseDocumentMode parseMode = ParseForDepartures )
         : AbstractTimetableItemRequest(sourceName, parseMode) {};
-    DepartureRequest( const QString &sourceName, const QString &stop,
-                      const QDateTime &dateTime, int count,
-                      const QString &city = QString(),
+    DepartureRequest( const QString &sourceName, const QString &stop, const QString &stopId,
+                      const QDateTime &dateTime, int count, const QString &city = QString(),
                       ParseDocumentMode parseMode = ParseForDepartures )
-        : AbstractTimetableItemRequest(sourceName, stop, dateTime, count, city, parseMode) {};
+        : AbstractTimetableItemRequest(sourceName, stop, stopId, dateTime,
+                                       count, city, parseMode) {};
     DepartureRequest( const DepartureRequest &info ) : AbstractTimetableItemRequest(info) {};
 
     virtual AbstractRequest *clone() const { return new DepartureRequest(*this); };
@@ -232,11 +238,10 @@ public:
     ArrivalRequest( const QString &sourceName = QString(),
                     ParseDocumentMode parseMode = ParseForArrivals )
         : DepartureRequest(sourceName, parseMode) {};
-    ArrivalRequest( const QString &sourceName, const QString &stop,
-                    const QDateTime &dateTime, int count,
-                    const QString &city = QString(),
+    ArrivalRequest( const QString &sourceName, const QString &stop, const QString &stopId,
+                    const QDateTime &dateTime, int count, const QString &city = QString(),
                     ParseDocumentMode parseMode = ParseForArrivals )
-        : DepartureRequest(sourceName, stop, dateTime, count, city, parseMode) {};
+        : DepartureRequest(sourceName, stop, stopId, dateTime, count, city, parseMode) {};
 
     virtual AbstractRequest *clone() const { return new ArrivalRequest(*this); };
     virtual QString argumentsString() const;
@@ -261,20 +266,22 @@ public:
     {
     };
 
-    JourneyRequest( const QString &sourceName, const QString &startStop,
-            const QString &targetStop, const QDateTime &dateTime, int count,
-            const QString &urlToUse, const QString &city = QString(),
+    JourneyRequest( const QString &sourceName, const QString &startStop, const QString &startStopId,
+            const QString &targetStop, const QString &targetStopId, const QDateTime &dateTime,
+            int count, const QString &urlToUse, const QString &city = QString(),
             ParseDocumentMode parseMode = ParseForJourneysByDepartureTime )
-        : AbstractTimetableItemRequest(sourceName, startStop, dateTime, count, city, parseMode),
-          m_targetStop(targetStop), m_urlToUse(urlToUse), m_roundTrips(0)
+        : AbstractTimetableItemRequest(sourceName, startStop, startStopId, dateTime,
+                                       count, city, parseMode),
+          m_targetStop(targetStop), m_targetStopId(targetStopId), m_urlToUse(urlToUse),
+          m_roundTrips(0)
     {
     };
 
-    JourneyRequest( const JourneyRequest &info ) : AbstractTimetableItemRequest(info)
+    JourneyRequest( const JourneyRequest &other )
+            : AbstractTimetableItemRequest(other), m_targetStop(other.m_targetStop),
+              m_targetStopId(other.m_targetStopId), m_urlToUse(other.m_urlToUse),
+              m_roundTrips(other.m_roundTrips)
     {
-        m_targetStop = info.m_targetStop;
-        m_urlToUse = info.m_urlToUse;
-        m_roundTrips = info.m_roundTrips;
     };
 
     virtual JourneyRequest *clone() const { return new JourneyRequest(*this); };
@@ -290,6 +297,9 @@ public:
     /** @brief The target stop name of the request. */
     QString targetStop() const { return m_targetStop; };
 
+    /** @brief The ID of the target stop of the request. */
+    QString targetStopId() const { return m_targetStopId; };
+
     /** @brief Specifies the URL to use to download the journey source document. */
     QString urlToUse() const { return m_urlToUse; };
 
@@ -298,8 +308,11 @@ public:
 
     void setTargetStop( const QString &targetStop ) { m_targetStop = targetStop; };
 
+    void setTargetStopId( const QString &targetStopId ) { m_targetStopId = targetStopId; };
+
 protected:
     QString m_targetStop;
+    QString m_targetStopId;
     QString m_urlToUse;
     int m_roundTrips;
 };
@@ -310,11 +323,11 @@ public:
                            ParseDocumentMode parseMode = ParseForAdditionalData )
         : AbstractTimetableItemRequest(sourceName, parseMode) {};
     AdditionalDataRequest( const QString &sourceName, int itemNumber, const QString &stop,
-                           const QDateTime &dateTime, const QString &transportLine,
-                           const QString &target, const QString &city = QString(),
-                           const QString &routeDataUrl = QString(),
+                           const QString &stopId, const QDateTime &dateTime,
+                           const QString &transportLine, const QString &target,
+                           const QString &city = QString(), const QString &routeDataUrl = QString(),
                            ParseDocumentMode parseMode = ParseForAdditionalData )
-        : AbstractTimetableItemRequest(sourceName, stop, dateTime, 1, city, parseMode),
+        : AbstractTimetableItemRequest(sourceName, stop, stopId, dateTime, 1, city, parseMode),
           m_itemNumber(itemNumber), m_transportLine(transportLine), m_target(target),
           m_routeDataUrl(routeDataUrl) {};
     AdditionalDataRequest( const AdditionalDataRequest &other )
