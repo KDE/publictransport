@@ -1146,17 +1146,16 @@ QString PublicTransportAppletPrivate::courtesyToolTip() const
 {
     // Get courtesy information for the current service provider from the data engine
     QVariantHash data = currentProviderData;
-    QString credit, url;
+    QString credit;
     if ( !data.isEmpty() ) {
         credit = data["credit"].toString();
-        url = data["url"].toString();
     }
 
-    if ( credit.isEmpty() || url.isEmpty() ) {
+    if ( credit.isEmpty() ) {
         // No courtesy information given by the data engine
         return QString();
     } else {
-        return i18nc( "@info/plain", "By courtesy of %1 (%2)", credit, url );
+        return credit;
     }
 }
 
@@ -1166,39 +1165,34 @@ QString PublicTransportAppletPrivate::infoText()
     const QVariantHash data = currentProviderData;
     const QString shortUrl = data.isEmpty() ? "-" : data["shortUrl"].toString();
     const QString url = data.isEmpty() ? "-" : data["url"].toString();
-    QString sLastUpdate = lastSourceUpdate.toString( "hh:mm" );
-    if ( sLastUpdate.isEmpty() ) {
-        sLastUpdate = i18nc( "@info/plain This is used as 'last data update' "
-                             "text when there hasn't been any updates yet.", "none" );
-    }
+    QString credit = data["credit"].toString();
+    const QSizeF size = graphicsWidget->size();
+    const QFontMetrics fm( labelInfo->font() );
 
-    // Plasma::Label sets it's height as if the label would show the HTML source.
-    // Therefore the <nobr>'s are inserted to prevent using multiple lines unnecessarily
-    const qreal minHeightForTwoLines = 250.0;
-    const QString dataByTextLocalized = i18nc( "@info/plain", "data by" );
-    const QString textNoHtml1 = QString( "%1: %2" )
-                                .arg( i18nc( "@info/plain", "last update" ), sLastUpdate );
-    const QString dataByLinkHtml = QString( "<a href='%1'>%2</a>" ).arg( url, shortUrl );
-    const QString textHtml2 = dataByTextLocalized + ": " + dataByLinkHtml;
-    QFontMetrics fm( labelInfo->font() );
-    const int widthLine1 = fm.width( textNoHtml1 );
-    const int widthLine2 = fm.width( dataByTextLocalized + ": " + shortUrl );
-    const int width = widthLine1 + fm.width( ", " ) + widthLine2;
-    QSizeF size = graphicsWidget->size();
-    if ( size.width() >= width ) {
-        // Enough horizontal space to show the complete info text in one line
-        return "<nobr>" + textNoHtml1 + ", " + textHtml2 + "</nobr>";
-    } else if ( size.height() >= minHeightForTwoLines &&
-                size.width() >= widthLine1 && size.width() >= widthLine2 ) {
-        // Not enough horizontal space to show the complete info text in one line,
-        // but enough vertical space to break it into two lines, which both fit horizontally
-        return "<nobr>" + textNoHtml1 + ",<br />" + textHtml2 + "</nobr>";
-    } else if ( size.width() >= widthLine2 ) {
-        // Do not show "last update" text, but credits info
-        return "<nobr>" + textHtml2 + "</nobr>";
+    if ( !credit.isEmpty() ) {
+        // Credit string available, show it as link to the provider home page
+        return QString("<a href='%1'>%2</a>")
+                .arg(url, fm.elidedText(credit, Qt::ElideMiddle, size.width() - 2));
     } else {
-        // Do not show "last update" text, but credits info, without "data by:" label
-        return "<nobr>" + dataByLinkHtml + "</nobr>";
+        // No credit string available, show a link to the provider home page.
+        // If there is enough space, also show a label.
+        const QString labelText = i18nc( "@info/plain", "Data by" );
+        const QString labelTextLong = i18nc( "@info/plain", "Timetable data by" );
+        const QString linkHtml = QString( "<a href='%1'>%2</a>" ).arg( url, shortUrl );
+        const QString html = labelText + ": " + linkHtml;
+        const QString htmlLong = labelTextLong + ": " + linkHtml;
+        const int width = fm.width( labelText + ": " + shortUrl );
+        const int widthLong = fm.width( labelTextLong + ": " + shortUrl );
+        if ( size.width() >= widthLong ) {
+            // Enough horizontal space to show the longer label
+            return htmlLong;
+        } else if ( size.width() >= width ) {
+            // Enough horizontal space to show the shorter label
+            return html;
+        } else {
+            // Not enough horizontal space for the label, only show the link
+            return linkHtml;
+        }
     }
 }
 
@@ -1211,27 +1205,40 @@ QString PublicTransportAppletPrivate::infoTooltip()
 
     // Add information about the next automatic update time (with minute precision)
     qint64 msecs = QDateTime::currentDateTime().msecsTo( nextAutomaticSourceUpdate );
-    if ( msecs <= 0 ) {
-        return tooltip;
+    if ( msecs > 0 ) {
+        if ( !tooltip.isEmpty() ) {
+            tooltip += ", ";
+        }
+        tooltip += i18nc("@info:tooltip %1 is a duration string with minute precision, "
+                        "as returned by KLocale::prettyFormatDuration()",
+                        "next automatic update in %1",
+                        KGlobal::locale()->prettyFormatDuration(qCeil(msecs / 60000.0) * 60000));
     }
-    if ( !tooltip.isEmpty() ) {
-        tooltip += ", ";
-    }
-    tooltip += i18nc("@info:tooltip %1 is a duration string with minute precision, "
-                     "as returned by KLocale::prettyFormatDuration()",
-                     "Next automatic update in %1",
-                     KGlobal::locale()->prettyFormatDuration(qCeil(msecs / 60000.0) * 60000));
 
     // Add information about the minimal next (malnual) update time (with second precision)
     if ( minManualSourceUpdateTime.isValid() ) {
         qint64 minMsecs = QDateTime::currentDateTime().msecsTo( minManualSourceUpdateTime );
         if ( minMsecs > 0 ) {
-            tooltip += ", " + i18nc("@info:tooltip %1 is a duration string with second precision, "
-                                    "as returned by KLocale::prettyFormatDuration()",
-                                    "updates blocked for %1",
+            if ( !tooltip.isEmpty() ) {
+                tooltip += ", ";
+            }
+            tooltip += i18nc("@info:tooltip %1 is a duration string with second precision, "
+                             "as returned by KLocale::prettyFormatDuration()",
+                             "updates blocked for %1",
                     KGlobal::locale()->prettyFormatDuration(qCeil(minMsecs / 1000.0) * 1000));
         }
     }
+
+    QString sLastUpdate = lastSourceUpdate.toString( "hh:mm" );
+    if ( sLastUpdate.isEmpty() ) {
+        sLastUpdate = i18nc( "@info/plain This is used as 'last data update' "
+                             "text when there hasn't been any updates yet.", "none" );
+    }
+    const QString dataByTextLocalized = i18nc( "@info/plain", "data by" );
+    if ( !tooltip.isEmpty() ) {
+        tooltip += ", ";
+    }
+    tooltip += i18nc("@info/plain", "last update: %1", sLastUpdate );
     return tooltip;
 }
 

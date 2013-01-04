@@ -540,11 +540,11 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
 
         labelInfo = new Plasma::Label( mainGraphicsWidget );
         labelInfo->setAlignment( Qt::AlignVCenter | Qt::AlignRight );
+        labelInfo->setMaximumHeight( labelInfo->geometry().height() );
         q->connect( labelInfo, SIGNAL(linkActivated(QString)),
                     KToolInvocation::self(), SLOT(invokeBrowser(QString)) );
         QLabel *_labelInfo = labelInfo->nativeWidget();
         _labelInfo->setOpenExternalLinks( true );
-        _labelInfo->setWordWrap( true );
         _labelInfo->setText( infoText() );
 
         // Watch for tooltip events and update the tooltip before showing it
