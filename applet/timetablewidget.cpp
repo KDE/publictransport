@@ -665,7 +665,7 @@ void DepartureGraphicsItem::updateTextLayouts()
     if ( m_routeItem ) {
         height -= m_routeItem->geometry().height() - padding();
     }
-    QSizeF othersSize( rect.width() - expandAreaIndentation(), height );
+    QSizeF othersSize( rect.width() - expandAreaIndentation() - padding(), height );
     if ( !m_othersTextDocument || (m_othersTextDocument->pageSize() != othersSize) ) {
         delete m_othersTextDocument;
         textOption.setAlignment( Qt::AlignVCenter | Qt::AlignLeft );

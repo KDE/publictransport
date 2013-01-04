@@ -106,9 +106,9 @@ qreal RouteGraphicsItem::textAngle( const QFontMetrics &fontMetrics, qreal zoomF
 qreal RouteGraphicsItem::maxTextWidth( qreal height, int fontHeight ) const
 {
     // Compute maximal text width for the computed angle,
-    // so that the stop name won't go outside of routeRect
+    // so that the stop name won't go outside of the route item
     const qreal angle = m_textAngle * 3.14159 / 180.0;
-    return (height - 10 * m_zoomFactor) / qSin(angle) - fontHeight / qTan(angle);
+    return height / qSin(angle) - fontHeight / qTan(angle);
 }
 
 QPointF RouteGraphicsItem::stopTextPosition( const QFontMetrics &fontMetrics,
@@ -158,7 +158,8 @@ void RouteGraphicsItem::arrangeStopItems()
             count = qFloor( routeRect.width() / minStep );
         }
         const qreal step = routeStopAreaWidth / count;
-        const qreal height = routeRect.height() - startStopPos.y();
+        QPointF startStopTextPos = stopTextPosition( fm, startStopPos );
+        const qreal height = routeRect.height() - startStopTextPos.y() + 6 * m_zoomFactor;
 
         // Compute text angle so that the stop names don't overlap
         m_textAngle = textAngle( fm, m_zoomFactor );
@@ -219,7 +220,7 @@ void RouteGraphicsItem::arrangeStopItems()
             if ( i >= count - 2 ) {
                 // The last stop names may not fit horizontally (correct the last two here)
                 baseSize = qMin( m_maxTextWidth,
-                        (routeRect.width() - stopTextPos.x() /*- 2 * fontMetrics->height()*/)
+                        (routeRect.width() - stopTextPos.x() - padding())
                         / qCos(m_textAngle * 3.14159 / 180.0) );
             } else {
                 baseSize = m_maxTextWidth;
@@ -233,7 +234,7 @@ void RouteGraphicsItem::arrangeStopItems()
             textItem->setFont( *font );
             textItem->setPos( stopTextPos );
             textItem->setBaseSize( baseSize );
-            textItem->resize( baseSize + 10, fontMetrics->height() );
+            textItem->resize( baseSize, fontMetrics->height() );
             const qreal half = textItem->geometry().height() / 2;
             textItem->setTransformOriginPoint( half, half );
             textItem->setRotation( m_textAngle );
@@ -284,7 +285,8 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
 
         // Compute distance between two route stop items
         const qreal step = routeStopAreaWidth / count;
-        const qreal height = routeRect.height() - startStopPos.y();
+        QPointF startStopTextPos = stopTextPosition( fm, startStopPos );
+        const qreal height = routeRect.height() - startStopTextPos.y() + 6 * m_zoomFactor;
 
         // Compute text angle so that the stop names don't overlap
         m_textAngle = textAngle( fm, m_zoomFactor );
@@ -407,7 +409,7 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             if ( index >= info->routeStops().count() - 2 ) {
                 // The last stop names may not fit horizontally (correct the last two here)
                 baseSize = qMin( m_maxTextWidth,
-                        (routeRect.width() - stopTextPos.x() /*- 2 * fontMetrics->height()*/)
+                        (routeRect.width() - stopTextPos.x() - padding())
                         / qCos(m_textAngle * 3.14159 / 180.0) );
             } else {
                 baseSize = m_maxTextWidth;
@@ -423,7 +425,7 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                     this, model, *font, baseSize, time, stopName, stopNameShortened,
                     minsFromFirstRouteStop, routeStopFlags );
             textItem->setPos( stopTextPos );
-            textItem->resize( baseSize + 10, fontMetrics->height() );
+            textItem->resize( baseSize, fontMetrics->height() );
             const qreal half = textItem->geometry().height() / 2;
             textItem->setTransformOriginPoint( half, half );
             textItem->setRotation( m_textAngle );
@@ -820,10 +822,10 @@ void RouteStopTextGraphicsItem::paint( QPainter* painter,
             PublicTransportWidget::DrawShadowsOrHalos );
     const bool drawHalos = drawShadowsOrHalos && qGray(textColor.rgb()) < 192;
 
-    QFontMetrics fm( font() );
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
     painter->setFont( font() );
 
+    const QFontMetrics fm( font() );
     QRect rect = option->rect;
     rect.setTop( 0 );
     QString stopText = fm.elidedText( m_stopText, Qt::ElideRight, rect.width() );
