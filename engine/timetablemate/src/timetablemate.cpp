@@ -1357,6 +1357,13 @@ void TimetableMate::showDock( const QString &dockName, bool show )
     }
 }
 
+void TimetableMate::showDocumentation( const QString &key )
+{
+    m_documentationDock->showDocumentation( key );
+    m_documentationDock->show();
+    m_documentationDock->mainWidget()->setFocus();
+}
+
 void TimetableMate::currentTabChanged( int index ) {
     // Clear status bar messages
     statusBar()->showMessage( QString() );
@@ -1744,6 +1751,8 @@ void TimetableMate::fileNew()
     Project *newProject = new Project( m_projectModel->weaver(), this );
     newProject->loadProject();
     m_projectModel->appendProject( newProject );
+    connect( newProject, SIGNAL(showDocumentationRequest(QString)),
+             this, SLOT(showDocumentation(QString)) );
 
     // Expand new project item
     m_projectsDock->projectsWidget()->expand( m_projectModel->indexFromProject(newProject) );
@@ -2060,6 +2069,8 @@ Project *TimetableMate::openProject( const QString &filePath )
             m_recentFilesAction->addUrl( project->filePath() );
         }
         m_projectModel->appendProject( project );
+        connect( project, SIGNAL(showDocumentationRequest(QString)),
+                 this, SLOT(showDocumentation(QString)) );
         return project;
     } else if ( project->state() == Project::ProjectError ) {
         // The error message was emitted from the constructor of Project

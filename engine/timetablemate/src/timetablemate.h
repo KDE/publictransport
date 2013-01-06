@@ -212,6 +212,8 @@ public slots:
      **/
     bool closeAllProjects();
 
+    void showDocumentation( const QString &key );
+
 protected slots:
     /** @brief Initialize after the TimetableMate instance is created. */
     void initialize();

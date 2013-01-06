@@ -5646,6 +5646,8 @@ ScriptTab *Project::createScriptTab( QWidget *parent )
              this, SLOT(scriptTabDestroyed()) );
     connect( d->scriptTab, SIGNAL(modifiedStatusChanged(bool)),
              this, SIGNAL(scriptModifiedStateChanged(bool)) );
+    connect( d->scriptTab, SIGNAL(showDocumentation(QString)),
+             this, SIGNAL(showDocumentationRequest(QString)) );
     return d->scriptTab;
 }
 
@@ -5691,6 +5693,8 @@ ScriptTab *Project::createExternalScriptTab( const QString &filePath, QWidget *p
              this, SLOT(externalScriptTabDestroyed(QObject*)) );
 //     connect( externalScriptTab, SIGNAL(modifiedStatusChanged(bool)),
 //              this, SIGNAL(externalScriptModifiedStateChanged(bool)) );
+    connect( externalScriptTab, SIGNAL(showDocumentation(QString)),
+             this, SIGNAL(showDocumentationRequest(QString)) );
     return externalScriptTab;
 }
 #endif // BUILD_PROVIDER_TYPE_SCRIPT

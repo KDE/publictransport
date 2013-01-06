@@ -27,6 +27,7 @@
 #include <KActionCollection>
 #include <KIcon>
 #include <KLocale>
+#include <QAbstractTextDocumentLayout>
 
 JavaScriptCompletionModel::JavaScriptCompletionModel( const QString& completionShortcut,
                               QObject* parent )
@@ -55,11 +56,24 @@ QVariant JavaScriptCompletionModel::data( const QModelIndex& index, int role ) c
     } else if ( role == ExpandingWidget ) {
         QVariant v;
         KTextBrowser *textBrowser = new KTextBrowser;
-        textBrowser->setText( m_completions.at(index.row()).description );
-        textBrowser->setGeometry( 0, 0, 100, 85 ); // Make the widget a bit bigger
+        const CompletionItem completion = m_completions.at( index.row() );
+        QString name = completion.name;
+        const int pos = name.indexOf( QRegExp("[\\(\\)\\. ]") );
+        if ( pos != -1 ) {
+            name = name.left( pos );
+        }
+        QString html = completion.description;
+        html += "<br /><a href='" + completion.className + '|' + name + "'>" +
+                i18nc("@info/plain", "Show Documentation for %1", name) + "</a>";
+        textBrowser->setHtml( html );
+        textBrowser->document()->setTextWidth( 200 ); // Needed to layout the HTML
+        const QSize size = textBrowser->document()->size().toSize();
+        textBrowser->setGeometry( QRect(0, 0, size.width(), qBound(25, size.height(), 150)) );
         textBrowser->setReadOnly( true );
         textBrowser->setTextInteractionFlags( Qt::LinksAccessibleByKeyboard |
                                               Qt::LinksAccessibleByMouse );
+        textBrowser->setNotifyClick( true );
+        connect( textBrowser, SIGNAL(urlClick(QString)), this, SIGNAL(showDocumentation(QString)) );
         v.setValue< QWidget* >( textBrowser );
         return v;
     } else if ( role == CompletionRole ) {
@@ -133,7 +147,6 @@ void JavaScriptCompletionModel::completionInvoked( KTextEditor::View* view,
             textUntilWhiteSpace = line.mid( pos + 1, col - pos - 1 ).trimmed();
             kDebug() << "Word Start:" << pos << textUntilWhiteSpace << col;
         }
-            m_completionObjects[""].insert("test", CompletionItem(0, "", "", ""));
 
         if ( word.isEmpty() )
             text = textUntilWhiteSpace;
@@ -160,24 +173,24 @@ void JavaScriptCompletionModel::completionInvoked( KTextEditor::View* view,
                         i18nc("@info The description for the 'helper' object",
                               "The <emphasis>helper</emphasis> object contains some useful "
                               "functions."),
-                        "helper.", false, "object" );
+                        "helper.", false, "object", QString(), "helper" );
                 m_completions << CompletionItem( Class | GlobalScope, "network",
                         i18nc("@info The description for the 'network' object",
                               "The <emphasis>network</emphasis> object is used request documents "
                               "from the internet.<nl/>"),
-                        "network.", false, "object" );
+                        "network.", false, "object", QString(), "network" );
                 m_completions << CompletionItem( Class | GlobalScope, "storage",
                         i18nc("@info The description for the 'storage' object",
                               "The <emphasis>storage</emphasis> object can be used to store some "
                               "script specific values in memory or on disk.<nl/>"),
-                        "storage.", false, "object" );
+                        "storage.", false, "object", QString(), "storage" );
                 m_completions << CompletionItem(  Class | GlobalScope, "result",
                         i18nc("@info The description for the 'result' object",
                               "The result object is used to store all parsed "
                               "departure/arrival/journey items. Call <emphasis>"
                               "result.addData({Target: 'Sample', DepartureDateTime: new Date()})</emphasis> "
                               "to add new data."),
-                        "result.", false, "object" );
+                        "result.", false, "object", QString(), "result" );
             }
         }
     }
@@ -193,15 +206,15 @@ QString JavaScriptCompletionModel::stripComments( const QString& text ) const {
     return ret.remove( rx );
 }
 
-CompletionItem JavaScriptCompletionModel::completionItemFromId( const QString id ) {
+QList< CompletionItem > JavaScriptCompletionModel::completionItemsFromId( const QString id ) {
     CompletionItem item = m_completionsGlobalFunctions.value( id );
     if ( item.isValid() ) {
-        return item;
+        return QList< CompletionItem >() << item;
     }
 
     item = m_completionsTimetableInfo.value( id );
     if ( item.isValid() ) {
-        return item;
+        return QList< CompletionItem >() << item;
     }
 
     QString simpleID = id;
@@ -209,24 +222,25 @@ CompletionItem JavaScriptCompletionModel::completionItemFromId( const QString id
     rxBraces.setMinimal( true );
     simpleID.replace( rxBraces, "()" );
     for ( int i = 0; i < m_completionObjects.count(); ++i ) {
-        const QHash< QString, CompletionItem > comp =
+        const QMultiHash< QString, CompletionItem > comp =
                 m_completionObjects[ m_completionObjects.keys()[i] ];
-        item = comp.value( simpleID );
-        if ( item.isValid() ) {
-            return item;
+        const QList< CompletionItem > items = comp.values( simpleID );
+        if ( !items.isEmpty() && items.first().isValid() ) {
+            return items;
         }
     }
 
+    QList< CompletionItem > items;
     QRegExp rxCall( "(\\w+)\\.(\\w+)" );
     if ( rxCall.indexIn(simpleID) != -1 ) {
         const QString obj = rxCall.cap(1);
         const QString func = QString("call:%1()").arg(rxCall.cap(2));
         if ( m_completionObjects.contains(obj) && m_completionObjects[obj].contains(func) ) {
-            return m_completionObjects[obj][func];
+            return m_completionObjects[obj].values(func);
         }
     }
 
-    return item;
+    return QList< CompletionItem >();
 }
 
 void JavaScriptCompletionModel::initGlobalFunctionCompletion() {

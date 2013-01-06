@@ -58,7 +58,8 @@ add_custom_command( OUTPUT javascriptcompletiongeneric.h
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scriptapi.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scriptapi-doc.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../enums.h
-            ${CMAKE_CURRENT_SOURCE_DIR}/../../engine-doc.h )
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../engine-doc.h
+            completiongenerator )
 
 # FIXME Manually add file dependencies to wait until javascriptcompletiongeneric.h/.cpp are ready.
 # Somehow it does not work without this and tries to build TimetableMate sources before

@@ -38,6 +38,9 @@ public:
     KWebView *documentationWidget() const { return m_documentationWidget; };
     virtual QWidget *mainWidget() const;
 
+public slots:
+    void showDocumentation( const QString &key );
+
 protected slots:
     void documentationChosen( int index = 0 );
     void documentationUrlChanged( const QUrl &url );

@@ -102,11 +102,11 @@ bool OutputGenerator::writeSourceHeaderOutput( const QString &headerFilePath,
         "     *\n"
         "     * @param completions A pointer to a QHash object that gets filled with the\n"
         "     *   available completion items per class. The keys are used for the class names\n"
-        "     *   and the values are again QHash objects. The inner QHash uses \"completion\n"
+        "     *   and the values are again QHash objects. The inner QMultiHash uses \"completion\n"
         "     *   strings\" as keys (eg. \"call:functionName()\") and CompletionItem objects\n"
         "     *   as values.\n"
         "     **/\n"
-        "    static void addCompletions( QHash< QString, QHash<QString, CompletionItem> > *completions );\n"
+        "    static void addCompletions( QHash< QString, QMultiHash<QString, CompletionItem> > *completions );\n"
         "\n"
         "    /**\n"
         "     * @brief Adds names of available methods per script object.\n"
@@ -143,7 +143,7 @@ bool OutputGenerator::writeSourceOutput( const QString &sourceFilePath,
         "#include \"%3\"\n"
         "#include <QStringList>\n"
         "\n"
-        "void %4::addCompletions( QHash< QString, QHash<QString, CompletionItem> > *completions ) {\n")
+        "void %4::addCompletions( QHash< QString, QMultiHash<QString, CompletionItem> > *completions ) {\n")
         .arg(OUTPUT_FILE_GENERATOR_COMMENT).arg(timeString)
         .arg(headerFileName).arg(className).toUtf8() );
     foreach( const ClassInformation &classInformation, completionClasses ) {
@@ -582,10 +582,13 @@ void OutputGenerator::writeAddCompletionsImplementation(
         QIODevice *dev, const ClassInformation &classInformation )
 {
     foreach( const Method &method, classInformation.methods ) {
+        const QString noMargin = "style=\\\"margin:0\\\"";
+        const QString itemBegin = "<p>";
+        const QString itemEnd = "</p>";
+
         // Output for completion
-        QString description = QString( "<b>Brief:</b> %1" )
-                .arg( transform(method.comment.brief) );
-        const QString newLine = "<br />\"\n            \"";
+        QString description = itemBegin + "<b>Brief:</b> " +
+                transform( method.comment.brief ) + itemEnd;
 
         // Add other comment blocks
         foreach ( const DoxygenComment *comment, method.comment.otherComments ) {
@@ -621,17 +624,17 @@ void OutputGenerator::writeAddCompletionsImplementation(
             QString commentText = transform( comment->comment(), transformations );
             commentText = splitLongTextToMultipleLines( commentText ).join( "\"\n            \"" );
             if ( title.isEmpty() ) {
-                description += newLine + commentText;
+                description += commentText;
             } else {
-                description += newLine +
-                        QString("<p class='doxygen_titled_paragraph'><b>%1:</b>&nbsp;%2</p>")
-                        .arg( title ).arg( commentText );
+                description += itemBegin +
+                        QString("<span class='doxygen_titled_paragraph'><b>%1:</b>&nbsp;%2</span>")
+                        .arg( title ).arg( commentText ) + itemEnd;
             }
         }
 
         // Add parameter description block
         if ( !method.comment.parameters.isEmpty() ) {
-            description += newLine + "<b>Parameters:</b><ul>\"\n            \"";
+            description += itemBegin + "<b>Parameters:</b><ul " + noMargin + ">\"\n            \"";
             foreach ( const DoxygenParameter *parameter, method.comment.parameters ) {
                 QString parameterCommentText = transform( parameter->comment() );
                 parameterCommentText = splitLongTextToMultipleLines( parameterCommentText )
@@ -640,16 +643,15 @@ void OutputGenerator::writeAddCompletionsImplementation(
                         .arg( parameter->arguments.first() )
                         .arg( parameterCommentText );
             }
-            description += "</ul></div>";
+            description += "</ul>" + itemEnd;
         }
 
         // Add return value description block
         if ( !method.comment.returns.isEmpty() ) {
             QString returnCommentText = transform( method.comment.returns );
             returnCommentText = splitLongTextToMultipleLines( returnCommentText )
-                    .join( "\"\n            \"" );
-            description += QString( newLine + "<b>Return Value:</b> %1")
-                    .arg( returnCommentText );
+                    .join( "\\n\"\n            \"" );
+            description += itemBegin + "<b>Return Value:</b> " + returnCommentText + itemEnd;
         }
 
         const QString newOutput = QString(
@@ -658,13 +660,14 @@ void OutputGenerator::writeAddCompletionsImplementation(
                 "            KTextEditor::CodeCompletionModel::Function,\n"
                 "            \"%2(%3)\",\n"
                 "            \"%6\",\n"
-                "            \"%2(%4);\", true, \"%5\") );\n" )
+                "            \"%2(%4);\", true, \"%5\", QString(), \"%7\") );\n" )
                 .arg( classInformation.scriptObjectName )
                 .arg( method.name )
                 .arg( method.typedParameters.join(", ") )
                 .arg( method.templatedParameters.join(", ") )
                 .arg( method.returnType )
-                .arg( description );
+                .arg( description )
+                .arg( classInformation.className );
         dev->write( newOutput.toUtf8() );
     }
 
@@ -702,6 +705,9 @@ QString AbstractGenerator::transform( const QString &input, Transformations tran
     QString output = input;
     if ( transformations.testFlag(TransformEncode) ) {
         output = encodeString( output );
+    }
+    if ( transformations.testFlag(TransformEncodeHtmlTags) ) {
+        output = encodeHtmlTags( output );
     }
     if ( transformations.testFlag(TransformInlineMarkers) ) {
         output = replaceInlineMarkers( output );
@@ -1300,6 +1306,13 @@ QString AbstractGenerator::encodeHtmlEntities( const QString &input ) const
     return output;
 }
 
+QString AbstractGenerator::encodeHtmlTags( const QString &input ) const
+{
+    QString output = input;
+    return output.replace( '<', QLatin1String("&lt;") )
+                 .replace( '>', QLatin1String("&gt;") );
+}
+
 void AbstractGenerator::setClassInformation( const ClassInformationList &classInformationList )
 {
     foreach ( const ClassInformation &classInformation, classInformationList ) {
@@ -1315,7 +1328,7 @@ QString DocumentationOutputGenerator::encodeString( const QString &input ) const
 QString CompletionOutputGenerator::encodeString( const QString &input ) const
 {
     return QString( input ).replace( QLatin1String( "\"" ), QLatin1String( "\\\"" ) )
-                           .replace( '\n', QLatin1String("\"\n\"") );
+                           .replace( '\n', QLatin1String("\\n\"\n\"") );
 }
 
 QString DocumentationOutputGenerator::transformReferences( const QString &input,
@@ -1484,12 +1497,12 @@ QString CompletionOutputGenerator::replaceInlineMarkers( const QString &input ) 
     output = replaceSectionMarkerPair( output, DoxygenSubSection, QLatin1String("<h3 id=\"%1\">"),
                                        QLatin1String("</h3>") );
 
-    output = replaceBeginEndMarkerPair( output, DoxygenBeginVerbatim, QLatin1String("<pre>"),
-                                        QLatin1String("</pre>") );
-    output = replaceBeginEndMarkerPair( output, DoxygenBeginCode, QLatin1String("<pre>"),
-                                        QLatin1String("</pre>") );
+    output = replaceBeginEndMarkerPair( output, DoxygenBeginVerbatim, QLatin1String("<i>"),
+                                        QLatin1String("</i>") );
+    output = replaceBeginEndMarkerPair( output, DoxygenBeginCode, QLatin1String("<pre style='margin=0'>"),
+                                        QLatin1String("</pre>"), TransformEncodeHtmlTags );
 
-    output = replaceBeginEndMarkerPair( output, DoxygenBeginList, QLatin1String("<ul>"),
+    output = replaceBeginEndMarkerPair( output, DoxygenBeginList, QLatin1String("<ul style='margin=0'>"),
                                         QLatin1String("</ul>") );
     output = replaceBeginEndMarkerPair( output, DoxygenBeginListItem, QLatin1String("<li>"),
                                         QLatin1String("</li>") );

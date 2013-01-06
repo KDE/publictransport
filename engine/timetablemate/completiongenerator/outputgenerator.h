@@ -109,6 +109,9 @@ protected:
     // Can be used for the implementation of encodeString()
     QString encodeHtmlEntities( const QString &input ) const;
 
+    // Encode HTML source code to be displayed in a Browser, eg. "<tag>" => "&lt;tag&gt;".
+    QString encodeHtmlTags( const QString &input ) const;
+
     QString replaceAllMarkers( const QString &input, const MarkerPair &marker,
                                const MarkerPair &replacement,
                                QString (*customTransformFunction)(const QString&),

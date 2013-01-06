@@ -937,6 +937,9 @@ signals:
     /** @brief Emitted when @p tab should be made the current tab. */
     void tabGoToRequest( AbstractTab *tab );
 
+    /** @brief Emitted when the documentation for @p key should be shown. */
+    void showDocumentationRequest( const QString &key );
+
     /**
      * @brief Emitted when this project should be set as active project.
      * ProjectModel automatically connects to this signal.

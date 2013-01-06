@@ -195,7 +195,6 @@ ClassInformation::ClassInformation( const QMetaObject &object, const QString &cl
     foreach ( const Method &method, methods ) {
         methodNames << method.name;
     }
-    methodNames.removeDuplicates();
 
     sortedMethods << methods.values();
     qSort( sortedMethods.begin(), sortedMethods.end(), methodLessThan );

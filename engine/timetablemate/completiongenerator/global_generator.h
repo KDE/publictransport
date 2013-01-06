@@ -40,6 +40,7 @@ enum Transformation {
     TransformAddVisibilityToggle
                             = 0x0040, /**< Add a little button to toggle visibility, if the content
                                          * is long enough. */
+    TransformEncodeHtmlTags = 0x0080, /**< Encode HTML tags in the input. */
 
     DefaultTransformations = TransformEncode | TransformInlineMarkers | TransformSureReferences,
             /**< Transformations that should be used most of the time. */

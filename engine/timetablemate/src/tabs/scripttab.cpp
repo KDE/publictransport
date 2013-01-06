@@ -188,6 +188,8 @@ ScriptTab *ScriptTab::create( Project *project, QWidget *parent )
 
         JavaScriptCompletionModel *completionModel =
                 new JavaScriptCompletionModel( completionShortcut, document );
+        connect( completionModel, SIGNAL(showDocumentation(QString)),
+                 tab, SIGNAL(showDocumentation(QString)) );
         completionInterface->registerCompletionModel( completionModel );
         tab->m_completionModel = completionModel;
     }

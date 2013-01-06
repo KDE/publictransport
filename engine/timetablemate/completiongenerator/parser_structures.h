@@ -184,13 +184,12 @@ class Methods : public QMap< QString, Method > {
 public:
     Methods() : QMap< QString, Method >() {};
 
+    /** @brief Find the first method with the given @p name. */
     Method findByMethodName( const QString &name ) const {
         for ( QMap< QString, Method >::ConstIterator it = constBegin(); it != constEnd(); ++it ) {
             const QString methodName = methodNameFromSignature( it.key() );
             if ( methodName == name ) {
                 return it.value();
-            } else if ( name == QLatin1String("get") ) {
-//                 qDebug() << methodName << it.key();
             }
         }
 
@@ -226,7 +225,7 @@ public:
 
     Methods methods;
     QList<Method> sortedMethods;
-    QStringList methodNames; // TODO ADD THIS
+    QStringList methodNames; // Overloaded methods are contained multiple times
 
     EnumComments enums;
     QList<EnumComment> sortedEnums;

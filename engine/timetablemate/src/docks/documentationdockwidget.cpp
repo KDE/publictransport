@@ -35,6 +35,8 @@
 // Qt includes
 #include <QBoxLayout>
 #include <QMouseEvent>
+#include <QWebFrame>
+#include <QWebElement>
 
 DocumentationDockWidget::DocumentationDockWidget( KActionMenu *showDocksAction, QWidget *parent )
         : AbstractDockWidget( i18nc("@title:window Dock title", "Documentation"),
@@ -87,6 +89,34 @@ void DocumentationDockWidget::showEvent( QShowEvent *event )
     QWidget::showEvent( event );
 }
 
+void DocumentationDockWidget::showDocumentation( const QString &key )
+{
+    const int pos = key.indexOf( '|' );
+    if ( pos == -1 ) {
+        kWarning() << "Invalid documentation key:" << key;
+        return;
+    }
+    QString className = key.left( pos ).toLower();
+    if ( className.isEmpty() ) {
+        className = "index";
+    }
+    const QString scriptClassName =
+            className == QLatin1String("resultobject") ? "result" : className;
+    const QString name = key.mid( pos + 1 ).toLower();
+    const QString anchor = '#' +
+            (className == QLatin1String("index") ? "script_functions_" + name
+                                                 : scriptClassName + '-' + name);
+
+    const QString documentationFileName = KGlobal::dirs()->findResource(
+            "data", QString("timetablemate/doc/%1.html").arg(className) );
+    if ( documentationFileName.isEmpty() ) {
+        kWarning() << "Documentation for" << className << "not found";
+        return;
+    }
+
+    m_documentationWidget->setUrl( QUrl("file://" + documentationFileName + anchor) );
+}
+
 void DocumentationDockWidget::documentationChosen( int index )
 {
     const QString page = m_documentationChooser->itemData( index ).toString();
@@ -102,7 +132,9 @@ void DocumentationDockWidget::documentationUrlChanged( const QUrl &url )
         const QString page = regExp.cap( 1 );
         const int index = m_documentationChooser->findData( page );
         if ( index != -1 ) {
+            const bool wasBlocked = m_documentationChooser->blockSignals( true );
             m_documentationChooser->setCurrentIndex( index );
+            m_documentationChooser->blockSignals( wasBlocked );
         } else {
             kDebug() << "Documentation page not found:" << page;
         }

@@ -73,6 +73,7 @@ signals:
     void syntaxErrorFound( const QString &errorString );
     void canGoToPreviousFunctionChanged( bool canGo );
     void canGoToNextFunctionChanged( bool canGo );
+    void showDocumentation( const QString &key );
 
 public slots:
     void parseScript();

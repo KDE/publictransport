@@ -76,8 +76,8 @@ void JavaScriptModel::needTextHint( const KTextEditor::Cursor &position, QString
         return;
     }
 
-    CompletionItem item = m_javaScriptCompletionModel->completionItemFromId( node->id() );
-    if ( !item.isValid() || item.description.isEmpty() ) {
+    QList<CompletionItem> items = m_javaScriptCompletionModel->completionItemsFromId( node->id() );
+    if ( items.isEmpty() || !items.first().isValid() || items.first().description.isEmpty() ) {
         kDebug() << "No completion item found for" << node->id();
 
         // Show what information is available for the code node
@@ -111,7 +111,7 @@ void JavaScriptModel::needTextHint( const KTextEditor::Cursor &position, QString
     text = QString("<table style='margin: 3px;'><tr><td style='font-size:large;'>"
             "<nobr>%1<b>%2</b></nobr><hr></td></tr><tr><td>%3</td></tr>")
             .arg(node->type() == Function ? i18n("Function: ") : QString(),
-            item.name, item.description);
+            items.first().name, items.first().description);
 
     // The KatePart only prints a debug message...
     emit showTextHint( position, text );
