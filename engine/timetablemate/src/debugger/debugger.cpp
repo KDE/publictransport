@@ -489,7 +489,7 @@ LoadScriptJob *Debugger::getLoadScriptJob( const QString &program, const Service
 LoadScriptJob *Debugger::loadScript( const QString &program, const ServiceProviderData *data,
                                      DebugFlags debugFlags )
 {
-    if ( isLoadScriptJobRunning() ) {
+    if ( m_loadScriptJob ) {
         // Script already gets loaded, return the running job
         QMutexLocker locker( m_mutex );
         return m_loadScriptJob;
