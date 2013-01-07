@@ -1460,7 +1460,7 @@ public:
         case TestModel::TestFinishedSuccessfully:
             q->emit informationMessage( i18nc("@info", "Test of %1 finished successfully",
                                               data()->id()),
-                    KMessageWidget::Positive, 4000,
+                    KMessageWidget::Positive, 4000, QString(), QString(),
                     QList<QAction*>() << q->projectAction(Project::ShowPlasmaPreview) );
             break;
         case TestModel::TestFinishedWithErrors:
@@ -5648,6 +5648,8 @@ ScriptTab *Project::createScriptTab( QWidget *parent )
              this, SIGNAL(scriptModifiedStateChanged(bool)) );
     connect( d->scriptTab, SIGNAL(showDocumentation(QString)),
              this, SIGNAL(showDocumentationRequest(QString)) );
+    connect( d->scriptTab, SIGNAL(syntaxErrorFound(QString,QString)),
+             this, SLOT(syntaxErrorFound(QString,QString)) );
     return d->scriptTab;
 }
 
@@ -5695,6 +5697,8 @@ ScriptTab *Project::createExternalScriptTab( const QString &filePath, QWidget *p
 //              this, SIGNAL(externalScriptModifiedStateChanged(bool)) );
     connect( externalScriptTab, SIGNAL(showDocumentation(QString)),
              this, SIGNAL(showDocumentationRequest(QString)) );
+    connect( externalScriptTab, SIGNAL(syntaxErrorFound(QString,QString)),
+             this, SLOT(syntaxErrorFound(QString,QString)) );
     return externalScriptTab;
 }
 #endif // BUILD_PROVIDER_TYPE_SCRIPT
@@ -6173,26 +6177,26 @@ void Project::publish()
             case GtfsDatabaseUpdateAvailable:
                 emit informationMessage( i18nc("@ịnfo", "An updated version of the GTFS feed is "
                         "available. Please import the new version into the database before "
-                        "publishing your plugin."), KMessageWidget::Error, -1,
+                        "publishing your plugin."), KMessageWidget::Error, -1, QString(), QString(),
                         QList<QAction*>() << projectAction(ImportGtfsFeed)
                                           << projectAction(ShowGtfsDatabase) );
                 return;
             case GtfsDatabaseImportRunning:
                 emit informationMessage( i18nc("@ịnfo", "Wait for the GTFS feed import to finish "
                         "before publishing your plugin (%1%).", d->gtfsFeedImportProgress),
-                        KMessageWidget::Error, -1,
+                        KMessageWidget::Error, -1, QString(), QString(),
                         QList<QAction*>() << projectAction(ShowGtfsDatabase) );
                 return;
             case GtfsDatabaseError:
                 emit informationMessage( i18nc("@ịnfo", "There was an error importing the GTFS "
                         "feed: <message>%1</message>. Fix this before publishing your plugin.",
-                        d->gtfsDatabaseErrorString), KMessageWidget::Error, -1,
+                        d->gtfsDatabaseErrorString), KMessageWidget::Error, -1, QString(), QString(),
                         QList<QAction*>() << projectAction(ShowGtfsDatabase) );
                 return;
             case GtfsDatabaseImportPending:
             default:
                 emit informationMessage( i18nc("@ịnfo", "Please import the GTFS feed before "
-                        "publishing your plugin."), KMessageWidget::Error, -1,
+                        "publishing your plugin."), KMessageWidget::Error, -1, QString(), QString(),
                         QList<QAction*>() << projectAction(ImportGtfsFeed)
                                           << projectAction(ShowGtfsDatabase) );
                 return;
@@ -6219,7 +6223,7 @@ void Project::publish()
                       "Please fix it using the <interface>Project Settings</interface> dialog "
                       "before publishing your plugin.",
                       TestModel::nameForTestCase(TestModel::ServiceProviderDataTestCase)),
-                KMessageWidget::Error, -1,
+                KMessageWidget::Error, -1, QString(), QString(),
                 QList<QAction*>() << projectAction(ShowProjectSettings) );
         return;
     }
@@ -6232,7 +6236,7 @@ void Project::publish()
                       "provider being used in the PublicTransport applet. "
                       "Please add at least one sample stop using the "
                       "<interface>Project Settings</interface> dialog before publishing "
-                      "your plugin."), KMessageWidget::Error, -1,
+                      "your plugin."), KMessageWidget::Error, -1, QString(), QString(),
                 QList<QAction*>() << projectAction(ShowProjectSettings) );
         return;
     }
@@ -6456,4 +6460,19 @@ void Project::slotDebugErrorMessage( const QString &message )
     QColor color = KColorScheme( QPalette::Active ).foreground( KColorScheme::NegativeText ).color();
     appendOutput( message, color );
     emit informationMessage( message, KMessageWidget::Error, -1 );
+}
+
+void Project::syntaxErrorFound( const QString &errorMessage, const QString &fileName )
+{
+    Q_D( Project );
+    ScriptTab *tab = fileName == d->provider->data()->scriptFileName()
+            ? scriptTab() : scriptTab( fileName );
+    if ( tab && tab->isVisible() ) {
+        // Show syntax errors only if the associated script tab is opened and visible,
+        // use KMessageWidget::Error, because for less severe errors the project needs
+        // to be active for the message to be shown
+        emit informationMessage( errorMessage, KMessageWidget::Error, 7000,
+                                 d->provider->id() + "syntax",
+                                 i18nc("@info", "Syntax errors resolved") );
+    }
 }

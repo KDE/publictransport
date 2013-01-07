@@ -70,7 +70,7 @@ public:
     static KAction *createPreviousFunctionAction( QObject *parent = 0 );
 
 signals:
-    void syntaxErrorFound( const QString &errorString );
+    void syntaxErrorFound( const QString &errorString, const QString &fileName );
     void canGoToPreviousFunctionChanged( bool canGo );
     void canGoToNextFunctionChanged( bool canGo );
     void showDocumentation( const QString &key );

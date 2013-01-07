@@ -78,8 +78,6 @@ void JavaScriptModel::needTextHint( const KTextEditor::Cursor &position, QString
 
     QList<CompletionItem> items = m_javaScriptCompletionModel->completionItemsFromId( node->id() );
     if ( items.isEmpty() || !items.first().isValid() || items.first().description.isEmpty() ) {
-        kDebug() << "No completion item found for" << node->id();
-
         // Show what information is available for the code node
         text.clear();
         CodeNode *currentNode = node.data();

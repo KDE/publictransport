@@ -80,7 +80,7 @@ CodeNode *CodeNode::childFromPosition( int lineNumber, int column ) const
 JavaScriptParser::JavaScriptParser( const QString &code )
 {
     m_code = code;
-    m_hasError = false;
+    m_error = NoError;
     m_errorLine = -1;
     m_errorColumn = 0;
     m_nodes = parse();
@@ -94,9 +94,26 @@ JavaScriptParser::~JavaScriptParser()
 QString JavaScriptParser::Token::whitespacesBetween( const JavaScriptParser::Token* token1,
                                                      const JavaScriptParser::Token* token2 )
 {
+    if ( !token1 || !token2 ) {
+        kWarning() << "Null token given" << token1 << token2;
+        return QString();
+    }
+
+    // WARNING It is important that this function returns an empty string if there actually is no
+    // whitespace between the two tokens in the document and a non-empty string if there is
+    // whitespace. Otherwise parsing may fail, because it falsely thinks that eg. "//" is not the
+    // beginning of a comment (two tokens "/").
+    // If there is whitespace it is less important what it exactly looks like. This is only used to
+    // get the original document text back from the parser result.
     const int newLines = token2->line - token1->line;
-    return newLines > 0 ? QString(newLines, '\n')
-                        : QString(token2->posStart - token1->posEnd, ' ');
+    if ( newLines > 0 ) {
+        // Return newlines and spaces until token2
+        // (spaces after token1 but before the newline are ignored)
+        return QString( newLines, '\n' ) + QString( token2->posStart, ' ' );
+    } else {
+        // Both tokens are on the same line, return spaces between them
+        return QString( token2->posStart - token1->posEnd - 1, ' ' );
+    }
 }
 
 bool JavaScriptParser::tryMoveToNextToken()
@@ -113,6 +130,7 @@ bool JavaScriptParser::tryMoveToNextToken()
 
 void JavaScriptParser::moveToNextToken()
 {
+    Q_ASSERT( !atEnd() );
     m_lastToken = currentToken();
     ++m_it;
 }
@@ -132,7 +150,7 @@ CodeNode::Ptr JavaScriptParser::parseComment()
         if ( currentToken()->isChar('/') ) {
             for ( moveToNextToken(); !atEnd() && currentToken()->line == curToken->line;
                   moveToNextToken() )
-                {
+            {
                 text += whitespaceSinceLastToken();
                 text += currentToken()->text;
             }
@@ -347,7 +365,7 @@ bool JavaScriptParser::isKeyword( const QString &text )
                    "with)").exactMatch(text.toLower());
 }
 
-CodeNode::Ptr JavaScriptParser::parseStatement()
+CodeNode::Ptr JavaScriptParser::parseStatement( bool calledFromParseBlock )
 {
     if ( atEnd() ) {
         return CodeNode::Ptr( 0 );
@@ -392,7 +410,9 @@ CodeNode::Ptr JavaScriptParser::parseStatement()
             }
             // TODO Do not go to next token, because the current '}'-token should be read by a
             // calling function
-//             moveToNextToken();
+            if ( !calledFromParseBlock ) {
+                moveToNextToken();
+            }
             return CodeNode::Ptr(
                     new StatementNode(text, firstToken->line, firstToken->posStart,
                                       m_lastToken->line, m_lastToken->posEnd, children) );
@@ -536,7 +556,8 @@ CodeNode::Ptr JavaScriptParser::parseFunction()
         }
     } else if ( !isAnonymous ) {
         name = currentToken()->text;
-        if ( !tryMoveToNextToken() ) { m_it = lastIt;
+        if ( !tryMoveToNextToken() ) {
+            m_it = lastIt;
             return CodeNode::Ptr( 0 );
         }
         isAnonymous = false;
@@ -621,18 +642,28 @@ BlockNode::Ptr JavaScriptParser::parseBlock()
         }
         while ( !atEnd() ) {
             CodeNode::Ptr node( 0 );
+            Token *previousToken = currentToken();
             if ( (node = parseComment())
-                || (!m_hasError && (node = parseString()))
-                || (!m_hasError && (node = parseBracketed()))
-                || (!m_hasError && (node = parseFunction()))
-                || (!m_hasError && (node = parseBlock())) )
+                || (!hasError() && (node = parseString()))
+                || (!hasError() && (node = parseBracketed()))
+                || (!hasError() && (node = parseFunction()))
+                || (!hasError() && (node = parseBlock())) )
             {
+                if ( !atEnd() && previousToken == currentToken() ) {
+                    kWarning() << "JavaScript parser locked down at line" << previousToken->line
+                               << "at token" << previousToken->text;
+                    m_error = InternalParserError;
+                    m_errorLine = node->line();
+                    m_errorColumn = node->column();
+                    m_errorMessage = i18nc("@info/plain", "Internal JavaScript parser error" );
+                    break;
+                }
                 children << node;
             } else if ( !atEnd() && currentToken()->isChar('}') ) {
                 moveToNextToken(); // Move to next token, ie. first token after the function definition (or EOF)
                 return BlockNode::Ptr( new BlockNode(firstToken->line, firstToken->posEnd,
                         m_lastToken->line, m_lastToken->posEnd, children) );
-            } else if ( (node = parseStatement()) ) {
+            } else if ( (node = parseStatement(true)) ) {
                 children << node;
             } else if ( !atEnd() ) {
                 moveToNextToken();
@@ -653,12 +684,12 @@ QList< CodeNode::Ptr > JavaScriptParser::parse()
 
     // Get token from the code, with line number and column begin/end
     m_token.clear();
-    QString alpha( "abcdefghijklmnopqrstuvwxyz_" );
+    const QString alphaNumeric( "abcdefghijklmnopqrstuvwxyz0123456789_" );
     QRegExp rxTokenBegin( "\\S" );
     QRegExp rxTokenEnd( "\\s|[-=#!$%&~;:,<>^`´/\\.\\+\\*\\\\\\(\\)\\{\\}\\[\\]'\"\\?\\|]" );
-    QStringList lines2 = m_code.split( '\n' );
-    for ( int lineNr = 0; lineNr < lines2.count(); ++lineNr ) {
-        QString line = lines2.at( lineNr );
+    const QStringList lines = m_code.split( '\n' );
+    for ( int lineNr = 0; lineNr < lines.count(); ++lineNr ) {
+        const QString line = lines.at( lineNr );
         QStringList words;
 
         int posStart = 0;
@@ -666,12 +697,12 @@ QList< CodeNode::Ptr > JavaScriptParser::parse()
             int posEnd;
             bool isName;
             // Only words beginning with a letter ([a-z]) may be concatenated
-            if ( !alpha.contains(line.at(posStart).toLower()) ) {
-                posEnd = posStart + 1;
-                isName = false;
-            } else {
+            if ( alphaNumeric.contains(line.at(posStart).toLower()) ) {
                 posEnd = rxTokenEnd.indexIn( line, posStart + 1 );
                 isName = true;
+            } else {
+                posEnd = posStart + 1;
+                isName = false;
             }
             if ( posEnd == -1 ) {
                 posEnd = line.length();
@@ -694,15 +725,23 @@ QList< CodeNode::Ptr > JavaScriptParser::parse()
     while ( !atEnd() ) {
         CodeNode::Ptr node( 0 );
         if ( (node = parseComment())
-            || (!m_hasError && (node = parseString()))
-            || (!m_hasError && (node = parseBracketed()))
-            || (!m_hasError && (node = parseFunction()))
-            || (!m_hasError && (node = parseBlock()))
-            || (!m_hasError && (node = parseStatement())) )
+            || (!hasError() && (node = parseString()))
+            || (!hasError() && (node = parseBracketed()))
+            || (!hasError() && (node = parseFunction()))
+            || (!hasError() && (node = parseBlock()))
+            || (!hasError() && (node = parseStatement())) )
         {
+            if ( !atEnd() && currentToken() == m_lastToken ) {
+                m_error = InternalParserError;
+                m_errorLine = node->line();
+                m_errorColumn = node->column();
+                m_errorMessage = i18nc("@info/plain", "Internal JavaScript parser error");
+                break;
+            }
+
             nodes << CodeNode::Ptr(node);
 
-            if ( m_hasError ) {
+            if ( hasError() ) {
                 break;
             }
         } else if ( !atEnd() ) {
@@ -738,11 +777,11 @@ QList< CodeNode::Ptr > JavaScriptParser::parse()
 void JavaScriptParser::setErrorState( const QString& errorMessage, int errorLine,
                       int errorColumn, int affectedLine )
 {
-    if ( m_hasError ) {
+    if ( hasError() ) {
         return; // Don't override existing errors
     }
 
-    m_hasError = true;
+    m_error = SyntaxError;
     m_errorLine = errorLine;
     m_errorAffectedLine = affectedLine;
 
@@ -751,7 +790,7 @@ void JavaScriptParser::setErrorState( const QString& errorMessage, int errorLine
 }
 
 void JavaScriptParser::clearError() {
-    m_hasError = false;
+    m_error = NoError;
     m_errorLine = -1;
     m_errorAffectedLine = -1;
     m_errorColumn = 0;

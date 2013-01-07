@@ -68,7 +68,6 @@
 #include <KMenu>
 #include <KMenuBar>
 #include <KToolBar>
-#include <KStatusBar>
 #include <KFileDialog>
 #include <KInputDialog>
 #include <KConfigDialog>
@@ -179,7 +178,7 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
         m_backtraceDock(0), m_consoleDock(0), m_outputDock(0), m_breakpointDock(0),
         m_variablesDock(0),
 #endif
-        m_showDocksAction(0), m_toolbarAction(0), m_statusbarAction(0), m_recentFilesAction(0),
+        m_showDocksAction(0), m_toolbarAction(0), m_recentFilesAction(0),
         m_currentTab(0), m_messageWidgetLayout(new QVBoxLayout()), m_downloadDialog(0)
 {
     m_partManager = new KParts::PartManager( this );
@@ -1365,9 +1364,6 @@ void TimetableMate::showDocumentation( const QString &key )
 }
 
 void TimetableMate::currentTabChanged( int index ) {
-    // Clear status bar messages
-    statusBar()->showMessage( QString() );
-
     AbstractTab *tab = index == -1 ? 0 : qobject_cast<AbstractTab*>(m_tabWidget->widget(index));
     if ( tab ) {
         // Go to project source or script tab
@@ -1828,8 +1824,8 @@ void TimetableMate::projectAdded( Project *project )
     connect( project, SIGNAL(tabTitleChanged(QWidget*,QString,QIcon)),
              this, SLOT(tabTitleChanged(QWidget*,QString,QIcon)) );
     connect( project, SIGNAL(testStarted()), this, SLOT(removeAllMessageWidgets()) );
-    connect( project, SIGNAL(informationMessage(QString,KMessageWidget::MessageType,int,QList<QAction*>)),
-             this, SLOT(infoMessage(QString,KMessageWidget::MessageType,int,QList<QAction*>)) );
+    connect( project, SIGNAL(informationMessage(QString,KMessageWidget::MessageType,int,QString,QString,QList<QAction*>)),
+             this, SLOT(infoMessage(QString,KMessageWidget::MessageType,int,QString,QString,QList<QAction*>)) );
     connect( project, SIGNAL(closeRequest()), this, SLOT(projectCloseRequest()) );
     connect( project, SIGNAL(tabCloseRequest(AbstractTab*)), this, SLOT(closeTab(AbstractTab*)) );
     connect( project, SIGNAL(otherTabsCloseRequest(AbstractTab*)),
@@ -1908,7 +1904,8 @@ void TimetableMate::removeAllMessageWidgets()
 }
 
 void TimetableMate::infoMessage( const QString &message, KMessageWidget::MessageType type,
-                                 int timeout, QList<QAction*> actions )
+                                 int timeout, const QString &messageGroup,
+                                 const QString &resolveMessage, QList<QAction*> actions )
 {
     // Do not show messages from inactive projects, except for error messages
     Project *project = qobject_cast< Project* >( sender() );
@@ -1916,30 +1913,29 @@ void TimetableMate::infoMessage( const QString &message, KMessageWidget::Message
         return;
     }
 
-    if ( statusBar()->isVisible() ) {
-        statusBar()->showMessage( message, timeout );
-    } else {
-        if ( !m_messageWidgets.isEmpty() ) {
-            QPointer< KMessageWidget > messageWidget = m_messageWidgets.last();
-            while ( !messageWidget.data() ) {
-                m_messageWidgets.removeOne( messageWidget );
-                if ( m_messageWidgets.isEmpty() ) {
-                    messageWidget = 0;
-                    break;
-                }
-                messageWidget = m_messageWidgets.last();
+    if ( !m_messageWidgets.isEmpty() ) {
+        QPointer< KMessageWidget > messageWidget = m_messageWidgets.last();
+        while ( !messageWidget.data() ) {
+            m_messageWidgets.removeOne( messageWidget );
+            if ( m_messageWidgets.isEmpty() ) {
+                messageWidget = 0;
+                break;
             }
-
-            if ( messageWidget && messageWidget->messageType() == type &&
-                 messageWidget->text() == message )
-            {
-                // The same message was just added
-                return;
-            }
+            messageWidget = m_messageWidgets.last();
         }
 
+        if ( messageWidget && messageWidget->messageType() == type &&
+             messageWidget->text() == message )
+        {
+            // The same message was just added
+            return;
+        }
+    }
+
+    if ( !replaceMessage(messageGroup, message, resolveMessage) ) {
         // Create a new KMessageWidget
         QPointer< KMessageWidget > messageWidget( new KMessageWidget(message, this) );
+        messageWidget->setObjectName( messageGroup );
         messageWidget->hide();
         messageWidget->setCloseButtonVisible( true );
         messageWidget->setMessageType( type );
@@ -1958,8 +1954,7 @@ void TimetableMate::infoMessage( const QString &message, KMessageWidget::Message
 
         // Add a timer to remove the message widget again
         if ( timeout > 0 ) {
-            m_autoRemoveMessageWidgets.enqueue( messageWidget );
-            QTimer::singleShot( timeout, this, SLOT(removeTopMessageWidget()) );
+            hideMessageWidgetLater( messageWidget, timeout );
         }
 
         // Clear up the message widget queue, if there are too many messages shown
@@ -1973,14 +1968,105 @@ void TimetableMate::infoMessage( const QString &message, KMessageWidget::Message
     }
 }
 
-void TimetableMate::removeTopMessageWidget()
+uint qHash( const QPointer< KMessageWidget > &messageWidget )
+{
+    return qHash( messageWidget.data() );
+}
+
+void TimetableMate::hideMessageWidgetLater( const QPointer< KMessageWidget > &messageWidget,
+                                            int timeout )
+{
+    QTimer *timer = timerFromMessageWidget( messageWidget );
+    if ( !timer ) {
+        timer = new QTimer( this );
+        connect( timer, SIGNAL(timeout()), this, SLOT(removeMessageWidget()) );
+        timer->setSingleShot( true );
+        m_autoRemoveMessageWidgets.insert( messageWidget, timer );
+    }
+    timer->start( timeout );
+}
+
+QTimer *TimetableMate::timerFromMessageWidget( const QPointer<KMessageWidget> &messageWidget )
+{
+    return m_autoRemoveMessageWidgets.value( messageWidget, 0 );
+}
+
+QPointer<KMessageWidget> TimetableMate::messageWidgetFromTimer( QTimer *timer )
+{
+    return m_autoRemoveMessageWidgets.key( timer );
+}
+
+bool TimetableMate::hasMessagesOfGroup( const QString &messageGroup ) const
+{
+    QQueue< QPointer<KMessageWidget> >::ConstIterator it = m_messageWidgets.constBegin();
+    while ( it != m_messageWidgets.constEnd() ) {
+        if ( (*it)->objectName() == messageGroup ) {
+            return true;
+        }
+        ++it;
+    }
+    return false;
+}
+
+void TimetableMate::removeMessages( const QString &messageGroup, const QString &resolveMessage )
+{
+    if ( messageGroup.isEmpty() ) {
+        return;
+    }
+
+    for ( int i = 0; i < m_messageWidgets.count(); ++i ) {
+        const QPointer<KMessageWidget> &messageWidget = m_messageWidgets[i];
+        if ( messageWidget->objectName() == messageGroup ) {
+            messageWidget->animatedHide();
+            m_messageWidgets.removeAt( i );
+
+            if ( !resolveMessage.isEmpty() ) {
+                infoMessage( resolveMessage, KMessageWidget::Positive, 1000, messageGroup );
+            }
+            break; // Only one message widget per group
+        }
+    }
+}
+
+bool TimetableMate::replaceMessage( const QString &messageGroup, const QString &newMessage,
+                                    const QString &resolveMessage )
+{
+    if ( newMessage.isEmpty() ) {
+        // No new message text, remove old messages of the group
+        removeMessages( messageGroup, resolveMessage );
+        return true;
+    }
+
+    // Update the text shown in the message group
+    QQueue< QPointer<KMessageWidget> >::ConstIterator it = m_messageWidgets.constBegin();
+    while ( it != m_messageWidgets.constEnd() ) {
+        if ( (*it)->objectName() == messageGroup ) {
+            (*it)->setText( newMessage );
+
+            // Restart the timer to hide the message widget
+            hideMessageWidgetLater( *it );
+            return true;
+        }
+        ++it;
+    }
+
+    return false;
+}
+
+void TimetableMate::removeMessageWidget()
 {
     if ( m_autoRemoveMessageWidgets.isEmpty() ) {
         return;
     }
 
     // Hide the widget and then delete it (give 1 second for the hide animation)
-    QPointer<KMessageWidget> messageWidget = m_autoRemoveMessageWidgets.dequeue();
+    QTimer *timer = qobject_cast< QTimer* >( sender() );
+    QPointer<KMessageWidget> messageWidget = messageWidgetFromTimer( timer );
+    if ( !messageWidget ) {
+        kWarning() << "Cannot find message widget associated to timer" << timer;
+        return;
+    }
+
     m_messageWidgets.removeOne( messageWidget );
     if ( messageWidget.data() ) {
         messageWidget->animatedHide();
@@ -2059,11 +2145,11 @@ Project *TimetableMate::openProject( const QString &filePath )
     // Create project and try to load it,
     // before loading it connect to the info message signal for error messages while reading
     Project *project = new Project( m_projectModel->weaver(), this );
-    connect( project, SIGNAL(informationMessage(QString,KMessageWidget::MessageType,int,QList<QAction*>)),
-             this, SLOT(infoMessage(QString,KMessageWidget::MessageType,int,QList<QAction*>)) );
+    connect( project, SIGNAL(informationMessage(QString,KMessageWidget::MessageType,int,QString,QString,QList<QAction*>)),
+             this, SLOT(infoMessage(QString,KMessageWidget::MessageType,int,QString,QString,QList<QAction*>)) );
     project->loadProject( filePath );
-    disconnect( project, SIGNAL(informationMessage(QString,KMessageWidget::MessageType,int,QList<QAction*>)),
-                this, SLOT(infoMessage(QString,KMessageWidget::MessageType,int,QList<QAction*>)) );
+    disconnect( project, SIGNAL(informationMessage(QString,KMessageWidget::MessageType,int,QString,QString,QList<QAction*>)),
+                this, SLOT(infoMessage(QString,KMessageWidget::MessageType,int,QString,QString,QList<QAction*>)) );
     if ( project->state() == Project::ProjectSuccessfullyLoaded ) {
         if ( !project->filePath().isEmpty() ) {
             m_recentFilesAction->addUrl( project->filePath() );

@@ -911,7 +911,9 @@ signals:
     /** @brief Emitted when @p message should be shown eg. in the status bar. */
     void informationMessage( const QString &message,
                              KMessageWidget::MessageType type = KMessageWidget::Information,
-                             int timeout = 4000, QList<QAction*> actions = QList<QAction*>() );
+                             int timeout = 4000, const QString &messageGroup = QString(),
+                             const QString &resolveMessage = QString(),
+                             QList<QAction*> actions = QList<QAction*>() );
 
     /** @brief Emitted when this project gets actived/deactived. */
     void activeProjectStateChanged( bool isActiveProject );
@@ -1135,6 +1137,7 @@ protected slots:
     void slotTabCloseRequest();
     void slotOtherTabsCloseRequest();
     void slotModifiedStateChanged();
+    void syntaxErrorFound( const QString &errorMessage, const QString &fileName );
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
     void jobStarted( JobType type, const QString &useCase, const QString &objectName );

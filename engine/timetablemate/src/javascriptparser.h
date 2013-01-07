@@ -141,6 +141,7 @@ public:
     typedef QSharedPointer<MultilineNode> Ptr;
 
     MultilineNode( const QString &text, int line, int colStart, int lineEnd, int colEnd );
+    virtual QString id() const { return "multiline:" + m_text; };
 
     /** @brief The last line of this node. */
     virtual int endLine() const { return m_endLine; };
@@ -175,7 +176,7 @@ public:
     EmptyNode();
 
     virtual NodeType type() const { return NoNodeType; };
-    virtual QString id() const { return QString(); };
+    virtual QString id() const { return "<empty>"; };
     void setText( const QString &text ) { m_text = text; };
 };
 
@@ -210,6 +211,7 @@ public:
     QString content() const { return m_text; };
 
     virtual NodeType type() const { return Comment; };
+    virtual QString id() const { return "comment:" + m_text; };
     virtual QString toString( bool shortString = false ) const {
         Q_UNUSED( shortString );
         return isMultiline() ? "/*" + m_text + "*/" : "//" + m_text;
@@ -262,6 +264,7 @@ public:
     QString content() const { return m_text; };
 
     virtual NodeType type() const { return Bracketed; };
+    virtual QString id() const { return "bracketed:" + m_text; };
     virtual QString toString( bool shortString = false ) const {
         Q_UNUSED( shortString );
         return m_bracketChar + m_text + closingBracketChar();
@@ -314,6 +317,7 @@ public:
                const QList< CodeNode::Ptr > &children );
 
     virtual NodeType type() const { return Block; };
+    virtual QString id() const { return "block:" + m_text; };
     virtual QString toString( bool shortString = false ) const;
     virtual QString content() const;
 };
@@ -364,10 +368,16 @@ private:
 /** @brief Parses java script code. */
 class JavaScriptParser {
 public:
+    enum ErrorType {
+        NoError = 0,
+        InternalParserError = 1,
+        SyntaxError = 2
+    };
+
     /** @brief Creates a new parser object and parses the given @p code.
      * @see nodes
      * @see hasError */
-    JavaScriptParser( const QString &code );
+    explicit JavaScriptParser( const QString &code );
 
     virtual ~JavaScriptParser();
 
@@ -377,8 +387,11 @@ public:
     /** @returns the parsed list of nodes. */
     QList< CodeNode::Ptr > nodes() const { return m_nodes; };
 
-    /** Wheather or not there was an error while parsing. */
-    bool hasError() const { return m_hasError; };
+    /** @brief Get the type of the error, if any. */
+    ErrorType errorType() const { return m_error; };
+
+    /** @brief Wheather or not there was an error while parsing. */
+    inline bool hasError() const { return m_error != NoError; };
 
     /** @returns a message for the error, if any.
      * @see hasError */
@@ -400,6 +413,7 @@ public:
     bool isKeyword( const QString &text );
 
 private:
+    /** @brief Represents one token read from JavaScript source code. */
     struct Token {
         // Constructs an invalid Token
         Token() { };
@@ -414,12 +428,27 @@ private:
 
         bool isValid() const { return !text.isEmpty(); };
         bool isChar( const QChar &ch ) const { return text.length() == 1 && text.at(0) == ch; };
+
+        /** @brief Get a string with whitespaces found between @p token1 and @p token2. */
         static QString whitespacesBetween( const Token *token1, const Token *token2 );
 
+        /** @brief The text read as one token, eg. "1223", "abcd", "/", ".", etc. */
         QString text;
+
+        /** @brief Whether or not this token is a name, eg. "abcd". */
         bool isName;
+
+        /** @brief The line number of the token. */
         int line;
-        int posStart, posEnd;
+
+        /** @brief The position of the first character of the token. */
+        int posStart;
+
+        /**
+         * @brief The position of the last character of the token.
+         * @note If the token contains only one character @c posEnd equals @c posStart.
+         **/
+        int posEnd;
     };
 
     QList< CodeNode::Ptr > parse();
@@ -428,11 +457,11 @@ private:
     CodeNode::Ptr parseBracketed();
     CodeNode::Ptr parseFunction(); // Parse a function declaration (not a function call)
     BlockNode::Ptr parseBlock();
-    CodeNode::Ptr parseStatement();
+    CodeNode::Ptr parseStatement( bool calledFromParseBlock = false );
 
     inline bool atEnd() const { return m_it == m_token.constEnd(); };
     inline Token *currentToken() const {
-//         Q_ASSERT( !atEnd() );
+        Q_ASSERT( !atEnd() );
         return *m_it;
     };
     inline QString whitespaceSinceLastToken() const {
@@ -455,7 +484,7 @@ private:
     QList<Token*>::const_iterator m_it;
     Token *m_lastToken;
 
-    bool m_hasError;
+    ErrorType m_error;
     QString m_errorMessage;
     int m_errorLine;
     int m_errorAffectedLine;

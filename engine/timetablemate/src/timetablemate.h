@@ -228,7 +228,13 @@ protected slots:
     void activeProjectChanged( Project *project, Project *previousProject );
     void infoMessage( const QString &message,
                       KMessageWidget::MessageType type = KMessageWidget::Information,
-                      int timeout = 4000, QList<QAction*> actions = QList<QAction*>() );
+                      int timeout = 4000, const QString &messageGroup = QString(),
+                      const QString &resolveMessage = QString(),
+                      QList<QAction*> actions = QList<QAction*>() );
+    void removeMessages( const QString &messageGroup, const QString &resolveMessage = QString() );
+    bool replaceMessage( const QString &messageGroup, const QString &newMessage,
+                         const QString &resolveMessage = QString() );
+    bool hasMessagesOfGroup( const QString &messageGroup ) const;
     void removeAllMessageWidgets();
     void testActionTriggered();
     void testCaseActionTriggered();
@@ -266,7 +272,7 @@ protected slots:
 #endif
 
     void updateWindowTitle();
-    void removeTopMessageWidget();
+    void removeMessageWidget();
     void tabNextActionTriggered();
     void tabPreviousActionTriggered();
 
@@ -348,6 +354,11 @@ private:
 
     bool hasHomePageURL( const ServiceProviderData *data );
 
+    void hideMessageWidgetLater( const QPointer<KMessageWidget> &messageWidget,
+                                 int timeout = 4000 );
+    QTimer *timerFromMessageWidget( const QPointer<KMessageWidget> &messageWidget );
+    QPointer<KMessageWidget> messageWidgetFromTimer( QTimer *timer );
+
     Ui::preferences *ui_preferences;
 
     ProjectModel *m_projectModel; // Contains all opened projects
@@ -381,17 +392,18 @@ private:
     // Pointers to specific actions
     KActionMenu *m_showDocksAction;
     KToggleAction *m_toolbarAction;
-    KToggleAction *m_statusbarAction;
     KRecentFilesAction *m_recentFilesAction;
     QList< QAction* > m_testCaseActions;
 
     AbstractTab *m_currentTab; // Stores a pointer to the current tab, if any
     QQueue< QPointer<KMessageWidget> > m_messageWidgets;
-    QQueue< QPointer<KMessageWidget> > m_autoRemoveMessageWidgets;
+    QHash< QPointer<KMessageWidget>, QTimer* > m_autoRemoveMessageWidgets;
     QVBoxLayout *m_messageWidgetLayout;
 
     KNS3::DownloadDialog *m_downloadDialog;
 };
+
+uint qHash( const QPointer<KMessageWidget> &messageWidget );
 
 #endif // _TIMETABLEMATE_H_
 

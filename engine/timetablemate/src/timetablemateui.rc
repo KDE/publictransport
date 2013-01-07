@@ -1,5 +1,5 @@
 <!DOCTYPE kpartgui SYSTEM "kpartgui.dtd">
-<kpartgui name="timetablemate" version="8">
+<kpartgui name="timetablemate" version="9">
 <!-- The menu bar shows non-standard menus at first: "Project", "Run" and "Test".
      After these menus a separator is inserted, followed by menus from the active part
      and another separator. After the part menus, the "Settings" and "Help" menus are appended.
@@ -89,7 +89,6 @@
         <Action name="options_show_toolbar"/>
         <Action name="options_show_docks" />
         <Merge name="StandardToolBarMenuHandler" />
-        <Action name="options_show_statusbar"/>
         <DefineGroup name="show_merge" append="show_merge"/>
         <Separator/>
         <Action name="options_configure_keybinding"/>

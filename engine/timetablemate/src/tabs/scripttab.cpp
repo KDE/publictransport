@@ -505,8 +505,6 @@ void ScriptTab::documentChanged( KTextEditor::Document *document )
 
     // Begin parsing after delay
     m_backgroundParserTimer->start( 500 );
-
-//     setModified();
 }
 
 bool ScriptTab::save()
@@ -557,24 +555,42 @@ void ScriptTab::parseScript()
     if ( markInterface ) {
         markInterface->clearMarks(); // TODO Only remove error marks
 
-        if ( parser.hasError() ) {
+        // The internal parser found no errors, but it's not made to find syntax errors,
+        // use QScriptEngine to find more syntax errors
+        QScriptSyntaxCheckResult result = QScriptEngine::checkSyntax( document()->text() );
+        if ( result.state() == QScriptSyntaxCheckResult::Error ) {
+            const QString errorMessage = result.errorMessage().isEmpty()
+                    ? i18nc("@info", "Syntax error") : result.errorMessage();
+            if ( fileName() != project()->scriptFileName() ) {
+                emit syntaxErrorFound( i18nc("@info",
+                        "Syntax error in <filename>%1</filename> line %2: <message>%3</message>",
+                        QFileInfo(fileName()).fileName(), result.errorLineNumber(),
+                        result.errorMessage()), fileName() );
+            } else {
+                emit syntaxErrorFound( i18nc("@info",
+                        "Syntax error in line %1: <message>%2</message>",
+                        result.errorLineNumber(), result.errorMessage()), fileName() );
+            }
+        } else if ( parser.hasError() ) {
             markInterface->addMark( parser.errorLine() - 1, KTextEditor::MarkInterface::Error );
             if ( parser.errorAffectedLine() != -1 ) {
                 markInterface->addMark( parser.errorAffectedLine() - 1,
                                 KTextEditor::MarkInterface::Warning );
             }
 
-            emit syntaxErrorFound( i18nc("@info:status",
-                    "Syntax error in line %1, column %2: <message>%3</message>",
-                    parser.errorLine(), parser.errorColumn(), parser.errorMessage()) );
-//             setError( ScriptSyntaxError, i18nc("@info:status",
-//                       "Syntax error in line %1, column %2: <message>%3</message>",
-//                       parser.errorLine(), parser.errorColumn(), parser.errorMessage()) );
-//             document()->views().first()->setCursorPosition( parser.errorCursor() );
-//             project()->emitInformationMessage( i18nc("@info:status",
-//                     "Syntax error in line %1, column %2: <message>%3</message>",
-//                     parser.errorLine(), parser.errorColumn(), parser.errorMessage()),
-//                     KMessageWidget::Error, 0 );
+            if ( fileName() != project()->scriptFileName() ) {
+                emit syntaxErrorFound( i18nc("@info",
+                        "Syntax error in <filename>%1</filename> line %2: <message>%3</message>",
+                        QFileInfo(fileName()).fileName(), parser.errorLine(),
+                        parser.errorMessage()), fileName() );
+            } else {
+                emit syntaxErrorFound( i18nc("@info",
+                        "Syntax error in line %1: <message>%2</message>",
+                        parser.errorLine(), parser.errorMessage()), fileName() );
+            }
+        } else {
+            // Clear syntax error messages
+            emit syntaxErrorFound( QString(), fileName() );
         }
     } else {
         project()->emitInformationMessage( i18nc("@info:status", "No syntax errors found."),
