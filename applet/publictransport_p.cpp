@@ -1333,7 +1333,7 @@ void PublicTransportAppletPrivate::onDepartureDataStateChanged()
         if ( settings.departureArrivalListType() == ArrivalList ) {
             noItemsText = i18nc("@info/plain", "Waiting for arrivals...");
         } else {
-            noItemsText = i18nc("@info/plain", "Waiting for depatures...");
+            noItemsText = i18nc("@info/plain", "Waiting for departures...");
         }
         busy = model->isEmpty();
     } else if ( isStateActive("departureDataInvalid") ) {
