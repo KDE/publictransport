@@ -183,7 +183,7 @@ bool ScriptObjects::attachToEngine( QScriptEngine *engine, const ScriptData &dat
             ? engine->undefinedValue() : engine->newQObject(storage.data()), flags );
     engine->globalObject().setProperty( "result", result.isNull()
             ? engine->undefinedValue() : engine->newQObject(result.data()), flags );
-    engine->globalObject().setProperty( "enum",
+    engine->globalObject().setProperty( "enums",
             engine->newQMetaObject(&ResultObject::staticMetaObject), flags );
     engine->globalObject().setProperty( "PublicTransport",
             engine->newQMetaObject(&Enums::staticMetaObject), flags );

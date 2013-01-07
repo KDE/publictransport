@@ -2221,16 +2221,16 @@ RouteStopFlags DepartureItem::routeStopFlags( int routeStopIndex, int *minsFromF
     if ( routeStopIndex < m_departureInfo.routeTimes().count()
         && m_departureInfo.routeTimes()[routeStopIndex].isValid() )
     {
-        const QTime time = m_departureInfo.routeTimes()[routeStopIndex];
+        const QDateTime time = m_departureInfo.routeTimes()[routeStopIndex];
         int _minsFromFirstRouteStop =
-                qCeil( m_departureInfo.departure().time().secsTo(time) / 60.0 );
+                qCeil( m_departureInfo.departure().secsTo(time) / 60.0 );
 
         if ( _minsFromFirstRouteStop == 0 ) {
             if ( routeStopIndex == 0 ) {
                 isFirstZeroMinuteStop = true;
             } else {
                 // Check if the previous stop has the same departure time
-                const QTime previousTime = m_departureInfo.routeTimes()[routeStopIndex - 1];
+                const QDateTime previousTime = m_departureInfo.routeTimes()[routeStopIndex - 1];
                 isFirstZeroMinuteStop = previousTime != time;
             }
         }
@@ -2267,7 +2267,7 @@ RouteStopFlags JourneyItem::arrivalRouteStopFlags( int routeStopIndex, int route
 
 RouteStopFlags JourneyItem::routeStopFlags( int routeStopIndex, int routeSubStopIndex,
                                             int* minsFromFirstRouteStop,
-                                            const QList< QTime >& times )
+                                            const QList< QDateTime >& times )
 {
     RouteStopFlags routeStopFlags;
 
@@ -2287,11 +2287,8 @@ RouteStopFlags JourneyItem::routeStopFlags( int routeStopIndex, int routeSubStop
     // Get time information
     int _minsFromFirstRouteStop = -1;
     if ( routeStopIndex < times.count() && times[routeStopIndex].isValid() ) {
-        QTime time = times[routeStopIndex];
-        _minsFromFirstRouteStop = qCeil( m_journeyInfo.departure().time().secsTo(time) / 60 );
-        while ( _minsFromFirstRouteStop < 0 ) {
-            _minsFromFirstRouteStop += 60 * 24;
-        }
+        QDateTime time = times[routeStopIndex];
+        _minsFromFirstRouteStop = qCeil( m_journeyInfo.departure().secsTo(time) / 60 );
     }
 
     const QString stopName = m_journeyInfo.routeStops()[ routeStopIndex ];

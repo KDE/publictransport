@@ -92,10 +92,13 @@ void NetworkRequest::abort()
     m_reply->abort();
     m_reply->deleteLater();
     m_reply = 0;
+    const QString url = m_url;
+    const QVariant userData = m_userData;
     m_mutex->unlockInline();
 
     emit aborted( timedOut );
-    emit finished( QByteArray(), true, i18nc("@info/plain", "The request was aborted") );
+    emit finished( QByteArray(), true, i18nc("@info/plain", "The request was aborted"),
+                   -1, 0, url, userData );
 }
 
 void NetworkRequest::slotReadyRead()
@@ -237,9 +240,11 @@ void NetworkRequest::slotFinished()
 
     m_isFinished = true;
     const QByteArray data = m_data;
+    const QString url = m_url;
+    const QVariant userData = m_userData;
     m_mutex->unlockInline();
 
-    emit finished( data, hasError, errorString, statusCode, size );
+    emit finished( data, hasError, errorString, statusCode, size, url, userData );
 }
 
 void NetworkRequest::started( QNetworkReply* reply, int timeout )
@@ -745,7 +750,6 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
                              Enums::VehicleType defaultVehicleType, const GlobalTimetableInfo *globalInfo,
                              ResultObject::Features features, ResultObject::Hints hints )
 {                               // TODO Use features and hints
-    Q_UNUSED( features );
     QDate curDate;
     QTime lastTime;
     int dayAdjustment = hints.testFlag(DatesNeedAdjustment)
@@ -763,8 +767,8 @@ void ResultObject::dataList( const QList< TimetableData > &dataList,
 
     // This is the range of occurrences of one word in stop names,
     // that causes that word to be removed
-    const int minWordOccurrence = 10;
-    const int maxWordOccurrence = 30;
+    const int minWordOccurrence = qMax( 2, dataList.count() );
+    const int maxWordOccurrence = qMax( 3, dataList.count() / 2 );
 
     // This regular expression gets used to search for word at the end, possibly including
     // a colon before the last word
@@ -2126,6 +2130,7 @@ int ResultObject::count() const
 ResultObject::Features ResultObject::features() const
 {
     QMutexLocker locker( m_mutex );
+    kDebug() << m_features;
     return m_features;
 }
 
@@ -2321,6 +2326,18 @@ quint64 NetworkRequest::uncompressedSize() const
 {
     QMutexLocker locker( m_mutex );
     return m_uncompressedSize;
+}
+
+void NetworkRequest::setUserData( const QVariant &userData )
+{
+    QMutexLocker locker( m_mutex );
+    m_userData = userData;
+}
+
+QVariant NetworkRequest::userData() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_userData;
 }
 
 #include "scriptapi.moc"

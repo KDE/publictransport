@@ -352,19 +352,21 @@ QList<Enums::ProviderFeature> ServiceProviderGtfs::features() const
     return features;
 }
 
-QTime ServiceProviderGtfs::timeFromSecondsSinceMidnight(
-        int secondsSinceMidnight, QDate *date ) const
+QDateTime ServiceProviderGtfs::timeFromSecondsSinceMidnight(
+        const QDate &dateAtMidnight, int secondsSinceMidnight, QDate *date ) const
 {
     const int secondsInOneDay = 60 * 60 * 24;
+    QDate resultDate = dateAtMidnight;
     while ( secondsSinceMidnight >= secondsInOneDay ) {
         secondsSinceMidnight -= secondsInOneDay;
+        resultDate.addDays( 1 );
         if ( date ) {
             date->addDays( 1 );
         }
     }
-    return QTime( secondsSinceMidnight / (60 * 60),
-                  (secondsSinceMidnight / 60) % 60,
-                  secondsSinceMidnight % 60 );
+    return QDateTime( resultDate, QTime(secondsSinceMidnight / (60 * 60),
+                                        (secondsSinceMidnight / 60) % 60,
+                                        secondsSinceMidnight % 60) );
 }
 
 bool ServiceProviderGtfs::isGtfsFeedImportFinished( const QString &providerId,
@@ -612,8 +614,7 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
     // Create a list of DepartureInfo objects from the query result
     DepartureInfoList departures;
     while ( query.next() ) {
-        QDate arrivalDate = request->dateTime().date();
-        QDate departureDate = request->dateTime().date();
+        const QDate dateAtMidnight = request->dateTime().date();
 
         // Load agency information from cache
         const QVariant agencyIdValue = query.value( agencyIdColumn );
@@ -626,10 +627,8 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
         int arrivalTimeValue = query.value(arrivalTimeColumn).toInt();
         int departureTimeValue = query.value(departureTimeColumn).toInt();
 
-        QDateTime arrivalTime( arrivalDate,
-                               timeFromSecondsSinceMidnight(arrivalTimeValue, &arrivalDate) );
-        QDateTime departureTime( departureDate,
-                                 timeFromSecondsSinceMidnight(departureTimeValue, &departureDate) );
+        QDateTime arrivalTime = timeFromSecondsSinceMidnight( dateAtMidnight, arrivalTimeValue );
+        QDateTime departureTime = timeFromSecondsSinceMidnight( dateAtMidnight, departureTimeValue );
 
         // Apply timezone offset
         int offsetSeconds = agency ? agency->timeZoneOffset() : 0;
@@ -666,7 +665,7 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
         const QStringList routeTimeValues = query.value(routeTimesColumn).toString().split( routeSeparator );
         QVariantList routeTimes;
         foreach ( const QString routeTimeValue, routeTimeValues ) {
-            routeTimes << timeFromSecondsSinceMidnight( routeTimeValue.toInt(), &arrivalDate );
+            routeTimes << timeFromSecondsSinceMidnight( dateAtMidnight, routeTimeValue.toInt() );
         }
         data[ Enums::RouteTimes ] = routeTimes;
 

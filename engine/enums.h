@@ -195,7 +195,7 @@ public:
         * A list of times of the departure / arrival to it's destination stop. If @ref RouteStops and
         * @ref RouteTimes are both set, they should contain the same number of elements. And elements
         * with equal indices should be associated (the times at which the vehicle is at the stops).
-        * Can contain list elements of type QTime (ie. QtScript Date) or QString in format "hh:mm".
+        * Can contain list elements of type QDateTime (ie. QtScript Date).
         **/
         RouteTimes = 24,
 
@@ -204,7 +204,7 @@ public:
         * are both set, the latter should contain one elements less (because the last stop has no
         * departure, only an arrival time). Elements with equal indices should be associated (the
         * times at which the vehicle departs from the stops).
-        * Can contain list elements of type QTime (ie. QtScript Date) or QString in format "hh:mm".
+        * Can contain list elements of type QDateTime (ie. QtScript Date).
         **/
         RouteTimesDeparture = 25,
 
@@ -213,7 +213,7 @@ public:
         * both set, the latter should contain one elements less (because the first stop has no
         * arrival, only a departure time). Elements with equal indices should be associated (the
         * times at which the vehicle arrives at the stops).
-        * Can contain list elements of type QTime (ie. QtScript Date) or QString in format "hh:mm".
+        * Can contain list elements of type QDateTime (ie. QtScript Date).
         **/
         RouteTimesArrival = 26,
 

@@ -396,7 +396,7 @@ protected:
     qreal rating() const;
 
     RouteStopFlags routeStopFlags( int routeStopIndex, int routeSubStopIndex,
-                                   int *minsFromFirstRouteStop, const QList<QTime> &times );
+                                   int *minsFromFirstRouteStop, const QList<QDateTime> &times );
 
     JourneyInfo m_journeyInfo;
 };

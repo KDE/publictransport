@@ -155,6 +155,18 @@ public:
 
     quint64 uncompressedSize() const;
 
+    /**
+     * @brief Set custom @p userData for the request.
+     *
+     * This data is available to slots connected to the finished() signal.
+     **/
+    Q_INVOKABLE void setUserData( const QVariant &userData );
+
+    /**
+     * @brief Get custom user data stored with setUserData().
+     **/
+    Q_INVOKABLE QVariant userData() const;
+
 public Q_SLOTS:
     /**
      * @brief Aborts this (running) request.
@@ -184,9 +196,12 @@ Q_SIGNALS:
      * @param errorString A human readable description of the error if @p error is @c true.
      * @param statusCode The HTTP status code that was received or -1 if there was an error.
      * @param size The size in bytes of the received data.
+     * @param url The URL of the request.
+     * @param userData Custom data stored for the request, see setUserData().
      **/
     void finished( const QByteArray &data = QByteArray(), bool error = false,
-                   const QString &errorString = QString(), int statusCode = -1, int size = 0 );
+                   const QString &errorString = QString(), int statusCode = -1, int size = 0,
+                   const QString &url = QString(), const QVariant &userData = QVariant() );
 
     /**
      * @brief Emitted when new data is available for this request.
@@ -220,6 +235,7 @@ private:
     QByteArray m_data;
     QByteArray m_postData;
     quint32 m_uncompressedSize;
+    QVariant m_userData;
 };
 /** \} */ // @ingroup scriptApi
 

@@ -46,10 +46,11 @@ var __hafas_routedata = function(hafas) {
             *   the HAFAS provider.
             * @return {Object} An object with these properties: RouteStops, RouteTimes.
             **/
-            parseXml: function( xml, stop, firstTime ) {
+            parseXml: function( xml, values ) {
+                print( "parseXml" );
                 if ( !HafasPrivate.expectFormat(Hafas.XmlFormat, xml) ) {
                     if ( HafasPrivate.isHtml(xml) ) {
-                        return processor.parser.parseHtml( xml, stop, firstTime );
+                        return processor.parser.parseHtml( xml, values );
                     } else {
                         throw Error( "File is not in XML format" );
                     }
@@ -71,8 +72,8 @@ var __hafas_routedata = function(hafas) {
                 // Find all <St> tags, which contain information about intermediate stops
                 var stopNodes = docElement.elementsByTagName("St");
                 var routeData = { RouteStops: [], RouteTimes: [] };
-                var inRange = firstTime == undefined;
-                var lastTime;
+                var inRange = values.dateTime == undefined || values.dataType == "arrivals";
+                var lastTime, firstDate = new Date;
                 for ( var i = 0; i < stopNodes.count(); ++i ) {
                     // Get the <St> tag for the current intermediate stop
                     var node = stopNodes.at( i ).toElement();
@@ -91,54 +92,73 @@ var __hafas_routedata = function(hafas) {
                     }
                     var timeString = departure.length < 5 ? arrival : departure;
                     var delay = departure.length < 5 ? arrivalDelay : departureDelay;
-                    var timeValue, timeValueWithDelay;
+                    var timeValue; //, timeValueWithDelay;
                     var validTimeFound = false;
                     if ( timeString.length < 5 ) {
                         // No time given for the current intermediate stop
-                        if ( i == 0 && firstTime != undefined ) {
+                        if ( i == 0 && values.dateTime != undefined ) {
                             // Use "first time" for the first route stop if available
-                            timeValue = firstTime;
+                            timeValue = values.dateTime;
                         } else {
                             // The HTML versions simply do not show such stops,
                             // create an invalid Date object for the stop here
                             timeValue = new Date( "unknown" );
                         }
-                        timeValueWithDelay = timeValue;
+//                         timeValueWithDelay = timeValue;
                     } else {
                         time = helper.matchTime( timeString, "hh:mm" );
                         if ( time.error ) {
                             helper.warning( "Hafas.routeData.parseXml(): Could not match route time: '" + timeString + "'", timeString );
                             continue;
                         }
-                        if ( firstTime == undefined ) {
-                            timeValue = new Date();
-                            timeValue.setHours( time.hour, time.minute, 0, 0 );
-                        } else {
-                            timeValue = new Date( firstTime.getFullYear(), firstTime.getMonth(),
-                                                  firstTime.getDate(), time.hour, time.minute, 0, 0 );
-                        }
+                        timeValue = typeof(lastTime) != 'undefined'
+                            ? new Date(lastTime.getFullYear(), lastTime.getMonth(), lastTime.getDate())
+                            : new Date(firstDate.getFullYear(), firstDate.getMonth(), firstDate.getDate());
+                        timeValue.setHours( time.hour, time.minute, 0, 0 );
+
                         if ( typeof(lastTime) != 'undefined' && timeValue < lastTime ) {
+                            // Assume departures to be sorted by date and time
                             // Add one day
+                            print( "  (will add one day)" );
                             timeValue.setTime( timeValue.getTime() + 24 * 60 * 60 * 1000 );
+                        }
+
+                        if ( values.dataType == "arrivals" &&
+                            routeData.RouteStops.length == 0 &&
+                            timeValue.getTime() >= values.dateTime.getTime() )
+                        {
+                            // No arrival route stops collected, but the current route time
+                            // is after the departure time from the home stop, which follows
+                            // later, subtract one day to correct the date
+                            print( "  (will subtract one day)" );
+                            timeValue.setTime( timeValue.getTime() - 24 * 60 * 60 * 1000 );
                         }
 
                         // Simply add delays to the time value,
                         // route stop delays are currently only supported for journeys
-                        timeValueWithDelay = timeValue;
-                        if ( delay > 0 ) {
-                            timeValueWithDelay.setTime( timeValue.getTime() + delay * 60 * 1000 );
-                        }
+//                         timeValueWithDelay = timeValue;
+//                         if ( delay > 0 ) {
+//                             timeValueWithDelay.setTime( timeValue.getTime() + delay * 60 * 1000 );
+//                         }
 
                         validTimeFound = true;
                         lastTime = timeValue;
                     }
 
-                    if ( inRange || routeStop == stop ||
-                         (validTimeFound && timeValue.getTime() >= firstTime.getTime()) )
+                    if ( inRange || routeStop == values.stop ||
+                         (values.dataType == "departures" && validTimeFound &&
+                          timeValue.getTime() >= values.dateTime.getTime()) )
                     {
                         inRange = true;
                         routeData.RouteStops.push( routeStop );
-                        routeData.RouteTimes.push( timeValueWithDelay );
+                        routeData.RouteTimes.push( timeValue );
+//                         routeData.RouteTimesDelay.push( delay ); // TODO
+                    }
+                    if ( inRange && values.dataType == "arrivals" &&
+                         timeValue.getTime() >= values.dateTime.getTime() )
+                    {
+                        // Last route stop for arrivals, ie. the home stop
+                        break;
                     }
                 }
 
@@ -153,11 +173,12 @@ var __hafas_routedata = function(hafas) {
             * @param {String} document Contents of a train info document in HTML text format received
             *   from the HAFAS provider.
             * @param {String} stop The name of the stop of the departure, should one of the
-            *    found route stops
+            *    found route stops TODO
             * @param {Date} [firstTime] Date and time of the departure at stop
             * @return {Object} An object with these properties: RouteStops, RouteTimes.
             **/
-            parseHtml: function( html, stop, firstTime ) {
+            parseHtml: function( html, values ) {
+                print( "parseHtml" );
                 var options = HafasPrivate.prepareOptions( processor.options, hafas.options );
                 html = helper.decode( html, options.charset(Hafas.HtmlFormat) );
 
@@ -170,7 +191,7 @@ var __hafas_routedata = function(hafas) {
 
                 var routeData = { RouteStops: [], RouteTimes: [] };
                 var trainRow = { position: -1 };
-                var inRange = firstTime == undefined;
+                var inRange = values.dateTime == undefined;
                 var lastTime;
                 while ( (trainRow = helper.findFirstHtmlTag(trainBlock.contents, "tr",
                     {position: trainRow.position + 1})).found )
@@ -210,12 +231,14 @@ var __hafas_routedata = function(hafas) {
                         continue;
                     }
                     var timeValue;
-                    if ( firstTime == undefined ) {
+                    if ( values.dateTime == undefined ) {
                         timeValue = new Date();
                         timeValue.setHours( time.hour, time.minute, 0, 0 );
                     } else {
-                        timeValue = new Date( firstTime.getFullYear(), firstTime.getMonth(),
-                                              firstTime.getDate(), time.hour, time.minute, 0, 0 );
+                        timeValue = new Date( values.dateTime.getFullYear(),
+                                              values.dateTime.getMonth(),
+                                              values.dateTime.getDate(),
+                                              time.hour, time.minute, 0, 0 );
                     }
                     if ( typeof(lastTime) != 'undefined' && timeValue < lastTime ) {
                         // Add one day
@@ -224,8 +247,8 @@ var __hafas_routedata = function(hafas) {
                     lastTime = timeValue;
 
                     var routeStop = helper.stripTags( columns["station"].contents );
-                    if ( inRange || routeStop == stop ||
-                         timeValue.getTime() >= firstTime.getTime() )
+                    if ( inRange || routeStop == values.stop ||
+                         timeValue.getTime() >= values.dateTime.getTime() )
                     {
                         inRange = true;
                         routeData.RouteStops.push( routeStop );

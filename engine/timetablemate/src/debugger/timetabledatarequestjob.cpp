@@ -737,8 +737,8 @@ bool TimetableDataRequestJob::testDepartureData( const DepartureRequest *request
             // Check if RouteTimesDeparture has one element less than RouteStops
             // and if RouteTimesDepartureDelay has the same number of elements as RouteStops (if set)
             const QStringList routeStops = values[Enums::RouteStops].toStringList();
-            if ( values.contains(Enums::RouteTimes) && !values[Enums::RouteTimes].toStringList().isEmpty() ) {
-                const QStringList routeTimes = values[Enums::RouteTimes].toStringList();
+            if ( values.contains(Enums::RouteTimes) && !values[Enums::RouteTimes].toList().isEmpty() ) {
+                const QVariantList routeTimes = values[Enums::RouteTimes].toList();
                 if ( routeTimes.count() != routeStops.count() ) {
                     m_additionalMessages << message( NotSameNumberOfItems, Enums::RouteTimes, Enums::RouteStops,
                                                      routeTimes.count(), routeStops.count() );

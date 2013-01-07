@@ -78,8 +78,8 @@ struct PUBLICTRANSPORTHELPER_EXPORT RouteSubJourney {
             const QStringList &routeNews = QStringList(),
             const QStringList &routePlatformsDeparture = QStringList(),
             const QStringList &routePlatformsArrival = QStringList(),
-            const QList<QTime> &routeTimesDeparture = QList<QTime>(),
-            const QList<QTime> &routeTimesArrival = QList<QTime>(),
+            const QList<QDateTime> &routeTimesDeparture = QList<QDateTime>(),
+            const QList<QDateTime> &routeTimesArrival = QList<QDateTime>(),
             const QList<int> &routeTimesDepartureDelay = QList<int>(),
             const QList<int> &routeTimesArrivalDelay = QList<int>() );
 
@@ -87,7 +87,7 @@ struct PUBLICTRANSPORTHELPER_EXPORT RouteSubJourney {
 
     QStringList routeStops, routeStopsShortened, routeTransportLines,
             routePlatformsDeparture, routePlatformsArrival, routeNews;
-    QList<QTime> routeTimesDeparture, routeTimesArrival;
+    QList<QDateTime> routeTimesDeparture, routeTimesArrival;
     QList<int> routeTimesDepartureDelay, routeTimesArrivalDelay;
 };
 
@@ -113,8 +113,8 @@ public:
             const QStringList &routePlatformsDeparture = QStringList(),
             const QStringList &routePlatformsArrival = QStringList(),
             const QVariantList &routeVehicleTypes = QVariantList(),
-            const QList<QTime> &routeTimesDeparture = QList<QTime>(),
-            const QList<QTime> &routeTimesArrival = QList<QTime>(),
+            const QList<QDateTime> &routeTimesDeparture = QList<QDateTime>(),
+            const QList<QDateTime> &routeTimesArrival = QList<QDateTime>(),
             const QList<int> &routeTimesDepartureDelay = QList<int>(),
             const QList<int> &routeTimesArrivalDelay = QList<int>(),
             const QList<RouteSubJourney> &routeSubJourneys = QList<RouteSubJourney>(),
@@ -131,8 +131,8 @@ public:
             const QStringList &routePlatformsDeparture = QStringList(),
             const QStringList &routePlatformsArrival = QStringList(),
             const QList<VehicleType> &routeVehicleTypes = QList<VehicleType>(),
-            const QList<QTime> &routeTimesDeparture = QList<QTime>(),
-            const QList<QTime> &routeTimesArrival = QList<QTime>(),
+            const QList<QDateTime> &routeTimesDeparture = QList<QDateTime>(),
+            const QList<QDateTime> &routeTimesArrival = QList<QDateTime>(),
             const QList<int> &routeTimesDepartureDelay = QList<int>(),
             const QList<int> &routeTimesArrivalDelay = QList<int>(),
             const QList<RouteSubJourney> &routeSubJourneys = QList<RouteSubJourney>(),
@@ -200,8 +200,8 @@ public:
     QStringList routeTransportLines() const { return m_routeTransportLines; };
     QStringList routePlatformsDeparture() const { return m_routePlatformsDeparture; };
     QStringList routePlatformsArrival() const { return m_routePlatformsArrival; };
-    QList<QTime> routeTimesDeparture() const { return m_routeTimesDeparture; };
-    QList<QTime> routeTimesArrival() const { return m_routeTimesArrival; };
+    QList<QDateTime> routeTimesDeparture() const { return m_routeTimesDeparture; };
+    QList<QDateTime> routeTimesArrival() const { return m_routeTimesArrival; };
     QList<int> routeTimesDepartureDelay() const { return m_routeTimesDepartureDelay; };
     QList<int> routeTimesArrivalDelay() const { return m_routeTimesArrivalDelay; };
     QStringList routeNews() const { return m_routeNews; };
@@ -226,8 +226,8 @@ private:
                const QStringList &routePlatformsDeparture = QStringList(),
                const QStringList &routePlatformsArrival = QStringList(),
                const QList<VehicleType> &routeVehicleTypes = QList<VehicleType>(),
-               const QList<QTime> &routeTimesDeparture = QList<QTime>(),
-               const QList<QTime> &routeTimesArrival = QList<QTime>(),
+               const QList<QDateTime> &routeTimesDeparture = QList<QDateTime>(),
+               const QList<QDateTime> &routeTimesArrival = QList<QDateTime>(),
                const QList<int> &routeTimesDepartureDelay = QList<int>(),
                const QList<int> &routeTimesArrivalDelay = QList<int>(),
                const QList<RouteSubJourney> &routeSubJourneys = QList<RouteSubJourney>(),
@@ -243,7 +243,7 @@ private:
     int m_duration, m_changes, m_routeExactStops;
     QStringList m_routeStops, m_routeStopsShortened, m_routeTransportLines,
         m_routePlatformsDeparture, m_routePlatformsArrival, m_routeNews;
-    QList<QTime> m_routeTimesDeparture, m_routeTimesArrival;
+    QList<QDateTime> m_routeTimesDeparture, m_routeTimesArrival;
     QList<int> m_routeTimesDepartureDelay, m_routeTimesArrivalDelay;
     QList<RouteSubJourney> m_routeSubJourneys;
     QList<int> m_matchedAlarms;
@@ -284,7 +284,7 @@ public:
                    const QString &journeyNews = QString(),
                    const QStringList &routeStops = QStringList(),
                    const QStringList &routeStopsShortened = QStringList(),
-                   const QList<QTime> &routeTimes = QList<QTime>(),
+                   const QList<QDateTime> &routeTimes = QList<QDateTime>(),
                    int routeExactStops = 0 ) : PublicTransportInfo()
     {
         LineServices lineServices = NoLineService;
@@ -414,9 +414,9 @@ public:
     /** @returns a list of intermediate, shortened stop names. */
     QStringList routeStopsShortened() const { return m_routeStopsShortened; };
 
-    /** @returns a list of QTime objects. Each time corresponds to the stop
+    /** @returns a list of QDateTime objects. Each time corresponds to the stop
      * in @ref routeStops with the same index. */
-    QList<QTime> routeTimes() const { return m_routeTimes; };
+    QList<QDateTime> routeTimes() const { return m_routeTimes; };
 
     /** @returns the number of exact stops in @ref routeStops. Some of the
      * following stops have been omitted. */
@@ -437,7 +437,7 @@ private:
                const QString &journeyNews = QString(),
                const QStringList &routeStops = QStringList(),
                const QStringList &routeStopsShortened = QStringList(),
-               const QList<QTime> &routeTimes = QList<QTime>(), int routeExactStops = 0 );
+               const QList<QDateTime> &routeTimes = QList<QDateTime>(), int routeExactStops = 0 );
 
     void generateHash();
 
@@ -450,7 +450,7 @@ private:
     LineServices m_lineServices;
     QStringList m_routeStops;
     QStringList m_routeStopsShortened;
-    QList<QTime> m_routeTimes;
+    QList<QDateTime> m_routeTimes;
     int m_routeExactStops;
     DepartureFlags m_flags;
     QList< int > m_matchedAlarms;

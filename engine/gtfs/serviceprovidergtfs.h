@@ -269,7 +269,8 @@ private:
      **/
     static Enums::VehicleType vehicleTypeFromGtfsRouteType( int gtfsRouteType );
 
-    QTime timeFromSecondsSinceMidnight( int secondsSinceMidnight, QDate *date = 0 ) const;
+    QDateTime timeFromSecondsSinceMidnight( const QDate &dateAtMidnight,
+                                            int secondsSinceMidnight, QDate *date = 0 ) const;
 
     void loadAgencyInformation();
 

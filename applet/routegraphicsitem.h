@@ -149,7 +149,7 @@ public:
      * @param stopFlags Flags of this route stop, eg. whether or not this is the current home stop.
      **/
     RouteStopTextGraphicsItem( QGraphicsItem* parent, DepartureModel *model, const QFont &font,
-                               qreal baseSize, const QTime &time,
+                               qreal baseSize, const QDateTime &time,
                                const QString &stopName, const QString &stopNameShortened,
                                int minsFromFirstRouteStop,
                                RouteStopFlags stopFlags = RouteStopIsIntermediate );
@@ -181,7 +181,7 @@ public:
      *   relative to the first stop. At the first stop this is 0. Use the default value
      *   (999999) if the times isn't known.
      **/
-    void setStop( const QTime &time, const QString &stopName, const QString &stopNameShortened,
+    void setStop( const QDateTime &time, const QString &stopName, const QString &stopNameShortened,
                   int minsFromFirstRouteStop = 999999 );
 
     qreal expandStep() const { return m_expandStep; };

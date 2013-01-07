@@ -1489,7 +1489,7 @@ void PublicTransportApplet::departureContextMenuRequested( PublicTransportGraphi
                 const QString stopNameShortened = info->routeStopsShortened()[index];
 
                 // Get time information and route flags
-                QTime time;
+                QDateTime time;
                 int minsFromFirstRouteStop = 0;
                 if ( index < info->routeTimes().count() && info->routeTimes()[index].isValid() ) {
                     time = info->routeTimes()[index];

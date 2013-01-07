@@ -56,6 +56,8 @@ var __hafas_timetable = function(hafas) {
             var url = processor.url( values, options );
             var userUrl = processor.userUrl( values, options );
             var request = network.createRequest( url, userUrl );
+            // Store dataType to know in parser function whether arrivals or departures were requested
+            request.setUserData( values.dataType );
             request.finished.connect( processor.parser.parserByFormat(options.format) );
             HafasPrivate.startRequest( request, processor.addPostData, values, options );
         },
@@ -129,7 +131,7 @@ var __hafas_timetable = function(hafas) {
             * @param {String} errorString A human readable description of the error, if any.
             * @return {Boolean} True, if departures/arrivals were found, false otherwise.
             **/
-            parseXml: function( xml, hasError, errorString ) {
+            parseXml: function( xml, hasError, errorString, statusCode, size, url, userData ) {
                 if ( hasError ) {
                     throw Error( errorString );
                 }
@@ -178,8 +180,18 @@ var __hafas_timetable = function(hafas) {
                     }
                     date.setHours( time.hour, time.minute, 0, 0 );
                     departure.DepartureDateTime = date;
+
+                    // Use "dir" attribute as target for departures if available.
+                    // For arrivals the "dir" attribute is still the direction to the target,
+                    // but an origin is needed for arrivals. The origin is available as "targetLoc"
+                    // for arrivals and can contain city names.
                     var target = node.attributeNode("targetLoc").nodeValue();
-                    departure.Target = node.hasAttribute("dir") ? node.attributeNode("dir").nodeValue() : target;
+                    var isShortDirAvailable = userData != "arrivals" && node.hasAttribute("dir");
+                    departure.Target = isShortDirAvailable
+                            ? node.attributeNode("dir").nodeValue() : target;
+                    if ( !isShortDirAvailable ) {
+                        result.enableFeature( enums.AutoRemoveCityFromStopNames, true );
+                    }
 
                     var transportLine, vehicleType;
                     var product = node.attributeNode("prod").nodeValue();
@@ -249,7 +261,7 @@ var __hafas_timetable = function(hafas) {
             * @param {String} errorString A human readable description of the error, if any.
             * @return {Boolean} True, if departures/arrivals were found, false otherwise.
             **/
-            parseXmlResC: function( xml, hasError, errorString ) {
+            parseXmlResC: function( xml, hasError, errorString, statusCode, size, url, userData ) {
                 if ( hasError ) {
                     throw Error( errorString );
                 }
@@ -539,7 +551,7 @@ var __hafas_timetable = function(hafas) {
                         ? values.routeDataUrl : "";
                 if ( routeDataUrl.length == 0 ) {
                     // No RouteDataUrl value given, get it from HTML data source or the cache
-                    var key = "lastTrainData_" + values.stop;
+                    var key = "lastTrainData_" + values.dataType + "_" + values.stop;
                     var findRouteDataUrl = function( items, values ) {
                         for ( i = 0; i < items.length; ++i ) {
                             if ( items[i].DepartureDateTime.getTime() == values.dateTime.getTime() &&
@@ -571,14 +583,17 @@ var __hafas_timetable = function(hafas) {
                         // TODO Journeys
                         // First get an URL to the mobile version of the departure board
                         // which contains traininfo.exe URLs
-                        var urlValues = values;
+                        var urlValues = HafasPrivate.cloneObject( values );
                         urlValues.count = options.batchSize;
+                        urlValues.dateTime = requestDateTime;
                         var url = processor.url( urlValues, options );
 
                         // Download and parse new data and add it to the old cached items
                         var data = network.getSynchronous( url, options.timeout );
                         var parser = processor.parser.parserByFormat( options.format );
-                        items = items.concat( parser(data) );
+                        // Parse data and tell the parser the dataType in values,
+                        // ie. "arrivals" or "departures"
+                        items = items.concat( parser(data, false, "", -1, 0, url, values) );
                         if ( items.length < 1 ) {
                             helper.error( "Could not find any traininfo.exe URL" );
                             return {};
@@ -606,7 +621,8 @@ var __hafas_timetable = function(hafas) {
                     var routeDocument = network.downloadSynchronous( routeDataUrl, options.timeout );
                     if ( !network.lastDownloadAborted ) {
                         var parser = hafas.routeData.parser.parserByFormat(hafas.routeData.options.format);
-                        return parser( routeDocument, values.stop, values.dateTime );
+                        print( "Parse route document" );
+                        return parser( routeDocument, values );
                     } else {
                         return {}; // Download was aborted
                     }

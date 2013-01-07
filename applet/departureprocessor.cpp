@@ -263,11 +263,11 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
 //     Q_ASSERT( departureJob->alreadyProcessed <= count );
     for ( int i = departureJob->alreadyProcessed; i < departuresData.count(); ++i ) {
         QVariantHash departureData = departuresData[ i ].toHash();
-        QList< QTime > routeTimes;
+        QList< QDateTime > routeTimes;
         if ( departureData.contains("RouteTimes") ) {
             QVariantList times = departureData[ "RouteTimes" ].toList();
             foreach( const QVariant &time, times ) {
-                routeTimes << time.toTime();
+                routeTimes << time.toDateTime();
             }
         }
 
@@ -359,17 +359,17 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
     }
     for ( int i = journeyJob->alreadyProcessed; i < journeysData.count(); ++i ) {
         QVariantHash journeyData = journeysData[i].toHash();
-        QList<QTime> routeTimesDeparture, routeTimesArrival;
+        QList<QDateTime> routeTimesDeparture, routeTimesArrival;
         if ( journeyData.contains( "RouteTimesDeparture" ) ) {
             QVariantList times = journeyData[ "RouteTimesDeparture" ].toList();
             foreach( const QVariant &time, times ) {
-                routeTimesDeparture << time.toTime();
+                routeTimesDeparture << time.toDateTime();
             }
         }
         if ( journeyData.contains( "RouteTimesArrival" ) ) {
             QVariantList times = journeyData[ "RouteTimesArrival" ].toList();
             foreach( const QVariant &time, times ) {
-                routeTimesArrival << time.toTime();
+                routeTimesArrival << time.toDateTime();
             }
         }
 
@@ -425,17 +425,17 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
                         routeSubTimesArrivalDelay << var.toInt();
                     }
                 }
-                QList<QTime> routeSubTimesDeparture, routeSubTimesArrival;
+                QList<QDateTime> routeSubTimesDeparture, routeSubTimesArrival;
                 if ( map.contains("RouteTimesDeparture") ) {
                     QVariantList times = map[ "RouteTimesDeparture" ].toList();
                     foreach( const QVariant &time, times ) {
-                        routeSubTimesDeparture << time.toTime();
+                        routeSubTimesDeparture << time.toDateTime();
                     }
                 }
                 if ( map.contains("RouteTimesArrival") ) {
                     QVariantList times = map[ "RouteTimesArrival" ].toList();
                     foreach( const QVariant &time, times ) {
-                        routeSubTimesArrival << time.toTime();
+                        routeSubTimesArrival << time.toDateTime();
                     }
                 }
                 routeSubJourneys << RouteSubJourney( map["RouteStops"].toStringList(),

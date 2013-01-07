@@ -193,27 +193,11 @@ void RouteGraphicsItem::arrangeStopItems()
             markerItem->setPos( stopMarkerPos );
 
             // Get time information
-            QTime time;
+            QDateTime time;
             int minsFromFirstRouteStop = -1;
             if ( i < info->routeTimes().count() && info->routeTimes()[i].isValid() ) {
                 time = info->routeTimes()[i];
-                minsFromFirstRouteStop = qCeil( info->departure().time().secsTo(time) / 60.0 );
-
-                // Fix number of minutes if the date changes between route stops
-                // NOTE This only works if the route extends over less than three days
-                if ( info->isArrival() ) {
-                    // Number of minutes should always be negative for arrivals
-                    // (time from home stop back in time to stop X)
-                    while ( minsFromFirstRouteStop > 0 ) {
-                        minsFromFirstRouteStop -= 24 * 60;
-                    }
-                } else {
-                    // Number of minutes should always be positive for departures
-                    // (time from home stop to stop X)
-                    while ( minsFromFirstRouteStop < 0 ) {
-                        minsFromFirstRouteStop += 24 * 60;
-                    }
-                }
+                minsFromFirstRouteStop = qCeil( info->departure().secsTo(time) / 60.0 );
             }
 
             qreal baseSize;
@@ -339,10 +323,10 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
                     QString stopText = info->routeStopsShortened()[omittedIndex];
 
                     // Prepend departure time at the current stop, if a time is given
-                    const QTime time = omittedIndex < info->routeTimes().count()
-                            ? info->routeTimes()[omittedIndex] : QTime();
+                    const QDateTime time = omittedIndex < info->routeTimes().count()
+                            ? info->routeTimes()[omittedIndex] : QDateTime();
                     if ( time.isValid() ) {
-                        stopText.prepend( KGlobal::locale()->formatTime(time) + ": " );
+                        stopText.prepend( KGlobal::locale()->formatTime(time.time()) + ": " );
                     } else {
                         kDebug() << "Invalid QTime in RouteTimes at index" << index;
                     }
@@ -396,10 +380,10 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
             }
 
             // Prepend departure time at the current stop, if a time is given
-            const QTime time = index < info->routeTimes().count()
-                    ? info->routeTimes()[index] : QTime();
+            const QDateTime time = index < info->routeTimes().count()
+                    ? info->routeTimes()[index] : QDateTime();
             if ( time.isValid() ) {
-                stopText.prepend( KGlobal::locale()->formatTime(time) + ": " );
+                stopText.prepend( KGlobal::locale()->formatTime(time.time()) + ": " );
             } else {
                 kDebug() << "Invalid QTime in RouteTimes at index" << index;
             }
@@ -682,7 +666,7 @@ RouteStopFlags JourneyRouteStopGraphicsItem::routeStopFlags() const
 }
 
 RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, DepartureModel *model,
-        const QFont &font, qreal baseSize, const QTime &time,
+        const QFont &font, qreal baseSize, const QDateTime &time,
         const QString &stopName, const QString &stopNameShortened,
         int minsFromFirstRouteStop, RouteStopFlags routeStopFlags )
         : QGraphicsWidget(parent), m_model(model)
@@ -695,7 +679,7 @@ RouteStopTextGraphicsItem::RouteStopTextGraphicsItem( QGraphicsItem* parent, Dep
     setAcceptHoverEvents( true );
 }
 
-void RouteStopTextGraphicsItem::setStop( const QTime &time, const QString &stopName,
+void RouteStopTextGraphicsItem::setStop( const QDateTime &time, const QString &stopName,
                                          const QString &stopNameShortened,
                                          int minsFromFirstRouteStop )
 {
@@ -707,7 +691,7 @@ void RouteStopTextGraphicsItem::setStop( const QTime &time, const QString &stopN
     qreal maxSize = QFontMetrics( font() ).width( m_stopText ) + 5;
     if ( maxSize > m_baseSize ) {
         if ( time.isValid() ) {
-            setToolTip( QString("%1: %2").arg(KGlobal::locale()->formatTime(time))
+            setToolTip( QString("%1: %2").arg(KGlobal::locale()->formatTime(time.time()))
                                          .arg(stopNameShortened) );
         } else {
             setToolTip( stopNameShortened );
@@ -1058,7 +1042,7 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
             }
 
             QStringList routePlatformsArrival, routePlatformsDeparture, routeNews;
-            QList<QTime> routeTimesArrival, routeTimesDeparture;
+            QList<QDateTime> routeTimesArrival, routeTimesDeparture;
             QList<int> routeTimesArrivalDelay, routeTimesDepartureDelay;
 
             if ( i < info->routeTimesDeparture().count() &&
@@ -1084,7 +1068,7 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
             }
 
             if ( i == 0 ) {
-                routeTimesArrival << QTime();
+                routeTimesArrival << QDateTime();
                 routeTimesArrivalDelay << -1;
                 routePlatformsArrival << QString();
             } else {
@@ -1114,12 +1098,12 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                 RouteStopFlags routeStopFlags = item->departureRouteStopFlags( i, n );
 
                 // Prepend departure time at the current stop, if a time is given
-                QTime departureTime = (n < routeTimesDeparture.count() && routeTimesDeparture[n].isValid())
-                        ? routeTimesDeparture[n] : QTime();
-                QTime arrivalTime = (n < routeTimesArrival.count() && routeTimesArrival[n].isValid())
-                        ? routeTimesArrival[n] : QTime();
+                QDateTime departureTime = (n < routeTimesDeparture.count() && routeTimesDeparture[n].isValid())
+                        ? routeTimesDeparture[n] : QDateTime();
+                QDateTime arrivalTime = (n < routeTimesArrival.count() && routeTimesArrival[n].isValid())
+                        ? routeTimesArrival[n] : QDateTime();
                 if ( arrivalTime.isValid() && arrivalTime != departureTime ) {
-                    QString timeString = KGlobal::locale()->formatTime(arrivalTime);
+                    QString timeString = KGlobal::locale()->formatTime(arrivalTime.time());
                     QString timeText( "<span style='font-weight:bold;'>" + timeString + "</span>" );
                     if ( n < routeTimesArrivalDelay.count() ) {
                         const int delay = routeTimesArrivalDelay[n];
@@ -1146,7 +1130,7 @@ void JourneyRouteGraphicsItem::updateData( JourneyItem* item )
                         }
                 }
                 if ( departureTime.isValid() ) {
-                    QString timeString = KGlobal::locale()->formatTime( departureTime );
+                    QString timeString = KGlobal::locale()->formatTime( departureTime.time() );
                     QString timeText( "<span style='font-weight:bold;'>" + timeString + "</span>" );
                     if ( n < routeTimesDepartureDelay.count() ) {
                         const int delay = routeTimesDepartureDelay[n];

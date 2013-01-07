@@ -91,8 +91,8 @@ PublicTransportInfo::PublicTransportInfo( const QHash< Enums::TimetableInformati
                 QVariantList vars = value( Enums::RouteTimes ).toList();
                 foreach ( const QVariant &var, vars ) {
                     // Convert from QVariant to QTime
-                    if ( !var.canConvert(QVariant::Time) || !var.toTime().isValid() ) {
-                        // Value for DepartureTime is not QTime
+                    if ( !var.canConvert(QVariant::DateTime) || !var.toDateTime().isValid() ) {
+                        // Value for DepartureTime is not QDateTime
                         kWarning() << "Invalid time in RouteTimes:" << var;
                         remove( Enums::RouteTimes );
                         break;
@@ -191,7 +191,7 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
             } else {
                 QVariantList vars = value( Enums::RouteTimesDeparture ).toList();
                 foreach( const QVariant &var, vars ) {
-                    if ( !var.canConvert(QVariant::Time) ) {
+                    if ( !var.canConvert(QVariant::DateTime) ) {
                         kWarning() << "Invalid time in RouteTimesDeparture" << var;
                         remove( Enums::RouteTimesDeparture );
                         break;
@@ -209,7 +209,7 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
             } else {
                 QVariantList vars = value( Enums::RouteTimesArrival ).toList();
                 foreach( const QVariant &var, vars ) {
-                    if ( !var.canConvert(QVariant::Time) ) {
+                    if ( !var.canConvert(QVariant::DateTime) ) {
                         kWarning() << "Invalid time in RouteTimesArrival" << var;
                         remove( Enums::RouteTimesArrival );
                         break;
@@ -316,14 +316,14 @@ DepartureInfo::DepartureInfo( const TimetableData &data, Corrections corrections
          value(Enums::RouteTimes).toList().count() != value(Enums::RouteStops).toStringList().count() )
     {
         int difference = value(Enums::RouteStops).toList().count() -
-                         value(Enums::RouteTimes).toStringList().count();
+                         value(Enums::RouteTimes).toList().count();
         if ( difference > 0 ) {
             // More route stops than times, add invalid times
             kDebug() << "The script stored" << difference << "more route stops than route times "
                         "for a departure, invalid route times will be added";
             QVariantList routeTimes = value( Enums::RouteTimes ).toList();
             while ( difference > 0 ) {
-                routeTimes << QTime();
+                routeTimes << QDateTime();
                 --difference;
             }
         } else {
