@@ -513,12 +513,6 @@ void PublicTransportApplet::departuresProcessed( const QString& sourceName,
 
     // Request additional data for new items
     if ( d->settings.additionalDataRequestType() == Settings::RequestAdditionalDataDirectly ) {
-        Plasma::Service *service = dataEngine("publictransport")->serviceForSource( sourceName );
-        if ( !service ) {
-            kWarning() << "No Timetable Service!";
-            return;
-        }
-
         int itemBegin = 999999999;
         int itemEnd = 0;
         foreach ( const DepartureInfo departure, departures ) {
@@ -530,6 +524,12 @@ void PublicTransportApplet::departuresProcessed( const QString& sourceName,
         }
 
         if ( itemBegin < 999999999 ) {
+            Plasma::Service *service = dataEngine("publictransport")->serviceForSource( sourceName );
+            if ( !service ) {
+                kWarning() << "No Timetable Service!";
+                return;
+            }
+
             KConfigGroup op = service->operationDescription("requestAdditionalDataRange");
             op.writeEntry( "itemnumberbegin", itemBegin );
             op.writeEntry( "itemnumberend", itemEnd );
@@ -1256,10 +1256,11 @@ void PublicTransportApplet::showMainWidget( QGraphicsWidget* mainWidget )
     // Cleanup previously used main widget, but never delete the departure/arrival timetable
     d->timetable->setVisible( d->isStateActive("departureView") ||
                               d->isStateActive("intermediateDepartureView") );
-    if ( !d->isStateActive("journeyView") ) {
+    if ( !d->isStateActive("journeyView") && d->journeyTimetable ) {
         d->journeyTimetable->deleteLater();
         d->journeyTimetable = 0;
-    } else if ( !d->isStateActive("journeySearch") ) {
+    }
+    if ( !d->isStateActive("journeySearch") && d->listStopSuggestions ) {
         d->listStopSuggestions->deleteLater();
         d->listStopSuggestions = 0;
     }
