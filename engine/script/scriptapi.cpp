@@ -410,7 +410,11 @@ NetworkRequest* Network::createRequest( const QString& url, const QString &userU
 {
     NetworkRequest *request = new NetworkRequest( url, userUrl, this, parent() );
     NetworkRequest::Ptr requestPtr( request );
+
+    m_mutex->lock();
     m_requests << requestPtr;
+    m_mutex->unlock();
+
     connect( request, SIGNAL(started()), this, SLOT(slotRequestStarted()) );
     connect( request, SIGNAL(finished(QByteArray,bool,QString,int,int)),
              this, SLOT(slotRequestFinished(QByteArray,bool,QString,int,int)) );
@@ -421,6 +425,7 @@ NetworkRequest* Network::createRequest( const QString& url, const QString &userU
 
 NetworkRequest::Ptr Network::getSharedRequest( NetworkRequest *request ) const
 {
+    QMutexLocker locker( m_mutex );
     foreach ( const NetworkRequest::Ptr &sharedRequest, m_requests ) {
         if ( sharedRequest.data() == request ) {
             return sharedRequest;
@@ -676,7 +681,6 @@ QByteArray Network::getSynchronous( const QString &url, const QString &userUrl, 
         emitSynchronousRequestFinished( url, QByteArray(), true, statusCode, time );
         return QByteArray();
     } else {
-        QMutexLocker locker( m_mutex );
         emitSynchronousRequestFinished( url, data, false, statusCode, time, data.size() );
         return data;
     }
@@ -1040,11 +1044,13 @@ void Helper::messageReceived( const QString& message, const QString &failedParse
     shortParseText = shortParseText.replace('\n', "\n    "); // Indent
 
 #ifdef ENABLE_DEBUG_SCRIPT_ERROR
+    m_mutex->lock();
     DEBUG_SCRIPT_ERROR( QString("Error in %1-script, function %2(), file %3, line %4")
             .arg(m_serviceProviderId)
             .arg(info.functionName().isEmpty() ? "[anonymous]" : info.functionName())
             .arg(QFileInfo(info.fileName()).fileName())
             .arg(info.lineNumber()) );
+    m_mutex->unlock();
     DEBUG_SCRIPT_ERROR( message );
     if ( !shortParseText.isEmpty() ) {
         DEBUG_SCRIPT_ERROR( QString("The text of the document where parsing failed is: \"%1\"")
@@ -2130,7 +2136,6 @@ int ResultObject::count() const
 ResultObject::Features ResultObject::features() const
 {
     QMutexLocker locker( m_mutex );
-    kDebug() << m_features;
     return m_features;
 }
 
