@@ -385,43 +385,20 @@ an update using the "requestUpdate" operation of the timetable service.</td></tr
 Each departure/arrival in the data received from the data engine (departureData in the code
 example) has the following keys:<br />
 <table>
-<tr><td><i>TransportLine</i></td> <td>QString</td> <td>The name of the public transport line,
-e.g. "S1", "6", "1E", "RB 24155".</td></tr>
-<tr><td><i>Target</i></td> <td>QString</td> <td>The name of the target / origin of the public
-transport line.</td></tr>
-<tr><td><i>DepartureDateTime</i></td> <td>QDateTime</td> <td>The date and time of the
-departure / arrival.</td></tr>
-<tr><td><i>TypeOfVehicle</i></td> <td>int</td> <td>An integer containing the ID of the vehicle type
-used for the departure/arrival. When you are using libpublictransporthelper, you can cast this ID
-to PublicTransport::VehicleType and get more information about the vehicle type using the static
-functions of PublicTransport::Global. Alternatively you can use the "VehicleTypes" data source,
-it stores vehicle type information in a hash with vehicle type ID's as keys.
-See also @ref usage_vehicletypes_sec. </td></tr>
-<tr><td><i>Nightline</i></td> <td>bool</td> <td>Wheather or not the public transport line
-is a night line.</td></tr>
-<tr><td><i>Expressline</i></td> <td>bool</td> <td>Wheather or not the public transport line
-is an express line.</td></tr>
-<tr><td><i>Platform</i></td> <td>QString</td> <td>The platform from/at which the vehicle
-departs/arrives.</td></tr>
-<tr><td><i>Delay</i></td> <td>int</td> <td>The delay in minutes, 0 means 'on schedule',
--1 means 'no delay information available'.</td></tr>
-<tr><td><i>DelayReason</i></td> <td>QString</td> <td>The reason of a delay.</td></tr>
-<tr><td><i>Status</i></td> <td>QString</td> <td>The status of the departure, if available.</td></tr>
-<tr><td><i>JourneyNews</i></td> <td>QString</td> <td>News for the journey.</td></tr>
-<tr><td><i>Operator</i></td> <td>QString</td>
-<td>The company that is responsible for the journey.</td></tr>
-<tr><td><i>RouteStops</i></td> <td>QStringList</td> <td>A list of stops of the departure/arrival
-to it's destination stop or a list of stops of the journey from it's start to it's destination stop.
-If 'routeStops' and 'routeTimes' are both set, they contain the same number of elements.
-And elements with equal indices are associated (the times at which the vehicle is at the stops).
-</td></tr>
-<tr><td><i>RouteTimes</i></td> <td>QList< QTime > (stored as QVariantList)</td>
-<td>A list of times of the departure/arrival to it's destination stop. If 'routeStops' and
-'routeTimes' are both set, they contain the same number of elements. And elements with
-equal indices are associated (the times at which the vehicle is at the stops).</td></tr>
-<tr><td><i>RouteExactStops</i></td> <td>int</td> <td>The number of exact route stops.
-The route stop list is not complete from the last exact route stop.</td></tr>
+<tr><td><i>additionalDataState</i></td> <td>QString</td>
+<td>A string to identify different states of additional data for this item. Currently these states
+are available: @em "notsupported" (the provider does not support any additional data),
+@em "notrequested" (additional data was not yet requested, but the provider supports it),
+@em "included" (additional data is included for this item, ie. in the following fields),
+@em "busy" (additional data was requested but is not yet ready), @em "error" (there was an error
+when getting additional data for this item, see @em additionalDataError. </td></tr>
+<tr><td><i>additionalDataError</i></td> <td>QString</td> <td>An error message if
+@em additionalDataState is @em "error" , otherwise an empty string. </td></tr>
 </table>
+
+The actual data of the timetable items is stored in fields named after the enumerables in
+Enums::TimetableInformation. A departure/arrival at least has a @em "DepartureDateTime",
+a @em "VehicleType" and a @em "Target" field.
 
 @note The service provider may not load all data by default. To load missing data
   ("additional data"), use the timetable service's operation "requestAdditionalData",
