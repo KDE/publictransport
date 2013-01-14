@@ -297,6 +297,9 @@ QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
                 if ( engine.globalObject().property(SCRIPT_FUNCTION_GETJOURNEYS).isValid() ) {
                     features << Enums::ProvidesJourneys;
                 }
+                if ( engine.globalObject().property(SCRIPT_FUNCTION_GETADDITIONALDATA).isValid() ) {
+                    features << Enums::ProvidesAdditionalData;
+                }
 
                 // Test if features() script function is available
                 if ( !engine.globalObject().property(SCRIPT_FUNCTION_FEATURES).isValid() ) {
