@@ -197,13 +197,13 @@ protected:
     /** @brief Perform the job. */
     virtual void run();
 
-    /** @brief Return a pointer to the object containing inforamtion about the request of this job. */
+    /** @brief Return a pointer to the object containing information about the request of this job. */
     virtual const AbstractRequest* request() const = 0;
 
     /** @brief Load @p script into the engine and insert some objects/functions. */
     bool loadScript( const QSharedPointer< QScriptProgram > &script );
 
-    bool waitFor( QObject *sender, const char *signal, WaitForType type );
+    bool waitFor( QObject *sender, const char *signal, WaitForType type, int *timeout );
 
     bool hasDataToBePublished() const;
 
