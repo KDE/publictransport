@@ -534,7 +534,7 @@ void ServiceProviderScript::stopSuggestionsReady( const QList<TimetableData> &da
     emit stopsReceived( this, url, stops, request );
 }
 
-void ServiceProviderScript::additionDataReady( const TimetableData &data,
+void ServiceProviderScript::additionalDataReady( const TimetableData &data,
         ResultObject::Features features, ResultObject::Hints hints, const QString &url,
         const GlobalTimetableInfo &globalInfo, const AdditionalDataRequest &request,
         bool couldNeedForcedUpdate )
@@ -646,7 +646,7 @@ void ServiceProviderScript::requestAdditionalData( const AdditionalDataRequest &
     if ( lazyLoadScript() ) {
         AdditionalDataJob *job = new AdditionalDataJob( m_scriptData, m_scriptStorage, request, this );
         connect( job, SIGNAL(additionalDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)),
-                 this, SLOT(additionDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)) );
+                 this, SLOT(additionalDataReady(TimetableData,ResultObject::Features,ResultObject::Hints,QString,GlobalTimetableInfo,AdditionalDataRequest,bool)) );
         enqueue( job );
     }
 }

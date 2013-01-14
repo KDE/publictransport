@@ -223,7 +223,7 @@ protected slots:
                                bool couldNeedForcedUpdate = false );
 
     /** @brief Additional @p data is ready, emits additionalDataReceived(). */
-    void additionDataReady( const TimetableData &data,
+    void additionalDataReady( const TimetableData &data,
                             ResultObject::Features features, ResultObject::Hints hints,
                             const QString &url, const GlobalTimetableInfo &globalInfo,
                             const AdditionalDataRequest &request,
