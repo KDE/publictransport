@@ -30,8 +30,7 @@
 #include <QGraphicsWidget> // Base class
 #include <QPointer> // Member variable
 
-namespace Plasma
-{
+namespace Plasma {
     class Svg;
 }
 
@@ -273,8 +272,8 @@ public:
     const DepartureItem *item() const { return m_item.data(); };
 
 protected:
-    virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
-    virtual inline void showEvent( QShowEvent* ) { arrangeStopItems(); };
+    virtual void resizeEvent( QGraphicsSceneResizeEvent *event );
+    virtual void showEvent( QShowEvent *event );
     void arrangeStopItems();
 
     /** @brief Get the position for stop text (before rotation) from the stop marker position. */

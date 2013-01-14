@@ -276,7 +276,6 @@ void PublicTransportAppletPrivate::onSettingsChanged( const Settings &_settings,
          changed.testFlag(SettingsIO::ChangedFont) ||
          changed.testFlag(SettingsIO::ChangedSizeFactor) )
     {
-        qDebug() << "UPDATE TITLE WIDGET";
         titleWidget->settingsChanged();
     }
 

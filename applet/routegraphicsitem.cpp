@@ -59,7 +59,7 @@ RouteGraphicsItem::RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item
     updateData( item );
 }
 
-void RouteGraphicsItem::resizeEvent(QGraphicsSceneResizeEvent* event)
+void RouteGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent *event )
 {
     QGraphicsWidget::resizeEvent(event);
     if ( !isVisible() ) {
@@ -67,6 +67,12 @@ void RouteGraphicsItem::resizeEvent(QGraphicsSceneResizeEvent* event)
         return;
     }
     arrangeStopItems();
+}
+
+void RouteGraphicsItem::showEvent( QShowEvent *event )
+{
+    arrangeStopItems();
+    QGraphicsWidget::showEvent(event);
 }
 
 void RouteGraphicsItem::setZoomFactor( qreal zoomFactor )
@@ -241,8 +247,8 @@ void RouteGraphicsItem::updateData( DepartureItem *item )
     m_textItems.clear();
     m_markerItems.clear();
 
-    // Add route stops if there are at least two stops given from the data engine
     if ( info->routeStops().count() >= 2 ) {
+        // Add route stops if there are at least two stops given from the data engine
         QFont routeFont = KGlobalSettings::smallestReadableFont();
         const qreal smallestReadableFontSize = routeFont.pointSizeF();
         const qreal targetFontSize = smallestReadableFontSize * m_zoomFactor;
@@ -459,16 +465,8 @@ void RouteGraphicsItem::paint( QPainter* painter, const QStyleOptionGraphicsItem
     Q_UNUSED( option );
     Q_UNUSED( widget );
 
-    if ( !m_item ) {
-        // Item was already deleted
-        // TODO: Paint to a pixmap before deletion and just paint that pixmap here?
-        return;
-    }
-
-    const DepartureInfo *info = m_item->departureInfo();
-    int count = info->routeStops().count();
-    if ( count == 0 ) {
-        kDebug() << "No route information";
+    if ( !m_item || m_markerItems.isEmpty() ) {
+        // Item was already deleted or no route data available
         return;
     }
 

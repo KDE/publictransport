@@ -1234,8 +1234,6 @@ PublicTransportModel::PublicTransportModel( QObject* parent )
 void PublicTransportModel::startUpdateTimer()
 {
     update();
-
-    kDebug() << "start update timer" << QTime::currentTime();
     m_updateTimer->start();
 }
 
