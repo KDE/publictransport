@@ -259,16 +259,15 @@ void PublicTransportGraphicsItem::paint( QPainter* painter,
     }
 
     // Paint background on whole item (including expand area)
-    QRectF rect = boundingRect();
-    paintBackground( painter, option, rect );
+    paintBackground( painter, option, option->rect );
 
     // Paint item (excluding expand area)
-    QRectF rectItem = rect;
-    rectItem.setHeight( unexpandedHeight() );
-    paintItem( painter, option, rectItem );
+    paintItem( painter, option, option->rect );
 
     // Draw expand area if this item isn't currently completely unexpanded
     if ( m_expanded || !qFuzzyIsNull(m_expandStep) ) {
+        QRectF rectItem = option->rect;
+        rectItem.setHeight( unexpandedHeight() );
         qreal pad = padding();
         qreal indentation = expandAreaIndentation();
         QRectF rectExpanded( rectItem.left() + indentation, rectItem.bottom() + 2 * pad,
@@ -353,17 +352,17 @@ QTextDocument* TextDocumentHelper::createTextDocument(const QString& html, const
 
 void TextDocumentHelper::drawTextDocument( QPainter *painter,
         const QStyleOptionGraphicsItem* option, QTextDocument *document,
-        const QRect &textRect, Option options )
+        const QRectF &textRect, Option options )
 {
-    if ( textRect.isEmpty() ) {
-        kDebug() << "Empty text rect given!";
+    if ( textRect.size().toSize().isEmpty() ) {
+        kDebug() << "No text visible, do not draw anything!" << textRect;
         return;
     }
 
-    QList<QRect> haloRects, fadeRects;
-    const int fadeWidth = 30;
+    QList< QRectF > haloRects, fadeRects;
+    const qreal fadeWidth = 30;
 
-    QPixmap pixmap( textRect.size() );
+    QPixmap pixmap( textRect.size().toSize() );
     pixmap.fill( Qt::transparent );
     QPainter p( &pixmap );
     p.setPen( painter->pen() );
@@ -393,15 +392,12 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
 
             if ( options == DrawHalos ) {
                 // Calculate halo rect
-                QSize textSize = textLine.naturalTextRect().size().toSize();
+                QSizeF textSize = textLine.naturalTextRect().size();
                 if ( textSize.width() > textRect.width() ) {
                     textSize.setWidth( textRect.width() );
                 }
-                QRect haloRect = QStyle::visualRect( textLayout->textOption().textDirection(),
-                        textRect, QRect((textLine.position() + position).toPoint() +
-                        (document->defaultTextOption().alignment().testFlag(Qt::AlignRight)
-                        ? (textRect.topRight() - QPoint(textSize.width(), 0)) : textRect.topLeft()),
-                        textSize) );
+                QRectF haloRect = textLine.naturalTextRect();
+                haloRect.moveTopLeft( haloRect.topLeft() + position + textRect.topLeft() );
                 if ( haloRect.top() <= textRect.bottom() ) {
                     if ( haloRect.width() > textRect.width() ) {
                         haloRect.setWidth( textRect.width() );
@@ -413,12 +409,10 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
 
             // Add a fade out rect to the list if the line is too long
             if ( textLine.naturalTextWidth() > textRect.width() - textLine.x() ) {
-                int x = int( qMin(textLine.naturalTextWidth(), (qreal)textRect.width()) )
+                const qreal x = qMin(textLine.naturalTextWidth(), textRect.width() - textLine.x())
                         - fadeWidth + textLine.x() + position.x();
-                int y = int( textLine.position().y() + position.y() );
-                QRect fadeRect = QStyle::visualRect( textLayout->textOption().textDirection(),
-                        textRect, QRect(x, y, fadeWidth, int(textLine.height()) + 1) );
-                fadeRects << fadeRect;
+                const qreal y = textLine.position().y() + position.y();
+                fadeRects << QRectF( x, y, fadeWidth, textLine.height() );
             }
         }
     }
@@ -437,7 +431,7 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
         }
 
         p.setCompositionMode( QPainter::CompositionMode_DestinationIn );
-        foreach( const QRect &rect, fadeRects ) {
+        foreach( const QRectF &rect, fadeRects ) {
             p.fillRect( rect, alphaGradient );
         }
     }
@@ -445,13 +439,13 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
 
     // Draw halo/shadow
     if ( options == DrawHalos ) {
-        foreach( const QRect &haloRect, haloRects ) {
+        foreach( const QRectF &haloRect, haloRects ) {
             Plasma::PaintUtils::drawHalo( painter, haloRect );
         }
     } else if ( options == DrawShadows ) {
         QImage shadow = pixmap.toImage();
         Plasma::PaintUtils::shadowBlur( shadow, 3, Qt::black );
-        painter->drawImage( textRect.topLeft() + QPoint(1, 2), shadow );
+        painter->drawImage( textRect.topLeft() + QPointF(1, 2), shadow );
     }
 
     painter->drawPixmap( textRect.topLeft(), pixmap );
@@ -1075,7 +1069,7 @@ void JourneyGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphi
     const bool drawHalos = drawShadowsOrHalos && qGray(_textColor.rgb()) < 192;
     painter->setPen( _textColor );
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
-            _infoRect.toRect(), drawShadowsOrHalos
+            _infoRect, drawShadowsOrHalos
             ? (drawHalos ? TextDocumentHelper::DrawHalos : TextDocumentHelper::DrawShadows)
             : TextDocumentHelper::DoNotDrawShadowOrHalos );
 
@@ -1334,9 +1328,9 @@ void DepartureGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGrap
             ? (drawHalos ? TextDocumentHelper::DrawHalos : TextDocumentHelper::DrawShadows)
             : TextDocumentHelper::DoNotDrawShadowOrHalos;
     TextDocumentHelper::drawTextDocument( painter, option, m_infoTextDocument,
-            _infoRect.toRect(), options );
+            _infoRect, options );
     TextDocumentHelper::drawTextDocument( painter, option, m_timeTextDocument,
-            _timeRect.toRect(), options );
+            _timeRect, options );
 
     // Draw extra icon(s), eg. an alarm icon or an indicator for additional news for a journey
     QRectF _extraIconRect;
@@ -1416,7 +1410,7 @@ void JourneyGraphicsItem::paintExpanded( QPainter* painter, const QStyleOptionGr
 
         painter->setPen( _textColor );
         TextDocumentHelper::drawTextDocument( painter, option, &additionalInformationTextDocument,
-                htmlRect.toRect(), drawShadowsOrHalos
+                htmlRect, drawShadowsOrHalos
                 ? (drawHalos ? TextDocumentHelper::DrawHalos : TextDocumentHelper::DrawShadows)
                 : TextDocumentHelper::DoNotDrawShadowOrHalos );
     }
@@ -1435,7 +1429,7 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
         y += m_routeItem->size().height() + padding();
     }
 
-    if ( y > rect.bottom() ) {
+    if ( y >= size().height() ) {
         return; // Currently not expanded enough to show more information (is animating)
     }
 
@@ -1445,7 +1439,7 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
 
         painter->setPen( _textColor );
         TextDocumentHelper::drawTextDocument( painter, option, m_othersTextDocument,
-                htmlRect.toRect(), drawShadowsOrHalos
+                htmlRect, drawShadowsOrHalos
                 ? (drawHalos ? TextDocumentHelper::DrawHalos : TextDocumentHelper::DrawShadows)
                 : TextDocumentHelper::DoNotDrawShadowOrHalos);
     }

@@ -380,7 +380,7 @@ public:
     static QTextDocument *createTextDocument( const QString &html, const QSizeF &size,
             const QTextOption &textOption, const QFont &font );
     static void drawTextDocument( QPainter *painter, const QStyleOptionGraphicsItem* option,
-            QTextDocument *document, const QRect &textRect, Option options = DefaultOption );
+            QTextDocument *document, const QRectF &textRect, Option options = DefaultOption );
     static qreal textDocumentWidth( QTextDocument *document );
 };
 
