@@ -100,7 +100,7 @@ void JourneyGraphicsItem::updateSettings()
     }
 }
 
-void PublicTransportGraphicsItem::setExpanded( bool expand )
+void PublicTransportGraphicsItem::setExpandedNotAffectingOtherItems( bool expand )
 {
     if ( m_expanded == expand ) {
         return; // Unchanged
@@ -118,8 +118,23 @@ void PublicTransportGraphicsItem::setExpanded( bool expand )
         m_resizeAnimation->stop();
     } else {
         m_resizeAnimation = new QPropertyAnimation( this, "expandStep" );
-        m_resizeAnimation->setEasingCurve( QEasingCurve(QEasingCurve::InOutBack) );
         connect( m_resizeAnimation, SIGNAL(finished()), this, SLOT(resizeAnimationFinished()) );
+
+        // The easing curve should be chosen so that another running resize animation
+        // to the other direction will (almost) not move the top edge of following items
+        m_resizeAnimation->setEasingCurve( QEasingCurve(QEasingCurve::InOutBack) );
+
+        // Make the duration longer, because many visible items may get moved when resizing an item
+        m_resizeAnimation->setDuration( 550 );
+
+        if ( expand ) {
+            // Call ensureVisible() multiple times while expanding
+            if ( !m_ensureVisibleTimer ) {
+                m_ensureVisibleTimer = new QTimer( this );
+                connect( m_ensureVisibleTimer, SIGNAL(timeout()), this, SLOT(ensureVisibleSnapped()) );
+            }
+            m_ensureVisibleTimer->start( 120 );
+        }
     }
 
     m_resizeAnimation->setStartValue( m_expandStep );
@@ -128,12 +143,28 @@ void PublicTransportGraphicsItem::setExpanded( bool expand )
     updateGeometry();
 
     emit expandedStateChanged( this, expand );
+}
 
-    if ( expand ) {
-        QRectF rect = geometry();
-        rect.setHeight( rect.height() + expandAreaHeightMaximum() );
-        m_parent->ensureRectVisible( rect );
+void PublicTransportGraphicsItem::setExpanded( bool expand )
+{
+    publicTransportWidget()->setItemExpanded( this, expand );
+}
+
+void PublicTransportGraphicsItem::ensureVisibleSnapped()
+{
+    // Ensure that the item is visible,
+    // if it does not fit ensure that the top area of the item is visible
+    const qreal height = m_parent->size().height();
+    QRectF rect = geometry();
+    if ( rect.height() > height ) {
+        rect.setHeight( height );
     }
+
+    // Align the rect vertically to scroll snap points,
+    // otherwise the item might get moved back afterwards by the snap scroll feature
+    const qreal heightUnit = m_parent->snapSize().height();
+    rect.moveTop( qCeil(rect.top() / heightUnit) * heightUnit - 0.5 );
+    m_parent->ensureRectVisible( rect );
 }
 
 void PublicTransportGraphicsItem::resizeAnimationFinished()
@@ -142,6 +173,10 @@ void PublicTransportGraphicsItem::resizeAnimationFinished()
     if ( route ) {
         route->setVisible( m_expanded );
     }
+
+    delete m_ensureVisibleTimer;
+    m_ensureVisibleTimer = 0;
+
     delete m_resizeAnimation;
     m_resizeAnimation = 0;
 }
@@ -1549,9 +1584,11 @@ QSizeF PublicTransportWidget::sizeHint(Qt::SizeHint which, const QSizeF& constra
     }
 }
 
-PublicTransportWidget::PublicTransportWidget( Options options, QGraphicsItem* parent )
-    : Plasma::ScrollWidget( parent ), m_options(options), m_model(0), m_prefixItem(0),
-      m_postfixItem(0), m_svg(0), m_copyStopToClipboardAction(0), m_showInMapAction(0)
+PublicTransportWidget::PublicTransportWidget( Options options, ExpandingOption expandingOption,
+                                              QGraphicsItem* parent )
+    : Plasma::ScrollWidget( parent ), m_options(options), m_expandingOption(expandingOption),
+      m_model(0), m_prefixItem(0), m_postfixItem(0), m_svg(0),
+      m_copyStopToClipboardAction(0), m_showInMapAction(0)
 {
     setHorizontalScrollBarPolicy( Qt::ScrollBarAlwaysOff );
     setupActions();
@@ -1663,9 +1700,11 @@ void PublicTransportWidget::setPostfixItem( TimetableListItem *postfixItem )
 }
 
 JourneyTimetableWidget::JourneyTimetableWidget( Options options, Flags flags,
+                                                ExpandingOption expandingOption,
                                                 QGraphicsItem* parent )
-    : PublicTransportWidget(options, parent), m_flags(flags), m_requestJourneyToStopAction(0),
-      m_requestJourneyFromStopAction(0), m_earlierAction(0), m_laterAction(0)
+    : PublicTransportWidget(options, expandingOption, parent), m_flags(flags),
+      m_requestJourneyToStopAction(0), m_requestJourneyFromStopAction(0), m_earlierAction(0),
+      m_laterAction(0)
 {
     setupActions();
 
@@ -1678,9 +1717,11 @@ JourneyTimetableWidget::JourneyTimetableWidget( Options options, Flags flags,
     }
 }
 
-TimetableWidget::TimetableWidget( Options options, QGraphicsItem* parent )
-    : PublicTransportWidget(options, parent), m_showDeparturesAction(0), m_highlightStopAction(0),
-      m_newFilterViaStopAction(0), m_pixmapCache(new KPixmapCache("PublicTransportVehicleIcons"))
+TimetableWidget::TimetableWidget( Options options, ExpandingOption expandingOption,
+                                  QGraphicsItem* parent )
+    : PublicTransportWidget(options, expandingOption, parent), m_showDeparturesAction(0),
+      m_highlightStopAction(0), m_newFilterViaStopAction(0),
+      m_pixmapCache(new KPixmapCache("PublicTransportVehicleIcons"))
 {
     m_targetHidden = false;
     setupActions();
@@ -1754,6 +1795,73 @@ PublicTransportGraphicsItem* PublicTransportWidget::item( const QModelIndex& ind
     }
 
     return 0;
+}
+
+int PublicTransportWidget::rowFromItem( PublicTransportGraphicsItem *item ) const
+{
+    for ( int row = 0; row < m_items.count(); ++row ) {
+        if ( m_items[row] == item ) {
+            // Found the item
+            return row;
+        }
+    }
+
+    // No such item found
+    return -1;
+}
+
+void PublicTransportWidget::setExpandOption( ExpandingOption expandingOption )
+{
+    if ( expandingOption == NoExpanding ) {
+        foreach ( PublicTransportGraphicsItem *item, m_items ) {
+            item->setExpanded( false );
+        }
+    } else if ( expandingOption == ExpandSingle ) {
+        PublicTransportGraphicsItem *visibleExpandedItem = 0;
+        QList< PublicTransportGraphicsItem* > expandedItems;
+        foreach ( PublicTransportGraphicsItem *item, m_items ) {
+            if ( item->isExpanded() ) {
+                if ( !visibleExpandedItem && item->geometry().intersects(boundingRect()) ) {
+                    kDebug() << item->geometry();
+                    visibleExpandedItem = item;
+                } else {
+                    expandedItems << item;
+                }
+            }
+        }
+
+        if ( !expandedItems.isEmpty() || visibleExpandedItem ) {
+            if ( !visibleExpandedItem ) {
+                visibleExpandedItem = expandedItems.takeFirst();
+            }
+            foreach ( PublicTransportGraphicsItem *item, expandedItems ) {
+                item->setExpandedNotAffectingOtherItems( false );
+            }
+        }
+    }
+
+    m_expandingOption = expandingOption;
+}
+
+bool PublicTransportWidget::isItemExpanded( int row ) const
+{
+    return m_items[ row ]->isExpanded();
+}
+
+void PublicTransportWidget::setItemExpanded( int row, bool expanded )
+{
+    if ( m_expandingOption == NoExpanding ) {
+        return;
+    }
+
+    if ( m_expandingOption == ExpandSingle && expanded ) {
+        // Toggle expanded items TODO fix docu...
+        foreach ( PublicTransportGraphicsItem *item, m_items ) {
+            item->setExpandedNotAffectingOtherItems( false );
+        }
+    }
+    PublicTransportGraphicsItem *expandItem = m_items[ row ];
+    expandItem->setExpandedNotAffectingOtherItems( expanded );
 }
 
 void PublicTransportWidget::setZoomFactor( qreal zoomFactor )

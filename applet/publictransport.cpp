@@ -975,7 +975,8 @@ void PublicTransportApplet::showJourneyList()
             d->currentServiceProviderFeatures.contains("ProvidesMoreJourneys")
             ? JourneyTimetableWidget::ShowEarlierAndLaterJourneysItems
             : JourneyTimetableWidget::NoFlags;
-    d->journeyTimetable = new JourneyTimetableWidget( options, flags, this );
+    d->journeyTimetable = new JourneyTimetableWidget( options, flags,
+                                                      PublicTransportWidget::ExpandSingle, this );
     d->journeyTimetable->setModel( d->modelJourneys );
     d->journeyTimetable->setFont( d->settings.sizedFont() );
     d->journeyTimetable->setSvg( &d->vehiclesSvg );
@@ -1234,7 +1235,6 @@ void PublicTransportApplet::createConfigurationInterface( KConfigDialog* parent 
 void PublicTransportApplet::setSettings( const Settings& settings )
 {
     Q_D( PublicTransportApplet );
-
     SettingsIO::ChangedFlags changed =
             SettingsIO::writeSettings( settings, d->settings, config(), globalConfig() );
     d->onSettingsChanged( settings, changed );
@@ -1394,9 +1394,9 @@ void PublicTransportApplet::toggleExpanded()
 {
     Q_D( PublicTransportApplet );
     if ( d->journeyTimetable && d->isStateActive("journeyView") ) {
-        d->journeyTimetable->item( d->clickedItemIndex.row() )->toggleExpanded();
+        d->journeyTimetable->toggleItemExpanded( d->clickedItemIndex.row() );
     } else {
-        d->timetable->item( d->clickedItemIndex.row() )->toggleExpanded();
+        d->timetable->toggleItemExpanded( d->clickedItemIndex.row() );
     }
 }
 

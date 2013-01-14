@@ -553,7 +553,7 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         // Create timetable item for departures/arrivals
         timetable = new TimetableWidget( settings.drawShadows()
                 ? PublicTransportWidget::DrawShadowsOrHalos : PublicTransportWidget::NoOption,
-                mainGraphicsWidget );
+                PublicTransportWidget::ExpandSingle, mainGraphicsWidget );
         timetable->setModel( model );
         timetable->setSvg( &vehiclesSvg );
         q->connect( timetable, SIGNAL(expandedStateChanged(PublicTransportGraphicsItem*,bool)),

@@ -352,6 +352,7 @@ protected:
     /** @brief Used by expandAreaHeight(), here without animation step applied. */
     qreal expandAreaHeightTarget() const;
 
+    void setExpandedNotAffectingOtherItems( bool expand = true );
 
     QPointer<TopLevelItem> m_item;
     PublicTransportWidget *m_parent;
@@ -662,7 +663,16 @@ public:
     };
     Q_DECLARE_FLAGS( Options, Option )
 
-    PublicTransportWidget( Options options = DefaultOptions, QGraphicsItem* parent = 0 );
+    /** @brief Options describing how to expand items. */
+    enum ExpandingOption {
+        NoExpanding = 0, /**< Never expand items. */
+        ExpandSingle, /**< Ensure, that only one item is expanded at a time. */
+        ExpandMultiple /**< Allow to expand multiple items at the same time. */
+    };
+
+    PublicTransportWidget( Options options = DefaultOptions,
+                           ExpandingOption expandingOption = ExpandSingle,
+                           QGraphicsItem* parent = 0 );
 
     /** @brief Gets the model containing the data for this widget. */
     PublicTransportModel *model() const { return m_model; };
@@ -675,6 +685,22 @@ public:
 
     /** @brief Gets the item with the given @p index. */
     PublicTransportGraphicsItem *item( const QModelIndex &index );
+
+    void setExpandOption( ExpandingOption expandingOption );
+    ExpandingOption expandingOption() const { return m_expandingOption; };
+
+    int rowFromItem( PublicTransportGraphicsItem *item ) const;
+
+    bool isItemExpanded( int row ) const;
+    void setItemExpanded( int row, bool expanded = true );
+    inline void toggleItemExpanded( int row ) { setItemExpanded(row, !isItemExpanded(row)); };
+
+    inline bool isItemExpanded( PublicTransportGraphicsItem *item ) const {
+        return isItemExpanded(rowFromItem(item)); };
+    inline void setItemExpanded( PublicTransportGraphicsItem *item, bool expanded = true ) {
+        setItemExpanded(rowFromItem(item), expanded); };
+    inline void toggleItemExpanded( PublicTransportGraphicsItem *item ) {
+        setItemExpanded(rowFromItem(item), !item->isExpanded()); };
 
     void setSvg( Plasma::Svg *svg ) { m_svg = svg; };
     Plasma::Svg *svg() const { return m_svg; };
@@ -751,6 +777,7 @@ protected:
     void updateSnapSize();
 
     Options m_options;
+    ExpandingOption m_expandingOption;
     PublicTransportModel *m_model;
     TimetableListItem *m_prefixItem;
     TimetableListItem *m_postfixItem;
@@ -775,7 +802,8 @@ class TimetableWidget : public PublicTransportWidget
     friend class DepartureGraphicsItem;
 
 public:
-    TimetableWidget( Options options = DefaultOptions, QGraphicsItem* parent = 0 );
+    TimetableWidget( Options options = DefaultOptions,
+                     ExpandingOption expandingOption = ExpandSingle, QGraphicsItem* parent = 0 );
     virtual ~TimetableWidget();
 
     void setTargetHidden( bool targetHidden ) { m_targetHidden = targetHidden; updateItemLayouts(); };
@@ -833,6 +861,7 @@ public:
 
     JourneyTimetableWidget( Options options = DefaultOptions,
                             Flags flags = ShowEarlierAndLaterJourneysItems,
+                            ExpandingOption expandingOption = ExpandSingle,
                             QGraphicsItem* parent = 0 );
 
     /** @brief Gets the journey item at the given @p row. */
