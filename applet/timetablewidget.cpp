@@ -1901,18 +1901,24 @@ void JourneyTimetableWidget::setupActions()
 
 void PublicTransportWidget::setModel( PublicTransportModel* model )
 {
+    if ( m_model ) {
+        kWarning() << "Model already set";
+        return;
+    }
     m_model = model;
 
-    connect( m_model, SIGNAL(rowsInserted(QModelIndex,int,int)),
-             this, SLOT(rowsInserted(QModelIndex,int,int)) );
-    connect( m_model, SIGNAL(itemsAboutToBeRemoved(QList<ItemBase*>)),
-             this, SLOT(itemsAboutToBeRemoved(QList<ItemBase*>)) );
-    connect( m_model, SIGNAL(rowsRemoved(QModelIndex,int,int)),
-             this, SLOT(rowsRemoved(QModelIndex,int,int)) );
-    connect( m_model, SIGNAL(modelReset()), this, SLOT(modelReset()) );
-    connect( m_model, SIGNAL(layoutChanged()), this, SLOT(layoutChanged()) );
-    connect( m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
-             this, SLOT(dataChanged(QModelIndex,QModelIndex)) );
+    if ( m_model ) {
+        connect( m_model, SIGNAL(rowsInserted(QModelIndex,int,int)),
+                 this, SLOT(rowsInserted(QModelIndex,int,int)) );
+        connect( m_model, SIGNAL(itemsAboutToBeRemoved(QList<ItemBase*>)),
+                 this, SLOT(itemsAboutToBeRemoved(QList<ItemBase*>)) );
+        connect( m_model, SIGNAL(rowsRemoved(QModelIndex,int,int)),
+                 this, SLOT(rowsRemoved(QModelIndex,int,int)) );
+        connect( m_model, SIGNAL(modelReset()), this, SLOT(modelReset()) );
+        connect( m_model, SIGNAL(layoutChanged()), this, SLOT(layoutChanged()) );
+        connect( m_model, SIGNAL(dataChanged(QModelIndex,QModelIndex)),
+                 this, SLOT(dataChanged(QModelIndex,QModelIndex)) );
+    }
 }
 
 PublicTransportGraphicsItem* PublicTransportWidget::item( const QModelIndex& index )
