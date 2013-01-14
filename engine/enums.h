@@ -313,6 +313,10 @@ public:
         ProvidesJourneys, /**< Journey data is provided through the getJourneys() script function.
                 * Scripts do not need to specify this enumerable in the features()
                 * script function, it is assumed by implementing the getJourneys() script function. */
+        ProvidesAdditionalData, /**< Additional data for existing timetable data sources is
+                * provided through the getAdditionalData() script function. Scripts do not need
+                * to specify this enumerable in the features() script function, it is assumed by
+                * implementing the getAdditionalData() script function. */
         ProvidesDelays, /**< Realtime delay data is provided for departures/arrivals and/or
                 * journeys. The data engine uses this information to determine how often timetable
                 * data may need to be updated. */

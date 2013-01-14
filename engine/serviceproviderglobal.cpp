@@ -309,6 +309,9 @@ QString ServiceProviderGlobal::featureName( Enums::ProviderFeature feature )
     case Enums::ProvidesJourneys:
         return i18nc("@info/plain A short string indicating support for journeys",
                      "Journey search");
+    case Enums::ProvidesAdditionalData:
+        return i18nc("@info/plain A short string indicating support for additional data",
+                     "Get additional data later");
     case Enums::ProvidesDelays:
         return i18nc("@info/plain A short string indicating that delay information can be provided",
                      "Delays");

@@ -1,5 +1,5 @@
 /*
- *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -31,72 +31,131 @@
 #include <Plasma/Service>
 #include <Plasma/ServiceJob>
 
+namespace Plasma {
+    class DataEngine;
+}
+
 /**
- * @brief Requests additional data for a data source.
- *
- * The job actually only invokes a slot in the data engine to start the request and waits for
- * a signal which gets emitted when the request has finished.
+ * @brief Base class for timetable service jobs.
+ * Only stores a pointer to the publictransport data engine.
  **/
-class RequestAdditionalDataJob : public Plasma::ServiceJob {
+class TimetableServiceJob : public Plasma::ServiceJob {
     Q_OBJECT
 
 public:
-    RequestAdditionalDataJob( const QString &destination, const QString &operation,
-                              const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
+    TimetableServiceJob( Plasma::DataEngine *engine, const QString &destination,
+                         const QString &operation, const QMap< QString, QVariant > &parameters,
+                         QObject *parent = 0 )
+            : ServiceJob(destination, operation, parameters, parent), m_engine(engine) {};
+
+protected:
+    Plasma::DataEngine *m_engine;
+};
+
+/**
+ * @brief Requests additional data for a data source.
+ *
+ * The job actually only invokes a slot in the data engine to start the request and waits
+ * (non-blocking) for a signal which gets emitted when the request has finished.
+ * The data engine may execute the request in another thread, eg. for script provider plugins.
+ *
+ *
+ **/
+class RequestAdditionalDataJob : public TimetableServiceJob {
+    Q_OBJECT
+
+public:
+    RequestAdditionalDataJob( Plasma::DataEngine *engine, const QString &destination,
+                              const QString &operation, const QMap< QString, QVariant > &parameters,
+                              QObject *parent = 0 );
     virtual ~RequestAdditionalDataJob() {};
 
     /** @brief Starts the additional data request. */
     virtual void start();
 
 protected slots:
-    void additionalDataRequestFinished( const QVariantHash &newData,
+    void additionalDataRequestFinished( const QString &sourceName, int item,
                                         bool success, const QString &errorMessage );
-
 private:
     int m_updateItem;
     int m_updateItemEnd;
     int m_itemsDone;
+    int m_itemsFailed;
+    QString m_errorMessage;
 };
 
-class UpdateRequestJob : public Plasma::ServiceJob {
+/**
+ * @brief Requests a manual update of a data source.
+ *
+ * The job actually only invokes a slot in the data engine to start the request and waits
+ * (non-blocking) for a signal which gets emitted when the request has finished.
+ * The data engine may execute the request in another thread, eg. for script provider plugins.
+ * It may also refuse to update the data source, because the last update was not long enough ago.
+ **/
+class UpdateRequestJob : public TimetableServiceJob {
     Q_OBJECT
 
 public:
-    UpdateRequestJob( const QString &destination, const QString &operation,
-                              const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
+    UpdateRequestJob( Plasma::DataEngine *engine, const QString &destination,
+                      const QString &operation, const QMap< QString, QVariant > &parameters,
+                      QObject *parent = 0 );
     virtual ~UpdateRequestJob() {};
 
     /** @brief Starts the update request. */
     virtual void start();
+
+protected slots:
+    void updateRequestFinished( const QString &sourceName,
+                                bool success = true, const QString &errorMessage = QString() );
 };
 
-class RequestMoreItemsJob : public Plasma::ServiceJob {
+/**
+ * @brief Requests more items for a (journey) data source.
+ *
+ * The job actually only invokes a slot in the data engine to start the request and waits
+ * (non-blocking) for a signal which gets emitted when the request has finished.
+ * The data engine may execute the request in another thread, eg. for script provider plugins.
+ *
+ * This only works with journey data sources, where usually only a few items are available.
+ * For departure/arrival data sources the number of items is usually much bigger and to make
+ * sharing of such data not unnecessarily hard, the start time is fixed (or always relative to the
+ * current time) for departure/arrival sources. In other words to get earlier or later
+ * departures/arrivals connect to another data source with earlier/later timetable items.
+ *
+ * The new journeys will not replace the old ones, but will be added to the list of journeys in
+ * the data source.
+ **/
+class RequestMoreItemsJob : public TimetableServiceJob {
     Q_OBJECT
 
 public:
-    RequestMoreItemsJob( Enums::MoreItemsDirection direction, const QString &destination,
-                         const QString &operation, const QMap< QString, QVariant > &parameters,
-                         QObject *parent = 0 );
+    RequestMoreItemsJob( Plasma::DataEngine *engine, const QString &destination,
+                         Enums::MoreItemsDirection direction, const QString &operation,
+                         const QMap< QString, QVariant > &parameters, QObject *parent = 0 );
     virtual ~RequestMoreItemsJob() {};
 
     /** @brief Starts the more items request. */
     virtual void start();
 
-    Enums::MoreItemsDirection direction() const { return m_direction; };
-
-// protected slots:
-//     void moreItemsRequestFinished( const QList< TimetableData > &newItems, bool success,
-//                                    const QString &errorMessage );
+protected slots:
+    void moreItemsRequestFinished( const QString &sourceName, Enums::MoreItemsDirection direction,
+                                   bool success = true, const QString &errorMessage = QString() );
 
 private:
-    Enums::MoreItemsDirection m_direction;
+    const Enums::MoreItemsDirection m_direction;
 };
 
 /**
  * @brief A service for timetable data sources of the PublicTransport data engine.
  *
  * The service provides an operation "requestAdditionalData" to get additional data for a
- * timetable item (eg. a departure) in an existing data source of the engine.
+ * timetable item (eg. a departure) in an existing data source of the engine. This can be eg.
+ * route data.
+ *
+ * To manually request an update of a timetable data source there is a "requestUpdate" operation.
+ *
+ * For journey data sources, earlier or later journeys can be requested using the
+ * "requestEarlierItems" or "requestLaterItems" operations.
  **/
 class TimetableService : public Plasma::Service {
     Q_OBJECT
@@ -107,7 +166,8 @@ public:
         UnknownError
     };
 
-    explicit TimetableService( const QString &name, QObject *parent = 0 );
+    explicit TimetableService( Plasma::DataEngine *engine, const QString &name,
+                               QObject *parent = 0 );
 
 protected:
     /**
@@ -122,7 +182,7 @@ protected:
                                            QMap< QString, QVariant > &parameters );
 
 private:
-    QString m_name; // The data source name, used as destination for jobs
+    Plasma::DataEngine *m_engine;
 };
 
 #endif // Multiple inclusion guard

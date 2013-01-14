@@ -1,5 +1,5 @@
 /*
- *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -221,12 +221,11 @@ public:
      * @see minSecsUntilUpdate()
      * @see secsUntilUpdate()
      **/
-    Q_INVOKABLE bool requestUpdate( const QString &sourceName, QString *errorMessage = 0 );
+    Q_INVOKABLE bool requestUpdate( const QString &sourceName );
 
     /** @brief Request more items in @p direction for @p sourceName */
     Q_INVOKABLE bool requestMoreItems( const QString &sourceName,
-                                       Enums::MoreItemsDirection direction = Enums::LaterItems,
-                                       QString *errorMessage = 0 );
+                                       Enums::MoreItemsDirection direction = Enums::LaterItems );
 
     /**
      * @brief Get a hash with information about the current GTFS feed import state.
@@ -271,17 +270,41 @@ signals:
      *
      * This signal gets used by the timetable service to get notified when a job has finsihed
      * and whether it was successful or not.
-     * @param newData The new contents (including additional data) in the data source for the item.
+     * @param sourceName The name of the data source for which an additional data request finished.
+     * @param item The index of the timetable item in @p sourceName for which the additional data
+     *   request finished or -1 if the request failed for all items.
      * @param success Whether or not the additional data job was successful.
      * @param errorMessage Contains an error message if @p success is @c false.
+     *
+     * @note The "additionalDataError" field of the target data source is not necessarily updated
+     *   when this signal gets emitted. This only happens when the request could actually be
+     *   started, ie. if the target data source exists, is a timetable data source and the provider
+     *   is valid and supports the Enums::ProvidesAdditionalData feature.
+     *
      * @see usage_service_sec
      **/
-    void additionalDataRequestFinished( const QVariantHash &newData, bool success = true,
+    void additionalDataRequestFinished( const QString &sourceName, int item, bool success = true,
                                         const QString &errorMessage = QString() );
 
+    /** @brief Emitted when a manual update request (requestUpdate()) has finished. */
+    void updateRequestFinished( const QString &sourceName,
+                                bool success = true, const QString &errorMessage = QString() );
+
+    /** @brief Emitted when a request for more items (requestMoreItems()) has finished. */
+    void moreItemsRequestFinished( const QString &sourceName, Enums::MoreItemsDirection direction,
+                                   bool success = true, const QString &errorMessage = QString() );
+
 public slots:
-    /** @brief Request additional timetable data for item @p updateItem in @p sourceName. */
-    void requestAdditionalData( const QString &sourceName, int updateItem );
+    /**
+     * @brief Request additional timetable data in @p sourceName.
+     *
+     * @param sourceName The name of the timetable data source for which additional data should
+     *   be requested.
+     * @param updateItem The index of the (first) timetable item to request additional data for.
+     * @param count The number of timetable items beginning at @p updateItem to request additional
+     *   data for. The default is 1.
+     **/
+    void requestAdditionalData( const QString &sourceName, int updateItem, int count = 1 );
 
 protected slots:
     /**
@@ -734,6 +757,16 @@ private:
 
     void startCleanupLater();
     void startDataSourceCleanupLater( TimetableDataSource *dataSource );
+
+    // Implementation for the requestAdditionalData() slot,
+    // call testDataSourceForAdditionalDataRequests() before and publishData() afterwards.
+    // Both functions only need to be called once for multiple calls to this function.
+    bool requestAdditionalData( const QString &sourceName, int updateItem,
+                                TimetableDataSource *dataSource );
+
+    // Should be called once before calling requestAdditionalData(),
+    // if 0 gets returned all additional data requests on sourceName will fail
+    TimetableDataSource *testDataSourceForAdditionalDataRequests( const QString &sourceName );
 
     QHash< QString, ProviderPointer > m_providers; // Currently used providers by ID
     QHash< QString, ProviderPointer > m_cachedProviders; // Unused but still cached providers by ID

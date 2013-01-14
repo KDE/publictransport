@@ -1,5 +1,5 @@
 /*
- *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -1149,54 +1149,89 @@ bool PublicTransportEngine::updateTimetableDataSource( const SourceRequestData &
     return true;
 }
 
-void PublicTransportEngine::requestAdditionalData( const QString &sourceName, int itemNumber )
+void PublicTransportEngine::requestAdditionalData( const QString &sourceName,
+                                                   int updateItem, int count )
+{
+    TimetableDataSource *dataSource = testDataSourceForAdditionalDataRequests( sourceName );
+    if ( dataSource ) {
+        // Start additional data requests
+        bool dataChanged = false;
+        for ( int itemNumber = updateItem; itemNumber < updateItem + count; ++itemNumber ) {
+            dataChanged = requestAdditionalData(sourceName, itemNumber, dataSource) || dataChanged;
+        }
+
+        if ( dataChanged ) {
+            // Publish changes to "additionalDataState" fields
+            publishData( dataSource );
+        }
+    }
+}
+
+TimetableDataSource *PublicTransportEngine::testDataSourceForAdditionalDataRequests(
+        const QString &sourceName )
 {
     // Try to get a pointer to the provider with the provider ID from the source name
     const QString providerId = providerIdFromSourceName( sourceName );
     const ProviderPointer provider = providerFromId( providerId );
-    if ( provider.isNull() ) {
-        emit additionalDataRequestFinished( QVariantHash(), false,
+    if ( provider.isNull() || provider->type() == Enums::InvalidProvider ) {
+        emit additionalDataRequestFinished( sourceName, -1, false,
                 QString("Service provider %1 could not be created").arg(providerId) );
-        return; // Service provider couldn't be created
+        return 0; // Service provider couldn't be created
+    }
+
+    // Test if the provider supports additional data
+    if ( !provider->features().contains(Enums::ProvidesAdditionalData) ) {
+        emit additionalDataRequestFinished( sourceName, -1, false,
+                i18nc("@info/plain", "Additional data not supported") );
+        kWarning() << "Additional data not supported by" << provider->id();
+        return 0; // Service provider does not support additional data
     }
 
     // Test if the source with the given name is cached
     const QString nonAmbiguousName = disambiguateSourceName( sourceName );
     if ( !m_dataSources.contains(nonAmbiguousName) ) {
-        emit additionalDataRequestFinished( QVariantHash(), false,
+        emit additionalDataRequestFinished( sourceName, -1, false,
                 "Data source to update not found: " + sourceName );
-        return;
+        return 0;
     }
 
     // Get the data list, currently only for departures/arrivals TODO: journeys
     TimetableDataSource *dataSource =
             dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
     if ( !dataSource ) {
-        emit additionalDataRequestFinished( QVariantHash(), false,
+        emit additionalDataRequestFinished( sourceName, -1, false,
                 "Data source is not a timetable data source: " + sourceName );
-        return;
+        return 0;
     }
 
+    return dataSource;
+}
+
+bool PublicTransportEngine::requestAdditionalData( const QString &sourceName,
+                                                   int itemNumber, TimetableDataSource *dataSource )
+{
     QVariantList items = dataSource->timetableItems();
     if ( itemNumber >= items.count() || itemNumber < 0 ) {
-        emit additionalDataRequestFinished( QVariantHash(), false,
-                                            "Item to update not found in data source" );
-        return;
+        emit additionalDataRequestFinished( sourceName, itemNumber, false,
+                QString("Item to update (%1) not found in data source").arg(itemNumber) );
+        return false;
     }
 
     // Get the timetable item stored in the data source at the given index
     QVariantHash item = items[ itemNumber ].toHash();
 
     // Check if additional data is already included or was already requested
-    if ( item["IncludesAdditionalData"].toBool() ) {
-        emit additionalDataRequestFinished( QVariantHash(), false,
-                                            "Additional data is already included" );
-        return;
-    } else if ( item["WaitingForAdditionalData"].toBool() ) {
-        kDebug() << "Additional data for" << itemNumber << "already requested, please wait";
-        emit additionalDataRequestFinished( QVariantHash(), false,
-                                            "Additional data already was requested, please wait" );
-        return;
+    const QString additionalDataState = item["additionalDataState"].toString();
+    if ( additionalDataState == QLatin1String("included") ) {
+        emit additionalDataRequestFinished( sourceName, itemNumber, false,
+                QString("Additional data is already included for item %1").arg(itemNumber) );
+        return false;
+    } else if ( additionalDataState == QLatin1String("busy") ) {
+        kDebug() << "Additional data for item" << itemNumber << "already requested, please wait";
+        emit additionalDataRequestFinished( sourceName, itemNumber, false,
+                QString("Additional data was already requested for item %1, please wait")
+                .arg(itemNumber) );
+        return false;
     }
 
     // Check if the timetable item is valid,
@@ -1208,22 +1243,25 @@ void PublicTransportEngine::requestAdditionalData( const QString &sourceName, in
     if ( routeDataUrl.isEmpty() &&
          (!dateTime.isValid() || transportLine.isEmpty() || target.isEmpty()) )
     {
-        emit additionalDataRequestFinished( QVariantHash(), false,
+        emit additionalDataRequestFinished( sourceName, itemNumber, false,
                                             QString("Item to update is invalid: %1, %2, %3")
                                             .arg(dateTime.toString()).arg(transportLine, target) );
-        return;
+        return false;
     }
 
     // Store state of additional data in the timetable item
-    item["WaitingForAdditionalData"] = true;
+    item["additionalDataState"] = "busy";
     items[ itemNumber ] = item;
     dataSource->setTimetableItems( items );
 
     // Found data of the timetable item to update
-    const SourceRequestData sourceData( sourceName );
-    provider->requestAdditionalData( AdditionalDataRequest(sourceName, itemNumber,
+    const SourceRequestData sourceData( dataSource->name() );
+    const ProviderPointer provider = providerFromId( dataSource->providerId() );
+    Q_ASSERT( provider );
+    provider->requestAdditionalData( AdditionalDataRequest(dataSource->name(), itemNumber,
             sourceData.request->stop(), sourceData.request->stopId(), dateTime, transportLine,
             target, sourceData.request->city(), routeDataUrl) );
+    return true;
 }
 
 QString PublicTransportEngine::fixProviderId( const QString &providerId )
@@ -1842,13 +1880,14 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
                     }
                     departureData.insert( Global::timetableInformationToString(it.key()), it.value() );
                 }
-                departureData[ "IncludesAdditionalData" ] = hasAdditionalData;
-                departureData.remove( "WaitingForAdditionalData" );
+                departureData[ "additionalDataState" ] = hasAdditionalData ? "included" : "error";
             }
         }
 
-        if ( !departureData.contains("IncludesAdditionalData") ) {
-            departureData[ "IncludesAdditionalData" ] = false;
+        if ( !departureData.contains("additionalDataState") ) {
+            departureData[ "additionalDataState" ] =
+                    provider->features().contains(Enums::ProvidesAdditionalData)
+                    ? "notrequested" : "notsupported";
         }
 
         departuresData << departureData;
@@ -1961,7 +2000,7 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     if ( !m_dataSources.contains(nonAmbiguousName) ) {
         kWarning() << "Additional data received for a source that was already removed:"
                    << nonAmbiguousName;
-        emit additionalDataRequestFinished( QVariantHash(), false,
+        emit additionalDataRequestFinished( request.sourceName(), request.itemNumber(), false,
                                             "Data source to update was already removed" );
         return;
     }
@@ -1972,8 +2011,9 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     Q_ASSERT( dataSource );
     QVariantList items = dataSource->timetableItems();
     if ( request.itemNumber() >= items.count() ) {
-        emit additionalDataRequestFinished( QVariantHash(), false,
-                                            "Item to update not found in the data source" );
+        emit additionalDataRequestFinished( request.sourceName(), request.itemNumber(), false,
+                QString("Item %1 not found in the data source (with %2 items)")
+                .arg(request.itemNumber()).arg(items.count()) );
         return;
     }
 
@@ -2013,16 +2053,18 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
         }
     }
 
-    item.remove( "WaitingForAdditionalData" );
     if ( !newDataInserted ) {
-        emit additionalDataRequestFinished( QVariantHash(), false, "No additional data found" );
-        item[ "IncludesAdditionalData" ] = false;
+        const QString errorMessage = i18nc("@info/plain", "No additional data found");
+        emit additionalDataRequestFinished( request.sourceName(), request.itemNumber(),
+                                            false, errorMessage );
+        item[ "additionalDataState" ] = "error";
+        item[ "additionalDataError" ] = errorMessage;
         items[ request.itemNumber() ] = item;
         dataSource->setTimetableItems( items );
         return;
     }
 
-    item[ "IncludesAdditionalData" ] = true;
+    item[ "additionalDataState" ] = "included";
 
     // Store the changed item back into the item list of the data source
     items[ request.itemNumber() ] = item;
@@ -2045,7 +2087,7 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
         // Create timer with a shorter interval, but directly publish the new data of the
         // data source. The timer is used here to delay further publishing of new data,
         // ie. combine multiple updates and publish them at once.
-        setData( request.sourceName(), dataSource->data() );
+        publishData( dataSource );
         updateDelayTimer = new QTimer( this );
         updateDelayTimer->setInterval( 150 );
         connect( updateDelayTimer, SIGNAL(timeout()),
@@ -2057,7 +2099,7 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     updateDelayTimer->start();
 
     // Emit result
-    emit additionalDataRequestFinished( item, true );
+    emit additionalDataRequestFinished( request.sourceName(), request.itemNumber(), true );
 }
 
 TimetableDataSource *PublicTransportEngine::dataSourceFromTimer( QTimer *timer ) const
@@ -2238,7 +2280,8 @@ void PublicTransportEngine::requestFailed( ServiceProvider *provider,
             dynamic_cast< const AdditionalDataRequest* >( request );
     if ( additionalDataRequest ) {
         // A request for additional data failed
-        emit additionalDataRequestFinished( QVariantHash(), false, errorMessage );
+        emit additionalDataRequestFinished( request->sourceName(),
+                additionalDataRequest->itemNumber(), false, errorMessage );
 
         // Check if the destination data source exists
         const QString nonAmbiguousName = disambiguateSourceName( request->sourceName() );
@@ -2252,11 +2295,14 @@ void PublicTransportEngine::requestFailed( ServiceProvider *provider,
                 // Found the item for which the request failed,
                 // reset additional data included/waiting fields
                 QVariantHash item = items[ additionalDataRequest->itemNumber() ].toHash();
-                item[ "IncludesAdditionalData" ] = false;
-                item.remove( "WaitingForAdditionalData" );
+                item[ "additionalDataState" ] = "error";
+                item[ "additionalDataError" ] = errorMessage;
 
                 items[ additionalDataRequest->itemNumber() ] = item;
                 dataSource->setTimetableItems( items );
+
+                // Publish updated fields
+                publishData( dataSource );
             }
         }
 
@@ -2279,22 +2325,23 @@ void PublicTransportEngine::requestFailed( ServiceProvider *provider,
     setData( sourceName, "updated", QDateTime::currentDateTime() );
 }
 
-bool PublicTransportEngine::requestUpdate( const QString &sourceName, QString *errorMessage )
+bool PublicTransportEngine::requestUpdate( const QString &sourceName )
 {
     // Find the TimetableDataSource object for sourceName
     const QString nonAmbiguousName = disambiguateSourceName( sourceName );
     if ( !m_dataSources.contains(nonAmbiguousName) ) {
         kWarning() << "Not an existing timetable data source:" << sourceName;
-        if ( errorMessage ) {
-            *errorMessage = i18nc("@info", "Data source is not an existing timetable "
-                                  "data source: %1", sourceName);
-        }
+        emit updateRequestFinished( sourceName, false,
+                i18nc("@info", "Data source is not an existing timetable data source: %1",
+                      sourceName) );
         return false;
     }
     TimetableDataSource *dataSource =
             dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
     if ( !dataSource ) {
         kWarning() << "Internal error: Invalid pointer to the data source stored";
+        emit updateRequestFinished( sourceName, false,
+                                    "Internal error: Invalid pointer to the data source stored" );
         return false;
     }
 
@@ -2302,10 +2349,9 @@ bool PublicTransportEngine::requestUpdate( const QString &sourceName, QString *e
     const QDateTime nextUpdateTime = sourceUpdateTime( dataSource, UpdateWasRequestedManually );
     if ( QDateTime::currentDateTime() < nextUpdateTime ) {
         kDebug() << "Too early to update again, update request rejected" << nextUpdateTime;
-        if ( errorMessage ) {
-            *errorMessage = i18nc("@info", "Update request rejected, earliest update time: %1",
-                                  nextUpdateTime.toString());
-        }
+        emit updateRequestFinished( sourceName, false,
+                i18nc("@info", "Update request rejected, earliest update time: %1",
+                      nextUpdateTime.toString()) );
         return false;
     }
 
@@ -2313,29 +2359,31 @@ bool PublicTransportEngine::requestUpdate( const QString &sourceName, QString *e
     dataSource->stopUpdateTimer();
 
     // Start the request
-    return request( sourceName );
+    const bool result = request( sourceName );
+    if ( result ) {
+        emit updateRequestFinished( sourceName );
+    } else {
+        emit updateRequestFinished( sourceName, false, i18nc("@info", "Request failed") );
+    }
+    return result;
 }
 
 bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
-                                              Enums::MoreItemsDirection direction,
-                                              QString *errorMessage )
+                                              Enums::MoreItemsDirection direction )
 {
     // Find the TimetableDataSource object for sourceName
     const QString nonAmbiguousName = disambiguateSourceName( sourceName );
     if ( !m_dataSources.contains(nonAmbiguousName) ) {
         kWarning() << "Not an existing timetable data source:" << sourceName;
-        if ( errorMessage ) {
-            *errorMessage = i18nc("@info", "Data source is not an existing timetable "
-                                  "data source: %1", sourceName);
-        }
+        emit moreItemsRequestFinished( sourceName, direction, false,
+                i18nc("@info", "Data source is not an existing timetable data source: %1",
+                      sourceName) );
         return false;
     } else if ( m_runningSources.contains(nonAmbiguousName) ) {
         // The data source currently gets processed or updated, including requests for more items
         kDebug() << "Source currently gets processed, please wait" << sourceName;
-        if ( errorMessage ) {
-            *errorMessage = i18nc("@info", "Source currently gets processed, "
-                                  "please try again later");
-        }
+        emit moreItemsRequestFinished( sourceName, direction, false,
+                i18nc("@info", "Source currently gets processed, please try again later") );
         return false;
     }
 
@@ -2343,6 +2391,7 @@ bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
             dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
     if ( !dataSource ) {
         kWarning() << "Internal error: Invalid pointer to the data source stored";
+        emit moreItemsRequestFinished( sourceName, direction, false, "Internal error" );
         return false;
     }
 
@@ -2353,6 +2402,8 @@ bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
         // Service provider couldn't be created, should only happen after provider updates,
         // where the provider worked to get timetable items, but the new provider version
         // does not work any longer and no more items can be requested
+        emit moreItemsRequestFinished( sourceName, direction, false,
+                                       "Provider could not be created" );
         return false;
     }
 
@@ -2362,8 +2413,8 @@ bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
     if ( items.isEmpty() ) {
         // TODO
         kWarning() << "No timetable items in data source" << sourceName;
-//         emit moreItemsRequestFinished( QVariantHash(), false,
-//                                             "No items" );
+        emit moreItemsRequestFinished( sourceName, direction, false,
+                i18nc("@info", "No timetable items in data source") );
         return false;
     }
     const QVariantHash item =
@@ -2379,6 +2430,7 @@ bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
     // Start the request
     m_runningSources << nonAmbiguousName;
     provider->requestMoreItems( MoreItemsRequest(sourceName, request, requestData, direction) );
+    emit moreItemsRequestFinished( sourceName, direction );
     return true;
 }
 
