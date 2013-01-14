@@ -177,7 +177,10 @@ void PublicTransportAppletPrivate::onSettingsChanged( const Settings &_settings,
                 int itemBegin = 999999999;
                 int itemEnd = 0;
                 foreach ( const DepartureInfo departure, model->departureInfos() ) {
-                    if ( !departure.includesAdditionalData() ) {
+                    if ( !departure.includesAdditionalData() &&
+                         !departure.isWaitingForAdditionalData() &&
+                          departure.additionalDataError().isEmpty() )
+                    {
                         const int index = departure.index();
                         itemBegin = qMin( itemBegin, index );
                         itemEnd = qMax( itemEnd, index );

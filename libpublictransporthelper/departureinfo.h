@@ -265,8 +265,10 @@ public:
                                            * a departure. */
         IsFilteredOut           = 0x02, /**< Whether or not the departure/arrival is filtered out.
                                            * Can be used for custom filter mechanisms. */
-        IncludesAdditionalData  = 0x04  /**< Whether or not the object includes additional data
+        IncludesAdditionalData  = 0x04, /**< Whether or not the object includes additional data
                                            * that was requested using the timetable service. */
+        WaitingForAdditionalData = 0x08 /**< Whether or not additional data was requested and the
+                                           * data engine is waiting for the request to finish. */
     };
     Q_DECLARE_FLAGS( DepartureFlags, DepartureFlag )
 
@@ -285,7 +287,8 @@ public:
                    const QStringList &routeStops = QStringList(),
                    const QStringList &routeStopsShortened = QStringList(),
                    const QList<QDateTime> &routeTimes = QList<QDateTime>(),
-                   int routeExactStops = 0 ) : PublicTransportInfo()
+                   int routeExactStops = 0, const QString &additionalDataError = QString() )
+            : PublicTransportInfo()
     {
         LineServices lineServices = NoLineService;
         if ( nightLine ) {
@@ -296,7 +299,7 @@ public:
         }
         init( dataSource, index, flags, operatorName, line, target, targetShortened, departure,
               lineType, lineServices, platform, delay, delayReason, journeyNews, routeStops,
-              routeStopsShortened, routeTimes, routeExactStops );
+              routeStopsShortened, routeTimes, routeExactStops, additionalDataError );
     };
 
     static QString formatDateFancyFuture( const QDate& date );
@@ -311,6 +314,12 @@ public:
 
     /** @brief Whether or not additional data is included. */
     bool includesAdditionalData() const { return m_flags.testFlag(IncludesAdditionalData); };
+
+    /** @brief Whether or not additional data has been requested but is not yet ready. */
+    bool isWaitingForAdditionalData() const { return m_flags.testFlag(WaitingForAdditionalData); };
+
+    /** @brief An error string if the last request for additional data failed for this item. */
+    QString additionalDataError() const { return m_additionalDataError; };
 
     /** @brief Enable/disable @p flag. */
     void setFlag( DepartureFlag flag, bool enable = true ) {
@@ -437,7 +446,8 @@ private:
                const QString &journeyNews = QString(),
                const QStringList &routeStops = QStringList(),
                const QStringList &routeStopsShortened = QStringList(),
-               const QList<QDateTime> &routeTimes = QList<QDateTime>(), int routeExactStops = 0 );
+               const QList<QDateTime> &routeTimes = QList<QDateTime>(), int routeExactStops = 0,
+               const QString &additionalDataError = QString() );
 
     void generateHash();
 
@@ -451,6 +461,7 @@ private:
     QStringList m_routeStops;
     QStringList m_routeStopsShortened;
     QList<QDateTime> m_routeTimes;
+    QString m_additionalDataError;
     int m_routeExactStops;
     DepartureFlags m_flags;
     QList< int > m_matchedAlarms;

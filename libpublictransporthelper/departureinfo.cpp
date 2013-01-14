@@ -282,7 +282,8 @@ void DepartureInfo::init( const QString &dataSource, int index, DepartureFlags f
                           const QString &delayReason, const QString &journeyNews,
                           const QStringList &routeStops, const QStringList &routeStopsShortened,
                           const QList<QDateTime> &routeTimes,
-                          int routeExactStops )
+                          int routeExactStops,
+                          const QString &additionalDataError )
 {
     m_flags = flags;
     m_dataSource = dataSource;
@@ -313,16 +314,21 @@ void DepartureInfo::init( const QString &dataSource, int index, DepartureFlags f
     m_routeTimes = routeTimes;
     m_routeExactStops = routeExactStops;
 
+    m_additionalDataError = additionalDataError;
+
     generateHash();
 }
 
 bool DepartureInfo::operator ==( const DepartureInfo& other ) const
 {
     return m_hash == other.m_hash
-//     These are already in m_hash
+//  These are already in m_hash
 //     && m_departure == other.m_departure
 //     && m_vehicleType == other.m_vehicleType
 //     && m_lineString == other.m_lineString
+//  These are only different if the associated fields without the "Shortened" are different
+//     && m_targetShortened == other.m_targetShortened
+//     && m_routeStopsShortened == other.m_routeStopsShortened
             && m_lineNumber == other.m_lineNumber
             && m_target == other.m_target
             && m_delay == other.m_delay
@@ -333,7 +339,9 @@ bool DepartureInfo::operator ==( const DepartureInfo& other ) const
             && m_lineServices == other.m_lineServices
             && m_routeStops == other.m_routeStops
             && m_routeTimes == other.m_routeTimes
-            && m_routeExactStops == other.m_routeExactStops;
+            && m_routeExactStops == other.m_routeExactStops
+            && m_additionalDataError == other.m_additionalDataError
+            && m_flags == other.m_flags;
 }
 
 void DepartureInfo::generateHash()

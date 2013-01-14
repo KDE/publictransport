@@ -271,12 +271,17 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
             }
         }
 
-        // Check whether or not additional timetable data is included
+        // Read departure flags
         DepartureInfo::DepartureFlags flags = globalFlags;
-        if ( departureData["IncludesAdditionalData"].toBool() ) {
+        const QString additionalDataState = departureData["additionalDataState"].toString();
+        if ( additionalDataState == QLatin1String("included") ) {
             // This departure includes additional timetable data,
             // most other data is most probably unchanged
             flags |= PublicTransport::DepartureInfo::IncludesAdditionalData;
+        } else if ( additionalDataState == QLatin1String("busy") ) {
+            // Additional data was requested for this departure,
+            // but the request did not finish yet
+            flags |= PublicTransport::DepartureInfo::WaitingForAdditionalData;
         }
 
         DepartureInfo departureInfo( sourceName, i, flags, departureData["Operator"].toString(),
@@ -289,7 +294,8 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
                 departureData["DelayReason"].toString(), departureData["JourneyNews"].toString(),
                 departureData["RouteStops"].toStringList(),
                 departureData["RouteStopsShortened"].toStringList(),
-                routeTimes, departureData["RouteExactStops"].toInt() );
+                routeTimes, departureData["RouteExactStops"].toInt(),
+                departureData["additionalDataError"].toString() );
 
         // Update the list of alarms that match the current departure
         departureInfo.matchedAlarms().clear();

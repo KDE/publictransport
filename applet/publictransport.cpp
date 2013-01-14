@@ -516,7 +516,10 @@ void PublicTransportApplet::departuresProcessed( const QString& sourceName,
         int itemBegin = 999999999;
         int itemEnd = 0;
         foreach ( const DepartureInfo departure, departures ) {
-            if ( !departure.includesAdditionalData() ) {
+            if ( !departure.includesAdditionalData() &&
+                 !departure.isWaitingForAdditionalData() &&
+                  departure.additionalDataError().isEmpty() )
+            {
                 const int index = departure.index();
                 itemBegin = qMin( itemBegin, index );
                 itemEnd = qMax( itemEnd, index );
@@ -1275,11 +1278,12 @@ void PublicTransportApplet::oldItemAnimationFinished()
 void PublicTransportApplet::expandedStateChanged( PublicTransportGraphicsItem *item, bool expanded )
 {
     Q_D( PublicTransportApplet );
-    // When an item gets expanded for the first time, try to load additional data
-    // using the timetable service of the PublicTransport engine
+    // When an item gets expanded, try to load additional data using the timetable service
+    // of the PublicTransport engine, if not already included, requested or failed
     DepartureGraphicsItem *departureItem = qobject_cast< DepartureGraphicsItem* >( item );
     if ( expanded && departureItem && departureItem->departureItem() &&
          !departureItem->departureItem()->includesAdditionalData() &&
+         !departureItem->departureItem()->isWaitingForAdditionalData() &&
          (d->settings.additionalDataRequestType() == Settings::RequestAdditionalDataWhenNeeded ||
           d->settings.additionalDataRequestType() == Settings::RequestAdditionalDataDirectly) )
     {
