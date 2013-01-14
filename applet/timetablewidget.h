@@ -35,10 +35,12 @@
  * @brief This file contains the TimetableWidget / JourneyTimetableWidget and it's item classes.
  * @author Friedrich Pülz <fpuelz@gmx.de> */
 
+class QTimer;
 class KPixmapCache;
 namespace Plasma
 {
     class Svg;
+    class BusyWidget;
 }
 
 class QPropertyAnimation;
@@ -334,12 +336,14 @@ signals:
 
 protected slots:
     void resizeAnimationFinished();
+    void ensureVisibleSnapped();
 
 protected:
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
     virtual void mousePressEvent( QGraphicsSceneMouseEvent* event );
     virtual void mouseReleaseEvent( QGraphicsSceneMouseEvent* event );
     virtual void updateGeometry();
+    virtual QRectF boundingRect() const;
     virtual void updateTextLayouts() = 0;
     virtual QGraphicsWidget *routeItem() const = 0;
     virtual void drawFadeOutLeftAndRight( QPainter *painter, const QRect &rect, int fadeWidth = 40 );
@@ -369,6 +373,7 @@ protected:
     QPixmap *m_pixmap;
     StopAction *m_copyStopToClipboardAction;
     StopAction *m_showInMapAction;
+    QTimer *m_ensureVisibleTimer;
 };
 
 class TextDocumentHelper {
@@ -416,6 +421,9 @@ public:
      * @param update Whether or not to update the layouts of the QTextDocuments. Default is false.
      **/
     void updateData( DepartureItem* item, bool update = false );
+
+    bool isRouteDataAvailable() const;
+    bool isRouteDataRequestable() const;
 
     /** @brief Notifies this item about changed settings in the parent PublicTransportWidget. */
     virtual void updateSettings();
@@ -508,11 +516,20 @@ public:
     /** @brief Set a value between 0 and 1 to control the leaving animation. */
     void setLeavingStep( qreal leavingStep );
 
+signals:
+    /**
+     * @brief Emitted to request an update of the additional data.
+     * Can be used eg. when a previous request failed.
+     */
+    void updateAdditionalDataRequest();
+
 protected:
     virtual void updateTextLayouts();
     qreal timeColumnWidth() const;
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
     virtual QGraphicsWidget *routeItem() const;
+    void hideRouteInfoWidget();
+    void showRouteInfoWidget( QGraphicsWidget *routeInfoWidget );
 
     /** @brief The minimum size of the expand area. */
     virtual qreal expandAreaHeightMinimum() const;
@@ -525,6 +542,7 @@ private:
     QTextDocument *m_timeTextDocument;
     QTextDocument *m_othersTextDocument;
     RouteGraphicsItem *m_routeItem; // Pointer to the route item or 0 if no route data is available
+    QGraphicsWidget *m_routeInfoWidget;
     bool m_highlighted;
 
     QPropertyAnimation *m_leavingAnimation;
@@ -533,6 +551,7 @@ private:
     StopAction *m_showDeparturesAction;
     StopAction *m_highlightStopAction;
     StopAction *m_newFilterViaStopAction;
+    QAction *m_updateAdditionalDataAction;
 
     KPixmapCache *m_pixmapCache;
 };

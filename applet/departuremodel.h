@@ -51,6 +51,7 @@ struct Info {
     float sizeFactor;
     QString homeStop;
     QString highlightedStop;
+    QStringList providerFeatures;
 };
 
 /**
@@ -441,6 +442,7 @@ public:
     void setLeavingSoon( bool leavingSoon = true );
 
     bool includesAdditionalData() const { return m_departureInfo.includesAdditionalData(); };
+    bool isWaitingForAdditionalData() const { return m_departureInfo.isWaitingForAdditionalData(); };
 
     /** @brief Sets the alarm states. */
     void setAlarmStates( AlarmStates alarmStates );
@@ -630,6 +632,8 @@ public:
     void setHomeStop( const QString &homeStop ) {
         m_info.homeStop = homeStop;
     };
+
+    void setProviderFeatures( const QStringList &providerFeatures );
 
     /**
      * @brief Returns the currently highlighted stop or an empty string, if no stop is

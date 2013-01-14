@@ -28,12 +28,15 @@
 #include <Plasma/Animator>
 #include <Plasma/Animation>
 #include <Plasma/DataEngineManager>
+#include <Plasma/BusyWidget>
+#include <Plasma/Label>
 
 // KDE includes
 #include <KColorScheme>
 #include <KColorUtils>
 #include <KMenu>
 #include <KPixmapCache>
+#include <KAction>
 
 // Qt includes
 #include <QGraphicsLinearLayout>
@@ -48,14 +51,16 @@
 #include <QParallelAnimationGroup>
 #include <QStyleOption>
 #include <QAbstractTextDocumentLayout>
+#include <QLabel>
 #include <qmath.h>
+#include <QTimer>
 
 PublicTransportGraphicsItem::PublicTransportGraphicsItem(
         PublicTransportWidget *publicTransportWidget, QGraphicsItem *parent,
         StopAction *copyStopToClipboardAction, StopAction *showInMapAction/*, QAction *toggleAlarmAction*/ )
         : QGraphicsWidget(parent), m_item(0), m_parent(publicTransportWidget),
         m_resizeAnimation(0), m_pixmap(0), m_copyStopToClipboardAction(copyStopToClipboardAction),
-        m_showInMapAction(showInMapAction)/*,
+        m_showInMapAction(showInMapAction), m_ensureVisibleTimer(0)/*,
         m_toggleAlarmAction(toggleAlarmAction)*/
 {
     setFlag( ItemClipsToShape );
@@ -184,6 +189,12 @@ void PublicTransportGraphicsItem::resizeAnimationFinished()
 void PublicTransportGraphicsItem::updateGeometry()
 {
     QGraphicsWidget::updateGeometry();
+}
+
+QRectF PublicTransportGraphicsItem::boundingRect() const
+{
+    // A line gets drawn at the bottom
+    return QGraphicsWidget::boundingRect().adjusted( 0, -1/2.0, 0, 1/2.0 );
 }
 
 void TimetableListItem::paint( QPainter *painter, const QStyleOptionGraphicsItem *option,
@@ -482,11 +493,18 @@ void DepartureGraphicsItem::resizeEvent( QGraphicsSceneResizeEvent* event )
 {
     PublicTransportGraphicsItem::resizeEvent(event);
 
-    if ( m_routeItem ) {
-        QRectF _infoRect = infoRect( rect(), 0 );
-        m_routeItem->setGeometry( _infoRect.left(), rect().top() + unexpandedHeight() + padding(),
-                                  rect().width() - padding() - _infoRect.left(),
-                                  routeItemHeight() );
+    if ( m_routeItem || m_routeInfoWidget ) {
+        const qreal indentation = expandAreaIndentation();
+        const QRectF _rect = rect();
+        const QRectF routeRect( _rect.left() + indentation,
+                                _rect.top() + unexpandedHeight() + padding(),
+                                _rect.width() - padding() - indentation,
+                                routeItemHeight() );
+        if ( m_routeItem ) {
+            m_routeItem->setGeometry( routeRect );
+        } else if ( m_routeInfoWidget ) {
+            m_routeInfoWidget->setGeometry( routeRect );
+        }
     }
 }
 
@@ -602,11 +620,16 @@ DepartureGraphicsItem::DepartureGraphicsItem( PublicTransportWidget* publicTrans
         : PublicTransportGraphicsItem( publicTransportWidget, parent, copyStopToClipboardAction,
                                        showInMapAction ),
         m_infoTextDocument(0), m_timeTextDocument(0), m_othersTextDocument(0), m_routeItem(0),
-        m_highlighted(false), m_leavingAnimation(0), m_showDeparturesAction(showDeparturesAction),
-        m_highlightStopAction(highlightStopAction), m_newFilterViaStopAction(newFilterViaStopAction),
+        m_routeInfoWidget(0), m_highlighted(false), m_leavingAnimation(0),
+        m_showDeparturesAction(showDeparturesAction), m_highlightStopAction(highlightStopAction),
+        m_newFilterViaStopAction(newFilterViaStopAction), m_updateAdditionalDataAction(0),
         m_pixmapCache(pixmapCache)
 {
     m_leavingStep = 0.0;
+    m_updateAdditionalDataAction = new KAction( KIcon("view-refresh"),
+                                                i18nc("@info", "Refresh"), this );
+    connect( m_updateAdditionalDataAction, SIGNAL(triggered(bool)),
+             this, SIGNAL(updateAdditionalDataRequest()) );
 }
 
 DepartureGraphicsItem::~DepartureGraphicsItem()
@@ -690,12 +713,8 @@ void DepartureGraphicsItem::updateTextLayouts()
                                                                      textOption, font() );
     }
 
-    qreal height = rect.height() - unexpandedHeight();
-    if ( m_routeItem ) {
-        height -= m_routeItem->geometry().height() - padding();
-    }
-    QSizeF othersSize( rect.width() - expandAreaIndentation() - padding(), height );
-    if ( !m_othersTextDocument || (m_othersTextDocument->pageSize() != othersSize) ) {
+    QSizeF othersSize( rect.width() - expandAreaIndentation() - padding(), 999 );
+    if ( !m_othersTextDocument || (m_othersTextDocument->textWidth() != othersSize.width()) ) {
         delete m_othersTextDocument;
         textOption.setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
 
@@ -809,6 +828,58 @@ void JourneyGraphicsItem::updateData( JourneyItem* item, bool updateLayouts )
     update();
 }
 
+void DepartureGraphicsItem::hideRouteInfoWidget()
+{
+    if ( m_routeInfoWidget ) {
+        // Fade out the route busy widget, delete the route busy widget and the animation when done
+        Plasma::Animation *animation =
+                Plasma::Animator::create( Plasma::Animator::FadeAnimation, m_routeInfoWidget );
+        animation->setTargetWidget( m_routeInfoWidget );
+        animation->setProperty( "startOpacity", m_routeInfoWidget->opacity() );
+        animation->setProperty( "targetOpacity", 0.0 );
+        connect( animation, SIGNAL(finished()), m_routeInfoWidget, SLOT(deleteLater()) );
+        animation->start( QAbstractAnimation::DeleteWhenStopped );
+        m_routeInfoWidget = 0;
+    }
+}
+
+void DepartureGraphicsItem::showRouteInfoWidget( QGraphicsWidget *routeInfoWidget )
+{
+    // Show the route info widget (busy widget or an error label) over the route item for
+    // the fade out animation of the route info widget, while the route item gets faded in
+    routeInfoWidget->setZValue( 100 );
+
+    // Position the route info widget TODO Do the SAME for the route item
+    const qreal indentation = expandAreaIndentation();
+    const QRectF _rect = rect();
+    routeInfoWidget->setPos( _rect.left() + indentation,
+                             _rect.top() + unexpandedHeight() + padding() );
+    routeInfoWidget->resize( _rect.width() - padding() - indentation, routeItemHeight() );
+    m_routeInfoWidget = routeInfoWidget;
+}
+
+bool DepartureGraphicsItem::isRouteDataAvailable() const
+{
+    DepartureItem *item = qobject_cast<DepartureItem*>( m_item );
+    if ( !item ) {
+        return false;
+    }
+    return !item->departureInfo()->routeStopsShortened().isEmpty();
+}
+
+bool DepartureGraphicsItem::isRouteDataRequestable() const
+{
+    DepartureItem *item = qobject_cast<DepartureItem*>( m_item );
+    if ( !item ) {
+        return false;
+    }
+    return !item->departureInfo()->includesAdditionalData() &&
+           publicTransportWidget()->model()->info().providerFeatures.contains(
+                QLatin1String("ProvidesAdditionalData")) &&
+           publicTransportWidget()->model()->info().providerFeatures.contains(
+                QLatin1String("ProvidesRouteInformation"));
+}
+
 void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts )
 {
     m_item = item;
@@ -822,30 +893,73 @@ void DepartureGraphicsItem::updateData( DepartureItem* item, bool updateLayouts 
     }
     updateTextLayouts();
 
-    if ( !item->departureInfo()->routeStopsShortened().isEmpty() ) {
+    // Test if route data is already available or if it should be available as additional data
+    if ( isRouteDataAvailable() ) {
+        hideRouteInfoWidget();
         if ( m_routeItem ) {
             m_routeItem->updateData( item );
         } else {
             m_routeItem = new RouteGraphicsItem( this, item, m_copyStopToClipboardAction,
                     m_showInMapAction, m_showDeparturesAction, m_highlightStopAction,
                     m_newFilterViaStopAction );
-            m_routeItem->setVisible( isVisible() );
-            if ( isVisible() ) {
-                Plasma::Animation *animation =
-                        Plasma::Animator::create( Plasma::Animator::FadeAnimation, m_routeItem );
-                animation->setTargetWidget( m_routeItem );
-                animation->start( QAbstractAnimation::DeleteWhenStopped );
-            }
-
             QRectF _infoRect = infoRect( rect(), 0 );
             m_routeItem->setZoomFactor( m_parent->zoomFactor() );
             m_routeItem->setPos( _infoRect.left(), rect().top() + unexpandedHeight() + padding() );
             m_routeItem->resize( rect().width() - padding() - _infoRect.left(),
                                  routeItemHeight() );
+            if ( isVisible() ) {
+                // Fade-in animation for the route item
+                m_routeItem->setOpacity( 0.0 );
+                Plasma::Animation *animation =
+                        Plasma::Animator::create( Plasma::Animator::FadeAnimation, m_routeItem );
+                animation->setTargetWidget( m_routeItem );
+                animation->setProperty( "startOpacity", 0.0 );
+                animation->setProperty( "targetOpacity", 1.0 );
+                animation->start( QAbstractAnimation::DeleteWhenStopped );
+            } else {
+                m_routeItem->hide();
+            }
+        }
+    } else if ( isRouteDataRequestable() ) {
+        if ( item->departureInfo()->isWaitingForAdditionalData() ) {
+            if ( !qgraphicsitem_cast<Plasma::BusyWidget*>(m_routeInfoWidget) ) {
+                // No busy widget shown
+                if ( m_routeInfoWidget ) {
+                    // Hide other info widget
+                    hideRouteInfoWidget();
+                }
+                showRouteInfoWidget( new Plasma::BusyWidget(this) );
+            }
+        } else {
+            Plasma::Label *label = qgraphicsitem_cast<Plasma::Label*>( m_routeInfoWidget );
+            if ( !label ) {
+                // No label shown, create a new one
+                if ( m_routeInfoWidget ) {
+                    // Hide other info widget
+                    hideRouteInfoWidget();
+                }
+
+                if ( !item->departureInfo()->additionalDataError().isEmpty() ) {
+                    label = new Plasma::Label( this );
+                    label->addAction( m_updateAdditionalDataAction );
+                    label->nativeWidget()->setContextMenuPolicy( Qt::ActionsContextMenu );
+                    showRouteInfoWidget( label );
+                }
+            }
+
+            // Update error text shown in the label
+            if ( item->departureInfo()->additionalDataError().isEmpty() ) {
+                // Hide error text if it changed to an empty string
+                hideRouteInfoWidget();
+            } else {
+                label->setText( item->departureInfo()->additionalDataError() );
+            }
         }
     } else if ( m_routeItem ) {
         delete m_routeItem;
         m_routeItem = 0;
+    } else if ( m_routeInfoWidget ) {
+        hideRouteInfoWidget();
     }
 
     if ( item->isLeavingSoon() && !m_leavingAnimation ) {
@@ -1427,6 +1541,8 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
     qreal y = rect.top();
     if ( m_routeItem ) {
         y += m_routeItem->size().height() + padding();
+    } else if ( m_routeInfoWidget ) {
+        y += m_routeInfoWidget->size().height() + padding();
     }
 
     if ( y >= size().height() ) {
@@ -1435,8 +1551,7 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
 
     if ( m_othersTextDocument ) {
         QFontMetrics fm( font() );
-        QRectF htmlRect( rect.left(), y, rect.width(), rect.bottom() - y );
-
+        QRectF htmlRect( rect.left(), y, rect.width(), m_othersTextDocument->size().height() );
         painter->setPen( _textColor );
         TextDocumentHelper::drawTextDocument( painter, option, m_othersTextDocument,
                 htmlRect, drawShadowsOrHalos
@@ -1508,11 +1623,11 @@ qreal DepartureGraphicsItem::expandAreaHeightMinimum() const
 
     qreal height = padding();
     const DepartureInfo *info = departureItem()->departureInfo();
-    if ( info->routeStops().count() >= 2 ) {
+    if ( isRouteDataAvailable() || isRouteDataRequestable() ) {
         height += routeItemHeight() + padding();
     }
     if ( m_othersTextDocument ) {
-        height += m_othersTextDocument->documentLayout()->documentSize().height() + padding();
+        height += m_othersTextDocument->size().height() + padding();
     }
     return height;
 }

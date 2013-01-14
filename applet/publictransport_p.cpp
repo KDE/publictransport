@@ -387,6 +387,10 @@ void PublicTransportAppletPrivate::providerDataUpdated( const QVariantHash &data
     Q_Q( PublicTransportApplet );
     currentProviderData = data;
     currentServiceProviderFeatures = data["features"].toStringList();
+    model->setProviderFeatures( currentServiceProviderFeatures );
+    if ( modelJourneys ) {
+        modelJourneys->setProviderFeatures( currentServiceProviderFeatures );
+    }
 
     // Only use the default target state (journey search) if journeys
     // are supported by the used service provider. Otherwise go to the

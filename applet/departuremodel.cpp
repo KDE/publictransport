@@ -1269,6 +1269,11 @@ void PublicTransportModel::setDepartureColumnSettings( Settings::DepartureTimeFl
     }
 }
 
+void PublicTransportModel::setProviderFeatures( const QStringList &providerFeatures )
+{
+    m_info.providerFeatures = providerFeatures;
+}
+
 QModelIndex PublicTransportModel::index( int row, int column,
         const QModelIndex& parent ) const
 {
