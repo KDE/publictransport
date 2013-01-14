@@ -193,14 +193,14 @@ void TimetableListItem::paint( QPainter *painter, const QStyleOptionGraphicsItem
     painter->setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 
     // Paint background on whole item
-    QRectF rect = boundingRect();
     const QFontMetrics fontMetrics( font() );
     const QString text = KGlobal::locale()->removeAcceleratorMarker( m_action->text() );
     const int iconSize = 16;
     const int padding = 4;
     const int textWidth = fontMetrics.width( text );
     const int usedWidth = iconSize + padding + textWidth;
-    const QRect targetRect( (rect.width() - usedWidth) / 2, (rect.height() - iconSize) / 2,
+    const QRect targetRect( (option->rect.width() - usedWidth) / 2,
+                            (option->rect.height() - iconSize) / 2,
                             usedWidth, iconSize );
     const QRect iconRect( 0, 0, iconSize, iconSize );
     const QRect textRect( iconRect.right() + padding, (iconSize - fontMetrics.height()) / 2,
@@ -1618,6 +1618,26 @@ QPainterPath PublicTransportGraphicsItem::shape() const
     }
     parentPath.addRect( viewport );
     parentPath = mapFromItem( publicTransportWidget(), parentPath );
+
+    // Intersect the parent shape with the shape of this item
+    // and return it as visible shape
+    QPainterPath path;
+    path.addRect( boundingRect() );
+    return path.intersected( parentPath );
+}
+
+QPainterPath TimetableListItem::shape() const
+{
+    // Get the viewport geometry of the ScrollWidget in local coordinates
+    // and adjusted to clip some pixels of children at the top/bottom
+    // for the ScrollWidget overflow border
+    QPainterPath parentPath;
+    QRectF viewport = m_parent->viewportGeometry();
+    if ( m_parent->overflowBordersVisible() ) {
+        viewport.adjust( 0, 2, 0, -1 );
+    }
+    parentPath.addRect( viewport );
+    parentPath = mapFromItem( m_parent, parentPath );
 
     // Intersect the parent shape with the shape of this item
     // and return it as visible shape

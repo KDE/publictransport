@@ -63,6 +63,8 @@ public:
             : QGraphicsWidget(parent), m_action(action), m_parent(timetableWidget)
     {
         setFlag( ItemIsFocusable );
+        setFlag( ItemClipsToShape );
+        setFlag( ItemClipsChildrenToShape );
         setAcceptHoverEvents( true );
     };
 
@@ -73,6 +75,7 @@ protected:
     virtual void mousePressEvent( QGraphicsSceneMouseEvent* ) { m_action->trigger(); };
     virtual void paint( QPainter *painter, const QStyleOptionGraphicsItem *option,
                         QWidget *widget = 0 );
+    virtual QPainterPath shape() const;
 
 private:
     QAction *m_action;
