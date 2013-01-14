@@ -30,34 +30,34 @@
 const int DepartureProcessor::DEPARTURE_BATCH_SIZE = 10;
 const int DepartureProcessor::JOURNEY_BATCH_SIZE = 10;
 
-DepartureProcessor::DepartureProcessor( QObject* parent )
-        : QThread( parent ), m_mutex(new QMutex())
+DepartureProcessor::DepartureProcessor( QObject *parent )
+        : QThread(parent), m_currentJob(NoJob), m_timeOffsetOfFirstDeparture(0),
+          m_isArrival(false), m_quit(false), m_abortCurrentJob(false), m_requeueCurrentJob(false),
+          m_mutex(new QMutex())
 {
-    m_currentJob = NoJob;
-    m_quit = false;
-    m_abortCurrentJob = false;
-    m_requeueCurrentJob = false;
-    m_timeOffsetOfFirstDeparture = 0;
-    m_isArrival = false;
     qRegisterMetaType< QList<DepartureInfo> >( "QList<DepartureInfo>" );
     qRegisterMetaType< QList<JourneyInfo> >( "QList<JourneyInfo>" );
 }
 
 DepartureProcessor::~DepartureProcessor()
 {
+    // Wake up, abort running jobs and quit
     m_mutex->lock();
     m_quit = true;
     m_abortCurrentJob = true;
     m_cond.wakeOne();
     m_mutex->unlock();
+
+    // Wait for the abort to finish
     wait();
+
+    // Cleanup
     delete m_mutex;
 }
 
 void DepartureProcessor::abortJobs( DepartureProcessor::JobTypes jobTypes )
 {
     QMutexLocker locker( m_mutex );
-
     if ( jobTypes.testFlag( m_currentJob ) ) {
         m_abortCurrentJob = true;
     }
@@ -107,6 +107,7 @@ void DepartureProcessor::setFirstDepartureSettings(
 
 void DepartureProcessor::setDepartureArrivalListType( DepartureArrivalListType type )
 {
+    QMutexLocker locker( m_mutex );
     m_isArrival = type == ArrivalList;
 }
 
@@ -140,6 +141,7 @@ bool DepartureProcessor::isTimeShown( const QDateTime& dateTime,
 
 void DepartureProcessor::startOrEnqueueJob( DepartureProcessor::JobInfo *job )
 {
+    // private function, m_mutex is expected to be already locked
     m_jobQueue.enqueue( job );
 
     if ( !isRunning() ) {
@@ -180,26 +182,28 @@ void DepartureProcessor::filterDepartures( const QString &sourceName,
 
 void DepartureProcessor::run()
 {
+    QMutexLocker locker( m_mutex );
     forever {
-        m_mutex->lock();
-        while ( m_jobQueue.isEmpty() ) {
-            if ( m_quit ) {
-                break;
-            }
-            kDebug() << "Waiting for new jobs...";
-            m_currentJob = NoJob;
-            m_cond.wait( m_mutex );
-        }
         if ( m_quit ) {
             break;
         }
+        if ( m_jobQueue.isEmpty() ) {
+            // Wait for new jobs, the wait condition is met on exit or when a new job was queued
+            m_currentJob = NoJob;
+            m_cond.wait( m_mutex );
+            if ( m_quit ) {
+                // Exit the thread
+                break;
+            }
+            Q_ASSERT( !m_jobQueue.isEmpty() );
+        }
 
+        // Get the next job
         JobInfo *job = m_jobQueue.dequeue();
         m_currentJob = job->type;
-        m_mutex->unlock();
 
-//         QTime time;
-//         time.start();
+        // Run the job with unlocked mutex
+        m_mutex->unlock();
         if ( job->type == ProcessDepartures ) {
             doDepartureJob( static_cast<DepartureJobInfo*>( job ) );
         } else if ( job->type == FilterDepartures ) {
@@ -207,10 +211,8 @@ void DepartureProcessor::run()
         } else if ( job->type == ProcessJourneys ) {
             doJourneyJob( static_cast<JourneyJobInfo*>( job ) );
         }
-//         kDebug() << " > Job" << job->type << "finished after"
-//                  << (time.elapsed() / 1000.0) << "seconds";
-
         m_mutex->lock();
+
         if ( !m_requeueCurrentJob ) {
             delete job;
         } else {
@@ -218,15 +220,6 @@ void DepartureProcessor::run()
         }
         m_abortCurrentJob = false;
         m_requeueCurrentJob = false;
-
-        if ( m_quit ) {
-            break;
-        } else if ( m_jobQueue.isEmpty() ) {
-            // Wait if there are no more jobs in the queue
-            m_currentJob = NoJob;
-            m_cond.wait( m_mutex );
-        }
-        m_mutex->unlock();
     }
 
     qDeleteAll( m_jobQueue );
@@ -318,17 +311,15 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
         departureInfos << departureInfo;
 
         if ( departureInfos.count() == DEPARTURE_BATCH_SIZE ) {
+            emit departuresProcessed( sourceName, departureInfos, url, updated,
+                                      nextAutomaticUpdate, minManualUpdateTime,
+                                      departuresData.count() - i - 1 );
+            departureInfos.clear();
+
             QMutexLocker locker( m_mutex );
             if ( m_abortCurrentJob ) {
                 break;
-            } else {
-                emit departuresProcessed( sourceName, departureInfos, url, updated,
-                                          nextAutomaticUpdate, minManualUpdateTime,
-                                          departuresData.count() - i - 1 );
-                departureInfos.clear();
-            }
-
-            if ( m_requeueCurrentJob ) {
+            } else if ( m_requeueCurrentJob ) {
                 departureJob->alreadyProcessed = i + 1;
                 m_jobQueue << departureJob;
                 break;
@@ -337,12 +328,16 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
     } // for ( int i = 0; i < count; ++i )
 
     // Emit remaining departures
-    m_mutex->lock();
-    if ( !m_abortCurrentJob && !departureInfos.isEmpty() ) {
-        emit departuresProcessed( sourceName, departureInfos, url, updated,
-                                  nextAutomaticUpdate, minManualUpdateTime, 0 );
+    if ( !departureInfos.isEmpty() ) {
+        m_mutex->lock();
+        const bool abortCurrentJob = m_abortCurrentJob;
+        m_mutex->unlock();
+
+        if ( !abortCurrentJob ) {
+            emit departuresProcessed( sourceName, departureInfos, url, updated,
+                                      nextAutomaticUpdate, minManualUpdateTime, 0 );
+        }
     }
-    m_mutex->unlock();
 }
 
 void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journeyJob )
@@ -476,15 +471,13 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
 
         journeyInfos << journeyInfo;
         if ( journeyInfos.count() == JOURNEY_BATCH_SIZE ) {
+            emit journeysProcessed( sourceName, journeyInfos, url, updated );
+            journeyInfos.clear();
+
             QMutexLocker locker( m_mutex );
             if ( m_abortCurrentJob ) {
                 break;
-            } else {
-                emit journeysProcessed( sourceName, journeyInfos, url, updated );
-                journeyInfos.clear();
-            }
-
-            if ( m_requeueCurrentJob ) {
+            } else if ( m_requeueCurrentJob ) {
                 journeyJob->alreadyProcessed = i + 1;
                 m_jobQueue << journeyJob;
                 break;
@@ -493,11 +486,15 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
     }
 
     // Emit remaining journeys
-    m_mutex->lock();
-    if ( !m_abortCurrentJob && !journeyInfos.isEmpty() ) {
-        emit journeysProcessed( sourceName, journeyInfos, url, updated );
+    if ( !journeyInfos.isEmpty() ) {
+        m_mutex->lock();
+        const bool abortCurrentJob = m_abortCurrentJob;
+        m_mutex->unlock();
+
+        if ( !abortCurrentJob ) {
+            emit journeysProcessed( sourceName, journeyInfos, url, updated );
+        }
     }
-    m_mutex->unlock();
 }
 
 void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJob )
@@ -524,8 +521,9 @@ void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJ
         // They may be newly filtered if they weren't filtered out, but
         // they may haven't been shown nevertheless, because the maximum
         // departure count was exceeded.
-        if ( filterOut && !departureInfo.isFilteredOut()
-                    && filterJob->shownDepartures.contains(departureInfo.hash()) ) {
+        if ( filterOut && !departureInfo.isFilteredOut() &&
+             filterJob->shownDepartures.contains(departureInfo.hash()) )
+        {
             newlyFiltered << departureInfo;
 
             // Newly not filtered departures are now not filtered out and
@@ -537,17 +535,20 @@ void DepartureProcessor::doFilterJob( DepartureProcessor::FilterJobInfo* filterJ
                         || !filterJob->shownDepartures.contains(departureInfo.hash()) )
                     && isTimeShown(departureInfo.predictedDeparture(),
                                 firstDepartureConfigMode, timeOfFirstDepartureCustom,
-                                timeOffsetOfFirstDeparture) ) {
+                                timeOffsetOfFirstDeparture) )
+        {
             newlyNotFiltered << departureInfo;
         }
         departureInfo.setFlag( PublicTransport::DepartureInfo::IsFilteredOut, filterOut );
     }
 
     m_mutex->lock();
-    if ( !m_abortCurrentJob ) {
+    const bool abortCurrentJob = m_abortCurrentJob;
+    m_mutex->unlock();
+
+    if ( !abortCurrentJob ) {
         emit departuresFiltered( filterJob->sourceName, departures, newlyFiltered, newlyNotFiltered );
     }
-    m_mutex->unlock();
 }
 
 QDebug& operator <<( QDebug debug, DepartureProcessor::JobType jobType )
