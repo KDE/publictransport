@@ -67,9 +67,13 @@ Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
     // If the name of a data requesting source is given, return the timetable service
     const SourceType type = sourceTypeFromName( name );
     if ( isDataRequestingSourceType(type) ) {
-        TimetableService *service = new TimetableService( name, this );
-        service->setDestination( name );
-        return service;
+        const QString nonAmbiguousName = disambiguateSourceName( name );
+        if ( m_dataSources.contains(nonAmbiguousName) ) {
+            // Data source exists
+            TimetableService *service = new TimetableService( this, name, this );
+            service->setDestination( name );
+            return service;
+        }
     }
 
     // No service for the given name found
