@@ -111,6 +111,9 @@ public:
                                           StopAction *showInMapAction = 0 );
     virtual ~PublicTransportGraphicsItem();
 
+    enum { Type = UserType + 4 };
+    virtual int type() const { return Type; };
+
     /**
      * @brief Get the visible part of the shape of this item.
      *
@@ -403,6 +406,9 @@ public:
                                     KPixmapCache *pixmapCache = 0 );
     virtual ~DepartureGraphicsItem();
 
+    enum { Type = UserType + 5 };
+    virtual int type() const { return Type; };
+
     /**
      * @brief Updates this graphics item to visualize the given @p item.
      *
@@ -550,6 +556,9 @@ public:
                                   StopAction *requestJourneyFromStopAction = 0 );
     virtual ~JourneyGraphicsItem();
 
+    enum { Type = UserType + 6 };
+    virtual int type() const { return Type; };
+
     /**
      * @brief Updates this graphics item to visualize the given @p item.
      *
@@ -680,6 +689,9 @@ public:
     /** @brief Gets the model containing the data for this widget. */
     PublicTransportModel *model() const { return m_model; };
 
+    enum { Type = UserType + 1 };
+    virtual int type() const { return Type; };
+
     /** @brief Sets the model containing the data for this widget to @p model. */
     void setModel( PublicTransportModel *model );
 
@@ -809,6 +821,9 @@ public:
                      ExpandingOption expandingOption = ExpandSingle, QGraphicsItem* parent = 0 );
     virtual ~TimetableWidget();
 
+    enum { Type = UserType + 2 };
+    virtual int type() const { return Type; };
+
     void setTargetHidden( bool targetHidden ) { m_targetHidden = targetHidden; updateItemLayouts(); };
     bool isTargetHidden() const { return m_targetHidden; };
 
@@ -866,6 +881,9 @@ public:
                             Flags flags = ShowEarlierAndLaterJourneysItems,
                             ExpandingOption expandingOption = ExpandSingle,
                             QGraphicsItem* parent = 0 );
+
+    enum { Type = UserType + 3 };
+    virtual int type() const { return Type; };
 
     /** @brief Gets the journey item at the given @p row. */
     inline JourneyGraphicsItem *journeyItem( int row ) {

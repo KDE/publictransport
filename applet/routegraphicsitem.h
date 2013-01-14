@@ -58,6 +58,9 @@ public:
                 * stops that are omitted / not displayed. */
     };
 
+    enum { Type = UserType + 11 };
+    virtual int type() const { return Type; };
+
     explicit RouteStopMarkerGraphicsItem( QGraphicsItem* parent = 0,
                                           RouteStopTextGraphicsItem *textItem = 0,
                                           MarkerType markerType = DefaultStopMarker,
@@ -127,6 +130,9 @@ class RouteStopTextGraphicsItem : public QGraphicsWidget {
     Q_PROPERTY( qreal expandStep READ expandStep WRITE setExpandStep )
 
 public:
+    enum { Type = UserType + 12 };
+    virtual int type() const { return Type; };
+
     /**
      * @brief Create a new route stop text item.
      *
@@ -228,6 +234,9 @@ class RouteGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
 
 public:
+    enum { Type = UserType + 10 };
+    virtual int type() const { return Type; };
+
     RouteGraphicsItem( QGraphicsItem* parent, DepartureItem *item,
                        StopAction *copyStopToClipboardAction = 0, StopAction *showInMapAction = 0,
                        StopAction *showDeparturesAction = 0, StopAction *highlightStopAction = 0,
@@ -294,6 +303,9 @@ class JourneyRouteStopGraphicsItem : public QGraphicsWidget {
     Q_OBJECT
 
 public:
+    enum { Type = UserType + 13 };
+    virtual int type() const { return Type; };
+
     JourneyRouteStopGraphicsItem( JourneyRouteGraphicsItem* parent, const QPixmap &vehiclePixmap,
                                   const QString &text, RouteStopFlags routeStopFlags,
                                   const QString &stopName, const QString &stopNameShortened );
