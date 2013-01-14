@@ -47,7 +47,6 @@ var __hafas_routedata = function(hafas) {
             * @return {Object} An object with these properties: RouteStops, RouteTimes.
             **/
             parseXml: function( xml, values ) {
-                print( "parseXml" );
                 if ( !HafasPrivate.expectFormat(Hafas.XmlFormat, xml) ) {
                     if ( HafasPrivate.isHtml(xml) ) {
                         return processor.parser.parseHtml( xml, values );
@@ -119,7 +118,6 @@ var __hafas_routedata = function(hafas) {
                         if ( typeof(lastTime) != 'undefined' && timeValue < lastTime ) {
                             // Assume departures to be sorted by date and time
                             // Add one day
-                            print( "  (will add one day)" );
                             timeValue.setTime( timeValue.getTime() + 24 * 60 * 60 * 1000 );
                         }
 
@@ -130,7 +128,6 @@ var __hafas_routedata = function(hafas) {
                             // No arrival route stops collected, but the current route time
                             // is after the departure time from the home stop, which follows
                             // later, subtract one day to correct the date
-                            print( "  (will subtract one day)" );
                             timeValue.setTime( timeValue.getTime() - 24 * 60 * 60 * 1000 );
                         }
 
@@ -178,7 +175,6 @@ var __hafas_routedata = function(hafas) {
             * @return {Object} An object with these properties: RouteStops, RouteTimes.
             **/
             parseHtml: function( html, values ) {
-                print( "parseHtml" );
                 var options = HafasPrivate.prepareOptions( processor.options, hafas.options );
                 html = helper.decode( html, options.charset(Hafas.HtmlFormat) );
 

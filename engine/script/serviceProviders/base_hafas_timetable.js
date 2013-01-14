@@ -561,8 +561,6 @@ var __hafas_timetable = function(hafas) {
                                 return items[i].RouteDataUrl;
                             }
                         }
-
-                        helper.warning( "No matching route data URL found" );
                         return "";
                     };
 
@@ -595,8 +593,7 @@ var __hafas_timetable = function(hafas) {
                         // ie. "arrivals" or "departures"
                         items = items.concat( parser(data, false, "", -1, 0, url, values) );
                         if ( items.length < 1 ) {
-                            helper.error( "Could not find any traininfo.exe URL" );
-                            return {};
+                            throw Error( "No matching route data URL found" );
                         }
 
                         // Cleanup 'result' object, may have been filled by the parser,
@@ -612,19 +609,19 @@ var __hafas_timetable = function(hafas) {
                 }
 
                 if ( routeDataUrl.length == 0 ) {
-                    helper.error( "Could not find any traininfo.exe URL" );
-                    return {};
+                    throw Error( "Could not find an URL for route data" );
                 } else {
                     if ( hafas.routeData.options.format == Hafas.XmlFormat ) {
                         routeDataUrl = routeDataUrl + "&L=vs_java3";
                     }
-                    var routeDocument = network.downloadSynchronous( routeDataUrl, options.timeout );
-                    if ( !network.lastDownloadAborted ) {
-                        var parser = hafas.routeData.parser.parserByFormat(hafas.routeData.options.format);
-                        print( "Parse route document" );
-                        return parser( routeDocument, values );
+                    var routeDocument =
+                            network.downloadSynchronous( routeDataUrl, options.timeout );
+                    if ( network.lastDownloadAborted ) {
+                        throw Error( "Aborted" );
                     } else {
-                        return {}; // Download was aborted
+                        var parser = hafas.routeData.parser.parserByFormat( 
+                                hafas.routeData.options.format );
+                        return parser( routeDocument, values );
                     }
                 }
             }
