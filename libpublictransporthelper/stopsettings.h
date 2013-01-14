@@ -125,6 +125,9 @@ public:
         return name;
     };
 
+    /** @brief Clear all values. */
+    void clear();
+
     /**
      * @brief The name of the stop.
      *

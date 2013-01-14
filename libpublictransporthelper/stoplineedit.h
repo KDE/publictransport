@@ -121,6 +121,9 @@ public:
      **/
     Stop selectedStop() const;
 
+    /** @brief Set the currently selected @p stop. */
+    void setSelectedStop( const Stop &stop );
+
 protected Q_SLOTS:
     /** @brief Stop suggestion data or provider (state) data arrived from the data engine. */
     void dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data &data );
@@ -207,6 +210,8 @@ public:
      * @see StopLineEdit::selectedStop()
      **/
     QList<Stop> selectedStops() const;
+
+    void setSelectedStops( const QList<Stop> &stops );
 
     QList< StopLineEdit* > stopLineEditWidgets() const;
 

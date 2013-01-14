@@ -74,6 +74,15 @@ bool Stop::isValid() const
     return !name.isEmpty();
 }
 
+void Stop::clear()
+{
+    name.clear();
+    id.clear();
+    hasValidCoordinates = false;
+    longitude = 0.0;
+    latitude = 0.0;
+}
+
 uint qHash( const Stop &stop )
 {
     return !stop.id.isEmpty() ? qHash(stop.id) : (stop.hasValidCoordinates
@@ -224,10 +233,12 @@ void StopSettings::setStops(const QStringList& stops, const QStringList& stopIDs
 {
     StopList stopList;
     if ( stops.count() == stopIDs.count() ) {
+        // Use given stop IDs
         for ( int i = 0; i < stops.count(); ++i ) {
             stopList << Stop( stops[i], stopIDs[i] );
         }
     } else {
+        // Do not use any stop IDs
         foreach ( const QString &stop, stops ) {
             stopList << Stop( stop );
         }

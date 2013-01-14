@@ -105,7 +105,7 @@ public:
     };
 
     StopLineEditPrivate( const QString &serviceProvider, StopLineEdit *q )
-            : stopIndex(-1), importJob(0), q_ptr(q)
+            : importJob(0), q_ptr(q)
     {
         state = Ready;
         progress = 0;
@@ -251,6 +251,7 @@ public:
         engine->connectSource( sourceName, q );
     };
 
+    // Get the index of the stop with the given @p stopName, -1 otherwise
     int stopIndexFromName( const QString &stopName ) {
         for ( int i = 0; i < stops.count(); ++i ) {
             const Stop &stop = stops[i];
@@ -264,11 +265,18 @@ public:
         return -1;
     };
 
+    // Require stop IDs when they are available,
+    // ie. only use validated stop names with a corresponding ID
+    bool requireStopId() const {
+        return providerFeatures.contains( QLatin1String("ProvidesStopID") );
+    };
+
     StopList stops;
-    int stopIndex; // The index of the current stop in stops if one was selected, -1 otherwise
+    Stop selectedStop;
     QString city;
     QString serviceProvider;
     QString providerType;
+    QStringList providerFeatures;
     State state;
     int progress; // Progress of the data engine in processing a task (0 .. 100)
     QString sourceName; // Source name used to request stop suggestions at the data engine
@@ -315,7 +323,19 @@ StopLineEdit::~StopLineEdit()
 Stop StopLineEdit::selectedStop() const
 {
     Q_D( const StopLineEdit );
-    return d->stopIndex == -1 ? Stop(text()) : d->stops[d->stopIndex];
+    return d->selectedStop;
+}
+
+void StopLineEdit::setSelectedStop( const Stop &stop )
+{
+    Q_D( StopLineEdit );
+    const int stopIndex = d->stopIndexFromName( stop.name );
+    if ( stopIndex == -1 ) {
+        // Stop unknown, store it
+        d->stops << stop;
+    }
+    d->selectedStop = stop;
+    setText( stop.name );
 }
 
 #ifdef MARBLE_FOUND
@@ -326,6 +346,8 @@ void StopLineEdit::popupHidden()
 
 void StopLineEdit::stopClicked( const Stop &stop )
 {
+    Q_D( StopLineEdit );
+    d->selectedStop = stop;
     if ( stop.isValid() ) {
         setText( stop.name );
     }
@@ -352,6 +374,7 @@ void StopLineEdit::setServiceProvider( const QString& serviceProvider )
     const Plasma::DataEngine::Data providerData =
             engine->query( "ServiceProvider " + d->serviceProvider );
     d->providerType = providerData["type"].toString();
+    d->providerFeatures = providerData["features"].toStringList();
     setEnabled( true );
     setClearButtonShown( true ); // Stays enabled and does not get drawn in KLineEdit::paintEvent
     setReadOnly( false );
@@ -434,24 +457,42 @@ bool StopLineEdit::cancelImport()
 
 void StopLineEdit::changed( const QString &newText )
 {
-#ifdef MARBLE_FOUND
     Q_D( StopLineEdit );
     if ( newText.isEmpty() ) {
-        kDebug() << "Empty, hide map";
+        d->selectedStop.clear();
+#ifdef MARBLE_FOUND
         d->mapPopup->hide();
-        d->stopIndex = -1;
-    } else if ( d->mapPopup->isVisible() ) {
-        d->mapPopup->publicTransportLayer()->setSelectedStop( newText );
-        d->stopIndex = d->stopIndexFromName( newText );
-        if ( d->stopIndex == -1 ) {
+#endif
+    } else {
+        const int stopIndex = d->stopIndexFromName( newText );
+        if ( stopIndex == -1 ) {
+            // No matching suggestion found
+            if ( !d->requireStopId() ) {
+                // No stop ID required, just use the current input text as stop name
+                d->selectedStop = Stop( newText );
+            }
+        } else {
+            // Found a matching suggestion
+            d->selectedStop = d->stops[ stopIndex ];
+        }
+
+#ifdef MARBLE_FOUND
+        if ( d->mapPopup->isVisible() ) {
+            d->mapPopup->publicTransportLayer()->setSelectedStop( newText );
+        }
+
+        if ( stopIndex == -1 ) {
             // The stop is not a suggestion for the line edit but was loaded
             // by the popup map, add data of that stop and use it's stop index
             const Stop stop = d->mapPopup->publicTransportLayer()->selectedStop();
-            d->stops << stop;
-            d->stopIndex = d->stops.count() - 1;
+            if ( stop.isValid() ) {
+                // Get stop data from the map
+                d->stops << stop;
+                d->selectedStop = stop;
+            }
         }
-    }
 #endif
+    }
 }
 
 void StopLineEdit::edited( const QString& newText )
@@ -467,13 +508,20 @@ void StopLineEdit::edited( const QString& newText )
     // Don't request new suggestions if newText is one of the suggestions, ie. most likely a
     // suggestion was selected. To allow choosing another suggestion with arrow keys the old
     // suggestions shouldn't be removed in this case and no update is needed.
-    d->stopIndex = d->stopIndexFromName( newText );
-    if ( d->stopIndex != -1 ) {
-        return; // Don't update suggestions
-    }
+    const int stopIndex = d->stopIndexFromName( newText );
+    if ( stopIndex == -1 ) {
+        // No matching suggestion found
+        if ( !d->requireStopId() ) {
+            // No stop ID required, just use the current input text as stop name
+            d->selectedStop = Stop( newText );
+        }
 
-    // No matching suggestion found, request new suggestions
-    d->connectStopsSource( newText );
+        // Request new suggestions
+        d->connectStopsSource( newText );
+    } else {
+        // Found a matching suggestion, do not update suggestions
+        d->selectedStop = d->stops[ stopIndex ];
+    }
 }
 
 void StopLineEdit::paintEvent( QPaintEvent *ev )
@@ -905,6 +953,14 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
         weightedStops << QString( "%1:%2" ).arg( stop.name ).arg( stopWeight );
     }
 
+    if ( !text().isEmpty() && d->requireStopId() && d->selectedStop.id.isEmpty() ) {
+        // Try to find the ID for the current stop name
+        const int stopIndex = d->stopIndexFromName( text() );
+        if ( stopIndex != -1 ) {
+            d->selectedStop = d->stops[ stopIndex ];
+        }
+    }
+
     // Only add stop suggestions, if the line edit still has focus
     if ( hasFocus() ) {
         kDebug() << "Prepare completion object";
@@ -969,6 +1025,26 @@ QList< Stop > StopLineEditList::selectedStops() const
         stops << stopLineEdit->selectedStop();
     }
     return stops;
+}
+
+void StopLineEditList::setSelectedStops( const QList<Stop> &stops )
+{
+    QList< StopLineEdit* > lineEdits = stopLineEditWidgets();
+    while ( lineEdits.count() > qMax(minimumWidgetCount(), stops.count()) ) {
+        // More line edits than stops to select, remove
+        removeLastWidget();
+    }
+    for ( int i = 0; i < stops.count(); ++i ) {
+        const Stop &stop = stops[i];
+        if ( i < lineEdits.count() ) {
+            lineEdits[i]->setSelectedStop( stop );
+        } else {
+            kDebug() << "Add a StopLineEdit" << stop.name << stop.id;
+            StopLineEdit *lineEdit = qobject_cast< StopLineEdit* >( addLineEdit() );
+            Q_ASSERT( lineEdit );
+            lineEdit->setSelectedStop( stop );
+        }
+    }
 }
 
 QList< StopLineEdit* > StopLineEditList::stopLineEditWidgets() const

@@ -587,6 +587,7 @@ StopSettingsDialog::StopSettingsDialog( QWidget *parent, const StopSettings &sto
             options, providerDataDialogOptions, customSettings, factory, stopIndex, this))
 {
     Q_D( StopSettingsDialog );
+    Q_ASSERT( filterConfigurations );
     d->init( stopSettings, filterConfigurations );
 
     // If no providers are available, show the GHNS download dialog
@@ -726,7 +727,7 @@ void StopSettingsDialog::setStopSettings( const StopSettings& stopSettings )
         }
         case StopNameSetting:
             if ( d->stopList ) {
-                d->stopList->setLineEditTexts( stopSettings.stops() );
+                d->stopList->setSelectedStops( stopSettings.stopList() );
             }
             break;
         case CitySetting: {

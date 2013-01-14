@@ -404,6 +404,15 @@ Q_SIGNALS:
     /** @brief The @p widget at @p widgetIndex in the widget list has been removed. */
     void removed( QWidget *widget, int widgetIndex );
 
+public Q_SLOTS:
+    /**
+     * @brief Removes the last widget.
+     *
+     * This slot is connected to the remove button, if created using
+     * @ref RemoveButtonAfterLastWidget.
+     **/
+    void removeLastWidget();
+
 protected Q_SLOTS:
     /**
      * @brief This slot is connected to the removeClicked signal of every contained @ref DynamicWidget.
@@ -412,14 +421,6 @@ protected Q_SLOTS:
      * containing the sender button gets removed.
      **/
     void removeWidget();
-
-    /**
-     * @brief Removes the last widget.
-     *
-     * This slot is connected to the remove button, if created using
-     * @ref RemoveButtonAfterLastWidget.
-     **/
-    void removeLastWidget();
 
     /**
      * @brief This slot is connected to the clicked()-signal of the add button to add a new widget.
