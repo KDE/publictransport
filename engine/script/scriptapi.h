@@ -252,8 +252,7 @@ private:
  * To download a document synchronously simply call getSynchronous() with the URL to download.
  * When the download is finished getSynchronous(this request using the POST method) returns and the script can start parsing the
  * document. There is a default timeout of 30 seconds. If a requests takes more time it gets
- * aborted. To define your own timeout you can give a second argument to getSynchronous(), which
- * is the timeout in milliseconds.
+ * aborted. To define your own timeout you can give it as argument to getSynchronous().
  * @note downloadSynchronous() is an alias for getSynchronous().
  *
  * @code
@@ -281,8 +280,9 @@ private:
  * If a script needs to use the POST method to request data use post(). The data to be sent in
  * a POST request can be set using NetworkRequest::setPostData().
  *
- * @note One request object created with createRequest() can not be used multiple times in
+ * @note One request object created with createRequest() can @em not be used multiple times in
  *   parallel. To start another request create a new request object.
+ * @note There is a global 60 seconds timeout for all network requests to finish.
  **/
 class Network : public QObject, public QScriptable {
     Q_OBJECT
@@ -331,15 +331,13 @@ public:
     /**
      * @brief Download the document at @p url synchronously.
      *
-     * After the request is sent an QEventLoop gets started to wait for the reply to finish.
-     * If the @p timeout expires or the abort() slot gets called, the download gets stopped.
-     *
      * @param url The URL to download.
      * @param userUrl An URL for this request that should be shown to users.
      *   This can be eg. an URL to an HTML document showing the data that is also available
      *   at the requested URL, but eg. in XML format.
      * @param timeout Maximum time in milliseconds to wait for the reply to finish.
      *   If smaller than 0, no timeout gets used.
+     *   Note that there is a global 60 seconds timeout for all network requests to finish.
      **/
     Q_INVOKABLE QByteArray getSynchronous( const QString &url, const QString &userUrl = QString(),
                                            int timeout = DEFAULT_TIMEOUT );
@@ -358,7 +356,6 @@ public:
      * @brief Creates a new NetworkRequest for asynchronous network access.
      *
      * @note Each NetworkRequest object can only be used once for one download.
-     *
      * @see get, download, post, head
      **/
     Q_INVOKABLE NetworkRequest *createRequest( const QString &url,
@@ -370,6 +367,7 @@ public:
      * @param request The NetworkRequest object created with createRequest().
      * @param timeout Maximum time in milliseconds to wait for the reply to finish.
      *   If smaller than 0, no timeout gets used.
+     *   Note that there is a global 60 seconds timeout for all network requests to finish.
      **/
     Q_INVOKABLE void get( NetworkRequest *request, int timeout = DEFAULT_TIMEOUT );
 
@@ -379,6 +377,7 @@ public:
      * @param request The NetworkRequest object created with createRequest().
      * @param timeout Maximum time in milliseconds to wait for the reply to finish.
      *   If smaller than 0, no timeout gets used.
+     *   Note that there is a global 60 seconds timeout for all network requests to finish.
      **/
     Q_INVOKABLE void post( NetworkRequest *request, int timeout = DEFAULT_TIMEOUT );
 
@@ -386,6 +385,9 @@ public:
      * @brief Perform the network @p request asynchronously, but only get headers.
      *
      * @param request The NetworkRequest object created with createRequest().
+     * @param timeout Maximum time in milliseconds to wait for the reply to finish.
+     *   If smaller than 0, no timeout gets used.
+     *   Note that there is a global 60 seconds timeout for all network requests to finish.
      **/
     Q_INVOKABLE void head( NetworkRequest *request, int timeout = DEFAULT_TIMEOUT );
 
@@ -1325,11 +1327,13 @@ public Q_SLOTS:
     void clear();
 
     /**
-     * @brief Adds the data from @p map.
+     * @brief Add @p timetableItem to the result set.
      *
-     * This can be used by scripts to add a timetable data object.
+     * This can be data for departures, arrivals, journeys, stop suggestions or additional data.
+     * See Enums::TimetableInformation for a list of the property names to use.
+     *
      * @code
-     *  result.addData({ DepartureDateTime: new Date(), Target: 'Test' });
+     *  result.addData( {DepartureDateTime: new Date(), Target: 'Test'} );
      * @endcode
      *
      * A predefined object can also be added like this:
@@ -1345,12 +1349,11 @@ public Q_SLOTS:
      *  result.addData( departure );
      * @endcode
      *
-     * Keys of @p map, ie. properties of the script object are matched case insensitive.
-     *
-     * @param map A map with all timetable informations as pairs of the information names and
-     *   their values.
+     * @param timetableItem A script object with data for a timetable item. Contains data in a set
+     *   of properties, eg. the departure date and time for a departure gets stored as
+     *   DepartureDateTime. All available properties can be found in Enums::TimetableInformation.
      **/
-    void addData( const QVariantMap &map );
+    void addData( const QVariantMap &timetableItem );
 
 //     TODO
 //     /** @brief Whether or not @p info is contained in this TimetableData object. */

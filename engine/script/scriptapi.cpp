@@ -1018,7 +1018,7 @@ void Helper::emitRepeatedMessageWarning()
     }
 }
 
-void Helper::messageReceived( const QString& message, const QString &failedParseText,
+void Helper::messageReceived( const QString &message, const QString &failedParseText,
                               ErrorSeverity severity )
 {
     m_mutex->lock();
@@ -1045,7 +1045,10 @@ void Helper::messageReceived( const QString& message, const QString &failedParse
 
 #ifdef ENABLE_DEBUG_SCRIPT_ERROR
     m_mutex->lock();
-    DEBUG_SCRIPT_ERROR( QString("Error in %1-script, function %2(), file %3, line %4")
+    const QString name = severity == Information ? "Information"
+            : (severity == Warning ? "Warning" : "Fatal error");
+    DEBUG_SCRIPT_ERROR( QString("%1 in %2-script, function %3(), file %4, line %5")
+            .arg(name)
             .arg(m_serviceProviderId)
             .arg(info.functionName().isEmpty() ? "[anonymous]" : info.functionName())
             .arg(QFileInfo(info.fileName()).fileName())
@@ -1089,11 +1092,11 @@ void Helper::messageReceived( const QString& message, const QString &failedParse
     }
 }
 
-void ResultObject::addData( const QVariantMap& map )
+void ResultObject::addData( const QVariantMap &item )
 {
     m_mutex->lockInline();
     TimetableData data;
-    for ( QVariantMap::ConstIterator it = map.constBegin(); it != map.constEnd(); ++it ) {
+    for ( QVariantMap::ConstIterator it = item.constBegin(); it != item.constEnd(); ++it ) {
         bool ok;
         Enums::TimetableInformation info =
                 static_cast< Enums::TimetableInformation >( it.key().toInt(&ok) );
@@ -1102,36 +1105,48 @@ void ResultObject::addData( const QVariantMap& map )
         }
         const QVariant value = it.value();
         if ( info == Enums::Nothing ) {
-            kDebug() << "Unknown timetable information" << it.key() << "with value" << value;
-            const QString message = i18nc("@info/plain", "Invalid timetable information \"%1\" "
-                                          "with value \"%2\"", it.key(), value.toString());
+            kWarning() << "Invalid property name" << it.key() << "with value" << value;
+            QString message;
+            if ( it.key() == QLatin1String("length") && value.canConvert(QVariant::Int) &&
+                 item.count() == value.toInt() + 1 ) // +1 for the "length" property
+            {
+                // Seems like a list was given and autoconverted to QVariantMap in this way
+                message = i18nc("@info/plain", "Invalid property name \"%1\" "
+                                "with value \"%2\", seems like a list was passed to "
+                                "result.addData() instead of an object with properties.",
+                                it.key(), value.toString());
+                context()->throwError( message );
+            } else {
+                message = i18nc("@info/plain", "Invalid property name \"%1\" with value \"%2\"",
+                                it.key(), value.toString());
+            }
             const int count = m_timetableData.count();
             m_mutex->unlockInline();
-            emit invalidDataReceived( info, message, context()->parentContext(), count, map );
+            emit invalidDataReceived( info, message, context()->parentContext(), count, item );
             m_mutex->lockInline();
             continue;
         } else if ( value.isNull() ) {
             // Null value received, simply leave the data empty
             continue;
         } else if ( !value.isValid() ) {
-            kDebug() << "Value for" << info << "is invalid or null" << value;
+            kWarning() << "Value for" << info << "is invalid or null" << value;
             const QString message = i18nc("@info/plain", "Invalid value received for \"%1\"",
                                           it.key());
             const int count = m_timetableData.count();
             m_mutex->unlockInline();
-            emit invalidDataReceived( info, message, context()->parentContext(), count, map );
+            emit invalidDataReceived( info, message, context()->parentContext(), count, item );
             m_mutex->lockInline();
             continue;
         } else if ( info == Enums::TypeOfVehicle &&
                     static_cast<Enums::VehicleType>(value.toInt()) == Enums::InvalidVehicleType &&
                     Global::vehicleTypeFromString(value.toString()) == Enums::InvalidVehicleType )
         {
-            kDebug() << "Invalid type of vehicle value" << value;
+            kWarning() << "Invalid type of vehicle value" << value;
             const QString message = i18nc("@info/plain",
                     "Invalid type of vehicle received: \"%1\"", value.toString());
             const int count = m_timetableData.count();
             m_mutex->unlockInline();
-            emit invalidDataReceived( info, message, context()->parentContext(), count, map );
+            emit invalidDataReceived( info, message, context()->parentContext(), count, item );
             m_mutex->lockInline();
         } else if ( info == Enums::TypesOfVehicleInJourney || info == Enums::RouteTypesOfVehicles ) {
             const QVariantList types = value.toList();
@@ -1147,7 +1162,7 @@ void ResultObject::addData( const QVariantMap& map )
                     const int count = m_timetableData.count();
                     m_mutex->unlockInline();
                     emit invalidDataReceived( info, message, context()->parentContext(),
-                                              count, map );
+                                              count, item );
                     m_mutex->lockInline();
                 }
             }
