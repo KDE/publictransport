@@ -1232,13 +1232,8 @@ QColor PublicTransportGraphicsItem::textColor() const
             QColor color = Plasma::Theme::defaultTheme()->color(Plasma::Theme::ViewTextColor);
         #endif
 
-        // Mix with group color if not highlighted
-        if ( m_item ) {
-            QColor groupColor = index().data(Qt::BackgroundColorRole).value<QColor>();
-            if ( groupColor != Qt::transparent ) {
-                color = KColorUtils::mix( color, groupColor, 0.1 );
-            }
-        }
+        // Make text color a little transparent, if not highlighted
+        color.setAlpha( 230 );
 
         return color;
     }
