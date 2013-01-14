@@ -1241,11 +1241,9 @@ void PublicTransportModel::startUpdateTimer()
 
 void PublicTransportModel::callAtNextFullMinute( const char* member )
 {
-    QTime time = QTime::currentTime();
-    QTime nextMinute( time.hour(), time.minute() ); // nextMinute = time with secs,msecs=0
-    nextMinute = nextMinute.addSecs( 60 );
-    int msecs = time.msecsTo( nextMinute );
-    QTimer::singleShot( qMin(60000, msecs), this, member );
+    // Calculate milliseconds until the next full minute
+    const QTime time = QTime::currentTime();
+    QTimer::singleShot( (60 - time.second()) * 1000 - time.msec(), this, member );
 }
 
 void PublicTransportModel::setLinesPerRow( int linesPerRow )
