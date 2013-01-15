@@ -1,5 +1,5 @@
 /*
- *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -343,11 +343,10 @@ protected:
     virtual void mousePressEvent( QGraphicsSceneMouseEvent* event );
     virtual void mouseReleaseEvent( QGraphicsSceneMouseEvent* event );
     virtual void updateGeometry();
-    virtual QRectF boundingRect() const;
     virtual void updateTextLayouts() = 0;
     virtual QGraphicsWidget *routeItem() const = 0;
-    virtual void drawFadeOutLeftAndRight( QPainter *painter, const QRect &rect, int fadeWidth = 40 );
-    virtual void drawAlarmBackground( QPainter *painter, const QRect &rect );
+    virtual void drawFadeOutLeftAndRight( QPainter *painter, const QRectF &rect, int fadeWidth = 40 );
+    virtual void drawAlarmBackground( QPainter *painter, const QRectF &rect );
 
     /** @brief The minimum size of the expand area. */
     virtual qreal expandAreaHeightMinimum() const = 0;

@@ -1,5 +1,5 @@
 /*
-*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -191,12 +191,6 @@ void PublicTransportGraphicsItem::updateGeometry()
     QGraphicsWidget::updateGeometry();
 }
 
-QRectF PublicTransportGraphicsItem::boundingRect() const
-{
-    // A line gets drawn at the bottom
-    return QGraphicsWidget::boundingRect().adjusted( 0, -1/2.0, 0, 1/2.0 );
-}
-
 void TimetableListItem::paint( QPainter *painter, const QStyleOptionGraphicsItem *option,
                                QWidget *widget )
 {
@@ -270,14 +264,15 @@ void PublicTransportGraphicsItem::paint( QPainter* painter,
     }
 
     // Paint background on whole item (including expand area)
-    paintBackground( painter, option, option->rect );
+    const QRectF _rect = rect();
+    paintBackground( painter, option, _rect );
 
     // Paint item (excluding expand area)
-    paintItem( painter, option, option->rect );
+    paintItem( painter, option, _rect );
 
     // Draw expand area if this item isn't currently completely unexpanded
     if ( m_expanded || !qFuzzyIsNull(m_expandStep) ) {
-        QRectF rectItem = option->rect;
+        QRectF rectItem = _rect;
         rectItem.setHeight( unexpandedHeight() );
         qreal pad = padding();
         qreal indentation = expandAreaIndentation();
@@ -999,8 +994,8 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
     QColor borderColor = textColor();
     borderColor.setAlphaF( 0.5 );
 
-    QRect pixmapRect( 0, 0, rect.width(), rect.height() );
-    QPixmap pixmap( pixmapRect.size());
+    QRectF pixmapRect( 0, 0, rect.width(), rect.height() );
+    QPixmap pixmap( pixmapRect.size().toSize() );
     QColor backgroundColor = Qt::transparent;
     pixmap.fill( backgroundColor );
 
@@ -1068,13 +1063,15 @@ void JourneyGraphicsItem::paintBackground( QPainter* painter, const QStyleOption
 
     // Draw a line at the bottom of this TimetableItem
     p.setPen( borderColor );
-    p.drawLine( pixmapRect.bottomLeft(), pixmapRect.bottomRight() );
+    p.drawLine( 0, pixmap.size().height() - 0.5,
+                pixmap.size().width(), pixmap.size().height() - 0.5 );
 
     // Fade out to the left and right
     drawFadeOutLeftAndRight( &p, pixmapRect );
     p.end();
 
-    painter->drawPixmap( rect.toRect(), pixmap );
+    // Draw pixmap
+    painter->drawPixmap( rect.topLeft(), pixmap );
 }
 
 void JourneyGraphicsItem::paintItem( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -1255,8 +1252,8 @@ void DepartureGraphicsItem::paintBackground( QPainter* painter,
     QColor borderColor = textColor();
     borderColor.setAlphaF( 0.5 );
 
-    QRect pixmapRect( 0, 0, rect.width(), rect.height() );
-    QPixmap pixmap( pixmapRect.size() );
+    QRectF pixmapRect( 0, 0, rect.width(), rect.height() );
+    QPixmap pixmap( pixmapRect.size().toSize() );
 
     // Get the background color for departures in color groups / alternative background colors
     QColor backgroundColor = index().data( Qt::BackgroundColorRole ).value<QColor>();
@@ -1276,18 +1273,21 @@ void DepartureGraphicsItem::paintBackground( QPainter* painter,
         drawAlarmBackground( &p, pixmapRect );
     }
 
-    // Draw a line at the bottom of this TimetableItem
+    // Draw a line at the bottom of this TimetableItem,
+    // -0.5 to draw the line completely inside the pixmap
     p.setPen( borderColor );
-    p.drawLine( pixmapRect.bottomLeft(), pixmapRect.bottomRight() );
+    p.drawLine( 0, pixmap.size().height() - 0.5,
+                pixmap.size().width(), pixmap.size().height() - 0.5 );
 
     // Fade out to the left and right
     drawFadeOutLeftAndRight( &p, pixmapRect );
     p.end();
 
-    painter->drawPixmap( rect.toRect(), pixmap );
+    // Draw pixmap
+    painter->drawPixmap( rect.topLeft(), pixmap );
 }
 
-void PublicTransportGraphicsItem::drawAlarmBackground( QPainter *painter, const QRect &rect )
+void PublicTransportGraphicsItem::drawAlarmBackground( QPainter *painter, const QRectF &rect )
 {
     // alarmColor is oxygen color "brick red5", with an alpha value added
     const QColor alarmColor( 191, 3, 3, 180 );
@@ -1298,17 +1298,17 @@ void PublicTransportGraphicsItem::drawAlarmBackground( QPainter *painter, const 
     QLinearGradient alarmGradientTop( 0, 0, 0, alarmHeight );
     alarmGradientTop.setColorAt( 0, alarmColor );
     alarmGradientTop.setColorAt( 1, Qt::transparent );
-    painter->fillRect( QRect(0, 0, rect.width(), alarmHeight), alarmGradientTop );
+    painter->fillRect( QRectF(0, 0, rect.width(), alarmHeight), alarmGradientTop );
 
     // Draw the gradient at the bottom
     QLinearGradient alarmGradientBottom( 0, rect.height() - alarmHeight, 0, rect.height() );
     alarmGradientBottom.setColorAt( 0, Qt::transparent );
     alarmGradientBottom.setColorAt( 1, alarmColor );
-    painter->fillRect( QRect(0, rect.height() - alarmHeight, rect.width(), alarmHeight),
+    painter->fillRect( QRectF(0, rect.height() - alarmHeight, rect.width(), alarmHeight),
                        alarmGradientBottom );
 }
 
-void PublicTransportGraphicsItem::drawFadeOutLeftAndRight( QPainter* painter, const QRect& rect,
+void PublicTransportGraphicsItem::drawFadeOutLeftAndRight( QPainter* painter, const QRectF& rect,
                                                            int fadeWidth )
 {
     painter->setCompositionMode( QPainter::CompositionMode_DestinationIn );
@@ -1317,13 +1317,13 @@ void PublicTransportGraphicsItem::drawFadeOutLeftAndRight( QPainter* painter, co
     alphaGradient.setColorAt( 0, Qt::transparent );
     alphaGradient.setColorAt( 1, Qt::black );
     // Fade out on the left
-    painter->fillRect( QRect(rect.left(), rect.top(), fadeWidth, rect.height()), alphaGradient );
+    painter->fillRect( QRectF(rect.left(), rect.top(), fadeWidth, rect.height()), alphaGradient );
 
     alphaGradient.setColorAt( 0, Qt::black );
     alphaGradient.setColorAt( 1, Qt::transparent );
     // Fade out on the right (the +1 is to be sure, to not have a 1 pixel line on the right, which
     // isn't made transparent at all)
-    painter->fillRect( QRect(rect.right() - fadeWidth, rect.top(), fadeWidth + 1, rect.height()),
+    painter->fillRect( QRectF(rect.right() - fadeWidth, rect.top(), fadeWidth + 1, rect.height()),
                        alphaGradient );
 }
 
@@ -1617,7 +1617,6 @@ qreal DepartureGraphicsItem::expandAreaHeightMinimum() const
     }
 
     qreal height = padding();
-    const DepartureInfo *info = departureItem()->departureInfo();
     if ( isRouteDataAvailable() || isRouteDataRequestable() ) {
         height += routeItemHeight() + padding();
     }
@@ -1634,7 +1633,6 @@ qreal DepartureGraphicsItem::expandAreaHeightMaximum() const
     }
 
     qreal height = padding();
-    const DepartureInfo *info = departureItem()->departureInfo();
     height += routeItemHeight() + padding();
     if ( m_othersTextDocument ) {
         height += m_othersTextDocument->documentLayout()->documentSize().height() + padding();
@@ -1723,11 +1721,12 @@ QPainterPath PublicTransportGraphicsItem::shape() const
     parentPath.addRect( viewport );
     parentPath = mapFromItem( publicTransportWidget(), parentPath );
 
-    // Intersect the parent shape with the shape of this item
+    // Intersect the parent bounding rectangle with the bounding rectangle of this item
     // and return it as visible shape
     QPainterPath path;
-    path.addRect( boundingRect() );
-    return path.intersected( parentPath );
+    QRectF rect = parentPath.boundingRect().intersected( boundingRect() );
+    path.addRect( rect );
+    return path;
 }
 
 QPainterPath TimetableListItem::shape() const
@@ -1743,11 +1742,12 @@ QPainterPath TimetableListItem::shape() const
     parentPath.addRect( viewport );
     parentPath = mapFromItem( m_parent, parentPath );
 
-    // Intersect the parent shape with the shape of this item
+    // Intersect the parent bounding rectangle with the bounding rectangle of this item
     // and return it as visible shape
     QPainterPath path;
-    path.addRect( boundingRect() );
-    return path.intersected( parentPath );
+    QRectF rect = parentPath.boundingRect().intersected( boundingRect() );
+    path.addRect( rect );
+    return path;
 }
 
 void PublicTransportWidget::setupActions()
