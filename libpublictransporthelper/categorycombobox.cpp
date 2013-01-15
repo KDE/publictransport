@@ -60,12 +60,8 @@ void CategoryComboBox::showPopup()
 
     categories.removeDuplicates();
     int categoryCount = categories.count();
-#if KDE_VERSION < KDE_MAKE_VERSION(4,4,0)
-    int categoriesHeight = categoryCount * categoryHeight + ( categoryCount - 1 );
-#else
     int categoriesHeight = categoryCount * ( categoryHeight + catView->categorySpacing() )
                            - catView->categorySpacing();
-#endif
     QSize size = view()->parentWidget()->size();
     int resultHeight = size.height() + categoriesHeight + 20;
 

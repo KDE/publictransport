@@ -23,32 +23,23 @@
 
 #include <Plasma/Applet>
 #include <Plasma/PaintUtils>
+#include <Plasma/Animation>
 #include <KGlobalSettings>
 
 #include <QPainter>
 #include <QGraphicsScene>
-
-#if QT_VERSION >= 0x040600
-    #include <QParallelAnimationGroup>
-    #include <QPropertyAnimation>
-    #include <QGraphicsEffect>
-#endif
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-    #include <Plasma/Animation>
-#endif
+#include <QParallelAnimationGroup>
+#include <QPropertyAnimation>
+#include <QGraphicsEffect>
 
 OverlayWidget::OverlayWidget( QGraphicsWidget* parent, QGraphicsWidget* under )
-        : QGraphicsWidget( parent ), opacity( 0.4 )
-#if QT_VERSION >= 0x040600
-        , m_under( 0 ), m_blur( 0 )
-#endif
+        : QGraphicsWidget( parent ), opacity( 0.4 ), m_under( 0 ), m_blur( 0 )
 {
     resize( parent->size() );
     setZValue( 10000 );
     m_under = under;
     under->setEnabled( false );
 
-#if QT_VERSION >= 0x040600
     if ( under && KGlobalSettings::graphicEffectsLevel() != KGlobalSettings::NoEffects ) {
         m_blur = new QGraphicsBlurEffect( this );
         under->setGraphicsEffect( m_blur );
@@ -63,12 +54,10 @@ OverlayWidget::OverlayWidget( QGraphicsWidget* parent, QGraphicsWidget* under )
     } else { // widget is too big
         m_blur->setBlurHints( QGraphicsBlurEffect::PerformanceHint );
     }
-#endif
 }
 
 void OverlayWidget::destroy()
 {
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
     if ( m_under->geometry().width() * m_under->geometry().height() <= 250000 ) {
         Plasma::Animation *fadeAnim = GlobalApplet::fadeAnimation( this, 0 );
 
@@ -89,9 +78,6 @@ void OverlayWidget::destroy()
     } else { // widget is too big
         overlayAnimationComplete();
     }
-#else
-    overlayAnimationComplete();
-#endif
 }
 
 void OverlayWidget::paint( QPainter* painter, const QStyleOptionGraphicsItem* option,
@@ -132,7 +118,5 @@ void OverlayWidget::overlayAnimationComplete()
     deleteLater();
 
     m_under->setEnabled( true );
-#if QT_VERSION >= 0x040600
     m_under->setGraphicsEffect( 0 );
-#endif
 }

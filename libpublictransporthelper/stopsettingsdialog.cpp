@@ -57,11 +57,9 @@
 #include <QVBoxLayout>
 #include <QProcess>
 #include <QXmlSimpleReader>
-#if QT_VERSION >= 0x040600
-    #include <QParallelAnimationGroup>
-    #include <QPropertyAnimation>
-    #include <QGraphicsEffect>
-#endif
+#include <QParallelAnimationGroup>
+#include <QPropertyAnimation>
+#include <QGraphicsEffect>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
@@ -268,13 +266,8 @@ public:
                 modelCategorized->setSourceModel( modelLocationServiceProviders );
 
                 KCategorizedView *serviceProviderView = new KCategorizedView( q );
-                #if KDE_VERSION >= KDE_MAKE_VERSION(4,4,60)
-                    KCategoryDrawerV3 *categoryDrawer = new KCategoryDrawerV3( serviceProviderView );
-                    serviceProviderView->setCategorySpacing( 10 );
-                #else
-                    KCategoryDrawerV2 *categoryDrawer = new KCategoryDrawerV2( q );
-                    serviceProviderView->setCategorySpacing( 10 );
-                #endif
+                KCategoryDrawerV3 *categoryDrawer = new KCategoryDrawerV3( serviceProviderView );
+                serviceProviderView->setCategorySpacing( 10 );
                 serviceProviderView->setCategoryDrawer( categoryDrawer );
                 serviceProviderView->setModel( modelCategorized );
                 serviceProviderView->setWordWrap( true );

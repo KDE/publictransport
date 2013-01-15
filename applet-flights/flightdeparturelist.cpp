@@ -59,9 +59,7 @@ FlightDeparture::FlightDeparture( QGraphicsItem* parent ) : QGraphicsWidget( par
 
     m_info->setText( infoText() );
     m_info->setToolTip( infoText() );
-    #if KDE_VERSION >= KDE_MAKE_VERSION(4,5,0)
-        m_info->setWordWrap( true );
-    #endif
+    m_info->setWordWrap( true );
     m_info->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
     m_info->setMaximumHeight( boundingRect().height() - m_header->maximumHeight() - 5 );
 

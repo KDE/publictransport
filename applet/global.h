@@ -31,12 +31,10 @@ template< class T >
 class QList;
 class KIcon;
 
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
 namespace Plasma {
     class Animation;
 }
 class QGraphicsWidget;
-#endif
 
 /** @brief Icons to be displayed by the Plasma::IconWidget in the applet's top left corner. */
 enum MainIconDisplay {
@@ -124,10 +122,8 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( AlarmStates )
  * @brief Contains global static methods. */
 class GlobalApplet {
 public:
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
     static Plasma::Animation *fadeAnimation( QGraphicsWidget *w, qreal targetOpacity );
     static void startFadeAnimation( QGraphicsWidget *w, qreal targetOpacity );
-#endif
 
     static KIcon stopIcon( RouteStopFlags routeStopFlags );
 

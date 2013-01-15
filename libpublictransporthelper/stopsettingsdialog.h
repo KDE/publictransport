@@ -35,9 +35,7 @@
 #include <KDialog>
 #include <Plasma/DataEngine> // For Plasma::DataEngine::Data
 
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
 // #define USE_KCATEGORYVIEW // Remove the comment to use KCategoryView for the service provider combobox
-#endif
 
 class QModelIndex;
 class KLineEdit;

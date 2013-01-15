@@ -31,10 +31,8 @@
 #include <qmath.h>
 
 // Plasma includes
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
-    #include <Plasma/Animator>
-    #include <Plasma/Animation>
-#endif
+#include <Plasma/Animator>
+#include <Plasma/Animation>
 
 KIcon GlobalApplet::stopIcon( RouteStopFlags routeStopFlags )
 {
@@ -104,7 +102,6 @@ KIcon GlobalApplet::makeOverlayIcon( const KIcon& icon, const QList<KIcon> &over
     return resultIcon;
 }
 
-#if KDE_VERSION >= KDE_MAKE_VERSION(4,3,80)
 void GlobalApplet::startFadeAnimation( QGraphicsWidget* w, qreal targetOpacity )
 {
     Plasma::Animation *anim = GlobalApplet::fadeAnimation( w, targetOpacity );
@@ -127,4 +124,3 @@ Plasma::Animation* GlobalApplet::fadeAnimation( QGraphicsWidget* w, qreal target
     anim->setProperty( "targetOpacity", targetOpacity );
     return anim;
 }
-#endif

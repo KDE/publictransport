@@ -112,9 +112,7 @@ void GraphicalTimetableLine::init()
     font.setPixelSize( 14 );
     font.setBold( true );
     m_title->setFont( font );
-    #if KDE_VERSION >= KDE_MAKE_VERSION(4,5,0)
-        m_title->setWordWrap( false );
-    #endif
+    m_title->setWordWrap( false );
     m_title->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Fixed );
     m_title->setZValue( 999999 );
 

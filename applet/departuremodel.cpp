@@ -2148,15 +2148,12 @@ void DepartureModel::fireAlarm( const QDateTime& dateTime, DepartureItem* item )
         }
         m_info.alarm[ matchedAlarm ].lastFired = QDateTime::currentDateTime();
 
-#if QT_VERSION >= 0x040600
         QPropertyAnimation *anim = new QPropertyAnimation( item, "alarmColorIntensity", this );
         anim->setStartValue( 1.0 );
         anim->setEndValue( 0.0 );
         anim->setDuration( 1000 );
         anim->setLoopCount( 5 );
         anim->start( QAbstractAnimation::DeleteWhenStopped );
-        kDebug() << "Start anim";
-#endif
     }
     kDebug() << "ALARMS TO BE REMOVED" << alarmsToRemove << item->departureInfo()->lineString()
              << item->departureInfo()->target() << item->departureInfo()->departure();

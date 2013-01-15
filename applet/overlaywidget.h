@@ -26,9 +26,7 @@
 
 #include <QGraphicsWidget> // Base class
 
-#if QT_VERSION >= 0x040600
 class QGraphicsBlurEffect;
-#endif
 
 /**
  * @brief A widget which gets laid over the whole applet.
@@ -54,10 +52,7 @@ public slots:
 private:
     qreal opacity;
     QGraphicsWidget* m_under; // TODO Better name...
-
-    #if QT_VERSION >= 0x040600
     QGraphicsBlurEffect *m_blur;
-    #endif
 };
 
 #endif // Multiple inclusion guard

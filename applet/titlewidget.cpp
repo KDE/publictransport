@@ -243,9 +243,7 @@ void TitleWidget::addJourneySearchWidgets()
 
     // Add journey search query input field
     Plasma::LineEdit *journeySearchLineEdit = new Plasma::LineEdit;
-    #if KDE_VERSION >= KDE_MAKE_VERSION(4,4,0)
-        journeySearchLineEdit->setNativeWidget( new JourneySearchLineEdit );
-    #endif
+    journeySearchLineEdit->setNativeWidget( new JourneySearchLineEdit );
     journeySearchLineEdit->setToolTip(
             i18nc("@info:tooltip This should match the localized keywords.",
             "<para>Type a <emphasis strong='1'>target stop</emphasis> or "
