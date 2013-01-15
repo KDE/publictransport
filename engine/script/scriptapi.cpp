@@ -2028,11 +2028,8 @@ QVariant Storage::readPersistent( const QString& name, const QVariant& defaultDa
 {
     // Try to load script features from a cache file
     QWriteLocker locker( d->readWriteLockPersistent );
-    if ( defaultData.isValid() ) {
-        return d->persistentGroup().readEntry( name, defaultData );
-    } else {
-        return decodeData( d->persistentGroup().readEntry(name, QByteArray()) );
-    }
+    const QByteArray data = d->persistentGroup().readEntry( name, QByteArray() );
+    return data.isEmpty() ? defaultData : decodeData(data);
 }
 
 void Storage::removePersistent( const QString& name, KConfigGroup& group )
