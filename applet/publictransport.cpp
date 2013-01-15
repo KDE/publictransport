@@ -40,6 +40,7 @@
 // Plasma includes
 #include <Plasma/LineEdit>
 #include <Plasma/PushButton>
+#include <Plasma/TabBar>
 #include <Plasma/Theme>
 #include <Plasma/Animation>
 #include <Plasma/ServiceJob>
@@ -766,7 +767,7 @@ void PublicTransportApplet::showActionButtons()
                 ? action("showArrivals") : action("showDepartures"));
     }
     if ( d->currentServiceProviderFeatures.contains("ProvidesJourneys") ) {
-        actions << action("journeys");
+        actions << action("searchJourneys");
     }
 
     // Add stop selector if multiple stops are defined
@@ -776,34 +777,62 @@ void PublicTransportApplet::showActionButtons()
 
     // Create buttons for the actions and create a list of fade animations
     foreach ( QAction *action, actions ) {
-        Plasma::PushButton *button = new Plasma::PushButton( d->overlay );
-        button->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
-        button->setAction( action );
+        QGraphicsWidget *widget;
         if ( action->menu() ) {
-//             action->setParent( button ); // Set button as parent
-            button->nativeWidget()->setMenu( action->menu() );
+            // Create tab bar and make it easy to find it in the overlay using QObject::findChild()
+            Plasma::TabBar *tabBar = new Plasma::TabBar( d->overlay );
+            tabBar->setObjectName( "stopChooser" );
+            tabBar->setParent( d->overlay );
+
+            // Add a tab for each configured stop
+            QFontMetrics fm( font() );
+            foreach ( QAction *menuAction, action->menu()->actions() ) {
+                if ( !menuAction->isSeparator() && !menuAction->text().isEmpty() ) {
+                    const QString text = fm.elidedText( menuAction->text(), Qt::ElideRight,
+                                                        size().width() / 3 );
+                    tabBar->addTab( menuAction->icon(), text );
+                }
+            }
+
+            // Select the current stop
+            tabBar->setCurrentIndex( d->settings.currentStopIndex() );
+
+            widget = tabBar;
+        } else {
+            Plasma::PushButton *button = new Plasma::PushButton( d->overlay );
+            button->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
+            button->setAction( action );
+            widget = button;
         }
 
-        layout->addItem( button );
-        layout->setAlignment( button, Qt::AlignCenter );
+        layout->addItem( widget );
+        layout->setAlignment( widget, Qt::AlignCenter );
     }
+
+    // Add an OK button
+    Plasma::PushButton *btnOk = new Plasma::PushButton( d->overlay );
+    btnOk->setText( i18nc("@action:button", "Ok") );
+    btnOk->setIcon( KIcon("dialog-ok") );
+    btnOk->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
+    connect( btnOk, SIGNAL(clicked()), this, SLOT(acceptActionButtons()) );
 
     // Add a cancel button
     Plasma::PushButton *btnCancel = new Plasma::PushButton( d->overlay );
     btnCancel->setText( i18nc("@action:button", "Cancel") );
     btnCancel->setIcon( KIcon("dialog-cancel") );
     btnCancel->setSizePolicy( QSizePolicy::Maximum, QSizePolicy::Fixed );
-    connect( btnCancel, SIGNAL(clicked()), this, SIGNAL(cancelActionButtons()) );
+    connect( btnCancel, SIGNAL(clicked()), this, SIGNAL(hideActionButtons()) );
 
     // Create a separate layout for the cancel button to have some more space
     // between the cancel button and the others
-    QGraphicsLinearLayout *layoutCancel = new QGraphicsLinearLayout( Qt::Vertical );
-    layoutCancel->setContentsMargins( 0, 10, 0, 0 );
-    layoutCancel->addItem( btnCancel );
+    QGraphicsLinearLayout *layoutButtons = new QGraphicsLinearLayout( Qt::Horizontal );
+    layoutButtons->setContentsMargins( 0, 10, 0, 0 );
+    layoutButtons->addItem( btnOk );
+    layoutButtons->addItem( btnCancel );
 
     // Finish layout with the cancel button and another spacer at the bottom
-    layout->addItem( layoutCancel );
-    layout->setAlignment( layoutCancel, Qt::AlignCenter );
+    layout->addItem( layoutButtons );
+    layout->setAlignment( layoutButtons, Qt::AlignCenter );
     QGraphicsWidget *spacer2 = new QGraphicsWidget( d->overlay );
     spacer2->setSizePolicy( QSizePolicy::Expanding, QSizePolicy::Expanding );
     layout->addItem( spacer2 );
@@ -816,16 +845,32 @@ void PublicTransportApplet::showActionButtons()
     }
 }
 
+void PublicTransportApplet::acceptActionButtons()
+{
+    Q_D( PublicTransportApplet );
+    Plasma::TabBar *tabBar = d->overlay->findChild< Plasma::TabBar* >( "stopChooser" );
+    Q_ASSERT( tabBar );
+    setCurrentStopIndex( tabBar->currentIndex() );
+    emit hideActionButtons();
+}
+
 void PublicTransportApplet::setCurrentStopIndex( QAction* stopAction )
 {
     Q_D( const PublicTransportApplet );
 
     bool ok;
-    int stopIndex = stopAction->data().toInt( &ok );
+    const int stopIndex = stopAction->data().toInt( &ok );
     if ( !ok ) {
         kDebug() << "Couldn't find stop index";
         return;
     }
+
+    setCurrentStopIndex( stopIndex );
+}
+
+void PublicTransportApplet::setCurrentStopIndex( int stopIndex )
+{
+    Q_D( const PublicTransportApplet );
 
     action("backToDepartures")->trigger();
 

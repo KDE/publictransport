@@ -544,7 +544,8 @@ public:
     void setDepartureArrivalListType( DepartureArrivalListType type ) {
             m_departureArrivalListType = type; };
 
-    void setCurrentStop( int stopIndex ) { m_currentStopIndex = stopIndex; };
+    void setCurrentStop( int stopIndex ) {
+        m_currentStopIndex = qBound(0, stopIndex, m_stops.count()); };
 
     /** @brief A list of all stop settings. */
     void setStops( const StopSettingsList & stopList ) { m_stops = stopList; };

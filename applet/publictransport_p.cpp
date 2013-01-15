@@ -1294,9 +1294,7 @@ KSelectAction *PublicTransportAppletPrivate::createSwitchStopAction( QObject *pa
 
         // Use a shortened stop name list as display text
         // and the complete version as tooltip (if it is different)
-        QAction *stopAction = settings.departureArrivalListType() == DepartureList
-                ? new QAction( i18nc( "@action", "Show Departures For '%1'", stopListShort ), parent )
-                : new QAction( i18nc( "@action", "Show Arrivals For '%1'", stopListShort ), parent );
+        QAction *stopAction = new QAction( stopListShort, parent );
         if ( stopList != stopListShort ) {
             stopAction->setToolTip( stopList );
         }

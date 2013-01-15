@@ -390,7 +390,7 @@ public: // Inline functions, mostly used only once (therefore inline) or very sh
         actionButtonsState->addTransition(
             q->action( "showArrivals" ), SIGNAL(triggered()), arrivalState );
         actionButtonsState->addTransition(
-            q, SIGNAL(cancelActionButtons()), lastMainState );
+            q, SIGNAL(hideActionButtons()), lastMainState );
         actionButtonsState->addTransition(
             q->action( "backToDepartures" ), SIGNAL(triggered()), lastDepartureListState );
         actionButtonsState->addTransition(

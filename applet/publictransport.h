@@ -135,8 +135,8 @@ signals:
      **/
     void journeySearchFinished();
 
-    /** @brief Emitted when the action buttons state was cancelled. */
-    void cancelActionButtons();
+    /** @brief Emitted when the action buttons state was left. */
+    void hideActionButtons();
 
     /** @brief Emitted when the network connection is lost to go set the corresponding states. */
     void networkConnectionLost();
@@ -213,6 +213,8 @@ protected slots:
      * @ingroup models
      **/
     void dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data );
+
+    void acceptActionButtons();
 
     void setAssociatedApplicationUrlForDepartures();
     void setAssociatedApplicationUrlForJourneys();
@@ -499,6 +501,8 @@ protected slots:
 
     /** @brief An action to change the currently shown stop has been triggered. */
     void setCurrentStopIndex( QAction *action );
+
+    void setCurrentStopIndex( int stopIndex );
 
     /** @brief Enable @p filterConfiguration for the currently active stop settings. */
     void enableFilterConfiguration( const QString &filterConfiguration, bool enable = true );
