@@ -1,5 +1,5 @@
 /*
-*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -1810,17 +1810,15 @@ public:
                     // LoadScriptJob already finished and the script was not changed
                     lastScriptError = debugger->lastScriptError();
                     lastScriptErrorString = debugger->lastScriptErrorString();
-                    testFinished( test );
-
                     if ( lastScriptError == Debugger::NoScriptError ) {
                         testModel->setTestState( test, TestModel::TestFinishedSuccessfully,
                                                  i18nc("@info/plain", "Script successfully loaded") );
-                        return true;
                     } else {
                         testModel->setTestState( test, TestModel::TestFinishedWithErrors,
                                                  lastScriptErrorString );
-                        return false;
                     }
+                    testFinished( test );
+                    return lastScriptError == Debugger::NoScriptError;
                 } else if ( debugger->isLoadScriptJobRunning() && !job->isFinished() ) {
                     // A LoadScriptJob has already been started
                     job->setObjectName( "TEST_LOAD" );
