@@ -1606,6 +1606,7 @@ public Q_SLOTS:
 
 private:
     int lifetime( const QString &name, const KConfigGroup &group );
+    int lifetimeNoLock( const QString &name, const KConfigGroup &group );
     void removePersistent( const QString &name, KConfigGroup &group );
     QByteArray encodeData( const QVariant &data ) const;
     QVariant decodeData( const QByteArray &data ) const;

@@ -1787,6 +1787,11 @@ int Storage::lifetime( const QString& name )
 int Storage::lifetime( const QString& name, const KConfigGroup& group )
 {
     QReadLocker locker( d->readWriteLockPersistent );
+    return lifetimeNoLock( name, group );
+}
+
+int Storage::lifetimeNoLock( const QString &name, const KConfigGroup &group )
+{
     const uint lifetimeTime_t = group.readEntry( name + LIFETIME_ENTRYNAME_SUFFIX, 0 );
     return QDateTime::currentDateTime().daysTo( QDateTime::fromTime_t(lifetimeTime_t) );
 }
@@ -1811,7 +1816,7 @@ void Storage::checkLifetime()
             // Do not check lifetime of entries which store the lifetime of the real data entries
             continue;
         }
-        const int remainingLifetime = lifetime( it.key(), group );
+        const int remainingLifetime = lifetimeNoLock( it.key(), group );
         if ( remainingLifetime <= 0 ) {
             // Lifetime has expired
             kDebug() << "Lifetime of storage data" << it.key() << "for" << d->serviceProvider
