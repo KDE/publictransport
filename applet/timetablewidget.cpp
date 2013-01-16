@@ -37,6 +37,7 @@
 #include <KMenu>
 #include <KPixmapCache>
 #include <KAction>
+#include <KToolInvocation>
 
 // Qt includes
 #include <QGraphicsLinearLayout>
@@ -343,8 +344,8 @@ int PublicTransportGraphicsItem::extraIconSize() const
     return m_parent->iconSize() / 2;
 }
 
-QTextDocument* TextDocumentHelper::createTextDocument(const QString& html, const QSizeF& size,
-    const QTextOption &textOption, const QFont &font  )
+QTextDocument* TextDocumentHelper::createTextDocument( const QString& html, const QSizeF& size,
+    const QTextOption &textOption, const QFont &font )
 {
     QTextDocument *textDocument = new QTextDocument;
     textDocument->setDefaultFont( font );
@@ -374,23 +375,10 @@ void TextDocumentHelper::drawTextDocument( QPainter *painter,
     p.setPen( painter->pen() );
     p.setRenderHints( QPainter::Antialiasing | QPainter::SmoothPixmapTransform );
 
-    QFontMetrics fm( document->defaultFont() );
-    int maxLineCount = qMax( qFloor(textRect.height() / fm.lineSpacing()), 1 );
-    int blockCount = document->blockCount();
-    int lineCount = 0;
-    for ( int b = 0; b < blockCount; ++b ) {
-        lineCount += document->findBlockByNumber( b ).layout()->lineCount();
-    }
-    if ( lineCount > maxLineCount ) {
-        lineCount = maxLineCount;
-    }
-    int textHeight = lineCount * ( fm.lineSpacing() + 1 );
-
-    // Draw text and calculate halo/fade rects
-    for ( int b = 0; b < blockCount; ++b ) {
+    const QPointF position( 0, (textRect.height() - document->size().height()) / 2.0f );
+    for ( int b = 0; b < document->blockCount(); ++b ) {
         QTextLayout *textLayout = document->findBlockByNumber( b ).layout();
         const int lines = textLayout->lineCount();
-        const QPointF position( 0, (textRect.height() - textHeight) / 2.0f );
         for ( int l = 0; l < lines; ++l ) {
             // Draw a text line
             QTextLine textLine = textLayout->lineAt( l );
@@ -597,13 +585,64 @@ void PublicTransportGraphicsItem::mousePressEvent( QGraphicsSceneMouseEvent* eve
 
 void PublicTransportGraphicsItem::mouseReleaseEvent( QGraphicsSceneMouseEvent* event )
 {
-    if ( event->button() == Qt::LeftButton
-        && (event->lastPos() - event->pos()).manhattanLength() < 5 )
+    if ( event->button() == Qt::LeftButton &&
+        (event->lastPos() - event->pos()).manhattanLength() < 5 )
     {
         toggleExpanded();
         event->accept();
     } else {
-        QGraphicsItem::mousePressEvent( event );
+        QGraphicsItem::mouseReleaseEvent( event );
+    }
+}
+
+QPointF DepartureGraphicsItem::othersTextPos() const
+{
+    const qreal indentation = expandAreaIndentation();
+    qreal y = unexpandedHeight() + 2 * padding();
+    qreal height = expandAreaHeight() - 2 * padding();
+    if ( m_routeItem ) {
+        y += m_routeItem->size().height() + padding();
+        height -= m_routeItem->size().height() + padding();
+    } else if ( m_routeInfoWidget ) {
+        y += m_routeInfoWidget->size().height() + padding();
+        height -= m_routeInfoWidget->size().height() + padding();
+    }
+    if ( m_othersTextDocument && m_othersTextDocument->blockCount() > 0 ) {
+        // Shift y because of vertical alignment
+        y += (height - m_othersTextDocument->size().height()) / 2.0f;
+    }
+    return QPointF( indentation, y );
+}
+
+void DepartureGraphicsItem::hoverMoveEvent( QGraphicsSceneHoverEvent *event )
+{
+    QGraphicsWidget::hoverMoveEvent(event);
+    if ( !m_othersTextDocument ) {
+        return;
+    }
+    const QString anchor = m_othersTextDocument->documentLayout()->anchorAt(
+            event->pos() - othersTextPos() );
+    if ( !anchor.isEmpty() ) {
+        setCursor( QCursor(Qt::PointingHandCursor) );
+        event->accept();
+    } else {
+        unsetCursor();
+    }
+}
+
+void DepartureGraphicsItem::mouseReleaseEvent( QGraphicsSceneMouseEvent *event )
+{
+    if ( !m_othersTextDocument || event->button() != Qt::LeftButton ) {
+        PublicTransportGraphicsItem::mouseReleaseEvent(event);
+        return;
+    }
+    const QString anchor = m_othersTextDocument->documentLayout()->anchorAt(
+            event->pos() - othersTextPos() );
+    if ( !anchor.isEmpty() ) {
+        KToolInvocation::self()->invokeBrowser( anchor );
+        event->accept();
+    } else {
+        PublicTransportGraphicsItem::mouseReleaseEvent(event);
     }
 }
 
@@ -625,6 +664,7 @@ DepartureGraphicsItem::DepartureGraphicsItem( PublicTransportWidget* publicTrans
                                                 i18nc("@info", "Refresh"), this );
     connect( m_updateAdditionalDataAction, SIGNAL(triggered(bool)),
              this, SIGNAL(updateAdditionalDataRequest()) );
+    setAcceptHoverEvents( true ); // Hover anchors in the document
 }
 
 DepartureGraphicsItem::~DepartureGraphicsItem()
@@ -709,40 +749,51 @@ void DepartureGraphicsItem::updateTextLayouts()
     }
 
     QSizeF othersSize( rect.width() - expandAreaIndentation() - padding(), 999 );
-    if ( !m_othersTextDocument || (m_othersTextDocument->textWidth() != othersSize.width()) ) {
+    const QString html = othersText();
+    if ( !m_othersTextDocument || m_othersTextDocument->textWidth() != othersSize.width() ||
+         html != m_othersTextDocument->toHtml() )
+    {
         delete m_othersTextDocument;
-        textOption.setAlignment( Qt::AlignVCenter | Qt::AlignLeft );
-
-        QString html;
-        ChildItem *delayItem = m_item->childByType( DelayItem );
-        ChildItem *platformItem = m_item->childByType( PlatformItem );
-        ChildItem *operatorItem = m_item->childByType( OperatorItem );
-        ChildItem *journeyNewsItem = m_item->childByType( JourneyNewsItem );
-        if ( delayItem ) {
-            html.append( delayItem->formattedText() );
-        }
-        if ( platformItem ) {
-            if ( !html.isEmpty() ) {
-                html.append("<br />");
-            }
-            html.append( platformItem->formattedText() );
-        }
-        if ( operatorItem ) {
-            if ( !html.isEmpty() ) {
-                html.append("<br />");
-            }
-            html.append( operatorItem->formattedText() );
-        }
-        if ( journeyNewsItem ) {
-            if ( !html.isEmpty() ) {
-                html.append("<br />");
-            }
-            html.append( journeyNewsItem->formattedText() );
-        }
+        textOption.setAlignment( Qt::AlignBottom | Qt::AlignLeft );
 
         m_othersTextDocument = TextDocumentHelper::createTextDocument( html, othersSize,
                                                                        textOption, font() );
     }
+}
+
+QString DepartureGraphicsItem::othersText() const
+{
+    DepartureItem *item = qobject_cast< DepartureItem* >( m_item.data() );
+    ChildItem *delayItem = m_item->childByType( DelayItem );
+    ChildItem *platformItem = m_item->childByType( PlatformItem );
+    ChildItem *operatorItem = m_item->childByType( OperatorItem );
+    ChildItem *journeyNewsItem = m_item->childByType( JourneyNewsItem );
+
+    QString html;
+    if ( delayItem ) {
+        html.append( delayItem->formattedText() );
+    }
+    if ( platformItem ) {
+        if ( !html.isEmpty() ) {
+            html.append("<br />");
+        }
+        html.append( platformItem->formattedText() );
+    }
+    if ( operatorItem ) {
+        if ( !html.isEmpty() ) {
+            html.append("<br />");
+        }
+        html.append( operatorItem->formattedText() );
+    }
+    if ( journeyNewsItem ) {
+        if ( !html.isEmpty() ) {
+            html.append("<br />");
+        }
+        if ( journeyNewsItem ) {
+            html.append( journeyNewsItem->formattedText() );
+        }
+    }
+    return html;
 }
 
 void JourneyGraphicsItem::updateTextLayouts()
@@ -1546,7 +1597,7 @@ void DepartureGraphicsItem::paintExpanded( QPainter* painter, const QStyleOption
 
     if ( m_othersTextDocument ) {
         QFontMetrics fm( font() );
-        QRectF htmlRect( rect.left(), y, rect.width(), m_othersTextDocument->size().height() );
+        QRectF htmlRect( rect.left(), y, rect.width(), rect.bottom() - y );
         painter->setPen( _textColor );
         TextDocumentHelper::drawTextDocument( painter, option, m_othersTextDocument,
                 htmlRect, drawShadowsOrHalos
@@ -2132,7 +2183,14 @@ void JourneyTimetableWidget::rowsInserted( const QModelIndex& parent, int first,
 void TimetableWidget::rowsInserted( const QModelIndex& parent, int first, int last )
 {
     if ( parent.isValid() ) {
-        kDebug() << "Item with parent" << parent << "Inserted" << first << last;
+        QModelIndex topLevelParent = parent;
+        while ( parent.parent().isValid() ) {
+            topLevelParent = topLevelParent.parent();
+        }
+        DepartureGraphicsItem *departure = departureItem( topLevelParent );
+        if ( departure ) {
+            departure->updateData( departure->departureItem(), true );
+        }
         return;
     }
 

@@ -611,6 +611,7 @@ var __hafas_timetable = function(hafas) {
                 if ( routeDataUrl.length == 0 ) {
                     throw Error( "Could not find an URL for route data" );
                 } else {
+                    var routeDataUserUrl = routeDataUrl.replace(/\/(\w)(ox|l)\//, "/$1n/");
                     if ( hafas.routeData.options.format == Hafas.XmlFormat ) {
                         routeDataUrl = routeDataUrl + "&L=vs_java3";
                     }
@@ -621,7 +622,14 @@ var __hafas_timetable = function(hafas) {
                     } else {
                         var parser = hafas.routeData.parser.parserByFormat( 
                                 hafas.routeData.options.format );
-                        return parser( routeDocument, values );
+                        var data = parser( routeDocument, values );
+                        if ( typeof(data.JourneyNews) != 'undefined' ) {
+                            data.JourneyNews += "<br />";
+                        } else {
+                            data.JourneyNews = "";
+                        }
+                        data.JourneyNews += "<a href='" + routeDataUserUrl + "'>Fahrtinformationen</a>";
+                        return data;
                     }
                 }
             }

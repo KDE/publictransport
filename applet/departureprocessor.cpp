@@ -1,5 +1,5 @@
 /*
- *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -284,7 +284,9 @@ void DepartureProcessor::doDepartureJob( DepartureProcessor::DepartureJobInfo* d
                 static_cast<VehicleType>( departureData["TypeOfVehicle"].toInt() ),
                 departureData["Nightline"].toBool(), departureData["Expressline"].toBool(),
                 departureData["Platform"].toString(), departureData["Delay"].toInt(),
-                departureData["DelayReason"].toString(), departureData["JourneyNews"].toString(),
+                departureData["DelayReason"].toString(),
+                departureData["JourneyNews"].toString(),
+                departureData["JourneyNewsUrl"].toString(),
                 departureData["RouteStops"].toStringList(),
                 departureData["RouteStopsShortened"].toStringList(),
                 routeTimes, departureData["RouteExactStops"].toInt(),
@@ -459,6 +461,7 @@ void DepartureProcessor::doJourneyJob( DepartureProcessor::JourneyJobInfo* journ
                                  journeyData["Duration"].toInt(),
                                  journeyData["Changes"].toInt(),
                                  journeyData["JourneyNews"].toString(),
+                                 journeyData["JourneyNewsUrl"].toString(),
                                  journeyData["RouteStops"].toStringList(),
                                  journeyData["RouteStopsShortened"].toStringList(),
                                  journeyData["RouteNews"].toStringList(),

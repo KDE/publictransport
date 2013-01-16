@@ -105,7 +105,7 @@ public:
     JourneyInfo( const QString &operatorName, const QVariantList &vehicleTypesVariant,
             const QDateTime &departure, const QDateTime &arrival, const QString &pricing,
             const QString &startStopName, const QString &targetStopName, int duration, int changes,
-            const QString &journeyNews = QString(),
+            const QString &journeyNews = QString(), const QString &journeyNewsUrl = QString(),
             const QStringList &routeStops = QStringList(),
             const QStringList &routeStopsShortened = QStringList(),
             const QStringList &routeNews = QStringList(),
@@ -123,7 +123,7 @@ public:
     JourneyInfo( const QString &operatorName, const QSet<VehicleType> &vehicleTypes,
             const QDateTime &departure, const QDateTime &arrival, const QString &pricing,
             const QString &startStopName, const QString &targetStopName, int duration, int changes,
-            const QString &journeyNews = QString(),
+            const QString &journeyNews = QString(), const QString &journeyNewsUrl = QString(),
             const QStringList &routeStops = QStringList(),
             const QStringList &routeStopsShortened = QStringList(),
             const QStringList &routeNews = QStringList(),
@@ -139,7 +139,7 @@ public:
             int routeExactStops = 0  ) : PublicTransportInfo()
     {
         init( operatorName, vehicleTypes, departure, arrival, pricing,
-              startStopName, targetStopName, duration, changes, journeyNews,
+              startStopName, targetStopName, duration, changes, journeyNews, journeyNewsUrl,
               routeStops, routeStopsShortened, routeNews, routeTransportLines,
               routePlatformsDeparture, routePlatformsArrival, routeVehicleTypes,
               routeTimesDeparture, routeTimesArrival, routeTimesDepartureDelay,
@@ -177,6 +177,9 @@ public:
 
     /** @returns an information string with news for this journey. */
     QString journeyNews() const { return m_journeyNews; };
+
+    /** @returns an URL to news for this journey. */
+    QString journeyNewsUrl() const { return m_journeyNewsUrl; };
 
     /** @returns a list of vehicle types used by this journey. Each vehicle type is contained only once. */
     QSet<VehicleType> vehicleTypes() const { return m_vehicleTypes; };
@@ -218,7 +221,7 @@ private:
                const QDateTime &departure, const QDateTime &arrival,
                const QString &pricing, const QString &startStopName,
                const QString &targetStopName, int duration, int changes,
-               const QString &journeyNews = QString(),
+               const QString &journeyNews = QString(), const QString &journeyNewsUrl = QString(),
                const QStringList &routeStops = QStringList(),
                const QStringList &routeStopsShortened = QStringList(),
                const QStringList &routeNews = QStringList(),
@@ -237,7 +240,8 @@ private:
 
 
     QDateTime m_departure, m_arrival;
-    QString m_operator, m_pricing, m_startStopName, m_targetStopName, m_journeyNews;
+    QString m_operator, m_pricing, m_startStopName, m_targetStopName;
+    QString m_journeyNews, m_journeyNewsUrl;
     QSet<VehicleType> m_vehicleTypes;
     QList<VehicleType> m_routeVehicleTypes;
     int m_duration, m_changes, m_routeExactStops;
@@ -284,6 +288,7 @@ public:
                    bool expressLine = false, const QString &platform = QString(),
                    int delay = -1, const QString &delayReason = QString(),
                    const QString &journeyNews = QString(),
+                   const QString &journeyNewsUrl = QString(),
                    const QStringList &routeStops = QStringList(),
                    const QStringList &routeStopsShortened = QStringList(),
                    const QList<QDateTime> &routeTimes = QList<QDateTime>(),
@@ -298,8 +303,8 @@ public:
             lineServices |= ExpressLine;
         }
         init( dataSource, index, flags, operatorName, line, target, targetShortened, departure,
-              lineType, lineServices, platform, delay, delayReason, journeyNews, routeStops,
-              routeStopsShortened, routeTimes, routeExactStops, additionalDataError );
+              lineType, lineServices, platform, delay, delayReason, journeyNews, journeyNewsUrl,
+              routeStops, routeStopsShortened, routeTimes, routeExactStops, additionalDataError );
     };
 
     static QString formatDateFancyFuture( const QDate& date );
@@ -404,7 +409,11 @@ public:
     /** @returns a string containing the reason of a delay if any. */
     QString delayReason() const { return m_delayReason; };
 
+    /** @returns an information string with news for this departure/arrival. */
     QString journeyNews() const { return m_journeyNews; };
+
+    /** @returns an URL to news for this departure/arrival. */
+    QString journeyNewsUrl() const { return m_journeyNewsUrl; };
 
     /** @returns the departure/arrival time. */
     QDateTime departure() const { return m_departure; };
@@ -443,7 +452,7 @@ private:
                const QDateTime &departure = QDateTime(), VehicleType lineType = UnknownVehicleType,
                LineServices lineServices = NoLineService, const QString &platform = QString(),
                int delay = -1, const QString &delayReason = QString(),
-               const QString &journeyNews = QString(),
+               const QString &journeyNews = QString(), const QString &journeyNewsUrl = QString(),
                const QStringList &routeStops = QStringList(),
                const QStringList &routeStopsShortened = QStringList(),
                const QList<QDateTime> &routeTimes = QList<QDateTime>(), int routeExactStops = 0,
@@ -453,7 +462,7 @@ private:
 
     int m_lineNumber;
     QString m_operator, m_target, m_targetShortened, m_lineString;
-    QString m_platform, m_delayReason, m_journeyNews;
+    QString m_platform, m_delayReason, m_journeyNews, m_journeyNewsUrl;
     QDateTime m_departure;
     int m_delay;
     VehicleType m_vehicleType;

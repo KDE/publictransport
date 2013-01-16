@@ -1,5 +1,5 @@
 /*
-*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -162,6 +162,9 @@ public:
 protected:
     /** @brief Removes @p count child items beginning with the child item at row @p first. */
     void removeChildren( int first, int count );
+
+    /** @brief Appends the given @p child item, called from the model. */
+    void appendChildFromModel( ChildItem *child );
 
     ItemBase *m_parent;
     PublicTransportModel *m_model;
@@ -698,6 +701,7 @@ protected slots:
 protected:
     void callAtNextFullMinute( const char *member );
     virtual ItemBase *findNextItem( bool sortedByTimeAscending = false ) const = 0;
+    void appendChild( ItemBase *parent, ChildItem *child );
 
     QList< ItemBase* > m_items;
     QHash< uint, ItemBase* > m_infoToItem;

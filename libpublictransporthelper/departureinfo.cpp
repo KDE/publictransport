@@ -53,6 +53,7 @@ JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList &vehic
                           const QString& pricing, const QString& startStopName,
                           const QString& targetStopName, int duration, int changes,
                           const QString &journeyNews,
+                          const QString &journeyNewsUrl,
                           const QStringList &routeStops,
                           const QStringList &routeStopsShortened,
                           const QStringList &routeNews,
@@ -80,7 +81,7 @@ JourneyInfo::JourneyInfo( const QString &operatorName, const QVariantList &vehic
     routeVehicleTypes.append( static_cast<VehicleType>( routeVehicleType.toInt() ) );
 
     init( operatorName, vehicleTypes, departure, arrival, pricing, startStopName, targetStopName,
-          duration, changes, journeyNews, routeStops, routeStopsShortened, routeNews,
+          duration, changes, journeyNews, journeyNewsUrl, routeStops, routeStopsShortened, routeNews,
           routeTransportLines, routePlatformsDeparture, routePlatformsArrival, routeVehicleTypes,
           routeTimesDeparture, routeTimesArrival, routeTimesDepartureDelay,
           routeTimesArrivalDelay, routeSubJourneys, routeExactStops );
@@ -91,6 +92,7 @@ void JourneyInfo::init( const QString &operatorName, const QSet< VehicleType > &
                         const QString& pricing, const QString& startStopName,
                         const QString& targetStopName, int duration, int changes,
                         const QString &journeyNews,
+                        const QString &journeyNewsUrl,
                         const QStringList &routeStops,
                         const QStringList &routeStopsShortened,
                         const QStringList &routeNews,
@@ -115,6 +117,7 @@ void JourneyInfo::init( const QString &operatorName, const QSet< VehicleType > &
     m_duration = duration;
     m_changes = changes;
     m_journeyNews = journeyNews;
+    m_journeyNewsUrl = journeyNewsUrl;
     m_routeStops = routeStops;
     m_routeStopsShortened = routeStopsShortened.isEmpty() ? routeStops : routeStopsShortened;
     m_routeNews = routeNews;
@@ -280,6 +283,7 @@ void DepartureInfo::init( const QString &dataSource, int index, DepartureFlags f
                           VehicleType lineType, LineServices lineServices,
                           const QString &platform, int delay,
                           const QString &delayReason, const QString &journeyNews,
+                          const QString &journeyNewsUrl,
                           const QStringList &routeStops, const QStringList &routeStopsShortened,
                           const QList<QDateTime> &routeTimes,
                           int routeExactStops,
@@ -308,6 +312,7 @@ void DepartureInfo::init( const QString &dataSource, int index, DepartureFlags f
     m_delay = delay;
     m_delayReason = delayReason;
     m_journeyNews = journeyNews;
+    m_journeyNewsUrl = journeyNewsUrl;
 
     m_routeStops = routeStops;
     m_routeStopsShortened = routeStopsShortened.isEmpty() ? routeStops : routeStopsShortened;
@@ -336,6 +341,7 @@ bool DepartureInfo::operator ==( const DepartureInfo& other ) const
             && m_delayReason == other.m_delayReason
             && m_operator == other.m_operator
             && m_journeyNews == other.m_journeyNews
+            && m_journeyNewsUrl == other.m_journeyNewsUrl
             && m_lineServices == other.m_lineServices
             && m_routeStops == other.m_routeStops
             && m_routeTimes == other.m_routeTimes

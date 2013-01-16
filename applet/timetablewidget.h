@@ -524,11 +524,15 @@ signals:
 
 protected:
     virtual void updateTextLayouts();
+    QString othersText() const;
     qreal timeColumnWidth() const;
     virtual void resizeEvent( QGraphicsSceneResizeEvent* event );
     virtual QGraphicsWidget *routeItem() const;
     void hideRouteInfoWidget();
     void showRouteInfoWidget( QGraphicsWidget *routeInfoWidget );
+    QPointF othersTextPos() const;
+    virtual void mouseReleaseEvent( QGraphicsSceneMouseEvent *event );
+    virtual void hoverMoveEvent( QGraphicsSceneHoverEvent *event );
 
     /** @brief The minimum size of the expand area. */
     virtual qreal expandAreaHeightMinimum() const;

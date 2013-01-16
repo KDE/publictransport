@@ -1,5 +1,5 @@
 /*
- *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -239,10 +239,23 @@ void ItemBase::removeChildren( int first, int count )
 
 void ItemBase::removeChild( ChildItem* child )
 {
-    m_model->removeRow( m_children.indexOf(child), index() );
+    if ( m_model ) {
+        m_model->removeRow( m_children.indexOf(child), index() );
+    } else {
+        m_children.removeOne( child );
+    }
 }
 
 void ItemBase::appendChild( ChildItem* child )
+{
+    if ( m_model ) {
+        m_model->appendChild( this, child );
+    } else {
+        appendChildFromModel( child );
+    }
+}
+
+void ItemBase::appendChildFromModel( ChildItem *child )
 {
     // Add child to children list, pass the model and set the parent to this item
     m_children.append( child );
@@ -475,7 +488,7 @@ void JourneyItem::updateValues()
                           m_journeyInfo.changes(), sDuration);
     setFormattedText( ColumnJourneyInfo, text );
 //     setText( s.replace(QRegExp("<[^>]*>"), "") );
-    if ( !m_journeyInfo.journeyNews().isEmpty() ) {
+    if ( hasDataForChildType(JourneyNewsItem) ) {
         setIcon( ColumnJourneyInfo, GlobalApplet::makeOverlayIcon(
                  KIcon( "view-pim-news" ), "arrow-down", QSize( 12, 12 ) ) );
     }
@@ -594,7 +607,7 @@ bool JourneyItem::hasDataForChildType( ItemType itemType )
 {
     switch ( itemType ) {
     case JourneyNewsItem:
-        return !m_journeyInfo.journeyNews().isEmpty();
+        return !m_journeyInfo.journeyNews().isEmpty() || !m_journeyInfo.journeyNewsUrl().isEmpty();
     case OperatorItem:
         return !m_journeyInfo.operatorName().isEmpty();
     case RouteItem:
@@ -625,11 +638,16 @@ QString JourneyItem::childItemText( ItemType itemType, int* linesPerRow )
     case JourneyNewsItem:
         text = m_journeyInfo.journeyNews();
         if ( text.startsWith( QLatin1String( "http://" ) ) ) { // TODO: Make the link clickable...
-            text = QString( "<a href='%1'>%2</a>" ).arg( text )
-                .arg( i18nc( "@info/plain", "Link to journey news" ) );
+            text = QString( "<a href='%1'>%1</a>" ).arg( text );
         }
         text = QString( "<b>%1</b> %2" ).arg( i18nc( "@info/plain News for a journey with public "
-                                            "transport, like 'platform changed'", "News:" ) ).arg( text );
+                "transport, like 'platform changed'", "News:" ) ).arg( text );
+        if ( !m_journeyInfo.journeyNewsUrl().isEmpty() ) {
+            if ( !m_journeyInfo.journeyNews().isEmpty() ) {
+                text += "<br />";
+            }
+            text += QString( "<a href='%1'>%1</a>" ).arg( m_journeyInfo.journeyNewsUrl() );
+        }
         if ( linesPerRow ) {
             *linesPerRow = qMin( 3, text.length() / 25 );
         }
@@ -837,7 +855,7 @@ void DepartureItem::updateValues()
     setIcon( ColumnLineString, Global::vehicleTypeToIcon(m_departureInfo.vehicleType()) );
 
     setText( ColumnTarget, m_departureInfo.target() );
-    if ( !m_departureInfo.journeyNews().isEmpty() ) {
+    if ( hasDataForChildType(JourneyNewsItem) ) {
         setIcon( ColumnTarget, GlobalApplet::makeOverlayIcon(KIcon("view-pim-news"),
                  "arrow-down", QSize(12, 12)) );
     }
@@ -955,7 +973,8 @@ bool DepartureItem::hasDataForChildType( ItemType itemType )
     case PlatformItem:
         return !m_departureInfo.platform().isEmpty();
     case JourneyNewsItem:
-        return !m_departureInfo.journeyNews().isEmpty();
+        return !m_departureInfo.journeyNews().isEmpty() ||
+               !m_departureInfo.journeyNewsUrl().isEmpty();
     case DelayItem:
         return true; // Also shows "no delay info available"
     case OperatorItem:
@@ -996,6 +1015,13 @@ QString DepartureItem::childItemText( ItemType itemType, int *linesPerRow )
                 .arg( i18nc("@info/plain News for a journey with public transport, "
                             "like 'platform changed'", "News:") )
                 .arg( text );
+
+        if ( !m_departureInfo.journeyNewsUrl().isEmpty() ) {
+            if ( !m_departureInfo.journeyNews().isEmpty() ) {
+                text += "<br />";
+            }
+            text += QString( "<a href='%1'>%1</a>" ).arg( m_departureInfo.journeyNewsUrl() );
+        }
         // Try to set enough lines to show all text
         if ( linesPerRow ) {
             *linesPerRow = qMin( 3, text.length() / 25 );
@@ -2029,6 +2055,14 @@ DepartureItem *DepartureModel::addItem( const DepartureInfo& departureInfo,
     }
 
     return newItem;
+}
+
+void PublicTransportModel::appendChild( ItemBase *parent, ChildItem *child )
+{
+    const QModelIndex index = parent->index();
+    beginInsertRows( index, parent->childCount(), parent->childCount() );
+    parent->appendChildFromModel( child );
+    endInsertRows();
 }
 
 bool DepartureModel::removeRows( int row, int count, const QModelIndex& parent )

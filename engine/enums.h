@@ -1,5 +1,5 @@
 /*
- *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -160,14 +160,17 @@ public:
         Delay = 9,
 
         DelayReason = 10, /**< The reason of a delay. */
-        JourneyNews = 11,  /**< Can contain delay / delay reason / other news */
-        JourneyNewsOther = 12, /**< Other news (not delay / delay reason) */
+        JourneyNews = 11,  /**< An informative message about the departure, arrival or journey,
+                * eg. "Train cancelled" or "From platform 4 instead of 3". If only an URL to a
+                * website with the news is available, use JourneyNewsUrl. */
+        JourneyNewsOther = 12, /**< @deprecated Use JourneyNews instead. */
 
         /**
-        * Contains a link to an html page with journey news. The url of the service provider is
-        * prepended, if a relative path has been matched (starting with "/").
-        **/
-        JourneyNewsLink = 13,
+         * Contains a link to an HTML page with journey news. The URL of the service provider is
+         * prepended, if a relative path has been matched (starting with "/").
+         **/
+        JourneyNewsUrl = 13, /**< Other news (not delay / delay reason) */
+        JourneyNewsLink = JourneyNewsUrl, /**< @deprecated Use JourneyNewsUrl instead. */
 
         Operator = 16, /**< The company that is responsible for the journey. */
         Status = 20, /**< The current status of the departure / arrival. Currently only used for planes. */
@@ -603,7 +606,8 @@ enum WaitForType {
     WaitForNothing, /**< Wait for the signal only. */
     WaitForNetwork, /**< Wait for all running network requests to finish. */
     WaitForInterrupt, /**< Wait for the next interrupt. */
-    WaitForScriptFinish /**< Wait until script execution is finished. */
+    WaitForScriptFinish, /**< Wait until script execution is finished. */
+    WaitForInjectedScriptFinish /**< Wait until execution of injected script code is finished. */
 };
 
 /** @brief Flags for data source updates. */

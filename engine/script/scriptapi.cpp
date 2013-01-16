@@ -1166,6 +1166,17 @@ void ResultObject::addData( const QVariantMap &item )
                     m_mutex->lockInline();
                 }
             }
+        } else if ( info == Enums::JourneyNewsUrl ) {
+            QString url = value.toString();
+            if ( url.startsWith('/') ) {
+                // Prepend provider URL to relative URLs
+                kWarning() << "Prepending provider URL to relative JourneyNewsUrls is not implemented";
+//                 url.prepend( m_ ); TODO
+            }
+        } else if ( info == Enums::JourneyNewsOther ) {
+            // DEPRECATED
+            kWarning() << "JourneyNewsOther is deprecated, use JourneyNews instead";
+            info = Enums::JourneyNews;
         }
 
         if ( m_features.testFlag(AutoDecodeHtmlEntities) ) {
