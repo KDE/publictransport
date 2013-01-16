@@ -751,7 +751,7 @@ void ProjectSettingsDialog::createScriptFile()
 
     // Get a name for the new script file based on the current country code
     // and the current service provider ID
-    QString scriptFile = m_currentServiceProviderID + ".js";
+    QString scriptFile = m_providerData->id() + ".js";
 
     // Get fileName for the new script file
     QString scriptFilePath = KUrl( m_openedPath ).directory( KUrl::AppendTrailingSlash ) + scriptFile;

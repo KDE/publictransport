@@ -1744,25 +1744,24 @@ void TimetableMate::fileNew()
         return; // Canceled
     }
 
-    Project *newProject = new Project( m_projectModel->weaver(), this );
+    // Create the new project
+    Project *newProject = new Project( providerType, m_projectModel->weaver(), this );
     newProject->loadProject();
     m_projectModel->appendProject( newProject );
     connect( newProject, SIGNAL(showDocumentationRequest(QString)),
              this, SLOT(showDocumentation(QString)) );
 
-    // Expand new project item
-    m_projectsDock->projectsWidget()->expand( m_projectModel->indexFromProject(newProject) );
-
-    // Set the plugin type as chosen
-    ServiceProviderData *data = newProject->data();
-    data->setType( providerType );
-    newProject->setProviderData( data );
+    // Make the new project the currently active one
+    newProject->setAsActiveProject();
 
     // Show settings of the project
     newProject->showSettingsDialog( this );
 
     // Show the dashboard of the new project
     newProject->showDashboardTab();
+
+    // Expand new project item in the projects dock
+    m_projectsDock->projectsWidget()->expand( m_projectModel->indexFromProject(newProject) );
 }
 
 Enums::ServiceProviderType TimetableMate::chooseProviderPluginType()

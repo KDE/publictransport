@@ -1,5 +1,5 @@
 /*
-*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -368,12 +368,20 @@ public:
     };
 
     /**
-     * @brief Create a new project from @p xmlFilePath.
-     *
+     * @brief Create a new invalid project.
      * @param parent Used as parent for dialogs created inside Project, eg. showSettingsDialog()
      *   uses this as parent for the settings dialog.
      **/
     explicit Project( const WeaverInterfacePointer &weaver, QWidget *parent = 0 );
+
+    /**
+     * @brief Create a new project from @p xmlFilePath.
+     * @param providerType The type of the provider to use for the project.
+     * @param parent Used as parent for dialogs created inside Project, eg. showSettingsDialog()
+     *   uses this as parent for the settings dialog.
+     **/
+    explicit Project( Enums::ServiceProviderType providerType,
+                      const WeaverInterfacePointer &weaver, QWidget *parent = 0 );
 
     /** @brief Destructor. */
     virtual ~Project();

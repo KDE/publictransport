@@ -138,7 +138,8 @@ public:
         ScriptLoaded
     };
 
-    ProjectPrivate( const WeaverInterfacePointer &weaver, Project *project )
+    ProjectPrivate( Enums::ServiceProviderType providerType,
+                    const WeaverInterfacePointer &weaver, Project *project )
         : state(Project::Uninitialized), projectModel(0), mutex(new QMutex(QMutex::Recursive)),
           projectSourceBufferModified(false),
           dashboardTab(0), projectSourceTab(0), plasmaPreviewTab(0), webTab(0),
@@ -150,7 +151,7 @@ public:
           scriptState(InitializingScript), scriptTab(0),
           debugger(new Debugger::Debugger(weaver, project)),
 #endif
-          provider(ServiceProvider::createInvalidProvider(project)),
+          provider(ServiceProvider::createProvider(providerType, project)),
           testModel(new TestModel(project)), testState(NoTestRunning),
           lastScriptError(NoScriptError), suppressMessages(false), enableQuestions(true),
           q_ptr(project)
@@ -403,6 +404,14 @@ public:
     bool initialize()
     {
         Q_ASSERT( state == Project::Uninitialized );
+
+        qRegisterMetaType< Project::ProjectActionData >( "ProjectActionData" );
+
+#ifdef BUILD_PROVIDER_TYPE_GTFS
+        // Load publictransport engine only if GTFS is available (but if it is load it also for
+        // scripted providers), used to access the GTFS service of the engine
+        Plasma::DataEngineManager::self()->loadEngine("publictransport");
+#endif
 
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         Q_Q( Project );
@@ -841,16 +850,15 @@ public:
     {
         Q_Q( Project );
 
-        // Recreate service provider from the contents of device
-        delete provider;
-        provider = 0;
-        xmlComments.clear();
-
         ServiceProviderDataReader reader;
         QString errorMessage;
         ServiceProviderData *readData = reader.read(
                 device, fileName, ServiceProviderDataReader::ReadErrorneousFiles,
                 q, &xmlComments, &errorMessage );
+
+        // Recreate service provider from the contents of device
+        xmlComments.clear();
+        provider->deleteLater();
         if ( readData ) {
             Enums::ServiceProviderType oldType = provider ? provider->type() : Enums::InvalidProvider;
             switch ( readData->type() ) {
@@ -1045,7 +1053,7 @@ public:
         Q_Q( Project );
         Enums::ServiceProviderType oldType = provider ? provider->type() : Enums::InvalidProvider;
         delete provider;
-        provider = ServiceProvider::createInvalidProvider( q );
+        provider = ServiceProvider::createProvider( oldType, q );
         xmlComments.clear();
 
         if ( provider->type() != oldType ) {
@@ -2565,16 +2573,19 @@ private:
 };
 
 Project::Project( const WeaverInterfacePointer &weaver, QWidget *parent )
-        : QObject( parent ), d_ptr(new ProjectPrivate(weaver, this))
+        : QObject(parent), d_ptr(new ProjectPrivate(Enums::InvalidProvider, weaver, this))
 {
     Q_D( Project );
     QMutexLocker locker( d->mutex );
-    qRegisterMetaType< ProjectActionData >( "ProjectActionData" );
-#ifdef BUILD_PROVIDER_TYPE_GTFS
-    // Load publictransport engine only if GTFS is available (but if it is load it also for
-    // scripted providers), used to access the GTFS service of the engine
-    Plasma::DataEngineManager::self()->loadEngine("publictransport");
-#endif
+    d->initialize();
+}
+
+Project::Project( Enums::ServiceProviderType providerType,
+                  const WeaverInterfacePointer &weaver, QWidget *parent )
+        : QObject(parent), d_ptr(new ProjectPrivate(providerType, weaver, this))
+{
+    Q_D( Project );
+    QMutexLocker locker( d->mutex );
     d->initialize();
 }
 

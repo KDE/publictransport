@@ -75,10 +75,6 @@ public:
 
     void setProviderData( const ServiceProviderData *data, const QString &fileName = QString() );
 
-    void setCurrentServiceProviderID( const QString &currentServiceProviderID ) {
-        m_currentServiceProviderID = currentServiceProviderID;
-    };
-
 signals:
     /** Some widgets value has been changed or setProviderData() has been called. */
     void changed();
@@ -151,7 +147,6 @@ private:
 #endif
 
     QString m_openedPath;
-    QString m_currentServiceProviderID;
     ServiceProviderData *m_providerData;
     bool m_shortAuthorAutoFilled;
     bool m_shortUrlAutoFilled;
