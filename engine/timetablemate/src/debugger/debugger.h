@@ -618,8 +618,9 @@ private:
     LoadScriptJob *createLoadScriptJob( DebugFlags debugFlags = NeverInterrupt );
     void connectJob( DebuggerJob *debuggerJob );
 
-    // Timeout for network requests, leave some time, many tests may be running in parallel
-    void startTimeout( int milliseconds = 10000 );
+    // Timeout for network requests, leave some time, many tests may be running in parallel.
+    // NOTE This includes waiting for asynchronous and synchronous network requests.
+    void startTimeout( int milliseconds = 61000 );
     void stopTimeout();
 
     const QPointer<DebuggerJob> currentJob() const;
