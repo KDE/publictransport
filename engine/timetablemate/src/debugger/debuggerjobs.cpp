@@ -444,8 +444,9 @@ bool DebuggerJob::waitFor( QObject *sender, const char *signal, WaitForType type
     while ( !agent->wasLastRunAborted() && finishWaitCounter < 50 && sender ) {
         if ( (type == WaitForNetwork && !objects.network->hasRunningRequests()) ||
              (type == WaitForScriptFinish &&
-              !agent->engine()->isEvaluating() && stoppedSignalWasProcessed)  ||
-             (type == WaitForInterrupt && agent->isInterrupted())  ||
+              !agent->engine()->isEvaluating() && stoppedSignalWasProcessed) ||
+             (type == WaitForInjectedScriptFinish && !agent->isInjectedScriptEvaluating()) ||
+             (type == WaitForInterrupt && agent->isInterrupted()) ||
              (type == WaitForNothing && finishWaitCounter > 0) )
         {
             break;
@@ -484,6 +485,8 @@ bool DebuggerJob::waitFor( QObject *sender, const char *signal, WaitForType type
             // Script not finished
             DEBUG_JOBS("Script not finished, abort");
             agent->engine()->abortEvaluation();
+        } else if ( type == WaitForNetwork ) {
+            objects.network->abortAllRequests();
         }
     }
     return finishWaitCounter < 50;
@@ -645,8 +648,10 @@ bool ExecuteConsoleCommandJob::runInForeignAgent( DebuggerAgent *agent )
 bool ForeignAgentJob::waitForFinish( DebuggerAgent *agent, const ScriptObjects &objects )
 {
     // Wait for the evaluation to finish,
-    // does not include waiting for running network requests to finish
-    if ( !waitFor(agent, SIGNAL(evaluationInContextFinished(QScriptValue))) ) {
+    // does not include waiting for running asynchronous network requests to finish
+    if ( !waitFor(agent, SIGNAL(evaluationInContextFinished(QScriptValue)),
+                  WaitForInjectedScriptFinish) )
+    {
         return false;
     }
 
@@ -810,7 +815,7 @@ bool EvaluateInContextJob::runInForeignAgent( DebuggerAgent *agent )
     EvaluationResult result;
     result.returnValue = agent->evaluateInContext( /*'{' + */program/* + '}'*/, context,
             &(result.error), &(result.errorLineNumber),
-            &(result.errorMessage), &(result.backtrace), InterruptOnExceptions ).toString();
+            &(result.errorMessage), &(result.backtrace), NeverInterrupt ).toString();
     DEBUG_JOBS("Evaluate in context result:" << result.returnValue);
 
     QMutexLocker locker( m_mutex );

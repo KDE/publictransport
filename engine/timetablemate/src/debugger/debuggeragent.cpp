@@ -146,6 +146,13 @@ bool DebuggerAgent::wasLastRunAborted() const
     return m_lastRunAborted;
 }
 
+bool DebuggerAgent::isInjectedScriptEvaluating() const
+{
+    QMutexLocker locker( m_mutex );
+    return m_injectedScriptState != InjectedScriptNotRunning &&
+           m_injectedScriptState != InjectedScriptAborting;
+}
+
 void DebuggerAgent::finish() const
 {
     m_mutex->lockInline();
@@ -777,6 +784,9 @@ void DebuggerAgent::abortDebugger()
         m_executionControl = ExecuteAbort;
         setState( Aborting );
         engine()->abortEvaluation();
+        if ( m_injectedScriptState == InjectedScriptEvaluating ) {
+            cancelInjectedCodeExecution();
+        }
         break;
     }
 
@@ -922,7 +932,7 @@ void DebuggerAgent::scriptLoad( qint64 id, const QString &program, const QString
     Q_UNUSED( baseLineNumber );
     if ( id != -1 ) {
         QMutexLocker locker( m_mutex );
-        if ( m_state != Running ) {
+        if ( m_state != Running && !isInjectedScriptEvaluating() ) {
             // Call fireup() in case a script was evaluated
             fireup();
         }
@@ -1136,7 +1146,7 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
     const bool isAborting = executionControl == ExecuteAbort || m_state == Aborting;
     DEBUGGER_EVENT_POS_CHANGED("Position changed to line" << lineNumber << "colum" << columnNumber
         << "in file" << m_scriptIdToFileName[scriptId] << "- Execution type:" << executionControl);
-    const bool injectedProgram = m_injectedScriptState == InjectedScriptEvaluating;
+    const bool injectedProgram = isInjectedScriptEvaluating();
     if ( !injectedProgram && m_state == NotRunning ) {
         // Execution has just started
         m_mutex->unlockInline();
@@ -1387,7 +1397,7 @@ void DebuggerAgent::doInterrupt( bool injectedProgram ) {
             return;
 
         // Check if execution should be interrupted again, ie. if it was just woken to do something
-        case ExecuteInterrupt:
+        case ExecuteInterrupt: {
             m_mutex->lockInline();
             DEBUGGER_EVENT("Still interrupted");
 
@@ -1399,6 +1409,7 @@ void DebuggerAgent::doInterrupt( bool injectedProgram ) {
             if ( m_injectedScriptState == InjectedScriptUpdateVariablesInParentContext ) {
                 m_injectedScriptId = -1;
             }
+            setState( Interrupted );
             m_mutex->unlockInline();
 
             // Update variables/backtrace
@@ -1408,7 +1419,7 @@ void DebuggerAgent::doInterrupt( bool injectedProgram ) {
             // while execution is interrupted
             emit doSomething();
             break;
-
+        }
         default:
             // Continue script execution
             continueExecution = true;

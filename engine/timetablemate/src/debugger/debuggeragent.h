@@ -111,11 +111,18 @@ public:
     /** @brief Whether or not script execution is currently interrupted. */
     bool isInterrupted() const;
 
-    /** @brief Whether or not the script currently gets executed or is interrupted. */
+    /** @brief Whether or not the script currently gets executed. */
     bool isRunning() const;
 
     /** @brief Whether or not the script currently gets aborted. */
     bool isAborting() const;
+
+    /**
+     * @brief Whether or not script script injected with evaluateInContext() is evaluating.
+     *
+     * Returns @c true until the injected script code has finished or was aborted.
+     **/
+    bool isInjectedScriptEvaluating() const;
 
     /**
      * @brief Blocks until the debugger has been completely shut down.
