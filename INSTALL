@@ -1,8 +1,7 @@
 Public Transport
 ----------------
 
-You need at least KDE 4.6 (not tested)
-Tested with KDE 4.9, 4.8
+Works with KDE 4.9, 4.10, maybe also earlier versions (untested), < 4.5 will not work
 
 -- Needed packages --
 
