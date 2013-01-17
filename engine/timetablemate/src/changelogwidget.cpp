@@ -154,13 +154,13 @@ ChangelogWidget::ChangelogWidget( QWidget *parent,
 
     QMenu *addMenu = new QMenu( this );
     addMenu->addAction( KIcon( "list-add" ), i18nc( "@action:inmenu", "Add &Empty Changelog Entry" ),
-                        this, SLOT( createAndAddWidget() ) );
+                        this, SLOT(createAndAddWidget()) );
     addMenu->addAction( KIcon( "list-add" ), i18nc( "@action:inmenu", "Add &Same Version Changelog Entry" ),
-                        this, SLOT( createAndAddWidgetSameVersion() ) );
+                        this, SLOT(createAndAddWidgetSameVersion() ));
     addMenu->addAction( KIcon( "list-add" ), i18nc( "@action:inmenu", "Add &New Minor Version Changelog Entry" ),
-                        this, SLOT( createAndAddWidgetNewMinorVersion() ) );
+                        this, SLOT(createAndAddWidgetNewMinorVersion()) );
     addMenu->addAction( KIcon( "list-add" ), i18nc( "@action:inmenu", "Add New &Major Version Changelog Entry" ),
-                        this, SLOT( createAndAddWidgetNewMajorVersion() ) );
+                        this, SLOT(createAndAddWidgetNewMajorVersion()) );
 
     btnAdd->setPopupMode( QToolButton::MenuButtonPopup );
     btnAdd->setMenu( addMenu );
@@ -266,7 +266,7 @@ void ChangelogWidget::addChangelogEntry( const ChangelogEntry &changelogEntry,
 {
     ChangelogEntryWidget *widget = qobject_cast<ChangelogEntryWidget *>( createNewWidget() );
     widget->setChangelogEntry( changelogEntry, shortAuthor );
-    connect( widget, SIGNAL( changed() ), this, SIGNAL( changed() ) );
+    connect( widget, SIGNAL(changed()), this, SIGNAL(changed()) );
     addWidget( widget );
 }
 

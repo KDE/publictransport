@@ -1029,7 +1029,7 @@ int AbstractDynamicLabeledWidgetContainer::removeWidget( QWidget *widget )
     if ( index == 0 && dynamicWidget->addButton() ) {
         if ( d->dynamicWidgets.count() >= 2 ) {
             d->addButton = d->dynamicWidgets[ 1 ]->addButton( this, DynamicWidget::AddButton );
-            connect( d->addButton, SIGNAL( clicked() ), this, SLOT( createAndAddWidget() ) );
+            connect( d->addButton, SIGNAL(clicked()), this, SLOT(createAndAddWidget()) );
             delete d->dynamicWidgets[ 1 ]->takeRemoveButton();
         } else {
             d->addButton = 0;

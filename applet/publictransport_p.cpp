@@ -475,8 +475,8 @@ void PublicTransportAppletPrivate::onResized()
                                                     titleWidget->layout()->preferredHeight() ) );
             shrinkAnimation->setEndValue( QSizeF( titleWidget->maximumWidth(), 0 ) );
 
-            q->connect( titleToggleAnimation, SIGNAL( finished() ),
-                        q, SLOT( titleToggleAnimationFinished() ) );
+            q->connect( titleToggleAnimation, SIGNAL(finished()),
+                        q, SLOT(titleToggleAnimationFinished()) );
             titleToggleAnimation->addAnimation( fadeAnimation );
             titleToggleAnimation->addAnimation( shrinkAnimation );
             titleToggleAnimation->start();
@@ -510,8 +510,8 @@ void PublicTransportAppletPrivate::onResized()
             growAnimation->setStartValue( QSizeF( titleWidget->maximumWidth(),
                                                   titleWidget->layout()->preferredHeight() ) );
 
-            q->connect( titleToggleAnimation, SIGNAL( finished() ),
-                        q, SLOT( titleToggleAnimationFinished() ) );
+            q->connect( titleToggleAnimation, SIGNAL(finished()),
+                        q, SLOT(titleToggleAnimationFinished()) );
             titleToggleAnimation->addAnimation( fadeAnimation );
             titleToggleAnimation->addAnimation( growAnimation );
             titleToggleAnimation->start();
@@ -1271,7 +1271,7 @@ Plasma::Animation *PublicTransportAppletPrivate::fadeOutOldAppearance()
         animOut->setProperty( "startOpacity", 1 );
         animOut->setProperty( "targetOpacity", 0 );
         animOut->setTargetWidget( oldItem );
-        q->connect( animOut, SIGNAL( finished() ), q, SLOT( oldItemAnimationFinished() ) );
+        q->connect( animOut, SIGNAL(finished()), q, SLOT(oldItemAnimationFinished()) );
         animOut->start( QAbstractAnimation::DeleteWhenStopped );
         return animOut;
     } else {
@@ -1300,8 +1300,8 @@ KSelectAction *PublicTransportAppletPrivate::createSwitchStopAction( QObject *pa
         }
         stopAction->setData( i );
         if ( destroyOverlayOnTrigger ) {
-            q->connect( stopAction, SIGNAL( triggered() ), q->action( "backToDepartures" ),
-                        SLOT( trigger() ) );
+            q->connect( stopAction, SIGNAL(triggered()), q->action("backToDepartures"),
+                        SLOT(trigger()) );
         }
 
         stopAction->setCheckable( true );
@@ -1309,8 +1309,8 @@ KSelectAction *PublicTransportAppletPrivate::createSwitchStopAction( QObject *pa
         switchStopAction->addAction( stopAction );
     }
 
-    q->connect( switchStopAction, SIGNAL( triggered( QAction * ) ),
-                q, SLOT( setCurrentStopIndex( QAction * ) ) );
+    q->connect( switchStopAction, SIGNAL(triggered(QAction*)),
+                q, SLOT(setCurrentStopIndex(QAction*)) );
     return switchStopAction;
 }
 
