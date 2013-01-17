@@ -789,7 +789,7 @@ void PublicTransportApplet::showActionButtons()
             foreach ( QAction *menuAction, action->menu()->actions() ) {
                 if ( !menuAction->isSeparator() && !menuAction->text().isEmpty() ) {
                     const QString text = fm.elidedText( menuAction->text(), Qt::ElideRight,
-                                                        size().width() / 3 );
+                            qMax(60, qCeil(d->graphicsWidget->size().width() / 3)) );
                     tabBar->addTab( menuAction->icon(), text );
                 }
             }
