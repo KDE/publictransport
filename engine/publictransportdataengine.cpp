@@ -1311,7 +1311,10 @@ QString PublicTransportEngine::disambiguateSourceName( const QString &sourceName
             time = QDateTime( QDate::currentDate(),
                               QTime::fromString(timeParameter.mid(5), "hh:mm") );
         } else { // startsWith "datetime="
-            time = QDateTime::fromString( timeParameter.mid(9) );
+            time = QDateTime::fromString( timeParameter.mid(9), Qt::ISODate );
+            if ( !time.isValid() ) {
+                time = QDateTime::fromString( timeParameter.mid(9) );
+            }
         }
 
         // Round 15 minutes
@@ -1319,7 +1322,8 @@ QString PublicTransportEngine::disambiguateSourceName( const QString &sourceName
         time = QDateTime::fromMSecsSinceEpoch( msecs - msecs % (1000 * 60 * 15) );
 
         // Replace old time parameter with a new one
-        ret.replace( rx.pos(), rx.matchedLength(), QLatin1String("datetime=") + time.toString() );
+        ret.replace( rx.pos(), rx.matchedLength(),
+                     QLatin1String("datetime=") + time.toString(Qt::ISODate) );
     }
 
     // Read parameters to reorder them afterwards
@@ -1341,7 +1345,7 @@ QString PublicTransportEngine::disambiguateSourceName( const QString &sourceName
             const QString parameterName = parameter.left( pos );
             const QString parameterValue = parameter.mid( pos + 1 ).trimmed();
             if ( !parameterName.isEmpty() && !parameterValue.isEmpty() ) {
-                parameters[ parameterName ] = parameterValue.toLower();
+                parameters[ parameterName ] = parameterValue;
             }
         }
     }
@@ -1349,19 +1353,25 @@ QString PublicTransportEngine::disambiguateSourceName( const QString &sourceName
     // Build non-ambiguous source name with standardized parameter order
     ret = typeKeyword + ' ' + defaultParameter;
     if ( parameters.contains(QLatin1String("city")) ) {
-        ret += "|city=" + parameters["city"];
+        ret += "|city=" + parameters["city"].toLower();
     }
     if ( parameters.contains(QLatin1String("stop")) ) {
-        ret += "|stop=" + parameters["stop"];
+        ret += "|stop=" + parameters["stop"].toLower();
     }
     if ( parameters.contains(QLatin1String("stopid")) ) {
         ret += "|stopid=" + parameters["stopid"];
     }
     if ( parameters.contains(QLatin1String("originstop")) ) {
-        ret += "|originstop=" + parameters["originstop"];
+        ret += "|originstop=" + parameters["originstop"].toLower();
+    }
+    if ( parameters.contains(QLatin1String("originstopid")) ) {
+        ret += "|originstopid=" + parameters["originstopid"];
     }
     if ( parameters.contains(QLatin1String("targetstop")) ) {
-        ret += "|targetstop=" + parameters["targetstop"];
+        ret += "|targetstop=" + parameters["targetstop"].toLower();
+    }
+    if ( parameters.contains(QLatin1String("targetstopid")) ) {
+        ret += "|targetstopid=" + parameters["targetstopid"];
     }
     if ( parameters.contains(QLatin1String("timeoffset")) ) {
         ret += "|timeoffset=" + parameters["timeoffset"];
@@ -1656,9 +1666,9 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                     request->setDateTime( QDateTime(QDate::currentDate(),
                                                     QTime::fromString(parameterValue, "hh:mm")) );
                 } else if ( parameterName == QLatin1String("datetime") ) {
-                    request->setDateTime( QDateTime::fromString(parameterValue) );
+                    request->setDateTime( QDateTime::fromString(parameterValue, Qt::ISODate) );
                     if ( !request->dateTime().isValid() ) {
-                        request->setDateTime( QDateTime::fromString(parameterValue, Qt::ISODate) );
+                        request->setDateTime( QDateTime::fromString(parameterValue) );
                     }
                 } else if ( parameterName == QLatin1String("count") ) {
                     bool ok;
@@ -2312,7 +2322,14 @@ void PublicTransportEngine::requestFailed( ServiceProvider *provider,
 
                 // Publish updated fields
                 publishData( dataSource );
+            } else {
+                kWarning() << "Timetable item" << additionalDataRequest->itemNumber()
+                           << "not found in data source" << request->sourceName()
+                           << "additional data error discarded";
             }
+        } else {
+            kWarning() << "Data source" << request->sourceName()
+                       << "not found, additional data error discarded";
         }
 
         // Do not mark the whole timetable data source as erroneous
