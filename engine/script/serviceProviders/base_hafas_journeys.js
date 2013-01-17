@@ -830,10 +830,12 @@ var __hafas_journeys = function(hafas) {
                     throw Error( errorString );
                 }
 
-                var options = prepareOptions( undefined, public.journeys.options );
+                var options = prepareOptions( undefined, processor.options );
                 if ( !expectFormat(_formats.XmlFormat, xml) ) {
-                    if ( isHtml(xml) )
-                        return public.journeys.parseHtml( xml );
+                    if ( isHtml(xml) ) {
+                        var parser = processor.parser.parserByFormat(_formats.HtmlFormat);
+                        return parser(xml);
+                    }
                     return false;
                 }
                 xml = helper.decode( xml, options.charset(_formats.XmlFormat) );
@@ -873,7 +875,7 @@ var __hafas_journeys = function(hafas) {
                 return true;
             },
 
-            parse: function( js, hasError, errorString ) { // TODO rename to parseJson() and add format JSON?
+            parse: function( js, hasError, errorString ) { // TODO rename to parseJson(), move to de_db? Or Remove?
                 if ( hasError ) {
                     throw Error( errorString );
                 }
@@ -885,7 +887,7 @@ var __hafas_journeys = function(hafas) {
                     throw TypeError("Hafas.parseJourneys(): Incorrect journey document received");
                 }
                 var json = js.substr(begin[0].length, js.length - begin[0].length - end[0].length);
-                var options = prepareOptions( undefined, public.journeys.options );
+                var options = prepareOptions( undefined, processor.options );
                 json = helper.decode( json, options.charset(_formats.JavaScriptFormat) );
 
                 // Parse JSON, expected is an object with these properties
@@ -945,7 +947,7 @@ var __hafas_journeys = function(hafas) {
                         journey.Delay = -1;
                     } else {
                         journey.Delay = parseInt( journeyData.abps ); // anps for arrival delay
-                        journey.DelayReason = journeyData.abpm != "-" ? journey.abpm : undefined, // TODO anpm for arrival delay reason
+                        journey.DelayReason = journeyData.abpm != "-" ? journey.abpm : undefined; // TODO anpm for arrival delay reason
                     }
                     journey.Platform = journeyData.g,
                     journey.Changes = parseInt( journeyData.u );
