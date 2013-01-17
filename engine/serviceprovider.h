@@ -103,8 +103,12 @@ public:
     /** @brief Destructor. */
     virtual ~ServiceProvider();
 
+    /** @brief Create a new provider of the given @p type. */
+    static ServiceProvider *createProvider( Enums::ServiceProviderType type, QObject *parent = 0 );
+
     /** @brief Create an invalid provider. */
-    static ServiceProvider *createInvalidProvider( QObject *parent = 0 );
+    static inline ServiceProvider *createInvalidProvider( QObject *parent = 0 ) {
+        return createProvider(Enums::InvalidProvider, parent); };
 
     /**
      * @brief Whether or not the cached test result is unchanged.

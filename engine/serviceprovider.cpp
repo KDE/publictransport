@@ -82,9 +82,9 @@ ServiceProviderTestData ServiceProvider::runSubTypeTest( const ServiceProviderTe
     }
 }
 
-ServiceProvider *ServiceProvider::createInvalidProvider( QObject *parent )
+ServiceProvider *ServiceProvider::createProvider( Enums::ServiceProviderType type, QObject *parent )
 {
-    return new ServiceProvider( 0, parent );
+    return new ServiceProvider( new ServiceProviderData(type), parent );
 }
 
 bool ServiceProvider::isSourceFileModified( const QSharedPointer<KConfig> &cache ) const
