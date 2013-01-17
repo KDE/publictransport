@@ -70,6 +70,7 @@ var __hafas_routedata = function(hafas) {
 
                 // Find all <St> tags, which contain information about intermediate stops
                 var stopNodes = docElement.elementsByTagName("St");
+                var allRouteData = { RouteStops: [], RouteTimes: [] };
                 var routeData = { RouteStops: [], RouteTimes: [] };
                 var inRange = values.dateTime == undefined || values.dataType == "arrivals";
                 var lastTime, firstDate = new Date;
@@ -151,11 +152,40 @@ var __hafas_routedata = function(hafas) {
                         routeData.RouteTimes.push( timeValue );
 //                         routeData.RouteTimesDelay.push( delay ); // TODO
                     }
+                    allRouteData.RouteStops.push( routeStop );
+                    allRouteData.RouteTimes.push( timeValue );
                     if ( inRange && values.dataType == "arrivals" &&
                          timeValue.getTime() >= values.dateTime.getTime() )
                     {
                         // Last route stop for arrivals, ie. the home stop
                         break;
+                    }
+                } // var i = 0; i < stopNodes.count(); ++i
+
+                if ( routeData.RouteStops.length == 0 ) {
+                    // No matching stops found, maybe the date is wrong (only times are available here)
+                    inRange = values.dateTime == undefined || values.dataType == "arrivals";
+                    for ( i = 0; i < allRouteData.RouteStops.length; ++i ) {
+                        var routeStop = allRouteData.RouteStops[i];
+                        var timeValue = allRouteData.RouteTimes[i];
+
+                        // Add one day
+                        timeValue.setTime( timeValue.getTime() + 24 * 60 * 60 * 1000 );
+
+                        if ( inRange || routeStop == values.stop || // TODO Does not work with IDs, remove and only use date & time?
+                             (values.dataType == "departures" &&
+                             values.dateTime.getTime() <= timeValue.getTime()) )
+                        {
+                            inRange = true;
+                            routeData.RouteStops.push( routeStop );
+                            routeData.RouteTimes.push( timeValue );
+                        }
+                        if ( inRange && values.dataType == "arrivals" &&
+                             timeValue.getTime() >= values.dateTime.getTime() )
+                        {
+                            // Last route stop for arrivals, ie. the home stop
+                            break;
+                        }
                     }
                 }
 
