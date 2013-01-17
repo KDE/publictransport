@@ -1,5 +1,5 @@
 /*
- *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -384,6 +384,9 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
         gtfsGroup.writeEntry( "feedModifiedTime", newLastModified.toString() );
         gtfsGroup.writeEntry( "feedSizeInBytes", newSizeInBytes );
         gtfsGroup.writeEntry( "feedUrl", data()->feedUrl() );
+
+        // Needed to have the GTFS feed information available directly after this job is finished
+        gtfsGroup.sync();
 
         // Stop here for "updateGtfsFeedInfo" operation
         if ( m_onlyGetInformation ) {

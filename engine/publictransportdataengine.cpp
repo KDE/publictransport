@@ -195,8 +195,9 @@ void PublicTransportEngine::gtfsServiceJobFinished( Plasma::ServiceJob *job )
 
     // Check that the job was not canceled because another database job was already running
     const bool canAccessGtfsDatabase = job->property("canAccessGtfsDatabase").toBool();
+    const bool isAccessingGtfsDatabase = job->property("isAccessingGtfsDatabase").toBool();
     const QString providerId = job->property( "serviceProviderId" ).toString();
-    if ( !canAccessGtfsDatabase || providerId.isEmpty() ) {
+    if ( (!canAccessGtfsDatabase && isAccessingGtfsDatabase) || providerId.isEmpty() ) {
         // Invalid job or cancelled, because another import job is already running
         // for the provider
         return;
@@ -903,7 +904,11 @@ bool PublicTransportEngine::isStateDataCached( const QString &stateDataKey )
 {
     return stateDataKey != QLatin1String("progress") &&
            stateDataKey != QLatin1String("gtfsDatabasePath") &&
-           stateDataKey != QLatin1String("gtfsDatabaseSize");
+           stateDataKey != QLatin1String("gtfsDatabaseSize") &&
+           stateDataKey != QLatin1String("gtfsDatabaseModifiedTime") &&
+           stateDataKey != QLatin1String("gtfsFeedImported") &&
+           stateDataKey != QLatin1String("gtfsFeedSize") &&
+           stateDataKey != QLatin1String("gtfsFeedModifiedTime");
 }
 
 bool PublicTransportEngine::testServiceProvider( const QString &providerId,
@@ -1973,7 +1978,7 @@ void PublicTransportEngine::updateTimeout()
     // requests updates for all connected sources (possibly multiple combined stops)
     foreach ( const QString &sourceName, dataSource->usingDataSources() ) {
         updateTimetableDataSource( SourceRequestData(sourceName) );
-    }
+    }  // TODO FIXME Do not update while running additional data requests?
 }
 
 void PublicTransportEngine::cleanupTimeout()

@@ -1,5 +1,5 @@
 /*
- *   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+ *   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
  *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU Library General Public License as
@@ -103,6 +103,17 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
     QString errorMessage;
     bool importFinished = isGtfsFeedImportFinished( providerId, feedUrl, cache, &errorMessage );
 
+    // Update GTFS feed state fields that do not need the import to be finished already
+    if ( stateData ) {
+        // Data might not be available,
+        // the "updateGtfsFeedInfo" operation of the GTFS service can be run to get the data
+        qlonglong sizeInBytes = gtfsGroup.readEntry( "feedSizeInBytes", qlonglong(-1) );
+        QDateTime lastModified = QDateTime::fromString(
+                gtfsGroup.readEntry("feedModifiedTime", QString()), Qt::ISODate );
+        stateData->insert( "gtfsFeedSize", sizeInBytes );
+        stateData->insert( "gtfsFeedModifiedTime", lastModified );
+    }
+
     // GTFS feed was successfully imported from the currently used feed URL
     if ( importFinished ) {
         // Import was marked as finished, test if the database file still exists and
@@ -120,6 +131,7 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
                 gtfsGroup.sync();
 
                 if ( stateData ) {
+                    stateData->insert( "gtfsFeedImported", false );
                     stateData->insert( "statusMessage", errorMessage );
                 }
                 return "gtfs_feed_import_pending";
@@ -128,14 +140,19 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
             // Database exists, feed marked as imported and feed URL did not change
             // since the import, set state data and return state "ready"
             if ( stateData ) {
+                stateData->insert( "gtfsFeedImported", true );
+
                 // Insert a status message
                 stateData->insert( "statusMessage",
                                    i18nc("@info/plain", "GTFS feed succesfully imported") );
 
                 // Update GTFS database state fields
                 const QString databasePath = GtfsDatabase::databasePath( providerId );
+                const QFileInfo databaseInfo( databasePath );
                 stateData->insert( "gtfsDatabasePath", databasePath );
-                stateData->insert( "gtfsDatabaseSize", QFileInfo(databasePath).size() );
+                stateData->insert( "gtfsDatabaseSize", databaseInfo.size() );
+                stateData->insert( "gtfsDatabaseModifiedTime",
+                                   databaseInfo.lastModified().toString(Qt::ISODate) );
 
                 // Add an 'updatable' field to the state data
                 const bool updatable =
@@ -156,6 +173,7 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
             // The GTFS feed has not been imported successfully yet
             // or the database file was deleted/corrupted
             if ( stateData ) {
+                stateData->insert( "gtfsFeedImported", false );
                 stateData->insert( "statusMessage", i18nc("@info/plain", "GTFS feed not imported") );
             }
             return "gtfs_feed_import_pending";
@@ -163,6 +181,7 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
     } else {
         // GTFS feed was not imported or the feed URL has changed since the import
         if ( stateData ) {
+            stateData->insert( "gtfsFeedImported", false );
             stateData->insert( "statusMessage", errorMessage );
         }
         return "gtfs_feed_import_pending";
