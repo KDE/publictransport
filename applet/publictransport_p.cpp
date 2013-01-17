@@ -1070,7 +1070,7 @@ void PublicTransportAppletPrivate::reconnectJourneySource( const QString &target
                                                      : "%4 %1|originstop=%2|datetime=%3" )
                                .arg( settings.currentStop().get<QString>(ServiceProviderSetting) )
                                .arg( _targetStopName )
-                               .arg( _dateTime.toString() )
+                               .arg( _dateTime.toString(Qt::ISODate) )
                                .arg( timeIsDeparture ? "Journeys" : "JourneysArr" );
 
         const Stop stop = stopSettings.stop( 0 );
