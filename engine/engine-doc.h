@@ -1,5 +1,5 @@
 /*
-*   Copyright 2012 Friedrich Pülz <fpuelz@gmx.de>
+*   Copyright 2013 Friedrich Pülz <fpuelz@gmx.de>
 *
 *   This program is free software; you can redistribute it and/or modify
 *   it under the terms of the GNU Library General Public License as
@@ -60,9 +60,10 @@ You might need to run kbuildsycoca4 in order to get the .desktop file recognized
     @li @ref pageUsage
     @li @ref pageServiceProviders
     @li @ref pageClassDiagram
+    @li @ref pageGlossary
 */
 
-/** @page pageUsage Usage
+/** @page pageUsage Usage of Data Sources and Services
 
 @par Sections
 <ul><li>@ref usage_introduction_sec </li>
@@ -79,8 +80,13 @@ You might need to run kbuildsycoca4 in order to get the .desktop file recognized
             <li>@ref usage_service_additional_data </li>
             <li>@ref usage_service_later_items </li>
         </ul>
+    <li>@ref usage_gtfs_service_sec </li>
+        <ul><li>@ref usage_gtfs_service_import </li>
+            <li>@ref usage_gtfs_service_update </li>
+            <li>@ref usage_gtfs_service_delete </li>
+            <li>@ref usage_gtfs_service_info </li>
+        </ul>
 </ul>
-
 <br />
 
 @section usage_introduction_sec Introduction
@@ -204,11 +210,20 @@ and @em error is @c false.
 current provider state in a QVariantHash. At least a @em statusMessage field is contained,
 with a human readable string explaining the current state. There may also be a
 @em statusMessageRich field with a formatted version of @em statusMessage.
-Depending on the @em state additional fields may be available. For example with the
-@em "importing_gtfs_feed" state a field @em progress is available.
+Depending on the @em state additional fields may be available.
+<br />
+For example with the @em "importing_gtfs_feed" state a field @em progress is available.
+GTFS providers of any state offer these fields as state data:
+@em gtfsFeedImported (whether or not the GTFS feed was successfully imported, see
+@ref usage_gtfs_service_import), @em updatable (whether or not an updated version of the GTFS feed
+is available, see @ref usage_gtfs_service_update), @em gtfsFeedSize (the size in bytes of the GTFS
+feed) and @em gtfsFeedModifiedTime (the last modified time of the GTFS feed as Qt::IsoDate string).
+Note that if @em gtfsFeedSize is -1 this information needs to be requested first using the GTFS
+service, see @ref usage_gtfs_service_info.
 GTFS providers that are @em "ready" also offer these fields as state data:
-@em gtfsDatabasePath (the path to the GTFS database file), @em gtfsDatabaseSize
-(the size in bytes of the GTFS database).</td></tr>
+@em gtfsDatabasePath (the path to the GTFS database file), @em gtfsDatabaseSize (the size in bytes
+of the GTFS database) and @em gtfsDatabaseModifiedTime (the last modified time of the GTFS
+database as Qt::IsoDate string).</td></tr>
 </table>
 <br />
 Here is an example of how to get service provider information for all available
@@ -368,7 +383,7 @@ an error message string.</td></tr>
     Error code 1 means, that there was a problem downloading a source file.
     Error code 2 means, that parsing a source file failed.
     Error code 3 means that a GTFS feed needs to be imorted into the database before using it.
-    Use the @ref PublicTransportService to start and monitor the import.</td></tr>
+    See @ref usage_gtfs_service_import to start and monitor the import.</td></tr>
 <tr><td><i>receivedData</i></td> <td>QString</td> <td>"departures", "journeys", "stopList" or
 "nothing" if there was an error.</td></tr>
 <tr><td><i>updated</i></td> <td>QDateTime</td> <td>The date and time when the data source was
@@ -652,6 +667,7 @@ This service is available for all timetable data sources, ie. departure, arrival
 data sources. It can be retrieved using DataEngine::serviceForSource() with the name of the
 timetable data source. The service offers some operations on timetable data sources and allows
 to change it's contents, ie. update or extend it with new data.
+@see TimetableService
 
 @subsection usage_service_manual_update Manual updates
 Manual updates can be requested for timetable data sources using the @b requestUpdate operation.
@@ -690,8 +706,25 @@ op.writeEntry( "itemnumber", 0 );
 Plasma::ServiceJob *additionalDataJob = service->startOperationCall( op );
 @endcode
 
+The associated timetable data source item (eg. a departure) gets extended with the additional data.
+When a timetable item in the data source already includes additional data, it has the field
+@em "additionalDataState" set to @em "included". If additional data was requested but is not yet
+ready the state is @em "busy" (you may want to show a busy widget while this state is set).
+Otherwise the additional data state is @em "error", @em "notrequested" or @em "notsupported"
+(see @ref usage_departures_datastructure_sec).
+
+What data actually gets added as additional data is up to the provider plugin. But it can also
+be determined with the other supported features sometimes. If a provider eg. supports the
+Enums::ProvidesAdditionalData @em and Enums::ProvidesRouteInformation features and a departure
+does not include any route data (without additional data), it can be expected that route data will
+be added as additional data.
+
+@note The used provider must support the Enums::ProvidesAdditionalData feature, otherwise all
+  requests for additional data will fail. For script providers this feature gets automatically set
+  if the getAdditionalData() function is implemented in the script.
+
 @subsection usage_service_later_items Request earlier/later items
-Use the operations @b "requestEarlierItems" and @b "requestLaterItems" to get more timetable items
+Use the operations @em "requestEarlierItems" and @em "requestLaterItems" to get more timetable items
 for a data source. This is currently only used for journeys. The difference between these operation
 and simply requesting more journeys with an earlier/later time is that the provider may benefit
 from data stored for the request at the provider's server (if any) when using this operation.
@@ -708,6 +741,53 @@ Plasma::Service *service = dataEngine("publictransport")->serviceForSource( sour
 KConfigGroup op = service->operationDescription("requestLaterItems");
 Plasma::ServiceJob *laterItemsJob = service->startOperationCall( op );
 @endcode
+
+@n
+@section usage_gtfs_service_sec Using the GTFS Service
+This service is available under the name "GTFS". It can be retrieved using
+DataEngine::serviceForSource() with "GTFS" as source name. The service offers some operations to
+import GTFS feeds or to update/delete an already imported GTFS database.
+@see GtfsService
+
+@subsection usage_gtfs_service_import Import GTFS feeds
+Use the operation @em "importGtfsFeed" to import the GTFS feed of an installed GTFS provider plugin
+to its local GTFS database. When this operation succeeds, timetable data will be available without
+network connection for the GTFS provider plugin. The operation expects one parameter
+@em "serviceProviderId", which is the ID of the GTFS provider plugin which GTFS feed should get
+imported.@n
+
+While the import is running the service provider data source will set the @em "state" field for
+the importing provider to @em "importing_gtfs_feed". The @em "stateData" field gets a field
+@em "progress" for monitoring the import progress, @em "statusMessage" contains more information
+about what is currently done in the import job.
+
+@note Importing a GTFS feed can take some time and the resulting GTFS database can take quite some
+  disk space, eg. around 300MB depending on the GTFS feed. The @em "stateData" field of the
+  provider data source contains some informative fields about the feed, eg. @em "gtfsFeedSize"
+  contains the size in bytes of the GTFS feed (can be used to estimate how big the database will be).
+  If it is not available, ie. @em "gtfsFeedSize" is -1, use the @em "updateGtfsFeedInfo" operation
+  to update this information.
+
+@subsection usage_gtfs_service_update Update GTFS database
+GTFS providers automatically update their GTFS databases when they get created and the GTFS feed
+was modified. To manually request an update of the GTFS database use the operation
+@em "updateGtfsDatabase", which expects one parameter @em "serviceProviderId", which is the ID
+of the GTFS provider plugin which GTFS database should be updated.
+
+@subsection usage_gtfs_service_delete Delete GTFS database
+To delete an imported GTFS database use the @em "deleteGtfsDatabase" operation, which expects
+one parameter @em "serviceProviderId", which is the ID of the GTFS provider plugin which GTFS
+database should be deleted.
+
+@subsection usage_gtfs_service_info Get information about GTFS feeds
+The service provider data source contains informative fields about the GTFS feed for GTFS providers
+in their @em "stateData" fields. If this information is not available it can be requested using
+the @em "updateGtfsFeedInfo" operation, which expects one parameter @em "serviceProviderId", which
+is the ID of the GTFS provider plugin for which information about the GTFS feed should be updated.
+The data updated by this operation is @em "gtfsFeedSize" and @em "gtfsFeedModifiedTime". The size
+of the feed is given in bytes and can be used to estimate how big the database will be after an
+import. The last modified time of the GTFS feed is stored as Qt::IsoDate string. The size will be
+-1 and the modified time will be invalid if this information is not available.
 */
 
 /** @page pageServiceProviders Add Support for new Service Providers
@@ -929,7 +1009,7 @@ Scripts are executed using QtScript (JavaScript), which can make use of Kross if
 languages should be used, eg. Python or Ruby. JavaScript is tested, the other languages may also
 work. There are functions with special names that get called by the data engine when needed:
 @n
-getTimetable(), getStopSuggestions(), getJourneys() and features()
+features(), getTimetable(), getStopSuggestions(), getJourneys() and getAdditionalData()
 @n
 
 @n
@@ -1020,3 +1100,46 @@ digraph publicTransportDataEngine {
 }
 @enddot
 */
+
+/** @page pageGlossary PublicTransport Glossary
+<table border="0" cellspacing="10">
+<tr><td style="text-align:right;"><b>(Service) Provider</b></td>
+    <td>A provider offers timetable data, eg. using a GTFS feed, a website or a (public) web API.
+    Also called "agency".</td>
+</tr>
+<tr><td style="text-align:right;"><b>(Service) Provider Plugin</b></td>
+    <td>A plugin for the PublicTransport data engine to add support for a service provider.
+    For simplicity provider plugins are called provider sometimes.</td>
+</tr>
+<tr><td style="text-align:right;"><b>Stop</b></td>
+    <td>A stop is where transportation vehicles stop. For trains this is a station,
+    for flights it is an airport, for ships it is a harbor, etc.</td>
+</tr>
+<tr><td style="text-align:right;"><b>Journey</b></td>
+    <td>A journey is a connection from one stop to another. It can contain sub journeys with
+    information about the route of each vehicle used in the journey.
+    Other projects call journeys "trips", "connections" or "routes".</td>
+</tr>
+<tr><td style="text-align:right;"><b>Route</b></td>
+    <td>For departures/arrivals the route is the list of stops passed by the departing/arriving
+    vehicle. For journeys it is the list of intermediate stops including origin and target.
+    Sub journeys contain routes between two intermediate stops of a journey.</td>
+</tr>
+<tr><td style="text-align:right;"><b>Transport Line</b></td>
+    <td>The name of a public transport line or train/flight number. Information about the vehicle
+    type should not be included, except for preventing ambiguities.
+    @em Examples: "3", "S4", "U5", "RB 885610".</td>
+</tr>
+<tr><td style="text-align:right;"><b>Vehicle Type</b></td>
+    <td>The vehicle type can be a tram, bus, subway, train, ferry, etc.</td>
+</tr>
+<tr><td style="text-align:right;"><b>Additional Data</b></td>
+    <td>This can be any timetable data that can be loaded later for existing timetable data
+    sources. For example the HAFAS base script allows to load route data later, because it is
+    not directly available.</td>
+</tr>
+<tr><td style="text-align:right;"><b>GTFS</b></td>
+    <td>The <a href="https://developers.google.com/transit/gtfs/reference">GeneralTransitFeedSpecification</a>
+    gets used by many service providers for standardized feeds with timetable data.</td>
+</tr></table>
+ */
