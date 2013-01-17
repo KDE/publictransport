@@ -955,7 +955,7 @@ void PublicTransportAppletPrivate::reconnectSource()
                     stopSettings.get<int>(TimeOffsetOfFirstDepartureSetting);
             break;
         case AtCustomTime:
-            currentSource += "|time=%1" +
+            currentSource += "|time=" +
                     stopSettings.get<QTime>(TimeOfFirstDepartureSetting).toString("hh:mm");
             break;
         default:
