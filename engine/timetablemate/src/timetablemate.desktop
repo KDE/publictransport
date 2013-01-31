@@ -1,6 +1,7 @@
 [Desktop Entry]
 Name=TimetableMate
 Name[ca]=TimetableMate
+Name[ca@valencia]=TimetableMate
 Name[de]=TimetableMate
 Name[et]=Sõiduplaanimeister
 Name[fr]=TimetableMate
@@ -21,6 +22,7 @@ MimeType=application-x-publictransport-engine;application/xml;
 X-DocPath=timetablemate/index.html
 GenericName=A little IDE for adding support for new service providers to the PublicTransport data engine
 GenericName[ca]=Una petit IDE per afegir suport per a nous proveïdors de serveis al motor de dades PublicTransport
+GenericName[ca@valencia]=Una petit IDE per afegir suport per a nous proveïdors de serveis al motor de dades PublicTransport
 GenericName[et]=Väike arenduskeskkond uute teenusepakkujate toetuse lisamiseks ühiskondliku transpordi andmemootorile
 GenericName[fr]=Un petit EDI pour ajouter la prise en charge de nouveaux prestataires de services au moteur de données « Transports publics » de Plasma.
 GenericName[km]=IDE តូច​សម្រាប់​បន្ថែម​កា​រគាំទ្រ​ក្រុមហ៊ុន​ផ្ដល់​សេវាកម្ម​ថ្មី​ទៅម៉ាស៊ីន​ទិន្នន័យ PublicTransport
