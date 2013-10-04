@@ -55,6 +55,10 @@ add_custom_command( OUTPUT javascriptcompletiongeneric.h
     COMMAND completiongenerator # --verbose
             --out_completion ${CMAKE_CURRENT_BINARY_DIR}
             --out_doc ${CMAKE_CURRENT_BINARY_DIR}
+            --input_script "${CMAKE_CURRENT_SOURCE_DIR}/../../script/scriptapi.h"
+            --input_script_doc "${CMAKE_CURRENT_SOURCE_DIR}/../../script/scriptapi-doc.h"
+            --input_engine "${CMAKE_CURRENT_SOURCE_DIR}/../../engine-doc.h"
+            --input_enum "${CMAKE_CURRENT_SOURCE_DIR}/../../enums.h"
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scriptapi.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../script/scriptapi-doc.h
             ${CMAKE_CURRENT_SOURCE_DIR}/../../enums.h
