@@ -2,6 +2,7 @@
 Name=Public Transport Runner Config
 Name[ca]=Arranjament de l'executor Transport públic
 Name[ca@valencia]=Arranjament de l'executor Transport públic
+Name[de]=Runner-Einstellungen für Öffentlichen Nahverkehr
 Name[et]=Ühiskondliku transpordi käivitaja seadistused
 Name[fr]=Configuration du lanceur de l'application « Transports publics »
 Name[gl]=Configuración da vía de transporte público
@@ -18,6 +19,7 @@ Name[x-test]=xxPublic Transport Runner Configxx
 Comment=Configuration of the Public Transport Runner
 Comment[ca]=Configuració de l'executor Transport públic
 Comment[ca@valencia]=Configuració de l'executor Transport públic
+Comment[de]=Einrichtung des Runners für Öffentlichen Nahverkehr
 Comment[et]=Ühiskondliku transpordi käivitaja seadistused
 Comment[fr]=Configuration du lanceur de l'application « Transports publics »
 Comment[gl]=Configurador da vía de transporte público
