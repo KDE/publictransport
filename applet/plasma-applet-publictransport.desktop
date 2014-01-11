@@ -26,6 +26,7 @@ Name[x-test]=xxPublic Transportxx
 Comment=Plasma Public Transport shows a departure / arrival board for public transport. It can also show journeys.
 Comment[ca]=Transport públic de Plasma mostra un tauler d'arribades / sortides pel transport públic. També pot mostrar els viatges.
 Comment[ca@valencia]=Transport públic de Plasma mostra un tauler d'arribades / eixides pel transport públic. També pot mostrar els viatges.
+Comment[de]=Öffentlicher Nahverkehr für Plasma zeigt eine Ankunfts- / Abfahrtstafel für den öffentlichen Nahverkehr. Auch Fahrten können angezeigt werden.
 Comment[et]=Plasma ühiskondliku transpordi vidin näitab liiklusvahendite saabumis- ja lahkumisaegu, samuti teekondi.
 Comment[fr]=L'application « Transports publics » pour Plasma affiche un panneau pour les départs / les arrivées des transports publics. Elle peut également indiquer des trajets.
 Comment[gl]=Transporte Público de Plasma mostra as saídas e chegadas dos transportes públicos. Mostra tamén as xornadas.

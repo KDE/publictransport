@@ -2,6 +2,7 @@
 Name=GraphicalTimetableLine
 Name[ca]=GraphicalTimetableLine
 Name[ca@valencia]=GraphicalTimetableLine
+Name[de]=Grafischer Fahrplan
 Name[et]=Graafiline sõiduplaan
 Name[fr]=GraphicalTimetableLine
 Name[gl]=Liña gráfica da liña de horarios
@@ -17,6 +18,7 @@ Name[x-test]=xxGraphicalTimetableLinexx
 Comment=Plasma GraphicalTimetableLine
 Comment[ca]=GraphicalTimetableLine de Plasma
 Comment[ca@valencia]=GraphicalTimetableLine de Plasma
+Comment[de]=Grafischer Fahrplan für Plasma
 Comment[et]=Plasma graafiline sõiduplaan
 Comment[fr]=Outil graphique de calendrier pour Plasma
 Comment[gl]=Liña gráfica da liña de horarios para Plasma
