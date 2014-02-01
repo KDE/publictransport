@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=GraphicalTimetableLine
+Name[bs]=GrafičkiRasporedLinija
 Name[ca]=GraphicalTimetableLine
 Name[ca@valencia]=GraphicalTimetableLine
 Name[de]=Grafischer Fahrplan
@@ -16,6 +17,7 @@ Name[sv]=Grafisk tidtabellrad
 Name[uk]=Графічний розклад авіаліній
 Name[x-test]=xxGraphicalTimetableLinexx
 Comment=Plasma GraphicalTimetableLine
+Comment[bs]=Plazma GrafičkiRasporedLinija
 Comment[ca]=GraphicalTimetableLine de Plasma
 Comment[ca@valencia]=GraphicalTimetableLine de Plasma
 Comment[de]=Grafischer Fahrplan für Plasma

@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Public Transport
+Name[bs]=Javni Prijevoz
 Name[ca]=Transport públic
 Name[ca@valencia]=Transport públic
 Name[cs]=Veřejná doprava
@@ -24,6 +25,7 @@ Name[ug]=ئاممىۋى قاتناش
 Name[uk]=Громадський транспорт
 Name[x-test]=xxPublic Transportxx
 Comment=Plasma Public Transport shows a departure / arrival board for public transport. It can also show journeys.
+Comment[bs]=Plazma Javni Prijevoz prikazuje tablu odlazaka / dolazaka za javni prijevoz. Također može prikazivati putovanja.
 Comment[ca]=Transport públic de Plasma mostra un tauler d'arribades / sortides pel transport públic. També pot mostrar els viatges.
 Comment[ca@valencia]=Transport públic de Plasma mostra un tauler d'arribades / eixides pel transport públic. També pot mostrar els viatges.
 Comment[de]=Öffentlicher Nahverkehr für Plasma zeigt eine Ankunfts- / Abfahrtstafel für den öffentlichen Nahverkehr. Auch Fahrten können angezeigt werden.

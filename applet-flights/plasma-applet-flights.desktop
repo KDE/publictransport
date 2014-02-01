@@ -22,6 +22,7 @@ Name[sv]=Flyg
 Name[uk]=Рейси
 Name[x-test]=xxFlightsxx
 Comment=Shows flight departures/arrivals for a given airport.
+Comment[bs]=Prikazuje odlaske/dolaske aviona za određeni aerodrom.
 Comment[ca]=Mostra les sortides/arribades dels vols per a un aeroport indicat.
 Comment[ca@valencia]=Mostra les eixides/arribades dels vols per a un aeroport indicat.
 Comment[de]=Zeigt Abflüge/Ankünfte von Flügen auf einem angegebenen Flughafen an.

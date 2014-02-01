@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Public transport engine
+Name[bs]=Pogon javnog prijevoza
 Name[ca]=El motor Transport públic
 Name[ca@valencia]=El motor Transport públic
 Name[de]=Modul für Öffentlichen Nahverkehr
@@ -19,6 +20,7 @@ Name[sv]=Gränssnitt för kollektivtrafik
 Name[uk]=Рушій громадського транспорту
 Name[x-test]=xxPublic transport enginexx
 Comment=Plasma data engine for public transport
+Comment[bs]=Plazma pogon podataka za javni prijevoz
 Comment[ca]=Motor de dades del Plasma pel transport públic
 Comment[ca@valencia]=Motor de dades del Plasma pel transport públic
 Comment[de]=Plasma-Datenquelle für den öffentlichen Nahverkehr

@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Public Transport
+Name[bs]=Javni Prijevoz
 Name[ca]=Transport públic
 Name[ca@valencia]=Transport públic
 Name[cs]=Veřejná doprava
@@ -24,6 +25,7 @@ Name[ug]=ئاممىۋى قاتناش
 Name[uk]=Громадський транспорт
 Name[x-test]=xxPublic Transportxx
 Comment=Gives information about public transport departing from a given stop
+Comment[bs]=Daje informacije o javnom prijevozu polazeći od određenog stajališta
 Comment[ca]=Proporciona informació sobre sortides de transport públic des d'una parada indicada
 Comment[ca@valencia]=Proporciona informació sobre eixides de transport públic des d'una parada indicada
 Comment[de]=Gibt Informationen über Abfahrtszeiten einer vorgegebenen Haltestelle im öffentlichen Nahverkehr

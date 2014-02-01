@@ -1,5 +1,6 @@
 [Desktop Entry]
 Name=Public Transport Helper Library
+Name[bs]=Pomoćna Biblioteka Javnog Transporta
 Name[ca]=Biblioteca d'ajuda del Transport públic
 Name[ca@valencia]=Biblioteca d'ajuda del Transport públic
 Name[de]=Hilfsbibliothek für Öffentlichen Nahverkehr
@@ -17,6 +18,7 @@ Name[sv]=Hjälpbibliotek för kollektivtrafik
 Name[uk]=Допоміжна бібліотека «Громадського транспорту»
 Name[x-test]=xxPublic Transport Helper Libraryxx
 Comment=A library to be used with the publictransport data engine. It provides widgets/dialogs to setup stop settings.
+Comment[bs]=Biblioteka će se koristiti sa podacima motora javnogprijevoza. Ona pruža članke/dijaloge za postavljanje zaustavnih postavki.
 Comment[ca]=Una biblioteca per a ser utilitzada amb el motor de dades publictransport. Ofereix estris/diàlegs per ajustar la configuració de la parada.
 Comment[ca@valencia]=Una biblioteca per a ser utilitzada amb el motor de dades publictransport. Ofereix estris/diàlegs per ajustar la configuració de la parada.
 Comment[de]=Eine Bibliothek, die mit dem Datenmodul für den öffentlichen Nahverkehrs benutzt wird. Dialoge und Miniprogramme für die Einstellungen von Haltestellen werden bereit gestellt.
