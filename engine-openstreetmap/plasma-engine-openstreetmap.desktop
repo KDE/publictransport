@@ -22,6 +22,7 @@ Name[sv]=Datagränssnitt för Open Street Map
 Name[uk]=Рушій даних OpenStreetMap
 Name[x-test]=xxOpenStreetMap data enginexx
 Comment=The OpenStreetMap data engine can be used to query things near the user.
+Comment[bs]=OpenStreetMap pogon podataka se može koristiti za upit stvari pored korisnika.
 Comment[ca]=El motor de dades OpenStreetMap es pot utilitzar per consultar coses a prop de l'usuari.
 Comment[ca@valencia]=El motor de dades OpenStreetMap es pot utilitzar per consultar coses a prop de l'usuari.
 Comment[de]=Mit dem OpenStreetMap-Datenmodul können Informationen nahe dem Standort des Benutzers abgefragt werden.
