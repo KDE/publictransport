@@ -1,9 +1,7 @@
 project( publictransporthelper )
 
 # Find the required Libaries
-find_package( KDE4 REQUIRED )
-include( KDE4Defaults )
-add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
+add_definitions( ${QT_DEFINITIONS} )
 
 # Create lib_config.h from lib_config.h.in, ie.
 # create #define's for each enabled variable from above
@@ -12,7 +10,6 @@ configure_file( lib_config.h.in lib_config.h )
 set( include_dirs
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}
-    ${KDE4_INCLUDES}
     ${CMAKE_CURRENT_BINARY_DIR} # For "lib_config.h"
 )
 if ( MARBLE_FOUND )
@@ -84,11 +81,11 @@ if ( MARBLE_FOUND )
            publictransportlayer.h )
 endif ( MARBLE_FOUND )
 
-kde4_add_ui_files( publictransporthelper_LIB_SRCS
+ki18n_wrap_ui( publictransporthelper_LIB_SRCS
     providerData.ui
     stopConfig.ui )
 
-kde4_add_library( publictransporthelper SHARED ${publictransporthelper_LIB_SRCS} )
+add_library( publictransporthelper SHARED ${publictransporthelper_LIB_SRCS} )
 
 if ( BUILD_TESTS )
     add_subdirectory( tests )
@@ -96,10 +93,10 @@ endif ( BUILD_TESTS )
 
 set( libraries
     publictransporthelper
-	${KDE4_PLASMA_LIBS}
-	${KDE4_KDEUI_LIBS}
-	${KDE4_KIO_LIBS}
-	${KDE4_KNEWSTUFF3_LIBS}
+    KF5::Plasma
+    KF5::KIOCore
+    KF5::NewStuff
+    KF5::KDELibs4Support
 )
 if ( MARBLE_FOUND )
     message( "   - Marble found, used to show stops in a map" )

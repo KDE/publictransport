@@ -1,17 +1,29 @@
 project( plasma-publictransport )
 
 # Find the required Libaries
-find_package( KDE4 REQUIRED )
-macro_optional_find_package( Marble )
-macro_log_feature( MARBLE_FOUND "Marble" "Public transport stop map, longitude/latitude widgets"
-    "http://marble.kde.org" FALSE "" "RECOMMENDED: Marble is used to show public transport stops in a map." )
+cmake_minimum_required(VERSION 2.8.12)
+find_package(ECM 1.7.0 REQUIRED NO_MODULE)
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${ECM_MODULE_PATH} ${ECM_MODULE_DIR} ${CMAKE_MODULE_PATH})
+find_package(Qt5 5.3.0  REQUIRED COMPONENTS Core DBus Xml Quick Test)
+find_package(KF5 5.19.0 REQUIRED COMPONENTS CoreAddons Config I18n NewStuff KDELibs4Support Plasma PlasmaQuick)
+find_package(Marble QUIET CONFIG)
+set_package_properties(Marble PROPERTIES DESCRIPTION "Marble is a virtual globe and world atlas" URL "http://marble.kde.org" TYPE OPTIONAL PURPOSE "Marble is used to show public transport stops in a map" )
 
-include( KDE4Defaults )
-add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
-include_directories(
-   ${CMAKE_SOURCE_DIR}
-   ${CMAKE_BINARY_DIR}
-   ${KDE4_INCLUDES} )
+include(FeatureSummary)
+
+include(KDEInstallDirs)
+include(KDECMakeSettings)
+include(KDECompilerSettings)
+
+include(ECMInstallIcons)
+include(ECMSetupVersion)
+include(ECMMarkNonGuiExecutable)
+include(ECMOptionalAddSubdirectory)
+
+include(CheckCXXCompilerFlag)
+
+add_definitions( ${QT_DEFINITIONS} )
+include_directories( ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR} )
 
 # Can be used from the command line, eg. "cmake -DINSTALL_TIMETABLEMATE=ON .."
 # to configure with timetablemate (or use "cmake -i .." for interactive options)
@@ -52,7 +64,7 @@ if ( MARBLE_FOUND )
     list ( APPEND PUBLICTRANSPORTHELPER_INCLUDES ${MARBLE_INCLUDE_DIR} )
 endif ( MARBLE_FOUND )
 
-message( " - PublicTransport Data Engine" )
+#[[message( " - PublicTransport Data Engine" )
 add_subdirectory( engine )
 
 if ( INSTALL_ENGINE_OPENSTREETMAP )
@@ -84,9 +96,9 @@ endif ( INSTALL_APPLET_GRAPHICALTIMETABLELINE )
 if ( INSTALL_RUNNER )
     message( " - PublicTransport Runner" )
     add_subdirectory( runner )
-endif ( INSTALL_RUNNER )
+endif ( INSTALL_RUNNER )]]
 
 message( "*****************************************************" )
 
 # Show which external packages were found
-macro_display_feature_log()
+#macro_display_feature_log()
