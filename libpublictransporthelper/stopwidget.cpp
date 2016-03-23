@@ -30,6 +30,7 @@
 // KDE+Plasma includes
 #include <KLineEdit>
 #include <KPushButton>
+#include <KLocalizedString>
 #include <Plasma/DataEngineManager>
 
 // Qt includes

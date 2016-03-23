@@ -27,6 +27,7 @@
 #include "lib_config.h"
 #include "dynamicwidget.h" // For StopLineEditList
 #include <KLineEdit> // Base class of StopLineEdit
+#include <KGlobalSettings>
 #include <Plasma/DataEngine> // For Plasma::DataEngine::Data in StopLineEdit::dataUpdated()
 
 #ifdef MARBLE_FOUND

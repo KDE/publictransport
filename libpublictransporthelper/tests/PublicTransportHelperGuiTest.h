@@ -22,7 +22,7 @@
 
 #define QT_GUI_LIB
 
-#include <QtCore/QObject>
+#include <QObject>
 #include "../stopsettings.h"
 #include "../filter.h"
 
