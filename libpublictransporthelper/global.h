@@ -29,7 +29,7 @@
 #include "enums.h"
 
 #include <qnamespace.h>
-#include <KIcon>
+#include <QIcon>
 #include "kdeversion.h"
 #include <QTime>
 #include <QDebug>
@@ -44,13 +44,13 @@ public:
     static GeneralVehicleType generalVehicleType( VehicleType vehicleType );
 
     /** @brief Create an "international" icon with some flag icons */
-    static KIcon internationalIcon();
+    static QIcon internationalIcon();
 
     /** @brief Gets an icon for the given type of vehicle. */
-    static KIcon vehicleTypeToIcon( const VehicleType &vehicleType );
+    static QIcon vehicleTypeToIcon( const VehicleType &vehicleType );
 
     /** @brief Gets an icon containing the icons of all vehicle types in the given list. */
-    static KIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes, int extend = 32 );
+    static QIcon iconFromVehicleTypeList( const QList<VehicleType> &vehicleTypes, int extend = 32 );
 
     /** @brief Gets the name of the given type of vehicle. */
     static QString vehicleTypeToString( const VehicleType &vehicleType, bool plural = false );

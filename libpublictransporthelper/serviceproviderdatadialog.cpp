@@ -259,7 +259,7 @@ void ServiceProviderDataWidget::dataUpdated( const QString &sourceName,
             favicon.fill( Qt::transparent );
         }
 
-        d->updateIcon( KIcon(favicon) );
+        d->updateIcon( QIcon(favicon) );
     }
 }
 
@@ -308,7 +308,7 @@ public:
                 q->enableButton( KDialog::User2, false );
             }
 
-            q->setButtonIcon( KDialog::User2, KIcon( button->icon()) );
+            q->setButtonIcon( KDialog::User2, button->icon() );
             q->setButtonText( KDialog::User2, button->text() );
             q->setButtonToolTip( KDialog::User2, button->toolTip() );
             q->showButton( KDialog::User2, true );
@@ -342,7 +342,7 @@ ServiceProviderDataDialog::ServiceProviderDataDialog( const QString &providerId,
     setButtons( KDialog::Ok );
     setMainWidget( d->widget );
     setWindowTitle( i18nc("@title:window", "Service Provider Information") );
-    setWindowIcon( KIcon("help-about") );
+    setWindowIcon( QIcon::fromTheme("help-about") );
 
     ButtonCodes buttonCodes = Ok;
     if ( options.testFlag(ShowOpenInTimetableMateButton) ) {
@@ -356,12 +356,12 @@ ServiceProviderDataDialog::ServiceProviderDataDialog( const QString &providerId,
     setButtons( buttonCodes );
 
     if ( options.testFlag(ShowOpenInTimetableMateButton) ) {
-        setButtonIcon( User1, KIcon("document-open") );
+        setButtonIcon( User1, QIcon::fromTheme("document-open") );
         setButtonText( User1, i18nc("@action:button", "Open in TimetableMate...") );
     }
 
     KPushButton *button = d->widget->d_ptr->uiProviderData.updateGtfsDatabaseButton;
-    setButtonIcon( User3, KIcon( button->icon()) );
+    setButtonIcon( User3, button->icon() );
     setButtonText( User3, button->text() );
     setButtonToolTip( User3, button->toolTip() );
 

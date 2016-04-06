@@ -37,7 +37,7 @@ public:
         this->countryCode = countryCode;
         if ( countryCode.compare("showAll", Qt::CaseInsensitive) == 0 ) {
             text = i18nc( "@item:inlistbox", "Show all available service providers" );
-            icon = KIcon( "package_network" );
+            icon = QIcon::fromTheme( "package_network" );
             formattedText = QString( "<span><b>%1</b></span> <br-wrap><small><b>%2</b></small>" )
                     .arg( text )
                     .arg( i18nc("@info/plain Label for the total number of providers", "Total: ")
@@ -45,7 +45,7 @@ public:
             itemType = LocationItem::Total;
             return;
         } else if ( countryCode.compare("erroneous", Qt::CaseInsensitive) == 0 ) {
-            icon = KIcon( "edit-delete" );
+            icon = QIcon::fromTheme( "edit-delete" );
             formattedText = QString( "<span><b>%1</b></span><br-wrap><small>%2</small>" )
                     .arg( i18ncp("@info/plain", "%1 provider is erroneous:",
                                 "%1 providers are erroneous:", providerCount) )
@@ -60,7 +60,7 @@ public:
         } else if ( countryCode.compare("unknown", Qt::CaseInsensitive) == 0 ) {
             text = i18nc("@item:inlistbox Name of the category for service providers "
                         "with unknown contries", "Unknown");
-            icon = KIcon( "dialog-warning" );
+            icon = QIcon::fromTheme( "dialog-warning" );
             itemType = LocationItem::Unknown;
         } else {
             if ( KGlobal::locale()->allCountriesList().contains( countryCode ) ) {
@@ -85,7 +85,7 @@ public:
     QString countryCode;
     QString text;
     QString formattedText;
-    KIcon icon;
+    QIcon icon;
     LocationItem::ItemType itemType;
 };
 
@@ -119,7 +119,7 @@ QString LocationItem::formattedText() const
     return d->formattedText;
 }
 
-KIcon LocationItem::icon() const
+QIcon LocationItem::icon() const
 {
     Q_D( const LocationItem );
     return d->icon;

@@ -31,9 +31,9 @@
 #include <Plasma/DataEngineManager>
 #include <Plasma/ServiceJob>
 #include <KColorScheme>
-#include <KIcon>
 
 // Qt includes
+#include <QIcon>
 #include <QEvent>
 #include <QPainter>
 #include <QStyle>
@@ -94,10 +94,10 @@ public:
         ButtonType type;
         ButtonStates state;
         QRect rect;
-        KIcon icon;
+        QIcon icon;
         QString toolTip;
 
-        Button( ButtonType type, const KIcon &icon, const QRect &rect,
+        Button( ButtonType type, const QIcon &icon, const QRect &rect,
                 const QString &tooltip = QString() )
                 : type(type), state(ButtonNormal), rect(rect), icon(icon), toolTip(tooltip)
         {
@@ -184,7 +184,7 @@ public:
         // That means that the first button added to buttons, gets placed at the right.
         buttons.clear();
         if ( newButtons.testFlag(StopButton) ) {
-            Button stopButton( StopButton, KIcon("media-playback-stop"), QRect(),
+            Button stopButton( StopButton, QIcon::fromTheme("media-playback-stop"), QRect(),
                     i18nc("@info:tooltip", "<title>Stop import</title>"
                           "<para>Click to cancel the currently running import of the GTFS feed. "
                           "You won't be able to use the service provider without completing the "
@@ -193,13 +193,13 @@ public:
             buttons << stopButton;
         }
         if ( newButtons.testFlag(PauseButton) ) {
-            Button pauseButton( PauseButton, KIcon("media-playback-pause"), QRect(),
+            Button pauseButton( PauseButton, QIcon::fromTheme("media-playback-pause"), QRect(),
                     i18nc("@info:tooltip", "<title>Pause/Continue import</title>"
                           "<para>Click to interrupt import. Click again to continue.</para>") );
             buttons << pauseButton;
         }
         if ( newButtons.testFlag(StartButton) ) {
-            Button startButton( StartButton, KIcon("media-playback-start"), QRect(),
+            Button startButton( StartButton, QIcon::fromTheme("media-playback-start"), QRect(),
                     i18nc("@info:tooltip", "<title>Start GTFS feed import</title>"
                           "<para>Click here to download the GTFS feed and import it into the "
                           "database.</para>") );
@@ -691,7 +691,7 @@ void StopLineEdit::mouseReleaseEvent( QMouseEvent *ev )
                         return;
                     }
                     d->state = StopLineEditPrivate::WaitingForImport; // Back to importing state
-                    button->icon = KIcon("media-playback-pause"); // Set icon back to pause
+                    button->icon = QIcon::fromTheme("media-playback-pause"); // Set icon back to pause
                     setToolTip( i18nc("@info:tooltip Tooltip for StopLineEdits, ie. shown in the "
                                       "stop settings dialog for stop name input. This tooltip is "
                                       "used, when the GTFS feed for the current service provider "
@@ -705,7 +705,7 @@ void StopLineEdit::mouseReleaseEvent( QMouseEvent *ev )
                         return;
                     }
                     d->state = StopLineEditPrivate::Pause; // Set pause state
-                    button->icon = KIcon("media-playback-start"); // Use start icon for continue
+                    button->icon = QIcon::fromTheme("media-playback-start"); // Use start icon for continue
                     setToolTip( i18nc("@info:tooltip Tooltip for StopLineEdits, ie. shown in the "
                                       "stop settings dialog for stop name input. This tooltip is "
                                       "used, when a currently running GTFS feed import job is "

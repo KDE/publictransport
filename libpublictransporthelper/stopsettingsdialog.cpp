@@ -177,20 +177,20 @@ public:
         if ( options.testFlag(StopSettingsDialog::ShowInstallProviderButton) ) {
             // Add get new service providers button
             QMenu *menu = new QMenu( q );
-            menu->addAction( KIcon("download"),
+            menu->addAction( QIcon::fromTheme("download"),
                     i18nc("@action:inmenu", "Download New Service Providers..."),
                     q, SLOT(downloadServiceProvidersClicked()) );
-            menu->addAction( KIcon("text-xml"),
+            menu->addAction( QIcon::fromTheme("text-xml"),
                     i18nc("@action:inmenu", "Install New Service Provider From Local File..."),
                     q, SLOT(installServiceProviderClicked()) );
             q->setButtonMenu( KDialog::User1, menu );
-            q->setButtonIcon( KDialog::User1, KIcon("get-hot-new-stuff") );
+            q->setButtonIcon( KDialog::User1, QIcon::fromTheme("get-hot-new-stuff") );
             q->setButtonText( KDialog::User1, i18nc("@action:button", "Get New Providers") );
         }
 
         // Show/hide provider info button
         if ( options.testFlag(StopSettingsDialog::ShowProviderInfoButton) ) {
-            uiStop.btnServiceProviderInfo->setIcon( KIcon("help-about") );
+            uiStop.btnServiceProviderInfo->setIcon( QIcon::fromTheme("help-about") );
             uiStop.btnServiceProviderInfo->setText( QString() );
             q->connect( uiStop.btnServiceProviderInfo, SIGNAL(clicked()),
                         q, SLOT(clickedServiceProviderInfo()) );

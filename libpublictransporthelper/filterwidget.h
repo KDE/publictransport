@@ -128,10 +128,10 @@ public:
     struct ListItem {
         QString text; /**< The text of this item. */
         QVariant value; /**< The value represented by this item. */
-        KIcon icon; /**< The icon to show for this item. */
+        QIcon icon; /**< The icon to show for this item. */
 
         ListItem() {};
-        ListItem( const QString &text, const QVariant &value, const KIcon &icon ) {
+        ListItem( const QString &text, const QVariant &value, const QIcon &icon ) {
             this->text = text;
             this->value = value;
             this->icon = icon;

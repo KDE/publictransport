@@ -78,7 +78,7 @@ public:
                                   "service provider name", "Service Provider:"),
                             provider );
 
-        KPushButton *change = new KPushButton( KIcon("configure"),
+        KPushButton *change = new KPushButton( QIcon::fromTheme("configure"),
                                                i18nc("@action:button", "&Change..."), q );
         q->connect( change, SIGNAL(clicked()), q, SLOT(editSettings()) );
 

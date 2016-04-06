@@ -28,7 +28,7 @@
 #include "publictransporthelper_export.h"
 
 #include <QModelIndex>
-#include <KIcon>
+#include <QIcon>
 #include <Plasma/DataEngine>
 
 /** @brief Namespace for the publictransport helper library. */
@@ -88,7 +88,7 @@ public:
     QString formattedText() const;
 
     /** @brief Gets the icon for this item, eg. a flag for items of type @ref Country. */
-    KIcon icon() const;
+    QIcon icon() const;
 
     /** @brief Gets the type of this item. */
     ItemType itemType() const;

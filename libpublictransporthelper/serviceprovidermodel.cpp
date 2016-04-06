@@ -70,7 +70,7 @@ public:
 
     QString name;
     QString formattedText;
-    KIcon icon;
+    QIcon icon;
     QVariantHash data;
     QString category;
     QString sortString;
@@ -112,7 +112,7 @@ QVariantHash ServiceProviderItem::data() const {
     return d->data;
 }
 
-KIcon ServiceProviderItem::icon() const {
+QIcon ServiceProviderItem::icon() const {
     Q_D( const ServiceProviderItem );
     return d->icon;
 }
@@ -127,7 +127,7 @@ QString ServiceProviderItem::sortValue() const {
     return d->sortString;
 }
 
-void ServiceProviderItem::setIcon( const KIcon &icon ) {
+void ServiceProviderItem::setIcon( const QIcon &icon ) {
     Q_D( ServiceProviderItem );
     d->icon = icon;
 }
@@ -323,7 +323,7 @@ void ServiceProviderModel::dataUpdated( const QString &sourceName,
             ServiceProviderItem *item = d->items[ row ];
             const QString favIconSource = item->data()["url"].toString();
             if ( favIconSource.compare(sourceName) == 0 ) {
-                item->setIcon( KIcon(favicon) );
+                item->setIcon( QIcon(favicon) );
                 const QModelIndex index = createIndex( row, 0, item );
                 dataChanged( index, index );
 

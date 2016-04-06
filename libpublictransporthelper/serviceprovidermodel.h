@@ -28,7 +28,7 @@
 #include "publictransporthelper_export.h"
 
 #include <QModelIndex>
-#include <KIcon>
+#include <QIcon>
 #include <Plasma/DataEngine> // For dataUpdated slot (Plasma::DataEngine::Data)
 
 class QStringList;
@@ -71,7 +71,7 @@ public:
     /** @brief Gets the data from the "publictransport" data engine for the service provider. */
     QVariantHash data() const;
     /** @brief Gets the icon for this item, ie. a favicon for the service provider. */
-    KIcon icon() const;
+    QIcon icon() const;
     /** @brief Gets the category of this service provider, can be used for KCategoryView. */
     QString category() const;
     /** @brief Gets a string used to sort the items. */
@@ -85,7 +85,7 @@ public:
      *
      * @param icon The new icon for this item.
      **/
-    void setIcon( const KIcon &icon );
+    void setIcon( const QIcon &icon );
 
     void setData( const QVariantHash &data );
 

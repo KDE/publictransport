@@ -68,7 +68,7 @@ GeneralVehicleType Global::generalVehicleType( VehicleType vehicleType )
     }
 }
 
-KIcon Global::internationalIcon()
+QIcon Global::internationalIcon()
 {
     // Size of the flag icons is 22x16 => 16x11.64
     QPixmap pixmap = QPixmap( 32, 32 );
@@ -85,7 +85,7 @@ KIcon Global::internationalIcon()
             x = 16;
         }
 
-        QPixmap pixmapFlag = KIcon( sIcon ).pixmap( 16 );
+        QPixmap pixmapFlag = QIcon::fromTheme( sIcon ).pixmap( 16 );
         p.drawPixmap( x, y, 16, 12, pixmapFlag );
 
         if ( i % 2 != 0 ) {
@@ -95,68 +95,68 @@ KIcon Global::internationalIcon()
     }
     p.end();
 
-    KIcon resultIcon = KIcon();
+    QIcon resultIcon = QIcon();
     resultIcon.addPixmap( pixmap, QIcon::Normal );
     return resultIcon;
 }
 
-KIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType )
+QIcon Global::vehicleTypeToIcon( const VehicleType &vehicleType )
 {
-    KIcon icon;
+    QIcon icon;
     switch ( vehicleType ) {
     case Tram:
-        icon = KIcon( "vehicle_type_tram" );
+        icon = QIcon::fromTheme( "vehicle_type_tram" );
         break;
     case Bus:
-        icon = KIcon( "vehicle_type_bus" );
+        icon = QIcon::fromTheme( "vehicle_type_bus" );
         break;
     case Subway:
-        icon = KIcon( "vehicle_type_subway" );
+        icon = QIcon::fromTheme( "vehicle_type_subway" );
         break;
     case Metro:
-        icon = KIcon( "vehicle_type_metro" );
+        icon = QIcon::fromTheme( "vehicle_type_metro" );
         break;
     case TrolleyBus:
-        icon = KIcon( "vehicle_type_trolleybus" );
+        icon = QIcon::fromTheme( "vehicle_type_trolleybus" );
         break;
     case Feet:
-        icon = KIcon( "vehicle_type_feet" );
+        icon = QIcon::fromTheme( "vehicle_type_feet" );
         break;
 
     case InterurbanTrain:
-        icon = KIcon( "vehicle_type_train_interurban" );
+        icon = QIcon::fromTheme( "vehicle_type_train_interurban" );
         break;
     case RegionalTrain: // Icon not done yet, using this for now
     case RegionalExpressTrain:
-        icon = KIcon( "vehicle_type_train_regional" );
+        icon = QIcon::fromTheme( "vehicle_type_train_regional" );
         break;
     case InterregionalTrain:
-        icon = KIcon( "vehicle_type_train_interregional" );
+        icon = QIcon::fromTheme( "vehicle_type_train_interregional" );
         break;
     case IntercityTrain:
-        icon = KIcon( "vehicle_type_train_intercity" );
+        icon = QIcon::fromTheme( "vehicle_type_train_intercity" );
         break;
     case HighSpeedTrain:
-        icon = KIcon( "vehicle_type_train_highspeed" );
+        icon = QIcon::fromTheme( "vehicle_type_train_highspeed" );
         break;
 
     case Ferry:
     case Ship:
-        icon = KIcon( "vehicle_type_ferry" );
+        icon = QIcon::fromTheme( "vehicle_type_ferry" );
         break;
     case Plane:
-        icon = KIcon( "vehicle_type_plane" );
+        icon = QIcon::fromTheme( "vehicle_type_plane" );
         break;
 
     case UnknownVehicleType:
     default:
-        icon = KIcon( "status_unknown" );
+        icon = QIcon::fromTheme( "status_unknown" );
     }
 
     return icon;
 }
 
-KIcon Global::iconFromVehicleTypeList( const QList< VehicleType >& vehicleTypes, int extend )
+QIcon Global::iconFromVehicleTypeList( const QList< VehicleType >& vehicleTypes, int extend )
 {
     QPixmap pixmap = QPixmap( extend, extend );
     int halfExtend = extend / 2;
@@ -192,7 +192,7 @@ KIcon Global::iconFromVehicleTypeList( const QList< VehicleType >& vehicleTypes,
     }
     p.end();
 
-    KIcon resultIcon = KIcon();
+    QIcon resultIcon = QIcon();
     resultIcon.addPixmap( pixmap, QIcon::Normal );
     return resultIcon;
 }

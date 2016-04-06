@@ -203,7 +203,7 @@ ConstraintWidget* ConstraintWidget::create( FilterType type, FilterVariant varia
 
         foreach( int dayOfWeek, filterDaysOfWeek ) {
             values << ConstraintListWidget::ListItem(
-                    QDate::longDayName(dayOfWeek, QDate::StandaloneFormat), dayOfWeek, KIcon() );
+                    QDate::longDayName(dayOfWeek, QDate::StandaloneFormat), dayOfWeek, QIcon() );
         }
         ConstraintListWidget *listWidget = new ConstraintListWidget( type,
                 variant, values, value.toList(), parent );
