@@ -287,13 +287,17 @@ QString Global::durationString( int seconds )
 
 QColor Global::textColorOnSchedule()
 {
-    QColor color = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+	Plasma::Theme theme;
+	theme.setUseGlobalSettings(true);
+	QColor color = theme.color(Plasma::Theme::TextColor);
     return KColorUtils::tint( color, Qt::green, 0.5 );
 }
 
 QColor Global::textColorDelayed()
 {
-    QColor color = Plasma::Theme::defaultTheme()->color( Plasma::Theme::TextColor );
+	Plasma::Theme theme;
+	theme.setUseGlobalSettings(true);
+	QColor color = theme.color( Plasma::Theme::TextColor );
     return KColorUtils::tint( color, Qt::red, 0.5 );
 }
 
