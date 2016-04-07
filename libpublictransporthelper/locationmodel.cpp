@@ -22,7 +22,10 @@
 #include "enums.h"
 #include <Plasma/DataEngine>
 #include <Plasma/DataEngineManager>
+#include <KDebug>
+#include <KGlobal>
 #include <KStandardDirs>
+#include <KLocalizedString>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {

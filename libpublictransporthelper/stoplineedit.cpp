@@ -30,7 +30,9 @@
 // Plasma/KDE includes
 #include <Plasma/DataEngineManager>
 #include <Plasma/ServiceJob>
+#include <KDebug>
 #include <KColorScheme>
+#include <KLocalizedString>
 
 // Qt includes
 #include <QIcon>

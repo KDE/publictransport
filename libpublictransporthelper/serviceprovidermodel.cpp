@@ -21,6 +21,9 @@
 #include "enums.h"
 #include <Plasma/DataEngine>
 #include <Plasma/DataEngineManager>
+#include <KDebug>
+#include <KGlobal>
+#include <KLocalizedString>
 #include <KCategorizedSortFilterProxyModel>
 
 /** @brief Namespace for the publictransport helper library. */

@@ -27,6 +27,7 @@
 #include <KToolInvocation>
 #include <KMessageBox>
 #include <KDebug>
+#include <KGlobal>
 
 #include <Plasma/Service>
 #include <Plasma/ServiceJob>

@@ -33,6 +33,8 @@
 
 #include <Plasma/Theme>
 #include <Plasma/DataEngineManager>
+#include <KUrl>
+#include <KGlobal>
 #include <KColorScheme>
 #include <KMessageBox>
 #include <KFileDialog>
@@ -40,7 +42,7 @@
 #include <KLineEdit>
 #include <knuminput.h>
 #include <kdeversion.h>
-#include <knewstuff3/downloaddialog.h>
+#include <KNewStuff3/kns3/downloaddialog.h>
 #ifdef USE_KCATEGORYVIEW
     #include <KCategorizedSortFilterProxyModel>
     #include <KCategorizedView>
