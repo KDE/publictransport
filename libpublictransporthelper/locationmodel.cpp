@@ -21,7 +21,8 @@
 #include "global.h"
 #include "enums.h"
 #include <Plasma/DataEngine>
-#include <Plasma/DataEngineManager>
+#include <Plasma/PluginLoader>
+#include <Plasma/DataEngineConsumer>
 #include <KDebug>
 #include <KGlobal>
 #include <KStandardDirs>
@@ -158,7 +159,7 @@ public:
 LocationModel::LocationModel( QObject* parent )
         : QAbstractListModel( parent ), d_ptr(new LocationModelPrivate())
 {
-    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->loadEngine( "publictransport" );
+    Plasma::DataEngine *engine = Plasma::PluginLoader::self()->loadDataEngine( "publictransport" );
     engine->connectSource( "Locations", this );
 }
 
@@ -166,11 +167,12 @@ LocationModel::~LocationModel()
 {
     delete d_ptr;
 
+	Plasma::DataEngineConsumer *consumer;
     // Disconnect sources to prevent warnings (No such slot QObject::dataUpdated...)
-    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
     engine->disconnectSource( "Locations", this );
 
-    Plasma::DataEngineManager::self()->unloadEngine( "publictransport" );
+    consumer->~DataEngineConsumer();
 }
 
 void LocationModel::dataUpdated( const QString &sourceName, const Plasma::DataEngine::Data &data )
@@ -192,7 +194,8 @@ kDebug() << sourceName;
     // Get a list with the location of each service provider
     // (locations can be contained multiple times)
     QList< LocationItem* > newLocations;
-    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine( "publictransport" );
+    Plasma::DataEngineConsumer *consumer;
+    Plasma::DataEngine *engine = consumer->dataEngine( "publictransport" );
     Plasma::DataEngine::Data serviceProviderData = engine->query( "ServiceProviders" );
     for ( Plasma::DataEngine::Data::const_iterator it = serviceProviderData.constBegin();
           it != serviceProviderData.constEnd(); ++it )

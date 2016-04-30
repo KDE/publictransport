@@ -32,7 +32,8 @@
 #include <Plasma/Service>
 #include <Plasma/ServiceJob>
 #include <Plasma/DataEngine>
-#include <Plasma/DataEngineManager>
+#include <Plasma/PluginLoader>
+#include <Plasma/DataEngineConsumer>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
@@ -212,9 +213,10 @@ ServiceProviderDataWidget::ServiceProviderDataWidget( const QString &providerId,
           d_ptr(new ServiceProviderDataWidgetPrivate(providerId, options, this))
 {
     Q_D( ServiceProviderDataWidget );
-    Plasma::DataEngineManager::self()->loadEngine( "publictransport" );
-    Plasma::DataEngineManager::self()->loadEngine( "favicons" );
-    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine( "publictransport" );
+    Plasma::DataEngineConsumer *consumer;
+    Plasma::PluginLoader::self()->loadDataEngine( "publictransport" );
+    Plasma::PluginLoader::self()->loadDataEngine( "favicons" );
+    Plasma::DataEngine *engine = consumer->dataEngine( "publictransport" );
     engine->connectSource( "ServiceProvider " + providerId, this );
     connect( d->uiProviderData.deleteGtfsDatabaseButton, SIGNAL(pressed()),
              this, SLOT(deleteGtfsDatabase()) );
@@ -227,26 +229,28 @@ ServiceProviderDataWidget::ServiceProviderDataWidget( const QString &providerId,
 ServiceProviderDataWidget::~ServiceProviderDataWidget()
 {
     Q_D( ServiceProviderDataWidget );
+    Plasma::DataEngineConsumer *consumer;
 
     // Disconnect sources to prevent warnings (No such slot QObject::dataUpdated...)
-    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
     engine->disconnectSource( "ServiceProvider " + d->providerId, this );
 
     delete d_ptr;
 
-    Plasma::DataEngineManager::self()->unloadEngine( "publictransport" );
-    Plasma::DataEngineManager::self()->unloadEngine( "favicons" );
+    consumer->~DataEngineConsumer();
 }
 
 void ServiceProviderDataWidget::dataUpdated( const QString &sourceName,
                                              const Plasma::DataEngine::Data &data )
 {
     Q_D( ServiceProviderDataWidget );
+    Plasma::DataEngineConsumer *consumer;
+
     if ( sourceName == "ServiceProvider " + d->providerId ) {
         d->update( data );
 
         // Request favicon
-        Plasma::DataEngine *favIconEngine = Plasma::DataEngineManager::self()->engine( "favicons" );
+        Plasma::DataEngine *favIconEngine = consumer->dataEngine( "favicons" );
         if ( favIconEngine ) {
             QString favIconSource = data["url"].toString();
             favIconEngine->connectSource( favIconSource, this );
@@ -430,6 +434,7 @@ void ServiceProviderDataDialog::openInTimetableMate()
 void ServiceProviderDataWidget::deleteGtfsDatabase()
 {
     Q_D( ServiceProviderDataWidget );
+    Plasma::DataEngineConsumer *consumer;
 
     if ( KMessageBox::warningContinueCancel(this, i18nc("@info",
             "<title>Delete GTFS database</title>"
@@ -438,7 +443,7 @@ void ServiceProviderDataWidget::deleteGtfsDatabase()
             "<para>By deleting the database %1 disk space get freed.</para>",
             KGlobal::locale()->formatByteSize(d->feedSizeInBytes))) == KMessageBox::Continue )
     {
-        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+        Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
         Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
         KConfigGroup op = gtfsService->operationDescription("deleteGtfsDatabase");
         op.writeEntry( "serviceProviderId", d->providerId );
@@ -451,8 +456,9 @@ void ServiceProviderDataWidget::deleteGtfsDatabase()
 void ServiceProviderDataWidget::importGtfsFeed()
 {
     Q_D( ServiceProviderDataWidget );
+    Plasma::DataEngineConsumer *consumer;
 
-    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
     Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
     KConfigGroup op = gtfsService->operationDescription("importGtfsFeed");
     op.writeEntry( "serviceProviderId", d->providerId );
@@ -463,8 +469,9 @@ void ServiceProviderDataWidget::importGtfsFeed()
 void ServiceProviderDataWidget::updateGtfsDatabase()
 {
     Q_D( ServiceProviderDataWidget );
+    Plasma::DataEngineConsumer *consumer;
 
-    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
     Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
     KConfigGroup op = gtfsService->operationDescription("updateGtfsDatabase");
     op.writeEntry( "serviceProviderId", d->providerId );

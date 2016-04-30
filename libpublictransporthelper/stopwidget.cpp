@@ -31,7 +31,7 @@
 #include <KLineEdit>
 #include <KPushButton>
 #include <KLocalizedString>
-#include <Plasma/DataEngineManager>
+#include <Plasma/DataEngineConsumer>
 
 // Qt includes
 #include <QHBoxLayout>

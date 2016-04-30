@@ -28,7 +28,9 @@
 #endif
 
 // Plasma/KDE includes
-#include <Plasma/DataEngineManager>
+#include <Plasma/DataEngineConsumer>
+#include <Plasma/PluginLoader>
+#include <Plasma/DataEngine>
 #include <Plasma/ServiceJob>
 #include <KDebug>
 #include <KColorScheme>
@@ -113,7 +115,7 @@ public:
         progress = 0;
 
         // Load data engine
-        Plasma::DataEngineManager::self()->loadEngine("publictransport");
+        Plasma::PluginLoader::self()->loadDataEngine("publictransport");
 
         this->serviceProvider = serviceProvider;
     };
@@ -121,13 +123,14 @@ public:
     ~StopLineEditPrivate()
     {
         Q_Q( StopLineEdit );
+		Plasma::DataEngineConsumer *consumer;
 
 #ifdef MARBLE_FOUND
         delete mapPopup;
 #endif
 
         // Disconnect sources to prevent warnings (No such slot QObject::dataUpdated...)
-        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+        Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
         if ( !sourceName.isEmpty() ) {
             engine->disconnectSource( sourceName, q );
             sourceName.clear();
@@ -137,7 +140,7 @@ public:
             engine->disconnectSource( "ServiceProvider " + serviceProvider, q );
         }
 
-        Plasma::DataEngineManager::self()->unloadEngine("publictransport");
+        consumer->~DataEngineConsumer();
     };
 
     /// Get the additional button at the given @p point. The index of the button gets stored in
@@ -240,7 +243,8 @@ public:
 
     void connectStopsSource( const QString &stopName ) {
         Q_Q( StopLineEdit );
-        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+		Plasma::DataEngineConsumer *consumer;
+        Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
         if ( !sourceName.isEmpty() ) {
             engine->disconnectSource( sourceName, q );
         }
@@ -359,7 +363,8 @@ void StopLineEdit::stopClicked( const Stop &stop )
 void StopLineEdit::setServiceProvider( const QString& serviceProvider )
 {
     Q_D( StopLineEdit );
-    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+	Plasma::DataEngineConsumer *consumer;
+    Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
     if ( !d->serviceProvider.isEmpty() ) {
         engine->disconnectSource( "ServiceProvider " + d->serviceProvider, this );
     }
@@ -399,10 +404,11 @@ QString StopLineEdit::serviceProvider() const
 void StopLineEdit::setCity( const QString& city )
 {
     Q_D( StopLineEdit );
+	Plasma::DataEngineConsumer *consumer;
     d->city = city;
     d->state = StopLineEditPrivate::Ready;
     if ( !d->sourceName.isEmpty() ) {
-        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+        Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
         engine->disconnectSource( d->sourceName, this );
     }
     setEnabled( true );
@@ -421,13 +427,14 @@ QString StopLineEdit::city() const
 void StopLineEdit::importGtfsFeed()
 {
     Q_D( StopLineEdit );
+	Plasma::DataEngineConsumer *consumer;
     if ( d->providerType != QLatin1String("GTFS") ) {
         kWarning() << "Not a GTFS provider";
         return;
     }
 
     kDebug() << "GTFS accessor whithout imported feed data, use service to import using the GTFS feed";
-    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
     Plasma::Service *service = engine->serviceForSource("GTFS");
     KConfigGroup op = service->operationDescription("importGtfsFeed");
     op.writeEntry( "serviceProviderId", d->serviceProvider );
@@ -850,6 +857,7 @@ void StopLineEdit::showGtfsFeedImportProgress()
 void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEngine::Data& data )
 {
     Q_D( StopLineEdit );
+	Plasma::DataEngineConsumer *consumer;
 
     if ( sourceName == "ServiceProvider " + d->serviceProvider ) {
         // The service provider state has changed
@@ -894,7 +902,7 @@ void StopLineEdit::dataUpdated( const QString& sourceName, const Plasma::DataEng
     }
 
     if ( !d->sourceName.isEmpty() ) {
-        Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+        Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
         engine->disconnectSource( d->sourceName, this );
         d->sourceName.clear();
     }

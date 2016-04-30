@@ -20,7 +20,8 @@
 #include "serviceprovidermodel.h"
 #include "enums.h"
 #include <Plasma/DataEngine>
-#include <Plasma/DataEngineManager>
+#include <Plasma/PluginLoader>
+#include <Plasma/DataEngineConsumer>
 #include <KDebug>
 #include <KGlobal>
 #include <KLocalizedString>
@@ -154,9 +155,10 @@ public:
 ServiceProviderModel::ServiceProviderModel( QObject* parent )
         : QAbstractListModel( parent ), d_ptr(new ServiceProviderModelPrivate())
 {
-    Plasma::DataEngineManager::self()->loadEngine( "publictransport" );
-    Plasma::DataEngineManager::self()->loadEngine( "favicons" );
-    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine( "publictransport" );
+    Plasma::PluginLoader::self()->loadDataEngine( "publictransport" );
+    Plasma::PluginLoader::self()->loadDataEngine( "favicons" );
+    Plasma::DataEngineConsumer *consumer;
+    Plasma::DataEngine *engine = consumer->dataEngine( "publictransport" );
     engine->connectSource( "ServiceProviders", this );
 }
 
@@ -165,11 +167,12 @@ ServiceProviderModel::~ServiceProviderModel()
     delete d_ptr;
 
     // Disconnect sources to prevent warnings (No such slot QObject::dataUpdated...)
-    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::DataEngineConsumer *consumer;
+    Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
+    Plasma::DataEngine *faviconEngine = consumer->dataEngine("favicons");
     engine->disconnectSource( "ServiceProviders", this );
 
-    Plasma::DataEngineManager::self()->unloadEngine( "publictransport" );
-    Plasma::DataEngineManager::self()->unloadEngine( "favicons" );
+	consumer->~DataEngineConsumer();
 }
 
 QModelIndex ServiceProviderModel::index( int row, int column, const QModelIndex& parent ) const
@@ -274,6 +277,8 @@ void ServiceProviderModel::dataUpdated( const QString &sourceName,
                                         const Plasma::DataEngine::Data &data )
 {
     Q_D( ServiceProviderModel );
+	Plasma::DataEngineConsumer *consumer;
+
     if ( sourceName == QLatin1String("ServiceProviders") ) {
         QList< ServiceProviderItem* > newProviders;
         for ( Plasma::DataEngine::Data::ConstIterator it = data.constBegin();
@@ -303,8 +308,7 @@ void ServiceProviderModel::dataUpdated( const QString &sourceName,
         // Request favicons for newly inserted providers
         // after inserting them (otherwise there will be no item to set the received icon for)
         foreach ( ServiceProviderItem *item, newProviders ) {
-            Plasma::DataEngine *faviconEngine =
-                    Plasma::DataEngineManager::self()->engine( "favicons" );
+            Plasma::DataEngine *faviconEngine = consumer->dataEngine( "favicons" );
             if ( faviconEngine ) {
                 QString favIconSource = item->data()["url"].toString();
                 faviconEngine->connectSource( favIconSource, this );
@@ -314,6 +318,8 @@ void ServiceProviderModel::dataUpdated( const QString &sourceName,
         // TODO persistent indexes?
 //         qSort( d->items.begin(), d->items.end(), serviceProviderGreaterThan );
     } else if ( sourceName.contains(QRegExp("^http")) ) {
+		Plasma::DataEngineConsumer *consumer;
+
         // Favicon of a service provider arrived
         QPixmap favicon( QPixmap::fromImage( data["Icon"].value<QImage>() ) );
         if ( favicon.isNull() ) {
@@ -330,8 +336,7 @@ void ServiceProviderModel::dataUpdated( const QString &sourceName,
                 const QModelIndex index = createIndex( row, 0, item );
                 dataChanged( index, index );
 
-                Plasma::DataEngine *faviconEngine =
-                        Plasma::DataEngineManager::self()->engine( "favicons" );
+                Plasma::DataEngine *faviconEngine = consumer->dataEngine( "favicons" );
                 faviconEngine->disconnectSource( sourceName, this );
                 break;
             }

@@ -32,7 +32,8 @@
 #include "checkcombobox.h"
 
 #include <Plasma/Theme>
-#include <Plasma/DataEngineManager>
+#include <Plasma/PluginLoader>
+#include <Plasma/DataEngineConsumer>
 #include <KUrl>
 #include <KGlobal>
 #include <KColorScheme>
@@ -95,8 +96,7 @@ public:
         correctSettings();
 
         // Load data engines
-        Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
-        manager->loadEngine("publictransport");
+        Plasma::PluginLoader::self()->loadDataEngine("publictransport");
 
         // Create location and service provider models
         modelLocations = new LocationModel( q );
@@ -106,8 +106,9 @@ public:
     };
 
     ~StopSettingsDialogPrivate() {
-        Plasma::DataEngineManager *manager = Plasma::DataEngineManager::self();
-        manager->unloadEngine("publictransport");
+        Plasma::DataEngineConsumer *consumer;
+        Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
+        consumer->~DataEngineConsumer();
     };
 
     void init( const StopSettings &_oldStopSettings,
@@ -911,6 +912,7 @@ void StopSettingsDialog::stopRemoved( QWidget* lineEdit, int index )
 void StopSettingsDialog::locationChanged( int index )
 {
     Q_D( StopSettingsDialog );
+    Plasma::DataEngineConsumer *consumer;
 
     const bool wasBlocked = d->uiStop.serviceProvider->blockSignals( true );
     d->updateServiceProviderModel( index );
@@ -918,7 +920,7 @@ void StopSettingsDialog::locationChanged( int index )
 
     // Select default provider of the selected location
     QString locationCode = d->uiStop.location->itemData( index, LocationCodeRole ).toString();
-    Plasma::DataEngine *engine = Plasma::DataEngineManager::self()->engine("publictransport");
+    Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
     Plasma::DataEngine::Data locationData = engine->query( "Locations" );
     QString defaultProviderId = locationData[locationCode].toHash()["defaultProvider"].toString();
     if ( !defaultProviderId.isEmpty() ) {
