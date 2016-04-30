@@ -22,6 +22,7 @@
 #include "enums.h"
 #include <Plasma/DataEngine>
 #include <Plasma/PluginLoader>
+#include <Plasma/DataContainer>
 #include <Plasma/DataEngineConsumer>
 #include <KDebug>
 #include <KGlobal>
@@ -194,9 +195,11 @@ kDebug() << sourceName;
     // Get a list with the location of each service provider
     // (locations can be contained multiple times)
     QList< LocationItem* > newLocations;
+    Plasma::DataContainer *sp, *ep;
     Plasma::DataEngineConsumer *consumer;
     Plasma::DataEngine *engine = consumer->dataEngine( "publictransport" );
-    Plasma::DataEngine::Data serviceProviderData = engine->query( "ServiceProviders" );
+    sp = engine->containerForSource( "ServiceProviders" );
+    Plasma::DataEngine::Data serviceProviderData = sp->data();
     for ( Plasma::DataEngine::Data::const_iterator it = serviceProviderData.constBegin();
           it != serviceProviderData.constEnd(); ++it )
     {
@@ -213,7 +216,9 @@ kDebug() << sourceName;
     newLocations << new LocationItem( "showAll", countries.count() );
 
     // Get erroneous service providers (TODO: Get error messages)
-    QVariantHash erroneousProviders = engine->query("ErroneousServiceProviders")["names"].toHash();
+    ep = engine->containerForSource("ErroneousServiceProviders");
+    Plasma::DataEngine::Data epData =  ep->data();
+    QVariantHash erroneousProviders = epData["names"].toHash();
     if ( !erroneousProviders.isEmpty() ) {
         QStringList errorLines;
         for ( QVariantHash::ConstIterator it = erroneousProviders.constBegin();

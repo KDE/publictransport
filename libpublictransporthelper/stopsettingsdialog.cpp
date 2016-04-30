@@ -33,6 +33,7 @@
 
 #include <Plasma/Theme>
 #include <Plasma/PluginLoader>
+#include <Plasma/DataContainer>
 #include <Plasma/DataEngineConsumer>
 #include <KUrl>
 #include <KGlobal>
@@ -921,7 +922,8 @@ void StopSettingsDialog::locationChanged( int index )
     // Select default provider of the selected location
     QString locationCode = d->uiStop.location->itemData( index, LocationCodeRole ).toString();
     Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
-    Plasma::DataEngine::Data locationData = engine->query( "Locations" );
+    Plasma::DataContainer *container = engine->containerForSource( "Locations" );
+    Plasma::DataEngine::Data locationData = container->data();
     QString defaultProviderId = locationData[locationCode].toHash()["defaultProvider"].toString();
     if ( !defaultProviderId.isEmpty() ) {
         QModelIndexList indices = d->uiStop.serviceProvider->model()->match(

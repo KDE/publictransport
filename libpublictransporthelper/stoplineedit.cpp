@@ -29,6 +29,7 @@
 
 // Plasma/KDE includes
 #include <Plasma/DataEngineConsumer>
+#include <Plasma/DataContainer>
 #include <Plasma/PluginLoader>
 #include <Plasma/DataEngine>
 #include <Plasma/ServiceJob>
@@ -378,8 +379,8 @@ void StopLineEdit::setServiceProvider( const QString& serviceProvider )
     d->mapPopup->setServiceProvider( serviceProvider );
 #endif
 
-    const Plasma::DataEngine::Data providerData =
-            engine->query( "ServiceProvider " + d->serviceProvider );
+    Plasma::DataContainer *container = engine->containerForSource( "ServiceProvider " + d->serviceProvider );
+    const Plasma::DataEngine::Data providerData = container->data();
     d->providerType = providerData["type"].toString();
     d->providerFeatures = providerData["features"].toStringList();
     setEnabled( true );
