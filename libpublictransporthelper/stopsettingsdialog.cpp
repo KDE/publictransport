@@ -40,6 +40,7 @@
 #include <KColorScheme>
 #include <KMessageBox>
 #include <KFileDialog>
+#include <KCompletion>
 #include <KStandardDirs>
 #include <KLineEdit>
 #include <knuminput.h>
@@ -895,7 +896,7 @@ void StopSettingsDialog::stopAdded( QWidget *lineEdit )
 
     // Enable completer for new line edits
     KLineEdit *edit = qobject_cast< KLineEdit* >( lineEdit );
-    edit->setCompletionMode( KGlobalSettings::CompletionPopup );
+    edit->setCompletionMode( KCompletion::CompletionPopup );
 
     // Add to column resizer
     d->resizer->addWidget( d->stopList->labelFor(qobject_cast<KLineEdit*>(lineEdit)) );

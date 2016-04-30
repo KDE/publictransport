@@ -26,7 +26,8 @@
 
 #include "lib_config.h"
 #include "dynamicwidget.h" // For StopLineEditList
-#include <KLineEdit> // Base class of StopLineEdit
+#include <KCompletion/KLineEdit> // Base class of StopLineEdit
+#include <KCompletion>
 #include <KGlobalSettings>
 #include <Plasma/DataEngine> // For Plasma::DataEngine::Data in StopLineEdit::dataUpdated()
 
@@ -89,7 +90,8 @@ class PUBLICTRANSPORTHELPER_EXPORT StopLineEdit : public KLineEdit
 public:
     /** @brief Creates a new StopLineEdit object, using the given @p serviceProvider. */
     explicit StopLineEdit( QWidget* parent = 0, const QString &serviceProvider = QString(),
-                           KGlobalSettings::Completion completion = KGlobalSettings::CompletionPopup );
+                           KCompletion::CompletionMode completion = KCompletion::CompletionPopup
+                         );
 
     /** @brief Simple destructor. */
     virtual ~StopLineEdit();

@@ -305,7 +305,7 @@ Q_DECLARE_OPERATORS_FOR_FLAGS( StopLineEditPrivate::ButtonTypes )
 Q_DECLARE_OPERATORS_FOR_FLAGS( StopLineEditPrivate::ButtonStates )
 
 StopLineEdit::StopLineEdit( QWidget* parent, const QString &serviceProvider,
-                            KGlobalSettings::Completion completion )
+                            KCompletion::CompletionMode completion )
         : KLineEdit( parent ), d_ptr( new StopLineEditPrivate(serviceProvider, this) )
 {
 #ifdef MARBLE_FOUND
