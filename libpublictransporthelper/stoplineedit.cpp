@@ -44,6 +44,7 @@
 #include <QStyle>
 #include <QStyleOption>
 #include <QMouseEvent>
+#include <QVariantMap>
 #include <QTimer>
 #include <qmath.h>
 
@@ -437,8 +438,8 @@ void StopLineEdit::importGtfsFeed()
     kDebug() << "GTFS accessor whithout imported feed data, use service to import using the GTFS feed";
     Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
     Plasma::Service *service = engine->serviceForSource("GTFS");
-    KConfigGroup op = service->operationDescription("importGtfsFeed");
-    op.writeEntry( "serviceProviderId", d->serviceProvider );
+    QVariantMap serviceMap = service->operationDescription("importGtfsFeed");
+    serviceMap.insert("serviceProviderId", d->serviceProvider);
 
     d->state = StopLineEditPrivate::WaitingForImport;
     d->addButtons( StopLineEditPrivate::StopButton | StopLineEditPrivate::PauseButton );
@@ -452,7 +453,7 @@ void StopLineEdit::importGtfsFeed()
     // Update the progress bar
     update();
 
-    d->importJob = service->startOperationCall( op );
+    d->importJob = service->startOperationCall( serviceMap );
     connect( d->importJob, SIGNAL(finished(KJob*)), this, SLOT(importFinished(KJob*)) );
 }
 

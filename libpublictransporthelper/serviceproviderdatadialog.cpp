@@ -445,9 +445,9 @@ void ServiceProviderDataWidget::deleteGtfsDatabase()
     {
         Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
         Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
-        KConfigGroup op = gtfsService->operationDescription("deleteGtfsDatabase");
-        op.writeEntry( "serviceProviderId", d->providerId );
-        Plasma::ServiceJob *deleteJob = gtfsService->startOperationCall( op );
+        QVariantMap serviceMap=  gtfsService->operationDescription("deleteGtfsDatabase");
+        serviceMap.insert("serviceProviderId", d->providerId);
+        Plasma::ServiceJob *deleteJob = gtfsService->startOperationCall( serviceMap );
         connect( deleteJob, SIGNAL(result(KJob*)), this, SLOT(deletionFinished(KJob*)) );
         connect( deleteJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
     }
@@ -460,9 +460,9 @@ void ServiceProviderDataWidget::importGtfsFeed()
 
     Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
     Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
-    KConfigGroup op = gtfsService->operationDescription("importGtfsFeed");
-    op.writeEntry( "serviceProviderId", d->providerId );
-    Plasma::ServiceJob *importJob = gtfsService->startOperationCall( op );
+    QVariantMap serviceMap = gtfsService->operationDescription("importGtfsFeed");
+    serviceMap.insert( "serviceProviderId", d->providerId );
+    Plasma::ServiceJob *importJob = gtfsService->startOperationCall( serviceMap );
     connect( importJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
 }
 
@@ -473,9 +473,9 @@ void ServiceProviderDataWidget::updateGtfsDatabase()
 
     Plasma::DataEngine *engine = consumer->dataEngine("publictransport");
     Plasma::Service *gtfsService = engine->serviceForSource("GTFS");
-    KConfigGroup op = gtfsService->operationDescription("updateGtfsDatabase");
-    op.writeEntry( "serviceProviderId", d->providerId );
-    Plasma::ServiceJob *updateJob = gtfsService->startOperationCall( op );
+    QVariantMap serviceMap = gtfsService->operationDescription("updateGtfsDatabase");
+    serviceMap.insert( "serviceProviderId", d->providerId );
+    Plasma::ServiceJob *updateJob = gtfsService->startOperationCall( serviceMap );
     connect( updateJob, SIGNAL(finished(KJob*)), gtfsService, SLOT(deleteLater()) );
 }
 
