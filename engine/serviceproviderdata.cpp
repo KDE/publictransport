@@ -22,10 +22,10 @@
 #include "serviceproviderglobal.h"
 
 // KDE includes
-#include <KLocalizedString>
+#include <KDE/KLocalizedString>
+#include <kstandarddirs.h>
+#include <klocale.h>
 #include <KDebug>
-#include <KStandardDirs>
-#include <KLocale>
 
 // Qt includes
 #include <QUrl>

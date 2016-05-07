@@ -40,14 +40,17 @@
 
 // KDE/Plasma includes
 #include <Plasma/DataContainer>
-#include <KStandardDirs>
+#include <KDE/KLocalizedString>
+#include <kstandarddirs.h>
+#include <kconfig.h>
+#include <klocale.h>
 
 // Qt includes
 #include <QFileSystemWatcher>
 #include <QFileInfo>
 #include <QTimer>
 #include <QDebug>
-#include <QDBusConnection>
+#include <QtDBus/QDBusConnection>
 
 const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
 const int PublicTransportEngine::PROVIDER_CLEANUP_TIMEOUT = 10000; // 10 seconds

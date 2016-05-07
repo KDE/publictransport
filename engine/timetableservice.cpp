@@ -22,6 +22,7 @@
 
 // KDE includes
 #include <Plasma/DataEngine>
+#include <KDE/KLocalizedString>
 
 // Qt incluse
 #include <QMetaMethod>

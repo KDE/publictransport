@@ -32,6 +32,7 @@
 // Qt includes
 #include <QScriptEngine>
 #include <QScriptable> // Base class
+#include <QDataStream>
 #include <QUrl>
 
 class PublicTransportInfo;

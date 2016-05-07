@@ -21,7 +21,7 @@
 #include "global.h"
 
 // KDE includes
-#include <KLocalizedString>
+#include <KI18n/KLocalizedString>
 
 // Qt includes
 #include <QRegExp>
