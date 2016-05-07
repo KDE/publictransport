@@ -30,7 +30,7 @@
 // KDE includes
 #include <KLocalizedString>
 #include <KDebug>
-#include <KUrl>
+#include <QUrl>
 #include <KSystemTimeZones>
 
 // Qt includes
@@ -429,7 +429,7 @@ TestModel::TestState ServiceProviderDataTester::isGtfsFeedUrlValid( const QStrin
         return TestModel::TestFinishedWithErrors;
     }
 
-    const KUrl url( gtfsFeedUrl );
+    const QUrl url( gtfsFeedUrl );
     if ( !url.isValid() ) {
         if ( errorMessage ) {
             *errorMessage = i18nc("@info/plain", "GTFS feed URL is invalid");
@@ -451,7 +451,7 @@ TestModel::TestState ServiceProviderDataTester::isGtfsRealtimeUrlValid(
         return TestModel::TestFinishedSuccessfully;
     }
 
-    const KUrl url( gtfsRealtimeUrl );
+    const QUrl url( gtfsRealtimeUrl );
     if ( !url.isValid() ) {
         if ( errorMessage ) {
             *errorMessage = i18nc("@info/plain", "GTFS-realtime URL is invalid");

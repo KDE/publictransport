@@ -27,7 +27,7 @@ class NetworkMonitorModel;
 class MonitorNetworkAccessManager;
 class KWebView;
 class KUrlComboBox;
-class KUrl;
+class QUrl;
 class KToolBar;
 class QNetworkReply;
 class QWebInspector;
@@ -54,7 +54,7 @@ signals:
 protected slots:
     void urlChanged( const QUrl &url );
     void urlBarReturn( const QString &url );
-    void urlActivated( const KUrl &url );
+    void urlActivated( const QUrl &url );
     void slotLoadStarted();
     void slotLoadFinished();
     void faviconChanged();

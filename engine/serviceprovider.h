@@ -30,7 +30,7 @@
 #include "departureinfo.h"
 
 // KDE includes
-#include <KUrl>
+#include <QUrl>
 
 // Qt includes
 #include <QHash>

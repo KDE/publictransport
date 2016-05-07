@@ -774,7 +774,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
             QSharedPointer<KConfig> cache = ServiceProviderGlobal::cache();
             foreach( const QString &provider, providers ) {
                 const QString providerId =
-                        ServiceProviderGlobal::idFromFileName( KUrl(provider).fileName() );
+                        ServiceProviderGlobal::idFromFileName( QUrl(provider).fileName() );
                 if ( updateProviderData(providerId, cache) ) {
                     loadedProviders << providerId;
                 }

@@ -754,7 +754,7 @@ void ProjectSettingsDialog::createScriptFile()
     QString scriptFile = m_providerData->id() + ".js";
 
     // Get fileName for the new script file
-    QString scriptFilePath = KUrl( m_openedPath ).directory( KUrl::AppendTrailingSlash ) + scriptFile;
+    QString scriptFilePath = QUrl( m_openedPath ).directory( QUrl::AppendTrailingSlash ) + scriptFile;
 
     // Check if the file already exists
     QFile file( scriptFilePath );
@@ -814,16 +814,16 @@ void ProjectSettingsDialog::browseForScriptFile()
         return;
     }
 
-    KUrl openedUrl( m_openedPath );
+    QUrl openedUrl( m_openedPath );
 
     // Get a list of all script files in the directory of the XML file
     QStringList scriptFiles;
     int current = -1;
-    QDir dir( openedUrl.directory() );
+    QDir dir( openedUrl.adjusted(QUrl::RemoveFilename|QUrl::StripTrailingSlash).path() );
     QStringList fileNames = dir.entryList();
     for( int i = 0; i < fileNames.count(); ++i ) {
         QString fileName = fileNames.at( i );
-        KMimeType::Ptr mimeType = KMimeType::findByUrl( KUrl( fileName ) );
+        KMimeType::Ptr mimeType = KMimeType::findByUrl( QUrl( fileName ) );
         if( mimeType->is("application/javascript") ||
             mimeType->is("application/x-ruby") ||
             mimeType->is("text/x-python") )

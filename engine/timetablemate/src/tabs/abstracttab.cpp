@@ -187,7 +187,7 @@ QString AbstractTab::fileName() const
 
 QString AbstractDocumentTab::fileName() const
 {
-    const KUrl url = document()->url();
+    const QUrl url = document()->url();
     return url.isValid() ? url.path() : AbstractTab::fileName();
 }
 

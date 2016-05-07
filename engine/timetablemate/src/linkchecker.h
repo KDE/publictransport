@@ -21,7 +21,7 @@
 #define LINKCHECKER_H
 
 // KDE includes
-#include <KUrl>
+#include <QUrl>
 
 // Qt includes
 #include <QDateTime>
@@ -48,7 +48,7 @@ public:
         ReplyWasEmpty /**< The reply was empty. */
     };
 
-    LinkChecker( const KUrl &url );
+    LinkChecker( const QUrl &url );
     ~LinkChecker();
 
     void start();
@@ -58,7 +58,7 @@ public:
     bool hasError() const { return m_error != NoError; };
     QString errorString() const { return m_errorString; };
     bool isFinished() const { return m_state == Finished; };
-    KUrl url() const { return m_url; };
+    QUrl url() const { return m_url; };
     QString redirectedUrl() const { return m_lastRedirectUrl; };
     QDateTime lastModificationTime() const { return m_lastModification; };
     qulonglong size() const { return m_size; };
@@ -74,7 +74,7 @@ protected slots:
 private:
     State m_state;
     Error m_error;
-    const KUrl m_url;
+    const QUrl m_url;
     QString m_lastRedirectUrl;
     QString m_errorString;
     QDateTime m_lastModification;

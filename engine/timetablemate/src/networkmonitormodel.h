@@ -33,7 +33,7 @@
 
 class NetworkMonitorModel;
 class KJob;
-class KUrl;
+class QUrl;
 class KTemporaryFile;
 class QPixmap;
 namespace KIO
@@ -145,8 +145,8 @@ protected slots:
 protected:
     void setModel( NetworkMonitorModel *model ) { m_model = model; };
     void prepareAdditionalImageData();
-    ContentType contentTypeFromUrl( const KUrl &url );
-    ContentType contentTypeFromContent( const QByteArray &content, const KUrl &url );
+    ContentType contentTypeFromUrl( const QUrl &url );
+    ContentType contentTypeFromContent( const QByteArray &content, const QUrl &url );
 
 private:
     NetworkMonitorModel *m_model;

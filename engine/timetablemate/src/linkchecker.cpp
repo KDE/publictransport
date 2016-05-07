@@ -29,7 +29,7 @@
 #include <QNetworkReply>
 #include <QTimer>
 
-LinkChecker::LinkChecker( const KUrl &url )
+LinkChecker::LinkChecker( const QUrl &url )
         : m_state(NotStarted), m_error(NoError), m_url(url), m_size(-1), m_reply(0)
 {
 }

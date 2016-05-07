@@ -86,7 +86,7 @@ public:
         QString name;
         QString phone;
         QString language;
-        KUrl url;
+        QUrl url;
         KTimeZone *timezone;
     };
 

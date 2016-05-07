@@ -617,7 +617,7 @@ public:
         q->emit outputChanged();
         q->emit consoleTextChanged( QString() );
 
-        KUrl url( projectSourceFile );
+        QUrl url( projectSourceFile );
         if ( projectSourceTab ) {
             if ( !projectSourceTab->document()->openUrl(url) ) {
                 errorHappened( Project::ProjectFileNotReadable,
@@ -946,7 +946,7 @@ public:
                                      "could not be found.", scriptFile) );
                 return false;
             }
-            if ( !scriptTab->document()->openUrl(KUrl(scriptFile)) ) {
+            if ( !scriptTab->document()->openUrl(QUrl(scriptFile)) ) {
                 return false;
             }
             scriptTab->document()->setModified( false );
@@ -998,7 +998,7 @@ public:
         } else {
             // Open file if already stored to have the correct url set in KTextEditor::Document
             if ( !filePath.isEmpty() &&
-                !projectSourceTab->document()->openUrl(KUrl(filePath)) )
+                !projectSourceTab->document()->openUrl(QUrl(filePath)) )
             {
                 errorHappened( Project::ProjectFileNotReadable,
                                i18nc("@info", "Could not open project source document "
@@ -1025,7 +1025,7 @@ public:
 
         if ( oldXmlFilePath != filePath ) {
             // Update member variables
-            KUrl url( filePath );
+            QUrl url( filePath );
             const QString oldServiceProviderId = serviceProviderID;
             serviceProviderID = serviceProviderIdFromProjectFileName( url.fileName() );
 
@@ -5685,7 +5685,7 @@ ScriptTab *Project::createExternalScriptTab( const QString &filePath, QWidget *p
                                 "could not be found.", filePath) );
         delete externalScriptTab;
         return 0;
-    } else if ( !externalScriptTab->document()->openUrl(KUrl(filePath)) ) {
+    } else if ( !externalScriptTab->document()->openUrl(QUrl(filePath)) ) {
         d->errorHappened( Project::ScriptFileNotFound,
                           i18nc("@info", "The external script file <filename>%1</filename> "
                                 "could not be opened.", filePath) );
@@ -6378,7 +6378,7 @@ void Project::publish()
     dialog.setDescription( description );
     dialog.setVersion( d->data()->version() );
     dialog.setChangelog( d->data()->changelogString() );
-    dialog.setPreviewImageFile( 1, KUrl(previewImageFile.fileName()) );
+    dialog.setPreviewImageFile( 1, QUrl(previewImageFile.fileName()) );
 
     // Show the dialog
     dialog.exec();

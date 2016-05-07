@@ -28,7 +28,7 @@
 #include <KDebug>
 #include <KGlobal>
 #include <KLocale>
-#include <KUrl>
+#include <QUrl>
 #include <KMimeType>
 #include <KIO/NetAccess>
 #include <KIO/Job>
@@ -362,7 +362,7 @@ NetworkMonitorModelItem::NetworkMonitorModelItem( NetworkMonitorModelItem::Type 
               m_contentType(NetworkMonitorModelItem::RetrievingContentType),
               m_time(QTime::currentTime()), m_url(url), m_data(data), m_imageData(0)
 {
-    const KUrl _url( url );
+    const QUrl _url( url );
     if ( !data.isEmpty() ) {
         m_contentType = contentTypeFromContent( data, _url );
         if ( m_contentType == NetworkMonitorModelItem::UnknownData ) {
@@ -415,14 +415,14 @@ void NetworkMonitorModelItem::prepareAdditionalImageData()
     // Write image data to a temporary file, for display in a QToolTip using an HTML <img> tag
     m_imageData->tempFile = new KTemporaryFile();
     m_imageData->tempFile->setAutoRemove( true );
-    m_imageData->tempFile->setPrefix( KUrl(m_url).fileName() );
+    m_imageData->tempFile->setPrefix( QUrl(m_url).fileName() );
     if ( m_imageData->tempFile->open() ) {
         m_imageData->tempFile->write( m_data );
         m_imageData->tempFile->close();
     }
 }
 
-NetworkMonitorModelItem::ContentType NetworkMonitorModelItem::contentTypeFromUrl( const KUrl &url )
+NetworkMonitorModelItem::ContentType NetworkMonitorModelItem::contentTypeFromUrl( const QUrl &url )
 {
     KMimeType::Ptr mimeType = KMimeType::findByUrl( url );
     if ( mimeType == KMimeType::defaultMimeTypePtr() ) {
@@ -440,7 +440,7 @@ NetworkMonitorModelItem::ContentType NetworkMonitorModelItem::contentTypeFromUrl
 }
 
 NetworkMonitorModelItem::ContentType NetworkMonitorModelItem::contentTypeFromContent(
-        const QByteArray &content, const KUrl &url )
+        const QByteArray &content, const QUrl &url )
 {
     int accuracy;
     KMimeType::Ptr mimeType = KMimeType::findByContent( content, &accuracy );

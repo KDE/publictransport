@@ -208,7 +208,7 @@ bool ServiceProviderGtfs::runTests( QString *errorMessage ) const
         return true;
     }
 
-    const KUrl feedUrl( m_data->feedUrl() );
+    const QUrl feedUrl( m_data->feedUrl() );
     if ( feedUrl.isEmpty() || !feedUrl.isValid() ) {
         if ( errorMessage ) {
             *errorMessage = i18nc("@info/plain", "Invalid GTFS feed URL: %1", m_data->feedUrl());

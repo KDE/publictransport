@@ -92,7 +92,7 @@ namespace KParts {
 class KActionMenu;
 class KToggleAction;
 class KRecentFilesAction;
-class KUrl;
+class QUrl;
 class KTabWidget;
 class KMessageWidget;
 
@@ -151,9 +151,9 @@ public slots:
     void fileNew();
 
     /** @brief Open project from @p url. */
-    void open( const KUrl &url );
+    void open( const QUrl &url );
 
-    void open( const QString &url ) { open(KUrl(url)); };
+    void open( const QString &url ) { open(QUrl(url)); };
 
     /** @brief Open a file dialog to select a project to open. */
     void fileOpen();

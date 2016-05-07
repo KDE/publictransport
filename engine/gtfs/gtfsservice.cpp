@@ -473,7 +473,7 @@ void ImportGtfsToDatabaseJob::downloadFeed()
         KConfigGroup gtfsGroup = group.group( "gtfs" );
         gtfsGroup.writeEntry( "feedImportFinished", false );
 
-        KIO::FileCopyJob *job = KIO::file_copy( m_data->feedUrl(), KUrl(tmpFile.fileName()), -1,
+        KIO::FileCopyJob *job = KIO::file_copy( m_data->feedUrl(), QUrl(tmpFile.fileName()), -1,
                                                 KIO::Overwrite | KIO::HideProgressInfo );
         connect( job, SIGNAL(result(KJob*)), this, SLOT(feedReceived(KJob*)) );
         connect( job, SIGNAL(percent(KJob*,ulong)), this, SLOT(downloadProgress(KJob*,ulong)) );

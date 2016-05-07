@@ -48,7 +48,7 @@ class ChangelogWidget;
 class QSignalMapper;
 class QPainter;
 
-class KUrl;
+class QUrl;
 class KActionCollection;
 
 typedef QSharedPointer< const ServiceProviderData > ServiceProviderDataPtr;

@@ -1287,7 +1287,7 @@ QAction *TimetableMate::qmlAction( const QString &name ) const
 QStringList TimetableMate::recentProjects() const
 {
     QStringList projects;
-    foreach ( const KUrl &url, m_recentFilesAction->urls() ) {
+    foreach ( const QUrl &url, m_recentFilesAction->urls() ) {
         // Make filenames more pretty
         QString prettyName;
         const QString fileName = url.fileName();
@@ -1309,7 +1309,7 @@ QStringList TimetableMate::recentProjects() const
 QStringList TimetableMate::recentUrls() const
 {
     QStringList urls;
-    foreach ( const KUrl &url, m_recentFilesAction->urls() ) {
+    foreach ( const QUrl &url, m_recentFilesAction->urls() ) {
         urls << url.path();
     }
     return urls;
@@ -1590,7 +1590,7 @@ void TimetableMate::setupActions() {
 
     KStandardAction::quit( qApp, SLOT(closeAllWindows()), actionCollection() );
     KStandardAction::preferences( this, SLOT(optionsPreferences()), actionCollection() );
-    m_recentFilesAction = KStandardAction::openRecent( this, SLOT(open(KUrl)), actionCollection() );
+    m_recentFilesAction = KStandardAction::openRecent( this, SLOT(open(QUrl)), actionCollection() );
     actionCollection()->addAction( QLatin1String("project_open_recent"), m_recentFilesAction );
 
     KAction *openInstalled = new KAction( KIcon("document-open"), i18nc("@action",
@@ -2126,7 +2126,7 @@ AbstractTab *TimetableMate::showProjectTab( bool addTab, AbstractTab *tab )
     return tab;
 }
 
-void TimetableMate::open( const KUrl &url ) {
+void TimetableMate::open( const QUrl &url ) {
     kDebug() << "OPEN" << url;
     Project *project = openProject( url.path() );
     if ( project ) {
@@ -2168,14 +2168,14 @@ Project *TimetableMate::openProject( const QString &filePath )
 }
 
 void TimetableMate::fileOpen() {
-    const QStringList fileNames = KFileDialog::getOpenFileNames( KUrl("kfiledialog:///serviceprovider"),
+    const QStringList fileNames = KFileDialog::getOpenFileNames( QUrl("kfiledialog:///serviceprovider"),
             "application/x-publictransport-serviceprovider application/xml",
             this, i18nc("@title:window", "Open Service Provider Plugin") );
     if ( fileNames.isEmpty() )
         return; // Cancel clicked
 
     foreach ( const QString &fileName, fileNames ) {
-        open( KUrl(fileName) );
+        open( QUrl(fileName) );
 
         // Expand manually opened project item
         m_projectsDock->projectsWidget()->expand(
@@ -2199,12 +2199,12 @@ void TimetableMate::fileOpenInstalled() {
         QString prettyName;
         if ( KStandardDirs::checkAccess(*it, W_OK) ) {
             // File is writable, ie. locally installed
-            prettyName = KUrl( *it ).fileName();
+            prettyName = QUrl( *it ).fileName();
         } else {
             // File isn't writable, ie. globally installed
             prettyName = i18nc("@info/plain This string is displayed instead of the full path for "
                                "globally installed service provider plugins.",
-                               "Global: %1", KUrl(*it).fileName());
+                               "Global: %1", QUrl(*it).fileName());
         }
 
         map.insert( prettyName, *it );

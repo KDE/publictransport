@@ -97,8 +97,8 @@ WebTab::WebTab( Project *project, QWidget *parent )
              this, SLOT(faviconChanged()) );
     connect( m_urlBar, SIGNAL(returnPressed(QString)),
              this, SLOT(urlBarReturn(QString)) );
-    connect( m_urlBar, SIGNAL(urlActivated(KUrl)),
-             this, SLOT(urlActivated(KUrl)) );
+    connect( m_urlBar, SIGNAL(urlActivated(QUrl)),
+             this, SLOT(urlActivated(QUrl)) );
     connect( m_webView, SIGNAL(loadStarted()), this, SLOT(slotLoadStarted()) );
     connect( m_webView, SIGNAL(loadFinished(bool)), this, SLOT(slotLoadFinished()) );
 
@@ -174,10 +174,10 @@ void WebTab::urlChanged( const QUrl &url )
 
 void WebTab::urlBarReturn( const QString &url )
 {
-    m_webView->setUrl( KUrl::fromUserInput(url) );
+    m_webView->setUrl( QUrl::fromUserInput(url) );
 }
 
-void WebTab::urlActivated( const KUrl &url )
+void WebTab::urlActivated( const QUrl &url )
 {
     m_webView->setUrl( url );
 }
