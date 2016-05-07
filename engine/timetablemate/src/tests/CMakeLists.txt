@@ -1,11 +1,7 @@
 
-find_package( KDE4 REQUIRED )
-include( KDE4Defaults )
-add_definitions (${QT_DEFINITIONS} ${KDE4_DEFINITIONS})
+add_definitions (${QT_DEFINITIONS})
 
 include_directories(
-   ${QT_INCLUDES}
-   ${KDE4_INCLUDES}
    ${CMAKE_CURRENT_SOURCE_DIR}/../
    ${CMAKE_CURRENT_BINARY_DIR}/../ # For config.h, javascriptcompletiongeneric.h
    ${CMAKE_CURRENT_BINARY_DIR}/../../../ # For config.h
@@ -24,17 +20,16 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
         ${CMAKE_CURRENT_BINARY_DIR}/../javascriptcompletiongeneric.h
         ${CMAKE_CURRENT_BINARY_DIR}/../javascriptcompletiongeneric.cpp
     )
-    qt4_automoc( ${JavaScriptParserTest_SRCS} )
     add_executable( JavaScriptParserTest ${JavaScriptParserTest_SRCS} )
     add_test( JavaScriptParserTest JavaScriptParserTest )
     target_link_libraries( JavaScriptParserTest
-        ${QT_QTTEST_LIBRARY} ${QT_QTGUI_LIBRARY} ${KDE4_KDECORE_LIBS} )
+        Qt5::Test Qt5::Gui KF5::KDELibs4Support )
 
     # Needed to have javascriptcompletiongeneric.h/.cpp generated before building the test
     add_dependencies( JavaScriptParserTest timetablemate plasma_engine_publictransport )
 
     # Run moc manually, alternatively add #include "moc_foo.cpp" to the end of the source files
-    qt4_wrap_cpp( timetablemate_test_MOC_SRCS
+    qt5_wrap_cpp( timetablemate_test_MOC_SRCS
         ../project.h
         ../projectmodel.h
         ../networkmonitormodel.h
@@ -127,27 +122,26 @@ if ( BUILD_PROVIDER_TYPE_SCRIPT )
         ${CMAKE_CURRENT_BINARY_DIR}/../javascriptcompletiongeneric.cpp
         ${timetablemate_test_MOC_SRCS}
     )
-    qt4_automoc( ${DebuggerTest_SRCS} )
 
     set( LIBS
-        ${QT_QTTEST_LIBRARY} ${QT_QTGUI_LIBRARY} ${KDE4_KDECORE_LIBS} ${KDE4_KIO_LIBS}
-        ${KDE4_KTEXTEDITOR_LIBS} # For the text editor main view tabs (for XML and script files)
-        ${KDE4_KDEWEBKIT_LIBS} # For the web main view tab
-        ${KDE4_PLASMA_LIBS} # For the Plasma preview main view tab
-        ${KDE4_THREADWEAVER_LIBS} # For the debugger and for includes from the engine
-        ${KDE4_KNEWSTUFF3_LIBS} # For plugin upload (publish)
-        ${QT_QTDECLARATIVE_LIBRARY} # For the dashboard main view tabs
-        kdeclarative # For KDeclarative, no ${KDE4_KDECLARATIVE_LIBS} available..
+        Qt5::Test Qt5::Gui KF5::KDELibs4Support KF5::KIOCore
+        KF5::TextEditor # For the text editor main view tabs (for XML and script files)
+        KF5::KDEWebKit # For the web main view tab
+        KF5::Plasma # For the Plasma preview main view tab
+        KF5::ThreadWeaver # For the debugger and for includes from the engine
+        KF5::NewStuff # For plugin upload (publish)
+        Qt5::Declarative # For the dashboard main view tabs
+        KF5::KDeclarative # For KDeclarative
         publictransporthelper
         z # zlib
     )
 
     if ( BUILD_PROVIDER_TYPE_SCRIPT )
-        set( LIBS ${LIBS} ${QT_QTSCRIPT_LIBRARY} )
+        set( LIBS ${LIBS} Qt5::Script )
     endif ( BUILD_PROVIDER_TYPE_SCRIPT )
 
     if ( BUILD_PROVIDER_TYPE_GTFS )
-        set( LIBS ${LIBS} ${QT_QTXML_LIBRARY} ${QT_QTSQL_LIBRARY} )
+        set( LIBS ${LIBS} Qt5::Xml Qt5::Sql )
         if ( BUILD_GTFS_REALTIME )
             set( LIBS ${LIBS} ${PROTOBUF_LIBRARY} pthread ) # pthread is needed for protobuf
         endif ( BUILD_GTFS_REALTIME )

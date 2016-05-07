@@ -1,17 +1,15 @@
 
 project(completiongenerator)
 # Find the required Libaries
-find_package( KDE4 REQUIRED )
-include( KDE4Defaults )
-add_definitions( ${QT_DEFINITIONS} ${KDE4_DEFINITIONS} )
+add_definitions( ${QT_DEFINITIONS} )
 include_directories(
    ${CMAKE_SOURCE_DIR}
    ${CMAKE_BINARY_DIR}
-   ${KDE4_INCLUDES} ../../
+    ../../
    ${CMAKE_CURRENT_BINARY_DIR}/../../ # For config.h
 )
 
-qt4_wrap_cpp( completiongenerator_MOC_SRCS ../../enums.h )
+qt5_wrap_cpp( completiongenerator_MOC_SRCS ../../enums.h )
 set( completiongenerator_SRCS
    main.cpp
    global_generator.cpp
@@ -27,8 +25,8 @@ set( completiongenerator_SRCS
    ${completiongenerator_MOC_SRCS}
 )
 
-kde4_add_executable( completiongenerator
+add_executable( completiongenerator
                      ${completiongenerator_SRCS} )
 
-target_link_libraries( completiongenerator ${KDE4_KDECORE_LIBS}
-        ${QT_QTNETWORK_LIBRARY} ${QT_QTSCRIPT_LIBRARY} z )
+target_link_libraries( completiongenerator KF5::KDELibs4Support
+        Qt5::Network Qt5::Script z )

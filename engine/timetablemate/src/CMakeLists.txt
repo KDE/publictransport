@@ -1,6 +1,6 @@
 
 set( include_dirs
-    ${KDE4_INCLUDES}
+    
     ${PUBLICTRANSPORTHELPER_INCLUDES} # For "lib_config.h"
     ${CMAKE_CURRENT_BINARY_DIR} # For "debug_config.h"
 )
@@ -72,7 +72,7 @@ set_source_files_properties(
     javascriptcompletionmodel.cpp javascriptparser.cpp
     PROPERTIES OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/javascriptcompletiongeneric.h )
 
-qt4_wrap_cpp( timetablemate_MOC_SRCS ../../enums.h tabs/tabs.h )
+qt5_wrap_cpp( timetablemate_MOC_SRCS ../../enums.h tabs/tabs.h )
 set( timetablemate_SRCS
    main.cpp
    timetablemate.cpp
@@ -103,7 +103,6 @@ set( timetablemate_SRCS
    ../../serviceproviderglobal.cpp
    ${timetablemate_MOC_SRCS}
 )
-qt4_automoc( timetablemate_SRCS )
 
 if ( BUILD_PROVIDER_TYPE_SCRIPT )
     set ( timetablemate_SRCS ${timetablemate_SRCS}
@@ -125,32 +124,32 @@ endif ( BUILD_PROVIDER_TYPE_GTFS )
 add_subdirectory( docks )
 add_subdirectory( tabs )
 
-kde4_add_ui_files( timetablemate_SRCS timetablemateview_base.ui preferences.ui )
-kde4_add_kcfg_files( timetablemate_SRCS settings.kcfgc )
-kde4_add_executable( timetablemate ${timetablemate_SRCS} )
+ki18n_wrap_ui( timetablemate_SRCS timetablemateview_base.ui preferences.ui )
+kconfig_add_kcfg_files( timetablemate_SRCS settings.kcfgc )
+add_executable( timetablemate ${timetablemate_SRCS} )
 
 add_dependencies( timetablemate publictransporthelper plasma_engine_publictransport )
 
 # Collect all needed libraries in LIBS
-set( LIBS ${KDE4_KDEUI_LIBS}
-    ${KDE4_KPARTS_LIBS} # For the different main view tabs
-    ${KDE4_KTEXTEDITOR_LIBS} # For the text editor main view tabs (for XML and script files)
-    ${KDE4_KDEWEBKIT_LIBS} # For the web main view tab
-    ${KDE4_PLASMA_LIBS} # For the Plasma preview main view tab
-    ${KDE4_THREADWEAVER_LIBS} # For the debugger and for includes from the engine
-    ${KDE4_KNEWSTUFF3_LIBS} # For plugin upload (publish)
-    kdeclarative # For KDeclarative, no ${KDE4_KDECLARATIVE_LIBS} available..
-    ${QT_QTDECLARATIVE_LIBRARY} # For the dashboard main view tabs
+set( LIBS 
+    KF5::Parts # For the different main view tabs
+    KF5::TextEditor # For the text editor main view tabs (for XML and script files)
+    KF5::KDEWebKit # For the web main view tab
+    KF5::Plasma # For the Plasma preview main view tab
+    KF5::ThreadWeaver # For the debugger and for includes from the engine
+    KF5::NewStuff # For plugin upload (publish)
+    KF5::KDeclarative # For KDeclarative
+    Qt5::Declarative # For the dashboard main view tabs
     publictransporthelper
     z # zlib
 )
 
 if ( BUILD_PROVIDER_TYPE_SCRIPT )
-    set( LIBS ${LIBS} ${QT_QTSCRIPT_LIBRARY} )
+    set( LIBS ${LIBS} Qt5::Script )
 endif ( BUILD_PROVIDER_TYPE_SCRIPT )
 
 if ( BUILD_PROVIDER_TYPE_GTFS )
-    set( LIBS ${LIBS} ${QT_QTXML_LIBRARY} ${QT_QTSQL_LIBRARY} )
+    set( LIBS ${LIBS} Qt5::Xml Qt5::Sql )
     if ( BUILD_GTFS_REALTIME )
         set( LIBS ${LIBS} ${PROTOBUF_LIBRARY} pthread ) # pthread is needed for protobuf
     endif ( BUILD_GTFS_REALTIME )
@@ -186,9 +185,9 @@ file( GLOB files "${CMAKE_CURRENT_BINARY_DIR}/*.html"
 install( FILES ${files} DESTINATION ${DOCUMENTATION_DIR} )
 
 ### KAuth
-kde4_install_auth_actions( org.kde.timetablemate timetablemate.actions )
+kauth_install_actions( org.kde.timetablemate timetablemate.actions )
 
-kde4_add_executable( timetablematehelper timetablematehelper.cpp )
-target_link_libraries( timetablematehelper ${KDE4_KDECORE_LIBS} )
+add_executable( timetablematehelper timetablematehelper.cpp )
+target_link_libraries( timetablematehelper KF5::KDELibs4Support )
 install( TARGETS timetablematehelper DESTINATION ${LIBEXEC_INSTALL_DIR} )
-kde4_install_auth_helper_files( timetablematehelper org.kde.timetablemate root )
+kauth_install_helper_files( timetablematehelper org.kde.timetablemate root )
