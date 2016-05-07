@@ -46,6 +46,7 @@
 #include <QFileSystemWatcher>
 #include <QFileInfo>
 #include <QTimer>
+#include <QDebug>
 #include <QDBusConnection>
 
 const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
@@ -296,7 +297,7 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
 PublicTransportEngine::~PublicTransportEngine()
 {
     if ( !m_runningSources.isEmpty() || !m_providers.isEmpty() ) {
-        kDebug() << m_runningSources.count() << "data sources are still being updated,"
+        qDebug() << m_runningSources.count() << "data sources are still being updated,"
                  << m_providers.count() << "providers used, abort and delete all providers";
         QStringList providerIds = m_providers.keys();
         foreach ( const QString &providerId, providerIds ) {
@@ -439,7 +440,7 @@ void PublicTransportEngine::slotSourceRemoved( const QString &sourceName )
                 }
             }
             if ( !isInstalled ) {
-                kDebug() << "Remove provider" << providerId;
+                qDebug() << "Remove provider" << providerId;
                 // Provider is not installed, remove it from the "ServiceProviders" data source
                 providersDataSource()->removeProvider( providerId );
                 removeData( sourceTypeKeyword(ServiceProvidersSource), providerId );
@@ -543,7 +544,7 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
             dataServiceProvider.insert( "featureNames",
                                         ServiceProviderGlobal::featureNames(features) );
         } else {
-            kDebug() << "No cached feature data was found for provider" << data.id();
+            qDebug() << "No cached feature data was found for provider" << data.id();
             // No cached feature data was found for the provider,
             // create the provider to get the feature list and store it in the cache
             bool newlyCreated;
@@ -781,7 +782,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
             }
 
             // Print information about loaded/erroneous providers
-            kDebug() << "Loaded" << loadedProviders.count() << "service providers";
+            qDebug() << "Loaded" << loadedProviders.count() << "service providers";
             if ( !m_erroneousProviders.isEmpty() ) {
                 kWarning() << "Erroneous service provider plugins, that could not be loaded:"
                            << m_erroneousProviders;
@@ -937,7 +938,7 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
         case Enums::ScriptedProvider:
             if ( !ServiceProviderScript::isTestResultUnchanged(providerId, cache) ) {
-                kDebug() << "Script changed" << providerId;
+                qDebug() << "Script changed" << providerId;
                 testData.setSubTypeTestStatus( ServiceProviderTestData::Pending );
                 testData.write( providerId, cache );
             }
@@ -957,9 +958,9 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
         // The XML structure of the provider plugin .pts file is marked as failed in the cache
         // Cannot add provider data to data sources, the file needs to be fixed first
         kWarning() << "Provider plugin" << providerId << "is invalid.";
-        kDebug() << "Fix the provider file at" << ServiceProviderGlobal::fileNameFromId(providerId);
-        kDebug() << testData.errorMessage();
-        kDebug() << "************************************";
+        qDebug() << "Fix the provider file at" << ServiceProviderGlobal::fileNameFromId(providerId);
+        qDebug() << testData.errorMessage();
+        qDebug() << "************************************";
 
         providerData->clear();
         *errorMessage = testData.errorMessage();
@@ -1138,7 +1139,7 @@ bool PublicTransportEngine::updateTimetableDataSource( const SourceRequestData &
         setData( data.name, dataSource->data() );
     } else if ( m_runningSources.contains(nonAmbiguousName) ) {
         // Source gets already processed
-        kDebug() << "Source already gets processed, please wait" << data.name;
+        qDebug() << "Source already gets processed, please wait" << data.name;
     } else if ( data.parseMode == ParseInvalid || !data.request ) {
         kWarning() << "Invalid source" << data.name;
         return false;
@@ -1236,7 +1237,7 @@ bool PublicTransportEngine::requestAdditionalData( const QString &sourceName,
                 QString("Additional data is already included for item %1").arg(itemNumber) );
         return false;
     } else if ( additionalDataState == QLatin1String("busy") ) {
-        kDebug() << "Additional data for item" << itemNumber << "already requested, please wait";
+        qDebug() << "Additional data for item" << itemNumber << "already requested, please wait";
         emit additionalDataRequestFinished( sourceName, itemNumber, false,
                 QString("Additional data was already requested for item %1, please wait")
                 .arg(itemNumber) );
@@ -1290,7 +1291,7 @@ QString PublicTransportEngine::fixProviderId( const QString &providerId )
 
     // Extract service provider ID from filename
     const QString defaultProviderId = ServiceProviderGlobal::idFromFileName( filePath );
-    kDebug() << "No service provider ID given, using the default one for country"
+    qDebug() << "No service provider ID given, using the default one for country"
              << country << "which is" << defaultProviderId;
     return defaultProviderId;
 }
@@ -1449,7 +1450,7 @@ void PublicTransportEngine::deleteProvider( const QString &providerId,
 
 void PublicTransportEngine::reloadChangedProviders()
 {
-    kDebug() << "Reload service providers (the service provider dir changed)";
+    qDebug() << "Reload service providers (the service provider dir changed)";
 
     delete m_providerUpdateDelayTimer;
     m_providerUpdateDelayTimer = 0;
@@ -1823,7 +1824,7 @@ bool PublicTransportEngine::requestOrUpdateSourceEvent( const SourceRequestData 
 
     case InvalidSourceName:
     default:
-        kDebug() << "Source name incorrect" << sourceData.name;
+        qDebug() << "Source name incorrect" << sourceData.name;
         return false;
     }
 }
@@ -1918,7 +1919,7 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
     dataSource->setValue( itemKey, departuresData );
 
 //     if ( deleteDepartureInfos ) {
-//         kDebug() << "Delete" << items.count() << "departures/arrivals";
+//         qDebug() << "Delete" << items.count() << "departures/arrivals";
 //         qDeleteAll( departures );
 //     }
 
@@ -2293,7 +2294,7 @@ void PublicTransportEngine::requestFailed( ServiceProvider *provider,
         const QUrl &requestUrl, const AbstractRequest *request )
 {
     Q_UNUSED( provider );
-    kDebug() << errorCode << errorMessage << "- Requested URL:" << requestUrl;
+    qDebug() << errorCode << errorMessage << "- Requested URL:" << requestUrl;
 
     const AdditionalDataRequest *additionalDataRequest =
             dynamic_cast< const AdditionalDataRequest* >( request );
@@ -2374,7 +2375,7 @@ bool PublicTransportEngine::requestUpdate( const QString &sourceName )
     // Check if updates are blocked to prevent to many useless updates
     const QDateTime nextUpdateTime = sourceUpdateTime( dataSource, UpdateWasRequestedManually );
     if ( QDateTime::currentDateTime() < nextUpdateTime ) {
-        kDebug() << "Too early to update again, update request rejected" << nextUpdateTime;
+        qDebug() << "Too early to update again, update request rejected" << nextUpdateTime;
         emit updateRequestFinished( sourceName, false,
                 i18nc("@info", "Update request rejected, earliest update time: %1",
                       nextUpdateTime.toString()) );
@@ -2407,7 +2408,7 @@ bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
         return false;
     } else if ( m_runningSources.contains(nonAmbiguousName) ) {
         // The data source currently gets processed or updated, including requests for more items
-        kDebug() << "Source currently gets processed, please wait" << sourceName;
+        qDebug() << "Source currently gets processed, please wait" << sourceName;
         emit moreItemsRequestFinished( sourceName, direction, false,
                 i18nc("@info", "Source currently gets processed, please try again later") );
         return false;
@@ -2422,7 +2423,7 @@ bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
     }
 
     const SourceRequestData data( sourceName );
-    kDebug() << data.defaultParameter;
+    qDebug() << data.defaultParameter;
     const ProviderPointer provider = providerFromId( data.defaultParameter );
     if ( provider.isNull() ) {
         // Service provider couldn't be created, should only happen after provider updates,
@@ -2499,7 +2500,7 @@ bool PublicTransportEngine::request( const SourceRequestData &data )
     } else if ( provider->useSeparateCityValue() && data.request->city().isEmpty() &&
                 !dynamic_cast<StopsByGeoPositionRequest*>(data.request) )
     {
-        kDebug() << QString("Service provider %1 needs a separate city value. Add to source name "
+        qDebug() << QString("Service provider %1 needs a separate city value. Add to source name "
                             "'|city=X', where X stands for the city name.")
                     .arg( data.defaultParameter );
         return false; // Service provider needs a separate city value
@@ -2507,7 +2508,7 @@ bool PublicTransportEngine::request( const SourceRequestData &data )
                 (data.parseMode == ParseForJourneysByDepartureTime ||
                  data.parseMode == ParseForJourneysByArrivalTime) )
     {
-        kDebug() << QString("Service provider %1 doesn't support journey searches.")
+        qDebug() << QString("Service provider %1 doesn't support journey searches.")
                     .arg( data.defaultParameter );
         return false; // Service provider doesn't support journey searches
     }

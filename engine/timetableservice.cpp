@@ -22,11 +22,11 @@
 
 // KDE includes
 #include <Plasma/DataEngine>
-#include <KDebug>
 
 // Qt incluse
 #include <QMetaMethod>
 #include <qmath.h>
+#include <QDebug>
 
 RequestAdditionalDataJob::RequestAdditionalDataJob( Plasma::DataEngine *engine,
         const QString &destination, const QString &operation,

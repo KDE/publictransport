@@ -23,11 +23,11 @@
 #include "serviceproviderglobal.h"
 
 // KDE includes
-#include <KDebug>
 #include <KLocalizedString>
 
 // Qt includes
 #include <QTimer>
+#include <QDebug>
 
 DataSource::DataSource( const QString &dataSource ) : m_name(dataSource)
 {
@@ -203,7 +203,7 @@ void TimetableDataSource::cleanup()
             ++it;
         } else {
             // The cached additional data is for a no longer present timetable item, remove it
-            kDebug() << "Discard old additional data" << it.key();
+            qDebug() << "Discard old additional data" << it.key();
             it = m_additionalData.erase( it );
         }
     }

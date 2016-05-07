@@ -23,8 +23,8 @@
 // Own includes
 #include "global.h"
 
-// KDE includes
-#include <KDebug>
+// Qt includes
+#include <QDebug>
 
 PublicTransportInfo::PublicTransportInfo(QObject* parent): QObject(parent)
 {
@@ -51,10 +51,10 @@ PublicTransportInfo::PublicTransportInfo( const QHash< Enums::TimetableInformati
         if ( !contains(Enums::DepartureDate) && contains(Enums::DepartureTime) ) {
             QTime departureTime = value( Enums::DepartureTime ).toTime();
             if ( departureTime < QTime::currentTime().addSecs(-5 * 60) ) {
-                kDebug() << "Guessed DepartureDate as tomorrow";
+                qDebug() << "Guessed DepartureDate as tomorrow";
                 insert( Enums::DepartureDate, QDate::currentDate().addDays(1) );
             } else {
-                kDebug() << "Guessed DepartureDate as today";
+                qDebug() << "Guessed DepartureDate as today";
                 insert( Enums::DepartureDate, QDate::currentDate() );
             }
         }
@@ -69,17 +69,17 @@ PublicTransportInfo::PublicTransportInfo( const QHash< Enums::TimetableInformati
                 if ( contains(Enums::DepartureDate) ) {
                     date = value( Enums::DepartureDate ).toDate();
                 } else if ( time < QTime::currentTime().addSecs(-5 * 60) ) {
-                    kDebug() << "Guessed DepartureDate as tomorrow";
+                    qDebug() << "Guessed DepartureDate as tomorrow";
                     date = QDate::currentDate().addDays( 1 );
                 } else {
-                    kDebug() << "Guessed DepartureDate as today";
+                    qDebug() << "Guessed DepartureDate as today";
                     date = QDate::currentDate();
                 }
                 insert( Enums::DepartureDateTime, QDateTime(date, time) );
                 remove( Enums::DepartureDate );
                 remove( Enums::DepartureTime );
             } else {
-                kDebug() << "No DepartureDateTime or DepartureTime information given";
+                qDebug() << "No DepartureDateTime or DepartureTime information given";
             }
         }
     }
@@ -230,7 +230,7 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
             QDateTime arrival( value(Enums::ArrivalDate).toDate(), value(Enums::ArrivalTime).toTime() );
             int minsDuration = departure.secsTo( arrival ) / 60;
             if ( minsDuration < 0 ) {
-                kDebug() << "Calculated duration is negative" << minsDuration
+                qDebug() << "Calculated duration is negative" << minsDuration
                         << "departure" << departure << "arrival" << arrival;
                 insert( Enums::Duration, -1 );
             } else {
@@ -246,10 +246,10 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
                 if ( contains(Enums::ArrivalDate) ) {
                     date = value( Enums::ArrivalDate ).toDate();
                 } else if ( time < QTime::currentTime().addSecs(-5 * 60) ) {
-                    kDebug() << "Guessed ArrivalDate as tomorrow";
+                    qDebug() << "Guessed ArrivalDate as tomorrow";
                     date = QDate::currentDate().addDays( 1 );
                 } else {
-                    kDebug() << "Guessed ArrivalDate as today";
+                    qDebug() << "Guessed ArrivalDate as today";
                     date = QDate::currentDate();
                 }
                 insert( Enums::ArrivalDateTime, QDateTime(date, time) );
@@ -319,7 +319,7 @@ DepartureInfo::DepartureInfo( const TimetableData &data, Corrections corrections
                          value(Enums::RouteTimes).toList().count();
         if ( difference > 0 ) {
             // More route stops than times, add invalid times
-            kDebug() << "The script stored" << difference << "more route stops than route times "
+            qDebug() << "The script stored" << difference << "more route stops than route times "
                         "for a departure, invalid route times will be added";
             QVariantList routeTimes = value( Enums::RouteTimes ).toList();
             while ( difference > 0 ) {
@@ -328,7 +328,7 @@ DepartureInfo::DepartureInfo( const TimetableData &data, Corrections corrections
             }
         } else {
             // More route times than stops, add empty stops
-            kDebug() << "The script stored" << -difference << "more route times than route "
+            qDebug() << "The script stored" << -difference << "more route times than route "
                         "stops for a departure, empty route stops will be added";
             QStringList routeStops = value( Enums::RouteStops ).toStringList();
             while ( difference < 0 ) {

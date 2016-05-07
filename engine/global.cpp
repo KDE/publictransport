@@ -21,11 +21,11 @@
 #include "global.h"
 
 // KDE includes
-#include <KDebug>
 #include <KLocalizedString>
 
 // Qt includes
 #include <QRegExp>
+#include <QDebug>
 #include <QTextCodec>
 
 Enums::VehicleType Global::vehicleTypeFromString( QString sVehicleType )
@@ -242,7 +242,7 @@ Enums::TimetableInformation Global::timetableInformationFromString(
     } else if ( sInfo == QLatin1String("requestdata") ) {
         return Enums::RequestData;
     } else {
-        kDebug() << sTimetableInformation
+        qDebug() << sTimetableInformation
                  << "is an unknown timetable information value! Assuming value Nothing.";
         return Enums::Nothing;
     }
@@ -404,7 +404,7 @@ QString Global::decodeHtml( const QByteArray& document, const QByteArray& fallba
         if ( !fallbackCharset.isEmpty() ) {
             textCodec = QTextCodec::codecForName( fallbackCharset );
             if ( !textCodec ) {
-                kDebug() << "Fallback charset" << fallbackCharset << "not found! Using utf8 now.";
+                qDebug() << "Fallback charset" << fallbackCharset << "not found! Using utf8 now.";
                 textCodec = QTextCodec::codecForName( "UTF-8" );
             }
         } else {
@@ -415,7 +415,7 @@ QString Global::decodeHtml( const QByteArray& document, const QByteArray& fallba
             if ( rxCharset.indexIn(sDocument) != -1 ) {
                 textCodec = QTextCodec::codecForName( rxCharset.cap(1).trimmed().toUtf8() );
             } else {
-                kDebug() << "No fallback charset specified and manual codec search failed, using utf8";
+                qDebug() << "No fallback charset specified and manual codec search failed, using utf8";
                 textCodec = QTextCodec::codecForName( "UTF-8" );
             }
         }
@@ -428,7 +428,7 @@ QString Global::decode( const QByteArray &document, const QByteArray &charset )
     if ( !charset.isEmpty() ) {
         QTextCodec *textCodec = QTextCodec::codecForName( charset );
         if ( !textCodec ) {
-            kDebug() << "Charset" << charset << "not found! Using utf8 now.";
+            qDebug() << "Charset" << charset << "not found! Using utf8 now.";
             textCodec = QTextCodec::codecForName( "UTF-8" );
         }
 
