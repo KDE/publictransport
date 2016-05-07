@@ -527,7 +527,7 @@ public:
 
         Project::GtfsDatabaseState state;
         if ( !GtfsDatabase::initDatabase(data()->id(), &gtfsDatabaseErrorString) ) {
-            kWarning() << "Error initializing the database" << gtfsDatabaseErrorString;
+            qWarning() << "Error initializing the database" << gtfsDatabaseErrorString;
             state = Project::GtfsDatabaseError;
         } else if ( gtfsGroup.readEntry("feedImportFinished", false) ) {
             state = Project::GtfsDatabaseImportFinished;
@@ -589,7 +589,7 @@ public:
         }
 
         if ( isModified() ) {
-            kWarning() << "Loading another project, discarding changes in the previously "
+            qWarning() << "Loading another project, discarding changes in the previously "
                           "loaded project";
         }
 
@@ -875,7 +875,7 @@ public:
             default:
                 // Do not create sub class instance for unknown types,
                 // this leads to eg. empty feature lists being inserted into the upload dialog
-                kWarning() << "Unknown provider type" << readData->type();
+                qWarning() << "Unknown provider type" << readData->type();
                 provider = new ServiceProvider( readData, q );
                 break;
             }
@@ -1077,7 +1077,7 @@ public:
             return;
         }
         if ( !scriptTab ) {
-            kWarning() << "No script tab created";
+            qWarning() << "No script tab created";
             return;
         }
 
@@ -1339,7 +1339,7 @@ public:
             dontAskAgainName = "make_project_active_for_debugging";
             break;
         default:
-            kWarning() << "Unknown project activation reason";
+            qWarning() << "Unknown project activation reason";
             return false;
         }
 
@@ -1417,7 +1417,7 @@ public:
         Q_Q( Project );
         if ( isTestRunning() ) {
             // Test is already running
-            kWarning() << "Test is already running" << data()->id();
+            qWarning() << "Test is already running" << data()->id();
             return true;
         }
 
@@ -1496,7 +1496,7 @@ public:
                                         KMessageWidget::Information, 4000 );
             break;
         default:
-            kWarning() << "Unexpected test state" << state;
+            qWarning() << "Unexpected test state" << state;
             break;
         }
         q->emit testRunningChanged( false );
@@ -1687,7 +1687,7 @@ public:
         case TestModel::ArrivalTest:
             if ( test == TestModel::ArrivalTest ) {
                 if ( !isTestFinishedOrPending(TestModel::FeaturesTest) ) {
-                    kWarning() << "First start the features test";
+                    qWarning() << "First start the features test";
                     return false;
                 }
                 if ( !hasFeature(test, Enums::ProvidesArrivals) ) {
@@ -1705,7 +1705,7 @@ public:
             break;
         case TestModel::AdditionalDataTest: {
             if ( !isTestFinishedOrPending(TestModel::DepartureTest) ) {
-                kWarning() << "First start the departure test";
+                qWarning() << "First start the departure test";
                 return false;
             }
 
@@ -1730,7 +1730,7 @@ public:
         case TestModel::StopsByGeoPositionTest:
             if ( test == TestModel::StopsByGeoPositionTest ) {
                 if ( !isTestFinishedOrPending(TestModel::FeaturesTest) ) {
-                    kWarning() << "First start the features test";
+                    qWarning() << "First start the features test";
                     return false;
                 }
                 if ( !hasFeature(test, Enums::ProvidesStopsByGeoPosition) ) {
@@ -1769,7 +1769,7 @@ public:
         case TestModel::LoadScriptTest:
             break;
         default:
-            kWarning() << "Invalid test" << test;
+            qWarning() << "Invalid test" << test;
             testFinished( test );
             return false;
         }
@@ -1896,7 +1896,7 @@ public:
                             data()->sampleCity() );
                     break;
                 default:
-                    kWarning() << "Invalid test" << test;
+                    qWarning() << "Invalid test" << test;
                     testFinished( test );
                     return false;
                 }
@@ -2004,7 +2004,7 @@ public:
         }
 
         default:
-            kWarning() << "Unknown GTFS test" << test;
+            qWarning() << "Unknown GTFS test" << test;
             return false;
         }
     };
@@ -2062,7 +2062,7 @@ public:
 #endif
 
         default:
-            kWarning() << "Unknown test" << test;
+            qWarning() << "Unknown test" << test;
             success = false;
             break;
         }
@@ -2363,7 +2363,7 @@ public:
         const QList< TimetableData > featuresResults =
                 testModel->testResults( TestModel::FeaturesTest );
         if ( featuresResults.isEmpty() ) {
-            kWarning() << "No results in features test";
+            qWarning() << "No results in features test";
             QStringList featureStrings;
             foreach ( Enums::ProviderFeature feature, features ) {
                 featureStrings << Enums::toString( feature );
@@ -2593,7 +2593,7 @@ Project::~Project()
 {
     Q_D( Project );
     if ( isModified() ) {
-        kWarning() << "Destroying project with modifications";
+        qWarning() << "Destroying project with modifications";
     }
 
 #ifdef BUILD_PROVIDER_TYPE_GTFS
@@ -3022,7 +3022,7 @@ const char *Project::projectActionName( Project::ProjectAction actionType )
 #endif
 
     default:
-        kWarning() << "Unknown project action" << actionType;
+        qWarning() << "Unknown project action" << actionType;
         return "";
     }
 }
@@ -3459,7 +3459,7 @@ void Project::connectProjectAction( Project::ProjectAction actionType, QAction *
 #endif
 
     default:
-        kWarning() << "Unknown project action" << actionType;
+        qWarning() << "Unknown project action" << actionType;
         return;
     }
 }
@@ -3523,7 +3523,7 @@ QString Project::projectActionText( Project::ProjectAction actionType, const QVa
     case RunSpecificTest: {
         TestModel::Test test = static_cast< TestModel::Test >( data.toInt() );
         if ( test == TestModel::InvalidTest ) {
-            kWarning() << "No test specified for project action RunSpecificTest";
+            qWarning() << "No test specified for project action RunSpecificTest";
             return QString();
         }
         return i18nc("@action", "Run %1", TestModel::nameForTest(test));
@@ -3533,7 +3533,7 @@ QString Project::projectActionText( Project::ProjectAction actionType, const QVa
     case SpecificTestCaseMenuAction: {
         TestModel::TestCase testCase = static_cast< TestModel::TestCase >( data.toInt() );
         if ( testCase == TestModel::InvalidTestCase ) {
-            kWarning() << "No test case specified for project action SpecificTestCaseMenuAction";
+            qWarning() << "No test case specified for project action SpecificTestCaseMenuAction";
             return QString();
         }
 
@@ -3705,7 +3705,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
     case RunSpecificTest: {
         TestModel::Test test = static_cast< TestModel::Test >( data.toInt() );
         if ( test == TestModel::InvalidTest ) {
-            kWarning() << "No test specified for project action RunSpecificTest";
+            qWarning() << "No test specified for project action RunSpecificTest";
             return 0;
         }
         action = new KAction( KIcon("arrow-right"), i18nc("@action:inmenu", "Run %1",
@@ -3715,7 +3715,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
     case RunSpecificTestCase: {
         TestModel::TestCase testCase = static_cast< TestModel::TestCase >( data.toInt() );
         if ( testCase == TestModel::InvalidTestCase ) {
-            kWarning() << "No test case specified for project action RunSpecificTestCase";
+            qWarning() << "No test case specified for project action RunSpecificTestCase";
             return 0;
         }
         action = new KAction( KIcon("arrow-right-double"),
@@ -3725,7 +3725,7 @@ QAction *Project::createProjectAction( Project::ProjectAction actionType, const 
     case SpecificTestCaseMenuAction: {
         TestModel::TestCase testCase = static_cast< TestModel::TestCase >( data.toInt() );
         if ( testCase == TestModel::InvalidTestCase ) {
-            kWarning() << "No test case specified for project action SpecificTestCaseMenuAction";
+            qWarning() << "No test case specified for project action SpecificTestCaseMenuAction";
             return 0;
         }
 
@@ -3935,7 +3935,7 @@ ScriptTab *Project::showScriptTab( QWidget *parent )
                      this, SLOT(scriptSaved()) );
             emit tabOpenRequest( d->scriptTab );
         } else {
-            kWarning() << "Could not create script tab";
+            qWarning() << "Could not create script tab";
         }
     }
     return d->scriptTab;
@@ -4177,7 +4177,7 @@ QList< Project::ProjectAction > Project::actionsFromGroup( Project::ProjectActio
 #endif
     case InvalidProjectActionGroup:
     default:
-        kWarning() << "Invalid group" << group;
+        qWarning() << "Invalid group" << group;
         break;
     }
     return actionTypes;
@@ -4320,7 +4320,7 @@ void Project::importGtfsFeed()
 
     d->updateGtfsDatabaseState();
     if ( d->gtfsDatabaseState == GtfsDatabaseError ) {
-        kWarning() << "Cannot import GTFS feed" << d->gtfsDatabaseErrorString;
+        qWarning() << "Cannot import GTFS feed" << d->gtfsDatabaseErrorString;
         return;
     }
 
@@ -4347,7 +4347,7 @@ void Project::updateGtfsDatabase()
 
     d->updateGtfsDatabaseState();
     if ( d->gtfsDatabaseState == GtfsDatabaseError ) {
-        kWarning() << "Cannot update GTFS feed" << d->gtfsDatabaseErrorString;
+        qWarning() << "Cannot update GTFS feed" << d->gtfsDatabaseErrorString;
         return;
     }
 
@@ -4374,7 +4374,7 @@ void Project::deleteGtfsDatabase()
 
     d->updateGtfsDatabaseState();
     if ( d->gtfsDatabaseState != GtfsDatabaseImportFinished ) {
-        kWarning() << "Cannot delete GTFS feed" << d->gtfsDatabaseErrorString;
+        qWarning() << "Cannot delete GTFS feed" << d->gtfsDatabaseErrorString;
         return;
     }
 
@@ -4618,7 +4618,7 @@ void Project::testJobStarted( TestModel::Test test, JobType type, const QString 
     Q_D( Project );
     QMutexLocker locker( d->mutex );
     if ( test == TestModel::InvalidTest ) {
-        kWarning() << "Unknown test job was started";
+        qWarning() << "Unknown test job was started";
         return;
     }
 
@@ -4637,7 +4637,7 @@ void Project::testJobDone( TestModel::Test test, JobType type, const QString &us
     Q_D( Project );
     QMutexLocker locker( d->mutex );
     if ( test == TestModel::InvalidTest ) {
-        kWarning() << "Unknown test" << test;
+        qWarning() << "Unknown test" << test;
     } else {
         d->pendingTests.remove( test );
     }
@@ -4708,7 +4708,7 @@ void Project::jobDone( JobType type, const QString &useCase, const QString &obje
     }
     TestModel::Test test = testFromObjectName( objectName );
     if ( test == TestModel::InvalidTest && type == Debugger::LoadScript && d->isTestRunning() ) {
-        kWarning() << "LoadScriptJob done while testing without objectName set to TEST_LOAD";
+        qWarning() << "LoadScriptJob done while testing without objectName set to TEST_LOAD";
         test = TestModel::LoadScriptTest;
     }
 
@@ -5372,7 +5372,7 @@ AbstractTab *Project::tab( TabType type ) const
     case Tabs::PlasmaPreview:
         return plasmaPreviewTab();
     default:
-        kWarning() << "Unknown tab type" << type;
+        qWarning() << "Unknown tab type" << type;
         return 0;
     }
 }
@@ -5397,7 +5397,7 @@ AbstractTab *Project::showTab( TabType type, QWidget *parent )
     case Tabs::PlasmaPreview:
         return showPlasmaPreviewTab( parent );
     default:
-        kWarning() << "Unknown tab type" << type;
+        qWarning() << "Unknown tab type" << type;
         return 0;
     }
 }
@@ -5539,7 +5539,7 @@ ProjectSourceTab *Project::createProjectSourceTab( QWidget *parent )
     QMutexLocker locker( d->mutex );
 
     if ( d->projectSourceTab ) {
-        kWarning() << "Project source tab already created";
+        qWarning() << "Project source tab already created";
         return d->projectSourceTab;
     }
 
@@ -5586,7 +5586,7 @@ GtfsDatabaseTab *Project::createGtfsDatabaseTab( QWidget *parent )
     QMutexLocker locker( d->mutex );
 
     if ( d->gtfsDatabaseTab ) {
-        kWarning() << "GTFS database tab already created";
+        qWarning() << "GTFS database tab already created";
         return d->gtfsDatabaseTab;
     }
 
@@ -5620,7 +5620,7 @@ ScriptTab *Project::createScriptTab( QWidget *parent )
     Q_D( Project );
     QMutexLocker locker( d->mutex );
     if ( d->scriptTab ) {
-        kWarning() << "Script tab already created";
+        qWarning() << "Script tab already created";
         return d->scriptTab;
     }
 
@@ -5628,7 +5628,7 @@ ScriptTab *Project::createScriptTab( QWidget *parent )
     parent = d->parentWidget( parent );
     d->scriptTab = ScriptTab::create( this, parent );
     if ( !d->scriptTab ) {
-        kWarning() << "Service katepart.desktop not found";
+        qWarning() << "Service katepart.desktop not found";
         d->errorHappened( KatePartError, i18nc("@info", "Service katepart.desktop not found") );
         return 0;
     }
@@ -5668,7 +5668,7 @@ ScriptTab *Project::createExternalScriptTab( const QString &filePath, QWidget *p
     QMutexLocker locker( d->mutex );
     foreach ( ScriptTab *externalScriptTab, d->externalScriptTabs ) {
         if ( externalScriptTab->fileName() == filePath ) {
-            kWarning() << "Script tab already created";
+            qWarning() << "Script tab already created";
             return externalScriptTab;
         }
     }
@@ -6016,7 +6016,7 @@ Project::ScriptTemplateType Project::getScriptTemplateTypeInput( QWidget *parent
     } else if( selectedTemplate == 3 ) {
         return ScriptPythonTemplate;
     } else {
-        kWarning() << "Unexpected script type" << scriptType;
+        qWarning() << "Unexpected script type" << scriptType;
         return NoScriptTemplate;
     }
 }
@@ -6254,7 +6254,7 @@ void Project::publish()
     KTemporaryFile previewImageFile;
     previewImageFile.setSuffix( ".png" );
     if ( !previewImageFile.open() ) {
-        kWarning() << "Could not open temporary file to write Plasma preview image";
+        qWarning() << "Could not open temporary file to write Plasma preview image";
     } else {
         QPixmap previewPixmap = renderAppletPreview();
         if ( !previewPixmap.isNull() ) {
@@ -6312,7 +6312,7 @@ void Project::publish()
                           QFileInfo(d->data()->scriptFileName()).fileName() );
         break;
     default:
-        kWarning() << "Invalid provider" << d->data()->type();
+        qWarning() << "Invalid provider" << d->data()->type();
         break;
     }
 
@@ -6368,7 +6368,7 @@ void Project::publish()
         }
         break;
     default:
-        kWarning() << "Unknown provider type" << d->data()->type();
+        qWarning() << "Unknown provider type" << d->data()->type();
         break;
     }
 

@@ -95,7 +95,7 @@ QString JavaScriptParser::Token::whitespacesBetween( const JavaScriptParser::Tok
                                                      const JavaScriptParser::Token* token2 )
 {
     if ( !token1 || !token2 ) {
-        kWarning() << "Null token given" << token1 << token2;
+        qWarning() << "Null token given" << token1 << token2;
         return QString();
     }
 
@@ -650,7 +650,7 @@ BlockNode::Ptr JavaScriptParser::parseBlock()
                 || (!hasError() && (node = parseBlock())) )
             {
                 if ( !atEnd() && previousToken == currentToken() ) {
-                    kWarning() << "JavaScript parser locked down at line" << previousToken->line
+                    qWarning() << "JavaScript parser locked down at line" << previousToken->line
                                << "at token" << previousToken->text;
                     m_error = InternalParserError;
                     m_errorLine = node->line();

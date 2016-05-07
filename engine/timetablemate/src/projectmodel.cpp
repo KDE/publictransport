@@ -177,7 +177,7 @@ QString ProjectModelItem::text() const
     case ProjectModelItem::WebItem:
         return i18nc("@info/plain", "Service Provider Home Page");
     default:
-        kWarning() << "Unknown project item type" << m_type;
+        qWarning() << "Unknown project item type" << m_type;
         return QString();
     }
 }
@@ -210,7 +210,7 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
             case ProjectModelItem::WebItem:
                 return KIcon("text-html");
             default:
-                kWarning() << "Unknown project item type" << projectItem->type();
+                qWarning() << "Unknown project item type" << projectItem->type();
                 break;
             }
             break;
@@ -252,7 +252,7 @@ QVariant ProjectModel::data( const QModelIndex &index, int role ) const
                     return project->provider()->data()->url();
                 }
             default:
-                kWarning() << "Unknown project item type" << projectItem->type();
+                qWarning() << "Unknown project item type" << projectItem->type();
                 break;
             }
             break;
@@ -712,7 +712,7 @@ void ProjectModel::setAsActiveProjectRequest()
     if ( project ) {
         setActiveProject( project );
     } else {
-        kWarning() << "Slot setAsActiveProjectRequest() not called from Project";
+        qWarning() << "Slot setAsActiveProjectRequest() not called from Project";
     }
 }
 
@@ -904,7 +904,7 @@ ProjectModelItem *ProjectModel::projectItemChildFromProject( Project *project,
     }
 
     // Not found
-    kWarning() << "Project" << project->data()->id() << "has no child of type" << type;
+    qWarning() << "Project" << project->data()->id() << "has no child of type" << type;
     return 0;
 }
 

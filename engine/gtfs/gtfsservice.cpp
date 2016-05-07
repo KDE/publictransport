@@ -113,7 +113,7 @@ bool AbstractGtfsDatabaseJob::canImportGtfsFeed()
     // If an import is already running for the provider, the operation cannot be executed now,
     // only updateGtfsFeedInfo can be executed while importing a GTFS feed
     if ( !m_canAccessGtfsDatabase ) {
-        kWarning() << "The GTFS feed already gets imported";
+        qWarning() << "The GTFS feed already gets imported";
         return false;
     }
 
@@ -583,7 +583,7 @@ void ImportGtfsToDatabaseJob::importerFinished(
 {
     // Remove temporary file
     if ( m_importer && !QFile::remove(m_importer->sourceFileName()) ) {
-        kWarning() << "Could not remove the temporary GTFS feed file";
+        qWarning() << "Could not remove the temporary GTFS feed file";
     }
 
     // Update 'feedImportFinished' field in the cache
@@ -646,7 +646,7 @@ Plasma::ServiceJob* GtfsService::createJob(
     // Check if a valid provider ID is available in the parameters
     const QString providerId = parameters["serviceProviderId"].toString();
     if ( providerId.isEmpty() ) {
-        kWarning() << "No 'serviceProviderId' parameter given to GTFS service operation";
+        qWarning() << "No 'serviceProviderId' parameter given to GTFS service operation";
         return 0;
     }
 
@@ -670,7 +670,7 @@ Plasma::ServiceJob* GtfsService::createJob(
         updateFeedInfoJob->setOnlyGetInformation( true );
         return updateFeedInfoJob;
     } else {
-        kWarning() << "Operation" << operation << "not supported";
+        qWarning() << "Operation" << operation << "not supported";
         return 0;
     }
 }

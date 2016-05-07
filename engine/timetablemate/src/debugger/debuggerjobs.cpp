@@ -395,13 +395,13 @@ void DebuggerJob::destroyAgent()
 
     m_mutex->lock();
     if ( !m_stoppedSignalWasProcessed ) {
-        kWarning() << "No stopped() signal was processed, aborted?";
+        qWarning() << "No stopped() signal was processed, aborted?";
         setJobDone( true );
         m_agent->engine()->abortEvaluation();
     }
     DEBUG_JOBS( "Destroying agent" << m_data.provider.id() << agent << engine );
     if ( engine->isEvaluating() ) {
-        kWarning() << "Still evaluating..." << engine;
+        qWarning() << "Still evaluating..." << engine;
     }
     m_agent = 0;
     engine->setAgent( 0 );
@@ -1005,7 +1005,7 @@ void DebuggerJob::debugStepInto( int repeat )
     if ( m_agent ) {
         m_agent->debugStepInto( repeat );
     } else {
-        kWarning() << "Debugger already deleted";
+        qWarning() << "Debugger already deleted";
     }
 }
 
@@ -1015,7 +1015,7 @@ void DebuggerJob::abortDebugger()
     if ( m_agent ) {
         m_agent->abortDebugger();
     } else {
-        kWarning() << "Debugger already deleted";
+        qWarning() << "Debugger already deleted";
     }
 }
 
@@ -1025,7 +1025,7 @@ void DebuggerJob::addBreakpoint( const Breakpoint &breakpoint )
     if ( m_agent ) {
         m_agent->addBreakpoint( breakpoint );
     } else {
-        kWarning() << "Debugger already deleted";
+        qWarning() << "Debugger already deleted";
     }
 }
 
@@ -1043,7 +1043,7 @@ void DebuggerJob::debugContinue()
     if ( m_agent ) {
         m_agent->debugContinue();
     } else {
-        kWarning() << "Debugger already deleted";
+        qWarning() << "Debugger already deleted";
     }
 }
 
@@ -1053,7 +1053,7 @@ void DebuggerJob::debugInterrupt()
     if ( m_agent ) {
         m_agent->debugInterrupt();
     } else {
-        kWarning() << "Debugger already deleted";
+        qWarning() << "Debugger already deleted";
     }
 }
 
@@ -1063,7 +1063,7 @@ void DebuggerJob::debugRunUntilLineNumber( const QString &fileName, int lineNumb
     if ( m_agent ) {
         m_agent->debugRunUntilLineNumber( fileName, lineNumber );
     } else {
-        kWarning() << "Debugger already deleted";
+        qWarning() << "Debugger already deleted";
     }
 }
 
@@ -1073,7 +1073,7 @@ void DebuggerJob::debugStepOut( int repeat )
     if ( m_agent ) {
         m_agent->debugStepOut( repeat );
     } else {
-        kWarning() << "Debugger already deleted";
+        qWarning() << "Debugger already deleted";
     }
 }
 
@@ -1083,7 +1083,7 @@ void DebuggerJob::debugStepOver( int repeat )
     if ( m_agent ) {
         m_agent->debugStepOver( repeat );
     } else {
-        kWarning() << "Debugger already deleted";
+        qWarning() << "Debugger already deleted";
     }
 }
 
@@ -1093,7 +1093,7 @@ void DebuggerJob::removeBreakpoint( const Breakpoint &breakpoint )
     if ( m_agent ) {
         m_agent->removeBreakpoint( breakpoint );
     } else {
-        kWarning() << "Debugger already deleted";
+        qWarning() << "Debugger already deleted";
     }
 }
 

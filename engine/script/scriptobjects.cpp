@@ -140,7 +140,7 @@ bool ScriptObjects::attachToEngine( QScriptEngine *engine, const ScriptData &dat
     }
 
     if ( engine->isEvaluating() ) {
-        kWarning() << "Cannot attach objects while evaluating";
+        qWarning() << "Cannot attach objects while evaluating";
         return false;
     }
 

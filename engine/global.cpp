@@ -160,10 +160,10 @@ Enums::TimetableInformation Global::timetableInformationFromString(
     } else if ( sInfo == QLatin1String("journeynews") ) {
         return Enums::JourneyNews;
     } else if ( sInfo == QLatin1String("journeynewsother") ) { // DEPRECATED
-        kWarning() << "JourneyNewsOther is deprecated, use JourneyNews instead";
+        qWarning() << "JourneyNewsOther is deprecated, use JourneyNews instead";
         return Enums::JourneyNewsOther;
     } else if ( sInfo == QLatin1String("journeynewslink") ) { // DEPRECATED
-        kWarning() << "JourneyNewsLink is deprecated, use JourneyNewsUrl instead";
+        qWarning() << "JourneyNewsLink is deprecated, use JourneyNewsUrl instead";
         return Enums::JourneyNewsUrl;
     } else if ( sInfo == QLatin1String("journeynewsurl") ) {
         return Enums::JourneyNewsUrl;

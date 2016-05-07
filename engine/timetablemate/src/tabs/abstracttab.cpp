@@ -74,7 +74,7 @@ AbstractTab::AbstractTab( Project *project, TabType type, QWidget *parent )
 AbstractTab::~AbstractTab()
 {
     if ( isModified() ) {
-        kWarning() << "Destroying tab with modifications";
+        qWarning() << "Destroying tab with modifications";
     }
 }
 
@@ -112,7 +112,7 @@ KTextEditor::Document *AbstractDocumentTab::createDocument( QWidget *parent )
 {
     KService::Ptr service = KService::serviceByStorageId( "katepart" );
     if ( !service ) {
-        kWarning() << "Could not find the kate part";
+        qWarning() << "Could not find the kate part";
         return 0;
     }
 
@@ -127,7 +127,7 @@ KTextEditor::View *AbstractDocumentTab::defaultView()
     m_document->widget();
 
     if ( m_document->views().isEmpty() ) {
-        kWarning() << "No view created";
+        qWarning() << "No view created";
         return m_document->createView( this );
     } else {
         return m_document->views().first();

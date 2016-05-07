@@ -299,7 +299,7 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
                     "tried ScriptedProvider and GtfsProvider";
     #endif
 #endif
-        kWarning() << "No provider type in the provider plugin file, using default type"
+        qWarning() << "No provider type in the provider plugin file, using default type"
                    << ServiceProviderGlobal::typeName(serviceProviderType);
     }
 
@@ -408,7 +408,7 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
     }
 
     if ( url.isEmpty() ) {
-        kWarning() << "No <url> tag in service provider plugin XML";
+        qWarning() << "No <url> tag in service provider plugin XML";
     }
 
     serviceProviderData->setNames( names );

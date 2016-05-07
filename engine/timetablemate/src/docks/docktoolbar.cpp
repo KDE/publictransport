@@ -266,7 +266,7 @@ DockToolButtonAction *DockToolBar::actionForDockWidget( QDockWidget *dockWidget 
                 return dockAction;
             }
         } else {
-            kWarning() << "Wrong action type in DockToolBar" << action;
+            qWarning() << "Wrong action type in DockToolBar" << action;
         }
     }
 

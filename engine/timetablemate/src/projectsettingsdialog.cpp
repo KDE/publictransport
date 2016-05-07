@@ -441,7 +441,7 @@ TestModel::Test testFromWidget( Ui::timetablemateview_base *ui, QWidget *widget 
     } else if ( widget == ui->description ) {
         return TestModel::ServiceProviderDataDescriptionTest;
     } else {
-        kWarning() << "Unknown widget";
+        qWarning() << "Unknown widget";
         return TestModel::InvalidTest;
     }
 }
@@ -463,7 +463,7 @@ bool ProjectSettingsDialog::testWidget( QWidget *widget )
         if ( richText ) {
             text = richText->textOrHtml();
         } else {
-            kWarning() << "Unknown widget type";
+            qWarning() << "Unknown widget type";
             return false;
         }
     }
@@ -485,7 +485,7 @@ void ProjectSettingsDialog::appendMessageWidgetAfter( QWidget *after, const QStr
         QWidget *tab = ui_provider->tabWidget->currentWidget();
         after = tab->layout()->itemAt( tab->layout()->count() - 1 )->widget();
         if ( !after ) {
-            kWarning() << "Could not find last widget in current tab to show this error message:"
+            qWarning() << "Could not find last widget in current tab to show this error message:"
                        << errorMessage;
             return;
         }
@@ -791,7 +791,7 @@ void ProjectSettingsDialog::createScriptFile()
     } else if( scriptType == QLatin1String("Python") ) {
         m_newScriptTemplateType = Project::ScriptPythonTemplate;
     } else {
-        kWarning() << "Unexpected script type" << scriptType;
+        qWarning() << "Unexpected script type" << scriptType;
         return;
     }
 

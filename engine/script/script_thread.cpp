@@ -475,7 +475,7 @@ QScriptValue include( QScriptContext *context, QScriptEngine *engine )
     QStringList includedFiles =
             engine->globalObject().property( "includedFiles" ).toVariant().toStringList();
     if ( includedFiles.contains(filePath) ) {
-        kWarning() << "File already included" << filePath;
+        qWarning() << "File already included" << filePath;
         return engine->undefinedValue();
     }
 
@@ -657,7 +657,7 @@ void ScriptJob::publish()
         }
         case ParseForAdditionalData: {
             if ( data.count() > 1 ) {
-                kWarning() << "The script added more than one result in an additional data request";
+                qWarning() << "The script added more than one result in an additional data request";
                 kDebug() << "All received additional data for item"
                          << dynamic_cast<const AdditionalDataRequest*>(_request)->itemNumber()
                          << ':' << data;
@@ -672,7 +672,7 @@ void ScriptJob::publish()
             // Additional data gets requested per timetable item, only one result expected
             const TimetableData additionalData = data.first();
             if ( additionalData.isEmpty() ) {
-                kWarning() << "Did not find any additional data.";
+                qWarning() << "Did not find any additional data.";
                 m_errorString = i18nc("@info/plain", "TODO."); // TODO
                 m_success = false;
                 cleanup();

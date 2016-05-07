@@ -107,7 +107,7 @@ void ServiceProviderScript::abortAllRequests()
         // The job has finished or the timeout was reached
         if ( !job->isFinished() ) {
             // The job is still not finished, the timeout was reached before
-            kWarning() << "Job not aborted before timeout, delete it" << job;
+            qWarning() << "Job not aborted before timeout, delete it" << job;
         }
         job->deleteLater();
     }
@@ -242,7 +242,7 @@ QList<Enums::ProviderFeature> ServiceProviderScript::readScriptFeatures(
             // The stored feature list only contains valid strings
             return features;
         } else {
-            kWarning() << "Invalid feature string stored for provider" << m_data->id();
+            qWarning() << "Invalid feature string stored for provider" << m_data->id();
         }
     }
 
@@ -566,7 +566,7 @@ void ServiceProviderScript::jobStarted( ThreadWeaver::Job* job )
     if ( !qobject_cast<AdditionalDataJob*>(scriptJob) &&
          m_publishedData.contains(sourceName) && !m_publishedData[sourceName].isEmpty() )
     {
-        kWarning() << "Data source already exists for job" << scriptJob << sourceName;
+        qWarning() << "Data source already exists for job" << scriptJob << sourceName;
     }
 }
 

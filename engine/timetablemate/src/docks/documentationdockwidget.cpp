@@ -93,7 +93,7 @@ void DocumentationDockWidget::showDocumentation( const QString &key )
 {
     const int pos = key.indexOf( '|' );
     if ( pos == -1 ) {
-        kWarning() << "Invalid documentation key:" << key;
+        qWarning() << "Invalid documentation key:" << key;
         return;
     }
     QString className = key.left( pos ).toLower();
@@ -110,7 +110,7 @@ void DocumentationDockWidget::showDocumentation( const QString &key )
     const QString documentationFileName = KGlobal::dirs()->findResource(
             "data", QString("timetablemate/doc/%1.html").arg(className) );
     if ( documentationFileName.isEmpty() ) {
-        kWarning() << "Documentation for" << className << "not found";
+        qWarning() << "Documentation for" << className << "not found";
         return;
     }
 

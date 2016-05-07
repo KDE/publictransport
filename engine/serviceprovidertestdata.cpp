@@ -107,7 +107,7 @@ void ServiceProviderTestData::write( const QString &providerId,
                                      const QSharedPointer<KConfig> &cache )
 {
     if ( providerId.isEmpty() ) {
-        kWarning() << "No provider plugin ID given!";
+        qWarning() << "No provider plugin ID given!";
         return;
     }
 

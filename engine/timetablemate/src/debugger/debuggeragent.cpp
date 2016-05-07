@@ -278,7 +278,7 @@ bool DebuggerAgent::executeCommand( const ConsoleCommand &command, QString *retu
         }
         return true;
     case ConsoleCommand::ClearCommand:
-        kWarning() << "ClearCommand needs to be implemented outside of DebuggerAgent";
+        qWarning() << "ClearCommand needs to be implemented outside of DebuggerAgent";
         return true;
     case ConsoleCommand::LineNumberCommand:
         if ( returnValue ) {
@@ -1239,7 +1239,7 @@ void DebuggerAgent::positionChange( qint64 scriptId, int lineNumber, int columnN
         const bool locked = m_engineSemaphore->tryAcquire( 1, 250 );
         engine()->abortEvaluation();
         if ( !locked ) {
-            kWarning() << "Could not lock the engine";
+            qWarning() << "Could not lock the engine";
         }
 
         shutdown();
@@ -1376,7 +1376,7 @@ void DebuggerAgent::doInterrupt( bool injectedProgram ) {
             const bool locked = m_engineSemaphore->tryAcquire( 1, 250 );
             engine()->abortEvaluation();
             if ( !locked ) {
-                kWarning() << "Could not lock the engine";
+                qWarning() << "Could not lock the engine";
             }
 
             // Shut the debugger down
@@ -1482,7 +1482,7 @@ bool DebuggerAgent::checkHasExited()
         isEvaluating = engine()->isEvaluating();
         m_engineSemaphore->release();
     } else {
-        kWarning() << "Cannot lock the engine";
+        qWarning() << "Cannot lock the engine";
         if ( m_state == Aborting ) {
             engine()->abortEvaluation();
         }

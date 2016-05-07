@@ -47,7 +47,7 @@ DashboardTab::DashboardTab( Project *project, QWidget *parent )
     // Find the QML file used for the dashboard tab
     const QString fileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.qml" );
     if ( fileName.isEmpty() ) {
-        kWarning() << "dashboard.qml not found! Check installation";
+        qWarning() << "dashboard.qml not found! Check installation";
         return;
     }
     const QString svgFileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.svg" );

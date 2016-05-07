@@ -107,7 +107,7 @@ void NetworkRequest::slotReadyRead()
     if ( !m_reply ) {
         // Prevent crashes on exit
         m_mutex->unlockInline();
-        kWarning() << "Reply object already deleted, aborted?";
+        qWarning() << "Reply object already deleted, aborted?";
         return;
     }
 
@@ -116,7 +116,7 @@ void NetworkRequest::slotReadyRead()
     m_data.append( data );
 
     if ( data.isEmpty() ) {
-        kWarning() << "Error downloading" << m_url << m_reply->errorString();
+        qWarning() << "Error downloading" << m_url << m_reply->errorString();
     }
     m_mutex->unlockInline();
 
@@ -135,7 +135,7 @@ QByteArray gzipDecompress( QByteArray compressData )
     const int chunkSize = qMin( int(compressData.size() / 0.2), 512 * 1024 );
     kDebug() << "Chunk size:" << chunkSize;
     if ( chunkSize == 512 * 1024 ) {
-        kWarning() << "Maximum chunk size for decompression reached, may fail";
+        qWarning() << "Maximum chunk size for decompression reached, may fail";
     }
 
     unsigned char buffer[ chunkSize ];
@@ -165,7 +165,7 @@ QByteArray gzipDecompress( QByteArray compressData )
                 break;
             }
         } else {
-            kWarning() << "Error while decompressing" << status << stream.msg;
+            qWarning() << "Error while decompressing" << status << stream.msg;
             if ( status == Z_NEED_DICT || status == Z_DATA_ERROR || status == Z_MEM_ERROR ) {
                 inflateEnd( &stream );
             }
@@ -182,14 +182,14 @@ void NetworkRequest::slotFinished()
     if ( !m_reply ) {
         // Prevent crashes on exit
         m_mutex->unlockInline();
-        kWarning() << "Reply object already deleted, aborted?";
+        qWarning() << "Reply object already deleted, aborted?";
         return;
     }
 
     if ( m_reply->attribute(QNetworkRequest::RedirectionTargetAttribute).isValid() ) {
         if ( m_redirectUrl.isValid() ) {
-            kWarning() << "Only one redirection allowed, from" << m_url << "to" << m_redirectUrl;
-            kWarning() << "New redirection to"
+            qWarning() << "Only one redirection allowed, from" << m_url << "to" << m_redirectUrl;
+            qWarning() << "New redirection to"
                        << m_reply->attribute(QNetworkRequest::RedirectionTargetAttribute).toUrl();
         } else {
             m_redirectUrl = m_reply->attribute( QNetworkRequest::RedirectionTargetAttribute ).toUrl();
@@ -216,7 +216,7 @@ void NetworkRequest::slotFinished()
     m_data.append( m_reply->readAll() );
 
     if ( m_data.isEmpty() ) {
-        kWarning() << "Error downloading" << m_url
+        qWarning() << "Error downloading" << m_url
                    << (m_reply ? m_reply->errorString() : "Reply already deleted");
     }
 
@@ -231,7 +231,7 @@ void NetworkRequest::slotFinished()
 
     DEBUG_NETWORK("Request finished" << m_reply->url());
     if ( m_reply->url().isEmpty() ) {
-        kWarning() << "Empty URL in QNetworkReply!";
+        qWarning() << "Empty URL in QNetworkReply!";
     }
     const bool hasError = m_reply->error() != QNetworkReply::NoError;
     const QString errorString = m_reply->errorString();
@@ -251,7 +251,7 @@ void NetworkRequest::started( QNetworkReply* reply, int timeout )
 {
     m_mutex->lockInline();
     if ( !m_network ) {
-        kWarning() << "Can't decode, no m_network given...";
+        qWarning() << "Can't decode, no m_network given...";
         m_mutex->unlockInline();
         return;
     }
@@ -395,7 +395,7 @@ Network::~Network()
 
     const QList< NetworkRequest::Ptr > _runningRequests = runningRequests();
     if ( !_runningRequests.isEmpty() ) {
-        kWarning() << "Deleting Network object with" << _runningRequests.count()
+        qWarning() << "Deleting Network object with" << _runningRequests.count()
                    << "running requests";
         foreach ( const NetworkRequest::Ptr &request, _runningRequests ) {
             request->abort();
@@ -499,7 +499,7 @@ void Network::slotRequestAborted()
     NetworkRequest *request = qobject_cast< NetworkRequest* >( sender() );
     NetworkRequest::Ptr sharedRequest = getSharedRequest( request );
     if ( !sharedRequest ) {
-        kWarning() << "Network object already deleted?";
+        qWarning() << "Network object already deleted?";
     }
 //     Q_ASSERT( sharedRequest ); // This slot should only be connected to signals of NetworkRequest
 
@@ -677,7 +677,7 @@ QByteArray Network::getSynchronous( const QString &url, const QString &userUrl, 
     QByteArray data = reply->readAll();
     reply->deleteLater();
     if ( data.isEmpty() ) {
-        kWarning() << "Error downloading" << url << reply->errorString();
+        qWarning() << "Error downloading" << url << reply->errorString();
         emitSynchronousRequestFinished( url, QByteArray(), true, statusCode, time );
         return QByteArray();
     } else {
@@ -1080,7 +1080,8 @@ void Helper::messageReceived( const QString &message, const QString &failedParse
             return;
         }
 
-        logFile.write( QString("%1 (%2, in function %3(), file %4, line %5):\n   \"%6\"\n   Failed while reading this text: \"%7\"\n-------------------------------------\n\n")
+        logFile.write( QString("%1 (%2, in function %3(), file %4, line %5):\n   \"%6\"\n   Failed while reading this text: 
+\"%7\"\n-------------------------------------\n\n")
                 .arg(serviceProviderId)
                 .arg(QDateTime::currentDateTime().toString())
                 .arg(info.functionName().isEmpty() ? "[anonymous]" : info.functionName())
@@ -1105,7 +1106,7 @@ void ResultObject::addData( const QVariantMap &item )
         }
         const QVariant value = it.value();
         if ( info == Enums::Nothing ) {
-            kWarning() << "Invalid property name" << it.key() << "with value" << value;
+            qWarning() << "Invalid property name" << it.key() << "with value" << value;
             QString message;
             if ( it.key() == QLatin1String("length") && value.canConvert(QVariant::Int) &&
                  item.count() == value.toInt() + 1 ) // +1 for the "length" property
@@ -1129,7 +1130,7 @@ void ResultObject::addData( const QVariantMap &item )
             // Null value received, simply leave the data empty
             continue;
         } else if ( !value.isValid() ) {
-            kWarning() << "Value for" << info << "is invalid or null" << value;
+            qWarning() << "Value for" << info << "is invalid or null" << value;
             const QString message = i18nc("@info/plain", "Invalid value received for \"%1\"",
                                           it.key());
             const int count = m_timetableData.count();
@@ -1141,7 +1142,7 @@ void ResultObject::addData( const QVariantMap &item )
                     static_cast<Enums::VehicleType>(value.toInt()) == Enums::InvalidVehicleType &&
                     Global::vehicleTypeFromString(value.toString()) == Enums::InvalidVehicleType )
         {
-            kWarning() << "Invalid type of vehicle value" << value;
+            qWarning() << "Invalid type of vehicle value" << value;
             const QString message = i18nc("@info/plain",
                     "Invalid type of vehicle received: \"%1\"", value.toString());
             const int count = m_timetableData.count();
@@ -1170,12 +1171,12 @@ void ResultObject::addData( const QVariantMap &item )
             QString url = value.toString();
             if ( url.startsWith('/') ) {
                 // Prepend provider URL to relative URLs
-                kWarning() << "Prepending provider URL to relative JourneyNewsUrls is not implemented";
+                qWarning() << "Prepending provider URL to relative JourneyNewsUrls is not implemented";
 //                 url.prepend( m_ ); TODO
             }
         } else if ( info == Enums::JourneyNewsOther ) {
             // DEPRECATED
-            kWarning() << "JourneyNewsOther is deprecated, use JourneyNews instead";
+            qWarning() << "JourneyNewsOther is deprecated, use JourneyNews instead";
             info = Enums::JourneyNews;
         }
 
@@ -2224,7 +2225,7 @@ DataStreamPrototype::DataStreamPrototype( QIODevice *device, QObject *parent )
         : QObject( parent )
 {
     if ( !device->isOpen() ) {
-        kWarning() << "Device not opened";
+        qWarning() << "Device not opened";
     }
     m_dataStream = QSharedPointer< QDataStream >( new QDataStream(device) );
 }
@@ -2296,7 +2297,7 @@ QByteArray DataStreamPrototype::readBytes( uint byteCount )
     char *chars = new char[ byteCount ];
     const uint bytesRead = thisDataStream()->readRawData( chars, byteCount );
     if ( bytesRead != byteCount ) {
-        kWarning() << "Did not read all requested bytes, read" << bytesRead << "of" << byteCount;
+        qWarning() << "Did not read all requested bytes, read" << bytesRead << "of" << byteCount;
     }
     QByteArray bytes( chars );
     delete[] chars;

@@ -93,14 +93,14 @@ PublicTransportInfo::PublicTransportInfo( const QHash< Enums::TimetableInformati
                     // Convert from QVariant to QTime
                     if ( !var.canConvert(QVariant::DateTime) || !var.toDateTime().isValid() ) {
                         // Value for DepartureTime is not QDateTime
-                        kWarning() << "Invalid time in RouteTimes:" << var;
+                        qWarning() << "Invalid time in RouteTimes:" << var;
                         remove( Enums::RouteTimes );
                         break;
                     }
                 }
             } else {
                 // No list of values given for RouteTimes, remove the invalid value
-                kWarning() << "RouteTimes value is invalid (not a list of values): "
+                qWarning() << "RouteTimes value is invalid (not a list of values): "
                            << value(Enums::RouteTimes);
                 remove( Enums::RouteTimes );
             }
@@ -133,7 +133,7 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
             QDateTime arrival = value( Enums::ArrivalDateTime ).toDateTime();
             int minsDuration = departure.secsTo( arrival ) / 60;
             if ( minsDuration < 0 ) {
-                kWarning() << "Calculated duration is negative" << minsDuration
+                qWarning() << "Calculated duration is negative" << minsDuration
                            << "departure" << departure << "arrival" << arrival;
                 insert( Enums::Duration, -1 );
             } else {
@@ -149,7 +149,7 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
              !value(Enums::DepartureTime).canConvert(QVariant::Time) )
         {
             // Value for DepartureTime is not QTime
-            kWarning() << "DepartureTime needs to be convertable to QTime:"
+            qWarning() << "DepartureTime needs to be convertable to QTime:"
                        << value(Enums::DepartureTime);
             remove( Enums::DepartureTime );
         }
@@ -159,7 +159,7 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
              (!value(Enums::DepartureDate).canConvert(QVariant::Date) ||
               !value(Enums::DepartureDate).toDate().isValid()) )
         {
-            kWarning() << "DepartureDate needs to be convertable to QDate:"
+            qWarning() << "DepartureDate needs to be convertable to QDate:"
                        << value( Enums::DepartureDate );
             remove( Enums::DepartureDate );
         }
@@ -169,7 +169,7 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
              (!value(Enums::ArrivalDate).canConvert(QVariant::Date) ||
               !value(Enums::ArrivalDate).toDate().isValid()) )
         {
-            kWarning() << "ArrivalDate needs to be convertable to QDate:"
+            qWarning() << "ArrivalDate needs to be convertable to QDate:"
                        << value(Enums::ArrivalDate);
             remove( Enums::ArrivalDate );
         }
@@ -178,21 +178,21 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
         if ( contains(Enums::Duration) && value(Enums::Duration).toInt() <= 0 &&
              value(Enums::Duration).canConvert(QVariant::String) )
         {
-            kWarning() << "Duration needs to be convertable to int:" << value(Enums::Duration);
+            qWarning() << "Duration needs to be convertable to int:" << value(Enums::Duration);
             remove( Enums::Duration );
         }
 
         // Check RouteTimesDeparture values
         if ( contains(Enums::RouteTimesDeparture) ) {
             if ( !value(Enums::RouteTimesDeparture).canConvert(QVariant::List) ) {
-                kWarning() << "Value for RouteTimesDeparture needs to be a list"
+                qWarning() << "Value for RouteTimesDeparture needs to be a list"
                            << value(Enums::RouteTimesDeparture);
                 remove( Enums::RouteTimesDeparture );
             } else {
                 QVariantList vars = value( Enums::RouteTimesDeparture ).toList();
                 foreach( const QVariant &var, vars ) {
                     if ( !var.canConvert(QVariant::DateTime) ) {
-                        kWarning() << "Invalid time in RouteTimesDeparture" << var;
+                        qWarning() << "Invalid time in RouteTimesDeparture" << var;
                         remove( Enums::RouteTimesDeparture );
                         break;
                     }
@@ -203,14 +203,14 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
         // Check RouteTimesArrival values
         if ( contains(Enums::RouteTimesArrival) ) {
             if ( !value(Enums::RouteTimesArrival).canConvert(QVariant::List) ) {
-                kWarning() << "Value for RouteTimesArrival needs to be a list"
+                qWarning() << "Value for RouteTimesArrival needs to be a list"
                            << value(Enums::RouteTimesArrival);
                 remove( Enums::RouteTimesArrival );
             } else {
                 QVariantList vars = value( Enums::RouteTimesArrival ).toList();
                 foreach( const QVariant &var, vars ) {
                     if ( !var.canConvert(QVariant::DateTime) ) {
-                        kWarning() << "Invalid time in RouteTimesArrival" << var;
+                        qWarning() << "Invalid time in RouteTimesArrival" << var;
                         remove( Enums::RouteTimesArrival );
                         break;
                     }
@@ -256,7 +256,7 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
                 remove( Enums::ArrivalDate );
                 remove( Enums::ArrivalTime );
             } else {
-                kWarning() << "No ArrivalDateTime or ArrivalTime information given";
+                qWarning() << "No ArrivalDateTime or ArrivalTime information given";
             }
         }
     }

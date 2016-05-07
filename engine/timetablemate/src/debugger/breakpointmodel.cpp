@@ -107,7 +107,7 @@ QVariant BreakpointModel::data( const QModelIndex &index, int role ) const
         case LastConditionResultColumn:
             return breakpoint->lastConditionResult().toString();
         default:
-            kWarning() << "Unknown breakpoint model column" << index.column();
+            qWarning() << "Unknown breakpoint model column" << index.column();
             break;
         }
 
@@ -248,7 +248,7 @@ void BreakpointModel::addBreakpoint( Breakpoint *breakpoint )
     const int count = rowCount();
     beginInsertRows( QModelIndex(), count, count );
     if ( breakpoint->model() ) {
-        kWarning() << "Breakpoint already used in another model";
+        qWarning() << "Breakpoint already used in another model";
     }
     breakpoint->setModel( this );
     BreakpointData &data = m_breakpointsByFile[ breakpoint->fileName() ];
@@ -268,7 +268,7 @@ void BreakpointModel::removeBreakpoint( Breakpoint *breakpoint )
              << "at line" << breakpoint->lineNumber();
     int row = indexFromBreakpoint( breakpoint ).row();
     if ( row == -1 ) {
-        kWarning() << "Breakpoint not found";
+        qWarning() << "Breakpoint not found";
         return;
     }
 

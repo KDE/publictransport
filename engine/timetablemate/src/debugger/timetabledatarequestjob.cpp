@@ -349,7 +349,7 @@ void CallScriptFunctionJob::debuggerRun()
     if ( !waitFor(this, SIGNAL(stopped(QDateTime,ScriptStoppedFlags,int,QString,QStringList)),
                   WaitForScriptFinish) )
     {
-        kWarning() << "Stopped signal not received";
+        qWarning() << "Stopped signal not received";
         m_engineSemaphore->release();
         return;
     }
@@ -600,7 +600,7 @@ TimetableDataRequestMessage CallScriptFunctionJob::message( MessageType messageT
                     Global::timetableInformationToString(info2), count2);
         break;
     default:
-        kWarning() << "Unknown message type" << messageType;
+        qWarning() << "Unknown message type" << messageType;
         break;
     }
 

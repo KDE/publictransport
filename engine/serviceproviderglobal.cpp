@@ -79,7 +79,7 @@ QString ServiceProviderGlobal::defaultProviderForLocation( const QString &locati
                 "data", subDirectory + location + '_' + pattern );
     }
     if ( locationProviders.isEmpty() ) {
-        kWarning() << "Couldn't find any providers for location" << location;
+        qWarning() << "Couldn't find any providers for location" << location;
         return QString();
     }
 
@@ -216,7 +216,7 @@ QString ServiceProviderGlobal::typeName( Enums::ServiceProviderType type, Provid
         break;
     case Enums::InvalidProvider:
     default:
-        kWarning() << "Invalid provider type" << type;
+        qWarning() << "Invalid provider type" << type;
         return i18nc("@info/plain Name of the invalid service provider plugin type", "Invalid");
     }
 
@@ -234,8 +234,8 @@ QStringList ServiceProviderGlobal::filePatterns()
     const KMimeType::Ptr mimeType =
             KMimeType::mimeType("application/x-publictransport-serviceprovider");
     if ( mimeType.isNull() ) {
-        kWarning() << "The application/x-publictransport-serviceprovider mime type was not found!";
-        kWarning() << "No provider plugins will get loaded.";
+        qWarning() << "The application/x-publictransport-serviceprovider mime type was not found!";
+        qWarning() << "No provider plugins will get loaded.";
         kDebug() << "Solution: Make sure 'serviceproviderplugin.xml' is installed correctly "
                     "and run kbuildsycoca4.";
         return QStringList();
@@ -250,7 +250,7 @@ QStringList ServiceProviderGlobal::fileExtensions()
     for ( QStringList::Iterator it = extensions.begin(); it != extensions.end(); ++it ) {
         const int pos = it->lastIndexOf( '.' );
         if ( pos == -1 || pos == it->length() - 1 ) {
-            kWarning() << "Could not extract file extension from mime type pattern!\n"
+            qWarning() << "Could not extract file extension from mime type pattern!\n"
                           "Check the \"application/x-publictransport-serviceprovider\" mime type.";
             continue;
         }
@@ -344,7 +344,7 @@ QString ServiceProviderGlobal::featureName( Enums::ProviderFeature feature )
                      "provided for existing journey data sources",
                      "Get earlier/later journeys");
     default:
-        kWarning() << "Unexpected feature value" << feature;
+        qWarning() << "Unexpected feature value" << feature;
         return QString();
     }
 }

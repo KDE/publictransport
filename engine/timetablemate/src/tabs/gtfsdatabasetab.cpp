@@ -73,7 +73,7 @@ GtfsDatabaseTab::GtfsDatabaseTab( Project *project, QWidget *parent )
     // Find the QML file used for the dashboard tab
     const QString fileName = KGlobal::dirs()->findResource( "data", "timetablemate/gtfs_dashboard.qml" );
     if ( fileName.isEmpty() ) {
-        kWarning() << "gtfs_dashboard.qml not found! Check installation";
+        qWarning() << "gtfs_dashboard.qml not found! Check installation";
         return;
     }
     const QString svgFileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.svg" );
@@ -236,7 +236,7 @@ GtfsDatabaseTab *GtfsDatabaseTab::create( Project *project, QWidget *parent )
 void GtfsDatabaseTab::executeQuery()
 {
     if ( !m_queryModel ) {
-        kWarning() << "No database connection";
+        qWarning() << "No database connection";
         return;
     }
 
@@ -247,7 +247,7 @@ void GtfsDatabaseTab::executeQuery()
 void GtfsDatabaseTab::tableChosen( int index )
 {
     if ( !m_model ) {
-        kWarning() << "No database connection";
+        qWarning() << "No database connection";
         return;
     }
 

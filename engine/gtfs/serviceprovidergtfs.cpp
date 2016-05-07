@@ -122,7 +122,7 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
         if ( fi.exists() && fi.size() > 10000 ) {
             // Try to initialize the database
             if ( !GtfsDatabase::initDatabase(providerId, &errorMessage) ) {
-                kWarning() << "Error initializing the database" << errorMessage;
+                qWarning() << "Error initializing the database" << errorMessage;
 
                 // Update 'feedImportFinished' field in the cache
                 gtfsGroup.writeEntry( "feedImportFinished", false );
@@ -161,7 +161,7 @@ QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
             }
             return "ready";
         } else {
-            kWarning() << "GTFS database file not found or empty database" << fi.filePath();
+            qWarning() << "GTFS database file not found or empty database" << fi.filePath();
 
             // The provider cache says the import has been finished,
             // but the database file does not exist any longer or is empty
@@ -468,7 +468,7 @@ uint ServiceProviderGtfs::stopIdFromName( const QString &stopName, bool *ok )
     if ( !query.exec("SELECT stops.stop_id FROM stops WHERE stop_name='" + stopValue + "' "
                      "AND (location_type IS NULL OR location_type=0)") )
     {
-        kWarning() << query.lastError();
+        qWarning() << query.lastError();
         kDebug() << query.executedQuery();
         if ( ok ) {
             *ok = false;
@@ -514,7 +514,7 @@ void ServiceProviderGtfs::requestDeparturesOrArrivals( const DepartureRequest *r
         bool ok;
         stopId = request->stopId().toUInt( &ok );
         if ( !ok ) {
-            kWarning() << "Invalid stop ID" << request->stopId() << "only numeric IDs allowed";
+            qWarning() << "Invalid stop ID" << request->stopId() << "only numeric IDs allowed";
             return;
         }
     } else {
@@ -856,7 +856,7 @@ bool ServiceProviderGtfs::checkForDiskIoError( const QSqlError &error,
     // ie. the database file may have been deleted/corrupted.
     // The error numbers (1, 10) are database dependend and work with SQLite
     if ( error.number() == 10 || error.number() == 1 ) {
-        kWarning() << "Disk I/O error reported from database, reimport the GTFS feed"
+        qWarning() << "Disk I/O error reported from database, reimport the GTFS feed"
                    << error.text();
         emit requestFailed( this, ErrorParsingFailed,
                 i18nc("@info/plain", "The GTFS database is corrupted, please reimport "

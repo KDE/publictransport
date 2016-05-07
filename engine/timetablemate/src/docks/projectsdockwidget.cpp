@@ -161,7 +161,7 @@ void ProjectsDockWidget::projectItemDoubleClicked( const QModelIndex &proxyIndex
             // Project root item double clicked, do nothing
             break;
         default:
-            kWarning() << "Project model item type unknown" << projectItem->type();
+            qWarning() << "Project model item type unknown" << projectItem->type();
             return;
         }
     }

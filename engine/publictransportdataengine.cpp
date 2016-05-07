@@ -669,7 +669,7 @@ PublicTransportEngine::ProviderPointer PublicTransportEngine::providerFromId(
         if ( dataSource ) {
             const QString state = dataSource->providerState( id );
             if ( state != QLatin1String("ready") ) {
-                kWarning() << "Provider" << id << "is not ready, state is" << state;
+                qWarning() << "Provider" << id << "is not ready, state is" << state;
                 return ProviderPointer::create();
             }
         }
@@ -768,7 +768,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
     if ( providersSource->isDirty() ) {
         const QStringList providers = ServiceProviderGlobal::installedProviders();
         if ( providers.isEmpty() ) {
-            kWarning() << "Could not find any service provider plugins";
+            qWarning() << "Could not find any service provider plugins";
         } else {
             QStringList loadedProviders;
             m_erroneousProviders.clear();
@@ -784,7 +784,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
             // Print information about loaded/erroneous providers
             qDebug() << "Loaded" << loadedProviders.count() << "service providers";
             if ( !m_erroneousProviders.isEmpty() ) {
-                kWarning() << "Erroneous service provider plugins, that could not be loaded:"
+                qWarning() << "Erroneous service provider plugins, that could not be loaded:"
                            << m_erroneousProviders;
             }
         }
@@ -881,7 +881,7 @@ QString PublicTransportEngine::updateProviderState( const QString &providerId,
             stateData->insert( "statusMessage",
                                 i18nc("@info/plain", "The provider is ready to use") );
         } else {
-            kWarning() << "Missing status message explaining why the provider" << providerId
+            qWarning() << "Missing status message explaining why the provider" << providerId
                         << "is not ready";
         }
     }
@@ -948,7 +948,7 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
             break;
         case Enums::InvalidProvider:
         default:
-            kWarning() << "Provider type unknown" << type;
+            qWarning() << "Provider type unknown" << type;
             break;
         }
     }
@@ -957,7 +957,7 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
     if ( testData.xmlStructureTestStatus() == ServiceProviderTestData::Failed ) {
         // The XML structure of the provider plugin .pts file is marked as failed in the cache
         // Cannot add provider data to data sources, the file needs to be fixed first
-        kWarning() << "Provider plugin" << providerId << "is invalid.";
+        qWarning() << "Provider plugin" << providerId << "is invalid.";
         qDebug() << "Fix the provider file at" << ServiceProviderGlobal::fileNameFromId(providerId);
         qDebug() << testData.errorMessage();
         qDebug() << "************************************";
@@ -1026,7 +1026,7 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
         // Read test data again, updated in the ServiceProvider constructor
         if ( testData.results().testFlag(ServiceProviderTestData::SubTypeTestFailed) ) {
             // Sub-type test failed
-            kWarning() << "Test failed for" << providerId << testData.errorMessage();
+            qWarning() << "Test failed for" << providerId << testData.errorMessage();
             providerData->clear();
             *errorMessage = testData.errorMessage();
             m_erroneousProviders.insert( providerId, testData.errorMessage() );
@@ -1141,7 +1141,7 @@ bool PublicTransportEngine::updateTimetableDataSource( const SourceRequestData &
         // Source gets already processed
         qDebug() << "Source already gets processed, please wait" << data.name;
     } else if ( data.parseMode == ParseInvalid || !data.request ) {
-        kWarning() << "Invalid source" << data.name;
+        qWarning() << "Invalid source" << data.name;
         return false;
     } else { // Request new data
         TimetableDataSource *dataSource = containsDataSource
@@ -1193,7 +1193,7 @@ TimetableDataSource *PublicTransportEngine::testDataSourceForAdditionalDataReque
     if ( !provider->features().contains(Enums::ProvidesAdditionalData) ) {
         emit additionalDataRequestFinished( sourceName, -1, false,
                 i18nc("@info/plain", "Additional data not supported") );
-        kWarning() << "Additional data not supported by" << provider->id();
+        qWarning() << "Additional data not supported by" << provider->id();
         return 0; // Service provider does not support additional data
     }
 
@@ -1605,7 +1605,7 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
             request = new JourneyRequest( name, parseMode );
             break;
         default:
-            kWarning() << "Cannot create a request for parse mode" << parseMode;
+            qWarning() << "Cannot create a request for parse mode" << parseMode;
             return;
         }
 
@@ -1615,7 +1615,7 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
             const int pos = parameter.indexOf( '=' );
             if ( pos == -1 ) {
                 if ( !defaultParameter.isEmpty() ) {
-                    kWarning() << "More than one parameters without name given:"
+                    qWarning() << "More than one parameters without name given:"
                                << defaultParameter << parameter;
                 }
 
@@ -1625,7 +1625,7 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                 const QString parameterName = parameter.left( pos );
                 const QString parameterValue = parameter.mid( pos + 1 ).trimmed();
                 if ( parameterValue.isEmpty() ) {
-                    kWarning() << "Empty parameter value for parameter" << parameterName;
+                    qWarning() << "Empty parameter value for parameter" << parameterName;
                 } else if ( parameterName == QLatin1String("city") ) {
                     request->setCity( parameterValue );
                 } else if ( parameterName == QLatin1String("stop") ) {
@@ -1635,28 +1635,28 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                 } else if ( parameterName == QLatin1String("targetstop") ) {
                     JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
                     if ( !journeyRequest ) {
-                        kWarning() << "The 'targetstop' parameter is only used for journey requests";
+                        qWarning() << "The 'targetstop' parameter is only used for journey requests";
                     } else {
                         journeyRequest->setTargetStop( parameterValue );
                     }
                 } else if ( parameterName == QLatin1String("targetstopid") ) {
                     JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
                     if ( !journeyRequest ) {
-                        kWarning() << "The 'targetstopId' parameter is only used for journey requests";
+                        qWarning() << "The 'targetstopId' parameter is only used for journey requests";
                     } else {
                         journeyRequest->setTargetStopId( parameterValue );
                     }
                 } else if ( parameterName == QLatin1String("originstop") ) {
                     JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
                     if ( !journeyRequest ) {
-                        kWarning() << "The 'originstop' parameter is only used for journey requests";
+                        qWarning() << "The 'originstop' parameter is only used for journey requests";
                     } else {
                         journeyRequest->setStop( parameterValue );
                     }
                 } else if ( parameterName == QLatin1String("originstopid") ) {
                     JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
                     if ( !journeyRequest ) {
-                        kWarning() << "The 'originstopId' parameter is only used for journey requests";
+                        qWarning() << "The 'originstopId' parameter is only used for journey requests";
                     } else {
                         journeyRequest->setStopId( parameterValue );
                     }
@@ -1675,7 +1675,7 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                     bool ok;
                     request->setCount( parameterValue.toInt(&ok) );
                     if ( !ok ) {
-                        kWarning() << "Bad value for 'count' in source name:" << parameterValue;
+                        qWarning() << "Bad value for 'count' in source name:" << parameterValue;
                         request->setCount( 20 );
                     }
                 } else if ( dynamic_cast<StopsByGeoPositionRequest*>(request) ) {
@@ -1685,23 +1685,23 @@ PublicTransportEngine::SourceRequestData::SourceRequestData( const QString &name
                     if ( parameterName == QLatin1String("longitude") ) {
                         stopRequest->setLongitude( parameterValue.toFloat(&ok) );
                         if ( !ok ) {
-                            kWarning() << "Bad value for 'longitude' in source name:" << parameterValue;
+                            qWarning() << "Bad value for 'longitude' in source name:" << parameterValue;
                         }
                     } else if ( parameterName == QLatin1String("latitude") ) {
                         stopRequest->setLatitude( parameterValue.toFloat(&ok) );
                         if ( !ok ) {
-                            kWarning() << "Bad value for 'latitude' in source name:" << parameterValue;
+                            qWarning() << "Bad value for 'latitude' in source name:" << parameterValue;
                         }
                     } else if ( parameterName == QLatin1String("distance") ) {
                         stopRequest->setDistance( parameterValue.toInt(&ok) );
                         if ( !ok ) {
-                            kWarning() << "Bad value for 'distance' in source name:" << parameterValue;
+                            qWarning() << "Bad value for 'distance' in source name:" << parameterValue;
                         }
                     } else {
-                        kWarning() << "Unknown argument" << parameterName;
+                        qWarning() << "Unknown argument" << parameterName;
                     }
                 } else {
-                    kWarning() << "Unknown argument" << parameterName;
+                    qWarning() << "Unknown argument" << parameterName;
                 }
             }
         }
@@ -1728,7 +1728,7 @@ PublicTransportEngine::SourceRequestData::~SourceRequestData()
 bool PublicTransportEngine::SourceRequestData::isValid() const
 {
     if ( type == InvalidSourceName ) {
-        kWarning() << "Invalid source name" << name;
+        qWarning() << "Invalid source name" << name;
         return false;
     }
 
@@ -1736,7 +1736,7 @@ bool PublicTransportEngine::SourceRequestData::isValid() const
         if ( parseMode == ParseForDepartures || parseMode == ParseForArrivals ) {
             // Check if the stop name/ID is missing
             if ( !request || (request->stop().isEmpty() && request->stopId().isEmpty()) ) {
-                kWarning() << "No stop ID or name in data source name" << name;
+                qWarning() << "No stop ID or name in data source name" << name;
                 return false;
             }
         } else if ( parseMode == ParseForStopSuggestions ) {
@@ -1744,7 +1744,7 @@ bool PublicTransportEngine::SourceRequestData::isValid() const
             if ( !request || (!dynamic_cast<StopsByGeoPositionRequest*>(request) &&
                               request->stop().isEmpty()) )
             {
-                kWarning() << "Stop name (part) is missing in data source name" << name;
+                qWarning() << "Stop name (part) is missing in data source name" << name;
                 return false;
             }
         } else if ( parseMode == ParseForJourneysByArrivalTime ||
@@ -1753,18 +1753,18 @@ bool PublicTransportEngine::SourceRequestData::isValid() const
             // Make sure non empty originstop(id) and targetstop(id) parameters are available
             JourneyRequest *journeyRequest = dynamic_cast< JourneyRequest* >( request );
             if ( !journeyRequest ) {
-                kWarning() << "Internal error: Not a JourneyRequest object but parseMode is"
+                qWarning() << "Internal error: Not a JourneyRequest object but parseMode is"
                            << parseMode;
                 return false;
             }
             if ( journeyRequest->stop().isEmpty() && journeyRequest->stopId().isEmpty() ) {
-                kWarning() << "No stop ID or name for the origin stop in data source name" << name;
+                qWarning() << "No stop ID or name for the origin stop in data source name" << name;
                 return false;
             }
             if ( journeyRequest->targetStop().isEmpty() &&
                  journeyRequest->targetStopId().isEmpty() )
             {
-                kWarning() << "No stop ID or name for the target stop in data source name" << name;
+                qWarning() << "No stop ID or name for the target stop in data source name" << name;
                 return false;
             }
         }
@@ -1861,7 +1861,7 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
 
     const QString nonAmbiguousName = disambiguateSourceName( sourceName );
     if ( !m_dataSources.contains(nonAmbiguousName) ) {
-        kWarning() << "Data source already removed";
+        qWarning() << "Data source already removed";
         return;
     }
     TimetableDataSource *dataSource =
@@ -1981,7 +1981,7 @@ void PublicTransportEngine::updateTimeout()
     if ( !dataSource ) {
         // No data source found that started the timer,
         // should not happen the data source should have deleted the timer on destruction
-        kWarning() << "Timeout received from an unknown update timer";
+        qWarning() << "Timeout received from an unknown update timer";
         return;
     }
 
@@ -2000,7 +2000,7 @@ void PublicTransportEngine::cleanupTimeout()
     if ( !dataSource ) {
         // No data source found that started the timer,
         // should not happen the data source should have deleted the timer on destruction
-        kWarning() << "Timeout received from an unknown cleanup timer";
+        qWarning() << "Timeout received from an unknown cleanup timer";
         return;
     }
 
@@ -2018,7 +2018,7 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     // Check if the destination data source exists
     const QString nonAmbiguousName = disambiguateSourceName( request.sourceName() );
     if ( !m_dataSources.contains(nonAmbiguousName) ) {
-        kWarning() << "Additional data received for a source that was already removed:"
+        qWarning() << "Additional data received for a source that was already removed:"
                    << nonAmbiguousName;
         emit additionalDataRequestFinished( request.sourceName(), request.itemNumber(), false,
                                             "Data source to update was already removed" );
@@ -2049,8 +2049,8 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
         if ( item.contains(key) && item[key].isValid() && !isRouteDataUrl ) {
             // The timetable item already contains data for the current field,
             // do not allow updates here, only additional data
-            kWarning() << "Cannot update timetable data in additional data requests";
-            kWarning() << "Tried to update field" << key << "to value" << it.value()
+            qWarning() << "Cannot update timetable data in additional data requests";
+            qWarning() << "Tried to update field" << key << "to value" << it.value()
                        << "from value" << item[key] << "in data source" << request.sourceName();
         } else {
             // Allow to add the additional data field
@@ -2146,7 +2146,7 @@ void PublicTransportEngine::updateDataSourcesWithNewAdditionData()
     Q_ASSERT( updateDelayTimer );
     TimetableDataSource *dataSource = dataSourceFromTimer( updateDelayTimer );
     if ( !dataSource ) {
-        kWarning() << "Data source was already removed";
+        qWarning() << "Data source was already removed";
         return;
     }
 
@@ -2192,13 +2192,13 @@ void PublicTransportEngine::journeysReceived( ServiceProvider* provider,
     const QString nonAmbiguousName = disambiguateSourceName( sourceName );
     m_runningSources.removeOne( nonAmbiguousName );
     if ( !m_dataSources.contains(nonAmbiguousName) ) {
-        kWarning() << "Data source already removed" << nonAmbiguousName;
+        qWarning() << "Data source already removed" << nonAmbiguousName;
         return;
     }
     TimetableDataSource *dataSource =
             dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
     if ( !dataSource ) {
-        kWarning() << "Data source already deleted" << nonAmbiguousName;
+        qWarning() << "Data source already deleted" << nonAmbiguousName;
         return;
     }
     dataSource->clear();
@@ -2324,12 +2324,12 @@ void PublicTransportEngine::requestFailed( ServiceProvider *provider,
                 // Publish updated fields
                 publishData( dataSource );
             } else {
-                kWarning() << "Timetable item" << additionalDataRequest->itemNumber()
+                qWarning() << "Timetable item" << additionalDataRequest->itemNumber()
                            << "not found in data source" << request->sourceName()
                            << "additional data error discarded";
             }
         } else {
-            kWarning() << "Data source" << request->sourceName()
+            qWarning() << "Data source" << request->sourceName()
                        << "not found, additional data error discarded";
         }
 
@@ -2357,7 +2357,7 @@ bool PublicTransportEngine::requestUpdate( const QString &sourceName )
     // Find the TimetableDataSource object for sourceName
     const QString nonAmbiguousName = disambiguateSourceName( sourceName );
     if ( !m_dataSources.contains(nonAmbiguousName) ) {
-        kWarning() << "Not an existing timetable data source:" << sourceName;
+        qWarning() << "Not an existing timetable data source:" << sourceName;
         emit updateRequestFinished( sourceName, false,
                 i18nc("@info", "Data source is not an existing timetable data source: %1",
                       sourceName) );
@@ -2366,7 +2366,7 @@ bool PublicTransportEngine::requestUpdate( const QString &sourceName )
     TimetableDataSource *dataSource =
             dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
     if ( !dataSource ) {
-        kWarning() << "Internal error: Invalid pointer to the data source stored";
+        qWarning() << "Internal error: Invalid pointer to the data source stored";
         emit updateRequestFinished( sourceName, false,
                                     "Internal error: Invalid pointer to the data source stored" );
         return false;
@@ -2401,7 +2401,7 @@ bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
     // Find the TimetableDataSource object for sourceName
     const QString nonAmbiguousName = disambiguateSourceName( sourceName );
     if ( !m_dataSources.contains(nonAmbiguousName) ) {
-        kWarning() << "Not an existing timetable data source:" << sourceName;
+        qWarning() << "Not an existing timetable data source:" << sourceName;
         emit moreItemsRequestFinished( sourceName, direction, false,
                 i18nc("@info", "Data source is not an existing timetable data source: %1",
                       sourceName) );
@@ -2417,7 +2417,7 @@ bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
     TimetableDataSource *dataSource =
             dynamic_cast< TimetableDataSource* >( m_dataSources[nonAmbiguousName] );
     if ( !dataSource ) {
-        kWarning() << "Internal error: Invalid pointer to the data source stored";
+        qWarning() << "Internal error: Invalid pointer to the data source stored";
         emit moreItemsRequestFinished( sourceName, direction, false, "Internal error" );
         return false;
     }
@@ -2439,7 +2439,7 @@ bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
     const QVariantList items = dataSource->timetableItems();
     if ( items.isEmpty() ) {
         // TODO
-        kWarning() << "No timetable items in data source" << sourceName;
+        qWarning() << "No timetable items in data source" << sourceName;
         emit moreItemsRequestFinished( sourceName, direction, false,
                 i18nc("@info", "No timetable items in data source") );
         return false;
@@ -2547,7 +2547,7 @@ int PublicTransportEngine::getSecsUntilUpdate( const QString &sourceName, QStrin
     TimetableDataSource *dataSource = dynamic_cast< TimetableDataSource* >(
             m_dataSources[nonAmbiguousName] );
     if ( !dataSource ) {
-        kWarning() << "Internal error: Invalid pointer to the data source stored";
+        qWarning() << "Internal error: Invalid pointer to the data source stored";
         return -1;
     }
 
@@ -2600,14 +2600,14 @@ ServiceProvider *PublicTransportEngine::createProviderForData( const ServiceProv
         QObject *parent, const QSharedPointer<KConfig> &cache )
 {
     if ( !ServiceProviderGlobal::isProviderTypeAvailable(data->type()) ) {
-        kWarning() << "Cannot create provider of type" << data->typeName() << "because the engine "
+        qWarning() << "Cannot create provider of type" << data->typeName() << "because the engine "
                       "has been built without support for that provider type";
         return 0;
     }
 
     // Warn if the format of the provider plugin is unsupported
     if ( data->fileFormatVersion() != QLatin1String("1.1") ) {
-        kWarning() << "The Provider" << data->id() << "was designed for an unsupported "
+        qWarning() << "The Provider" << data->id() << "was designed for an unsupported "
                 "provider plugin format version, update to version 1.1";
         return 0;
     }
@@ -2623,7 +2623,7 @@ ServiceProvider *PublicTransportEngine::createProviderForData( const ServiceProv
 #endif
     case Enums::InvalidProvider:
     default:
-        kWarning() << "Invalid/unknown provider type" << data->type();
+        qWarning() << "Invalid/unknown provider type" << data->type();
         return 0;
     }
 }

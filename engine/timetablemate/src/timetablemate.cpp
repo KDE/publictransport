@@ -270,7 +270,7 @@ TimetableMate::TimetableMate() : KParts::MainWindow( 0, Qt::WindowContextHelpBut
             m_bottomDockBar->addAction( dockAction );
             break;
         default:
-            kWarning() << "Top dock widget area is not supported";
+            qWarning() << "Top dock widget area is not supported";
             break;
         }
 
@@ -622,7 +622,7 @@ bool TimetableMate::fixMenus()
         separatorPartMenusEnd->setVisible( fileMenu->isVisible() && menus["edit"] &&
                                            menus["view"] && menus["tools"] && menus["bookmarks"] );
     } else {
-        kWarning() << "Missing separator_part_menus_end, timetablemateui.rc not installed?";
+        qWarning() << "Missing separator_part_menus_end, timetablemateui.rc not installed?";
     }
 
     QAction *editMenu = menus["edit"];
@@ -1346,7 +1346,7 @@ void TimetableMate::showDock( const QString &dockName, bool show )
         dock = m_variablesDock;
 #endif
     } else {
-        kWarning() << "Unknown dock" << dockName;
+        qWarning() << "Unknown dock" << dockName;
         return;
     }
 
@@ -1415,7 +1415,7 @@ void TimetableMate::currentTabChanged( int index ) {
             // Find the QML file used for the timetablemate dashboard
             const QString fileName = KGlobal::dirs()->findResource( "data", "timetablemate/timetablemate.qml" );
             if ( fileName.isEmpty() ) {
-                kWarning() << "timetablemate.qml not found! Check installation";
+                qWarning() << "timetablemate.qml not found! Check installation";
             } else {
                 m_qmlView->setSource( fileName );
             }
@@ -2062,7 +2062,7 @@ void TimetableMate::removeMessageWidget()
     QTimer *timer = qobject_cast< QTimer* >( sender() );
     QPointer<KMessageWidget> messageWidget = messageWidgetFromTimer( timer );
     if ( !messageWidget ) {
-        kWarning() << "Cannot find message widget associated to timer" << timer;
+        qWarning() << "Cannot find message widget associated to timer" << timer;
         return;
     }
 
@@ -2086,7 +2086,7 @@ bool TimetableMate::eventFilter( QObject *object, QEvent *event )
 void TimetableMate::projectCloseRequest() {
     Project *project = qobject_cast< Project* >( sender() );
     if ( !project ) {
-        kWarning() << "Slot projectCloseRequest() called from wrong sender, "
+        qWarning() << "Slot projectCloseRequest() called from wrong sender, "
                       "only class Project is allowed";
         return;
     }
@@ -2240,7 +2240,7 @@ void TimetableMate::fetchProject()
 void TimetableMate::fetchProjectFinished()
 {
     if ( !m_downloadDialog ) {
-        kWarning() << "Download dialog already destroyed";
+        qWarning() << "Download dialog already destroyed";
         return;
     }
 
@@ -2263,7 +2263,7 @@ void TimetableMate::fetchProjectFinished()
                 }
             }
             if ( providerFile.isEmpty() ) {
-                kWarning() << "No provider plugin file found in installed entry"
+                qWarning() << "No provider plugin file found in installed entry"
                            << installedEntry.name();
                 continue;
             }

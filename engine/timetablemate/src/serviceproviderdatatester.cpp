@@ -71,7 +71,7 @@ TestModel::TestState  ServiceProviderDataTester::runServiceProviderDataTest( Tes
         return isTimeZoneValid( text, errorMessage, tooltip, childrenExplanations );
 
     default:
-        kWarning() << "Unknown test";
+        qWarning() << "Unknown test";
         return TestModel::TestFinishedSuccessfully;
     }
 }
@@ -121,7 +121,7 @@ TestModel::TestState ServiceProviderDataTester::runServiceProviderDataTest( Test
         return isTimeZoneValid( data->timeZone(), errorMessage, tooltip, childrenExplanations );
 
     default:
-        kWarning() << "Unknown test";
+        qWarning() << "Unknown test";
         return TestModel::TestFinishedSuccessfully;
     }
 }

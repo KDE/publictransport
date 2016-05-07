@@ -49,7 +49,7 @@ GtfsImporter::GtfsImporter( const QString &providerName )
         // Remove the database file and the connection to it
         GtfsDatabase::closeDatabase( m_providerName );
         if ( !QFile::remove(databasePath) ) {
-            kWarning() << "Already existing GTFS database for" << m_providerName
+            qWarning() << "Already existing GTFS database for" << m_providerName
                        << "could not be removed" << databasePath;
         }
     }
@@ -677,7 +677,7 @@ bool GtfsImporter::readHeader( const QString &header, QStringList *fieldNames,
             emit logMessage( i18nc("@info", "Field name <emphasis>%1</emphasis> contains "
                                    "a disallowed character <emphasis>%2</emphasis>' at %3",
                                    fieldName, regExp.cap(), regExp.pos()) );
-            kWarning() << "Field name" << fieldName << "contains a disallowed character"
+            qWarning() << "Field name" << fieldName << "contains a disallowed character"
                        << regExp.cap() << "at" << regExp.pos();
         } else {
             fieldNames->append( name );
@@ -733,9 +733,9 @@ bool GtfsImporter::readFields( const QByteArray &line, QVariantList *fieldValues
             }
 
             if ( endPos >= line.length() || line[endPos] != '"' ) {
-                kWarning() << "No field end delimiter found in line" << line;
-                kWarning() << "for field starting with a delimiter at position" << pos;
-                kWarning() << "Read until the end of the line";
+                qWarning() << "No field end delimiter found in line" << line;
+                qWarning() << "for field starting with a delimiter at position" << pos;
+                qWarning() << "Read until the end of the line";
                 // Do not remove 1, because it gets done below,
                 // there is no delimiter to remove at the end
                 endPos = line.length();
@@ -776,9 +776,9 @@ bool GtfsImporter::readFields( const QByteArray &line, QVariantList *fieldValues
     if ( fieldValues->isEmpty() ) {
         return false;
     } else if ( fieldValues->count() < expectedFieldCount ) {
-        kWarning() << "Header contains" << expectedFieldCount << "fields, but a line was read "
+        qWarning() << "Header contains" << expectedFieldCount << "fields, but a line was read "
                 "with only" << fieldValues->count() << "field values. Using empty/default values:";
-        kWarning() << "Values: " << *fieldValues;
+        qWarning() << "Values: " << *fieldValues;
         while ( fieldValues->count() < expectedFieldCount ) {
             fieldValues->append( QVariant() );
         }

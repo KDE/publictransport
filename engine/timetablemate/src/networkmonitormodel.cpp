@@ -660,7 +660,7 @@ QIODevice *NetworkMemoryCache::prepare( const QNetworkCacheMetaData &metaData )
 void NetworkMemoryCache::insert( QIODevice *device )
 {
     if ( !m_prepared.contains(device) ) {
-        kWarning() << "Call prepare() first";
+        qWarning() << "Call prepare() first";
         return;
     }
 
@@ -685,7 +685,7 @@ void NetworkMemoryCache::removeOldestCacheData()
 
     CacheData *cacheData = m_orderedData.first();
     if ( !remove(cacheData->metaData.url()) ) {
-        kWarning() << "Could not remove old cache item" << cacheData->metaData.url();
+        qWarning() << "Could not remove old cache item" << cacheData->metaData.url();
         m_orderedData.removeFirst();
     }
 }

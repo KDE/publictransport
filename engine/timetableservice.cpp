@@ -213,7 +213,7 @@ Plasma::ServiceJob* TimetableService::createJob(
         return new RequestMoreItemsJob( m_engine, destination(), Enums::LaterItems,
                                         operation, parameters, this );
     } else {
-        kWarning() << "Operation" << operation << "not supported";
+        qWarning() << "Operation" << operation << "not supported";
         return 0;
     }
 }

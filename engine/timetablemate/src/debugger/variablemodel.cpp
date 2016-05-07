@@ -167,7 +167,7 @@ QVariant VariableModel::data( const QModelIndex &index, int role ) const
         return QVariant();
     }
     if ( index.model() != this ) {
-        kWarning() << "Invalid model";
+        qWarning() << "Invalid model";
         return QVariant();
     }
 
@@ -180,7 +180,7 @@ QVariant VariableModel::data( const QModelIndex &index, int role ) const
         case ValueColumn:
             return item->displayValueString();
         default:
-            kWarning() << "Unknown variable model column" << index.column();
+            qWarning() << "Unknown variable model column" << index.column();
             break;
         }
         break;
@@ -376,7 +376,7 @@ void VariableModel::pushVariableStack()
 void VariableModel::popVariableStack()
 {
     if ( m_variableStack.isEmpty() ) {
-        kWarning() << "Cannot pop, variable stack is empty";
+        qWarning() << "Cannot pop, variable stack is empty";
         return;
     }
 
@@ -582,7 +582,7 @@ void VariableModel::applyChange( const VariableChange &change )
         updateVariableStack( change.variableStack );
         break;
     default:
-        kWarning() << "VariableChange type not implemented" << change.type;
+        qWarning() << "VariableChange type not implemented" << change.type;
         break;
     }
 }
@@ -739,7 +739,7 @@ QList<VariableTreeData> VariableModel::variablesFromScriptValue( const QScriptVa
 
     // Limit depth of variable children
     if ( it.hasNext() && maxDepth <= 0 ) {
-        kWarning() << "Maximum variable depth reached";
+        qWarning() << "Maximum variable depth reached";
         return QList<VariableTreeData>();
     }
 
@@ -756,7 +756,7 @@ QList<VariableTreeData> VariableModel::variablesFromScriptValue( const QScriptVa
     while ( it.hasNext() ) {
         if ( variables.count() >= 500 ) {
             // Add a dummy variable instead of adding more than 500 variables
-            kWarning() << "Only show up to 500 variables per level";
+            qWarning() << "Only show up to 500 variables per level";
             variables << VariableTreeData( "..." );
             break;
         }

@@ -162,7 +162,7 @@ void Debugger::slotStarted( const QDateTime &timestamp )
     stopTimeout();
     QMutexLocker locker( m_mutex );
     if ( !m_runData ) {
-        kWarning() << "ScriptRunData already deleted / not yet created";
+        qWarning() << "ScriptRunData already deleted / not yet created";
         return;
     }
     DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_runData->job(), "Debugger::slotStarted(): Execution started/continued" );
@@ -188,7 +188,7 @@ void Debugger::slotStopped( const QDateTime &timestamp, ScriptStoppedFlags flags
     Q_UNUSED( uncaughtException );
     QMutexLocker locker( m_mutex );
     if ( !m_runData ) {
-        kWarning() << "ScriptRunData already deleted";
+        qWarning() << "ScriptRunData already deleted";
         return;
     }
     DEBUGGER_JOB_SYNCHRONIZATION_JOB( m_runData->job(), "Debugger::slotStopped(): Execution stopped" );
@@ -231,7 +231,7 @@ void Debugger::slotInterrupted( int lineNumber, const QString &fileName,
 {
     QMutexLocker locker( m_mutex );
     if ( !m_runData ) {
-        kWarning() << "No ScriptRunData available";
+        qWarning() << "No ScriptRunData available";
         return;
     }
     m_runData->interrupted( timestamp );
@@ -243,7 +243,7 @@ void Debugger::slotContinued( const QDateTime &timestamp, bool willInterruptAfte
 {
     QMutexLocker locker( m_mutex );
     if ( !m_runData ) {
-        kWarning() << "No ScriptRunData available";
+        qWarning() << "No ScriptRunData available";
         return;
     }
     m_runData->continued( timestamp );
@@ -283,14 +283,14 @@ void Debugger::slotJobDone( ThreadWeaver::Job *job )
     DebuggerJob *debuggerJob = qobject_cast< DebuggerJob* >( job );
     Q_ASSERT( debuggerJob );
     if ( !hasRunningJobs() ) {
-        kWarning() << "Job done signal received, but no running jobs, exiting?";
+        qWarning() << "Job done signal received, but no running jobs, exiting?";
         job->deleteLater();
         return;
     }
 
     m_mutex->lock();
     if ( debuggerJob != m_runningJobs.top() ) {
-        kWarning() << "Unknown job done" << debuggerJob;
+        qWarning() << "Unknown job done" << debuggerJob;
         kDebug() << "Current job is" << m_runningJobs.top();
         m_mutex->unlock();
         return;
@@ -329,7 +329,7 @@ void Debugger::slotJobDone( ThreadWeaver::Job *job )
         testFeaturesJobDone( debuggerJob );
         break;
     default:
-        kWarning() << "Unknown job type" << debuggerJob->type();
+        qWarning() << "Unknown job type" << debuggerJob->type();
         break;
     }
 
@@ -370,7 +370,7 @@ void Debugger::slotJobDone( ThreadWeaver::Job *job )
         m_mutex->lock();
         m_running = false;
         if ( !m_runData ) {
-            kWarning() << "ScriptRunData already deleted";
+            qWarning() << "ScriptRunData already deleted";
             m_mutex->unlock();
 
             emit stopped( ScriptRunData() );
@@ -437,7 +437,7 @@ void Debugger::removeAllBreakpoints()
 void Debugger::executeCommand( const ConsoleCommand &command )
 {
     if ( command.command() == ConsoleCommand::ClearCommand ) {
-        kWarning() << "The clear command is not implemented in Debugger/DebuggerAgent, "
+        qWarning() << "The clear command is not implemented in Debugger/DebuggerAgent, "
                       "should be implemented in the console to clear it's history";
     } else {
         enqueueJob( createExecuteConsoleCommandJob(command) );
@@ -544,7 +544,7 @@ TestFeaturesJob *Debugger::createTestFeaturesJob( const QString &useCase, DebugF
 bool Debugger::canEvaluate( const QString &program ) const
 {
     if ( !hasRunningJobs() ) {
-        kWarning() << "Not running";
+        qWarning() << "Not running";
         return false;
     }
 
@@ -556,7 +556,7 @@ bool Debugger::requestTimetableData( const AbstractRequest *request, const QStri
 {
     QMutexLocker locker( m_mutex );
     if ( m_lastScriptError != NoScriptError && m_lastScriptError != InitializingScript ) {
-        kWarning() << "Script could not be loaded correctly";
+        qWarning() << "Script could not be loaded correctly";
         emit requestTimetableDataResult( QSharedPointer< AbstractRequest >(request->clone()),
                 false, i18nc("@info", "Script could not be loaded correctly") );
         return false;
@@ -810,7 +810,7 @@ void Debugger::asynchronousRequestWaitFinished( const QDateTime &timestamp,
     if ( m_runData ) {
         m_runData->asynchronousDownloadFinished( timestamp, size );
     } else {
-        kWarning() << "ScriptRunData object already deleted";
+        qWarning() << "ScriptRunData object already deleted";
     }
 }
 
@@ -820,7 +820,7 @@ void Debugger::synchronousRequestWaitFinished( int statusCode, int waitingTime, 
     if ( m_runData ) {
         m_runData->synchronousDownloadFinished( waitingTime, size );
     } else {
-        kWarning() << "ScriptRunData object already deleted";
+        qWarning() << "ScriptRunData object already deleted";
     }
 }
 

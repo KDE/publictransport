@@ -86,7 +86,7 @@ QVariant BacktraceModel::data( const QModelIndex &index, int role ) const
             }
         } break;
         default:
-            kWarning() << "Unknown backtrace model column" << index.column();
+            qWarning() << "Unknown backtrace model column" << index.column();
             break;
         }
     }
@@ -110,14 +110,14 @@ void BacktraceModel::applyChange( const BacktraceChange &change )
         break;
     case UpdateBacktraceFrame: {
         if( m_frames.isEmpty() ) {
-            kWarning() << "Trying to update current backtrace frame, but the model is empty";
+            qWarning() << "Trying to update current backtrace frame, but the model is empty";
             pushFrame( new Frame() );
         }
 
         m_frames.top()->setValuesOf( change.frame );
     } break;
     default:
-        kWarning() << "BacktraceChange type not implemented" << change.type;
+        qWarning() << "BacktraceChange type not implemented" << change.type;
         break;
     }
 }
@@ -126,7 +126,7 @@ void BacktraceModel::frameChanged( Frame *frame )
 {
     QModelIndex frameIndex = indexFromFrame( frame );
     if ( !frameIndex.isValid() ) {
-        kWarning() << "Frame not found" << frame;
+        qWarning() << "Frame not found" << frame;
         return;
     }
 

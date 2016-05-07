@@ -59,7 +59,7 @@ QString JavaScriptModel::nodeTypeName( NodeType nodeType )
     case Bracketed:
         return i18nc("info", "Bracketed region");
     default:
-        kWarning() << "Unknown NodeType" << nodeType;
+        qWarning() << "Unknown NodeType" << nodeType;
         return "- not implemented -";
     }
 }

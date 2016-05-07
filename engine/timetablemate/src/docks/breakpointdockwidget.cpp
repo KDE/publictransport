@@ -115,7 +115,7 @@ Debugger::BreakpointModel *BreakpointDockWidget::model() const
     if ( m_projectModel->activeProject() ) {
         return m_projectModel->activeProject()->debugger()->breakpointModel();
     } else {
-        kWarning() << "No breakpoint model available";
+        qWarning() << "No breakpoint model available";
         return 0;
     }
 }
