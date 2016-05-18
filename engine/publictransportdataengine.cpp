@@ -1066,8 +1066,11 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
 
 bool PublicTransportEngine::updateErroneousServiceProviderSource()
 {
+    QVariantMap erroneousProvidersMap;
     const QLatin1String name = sourceTypeKeyword( ErroneousServiceProvidersSource );
-    setData( name, static_cast<Data>(m_erroneousProviders) );
+    foreach(QString key, m_erroneousProviders.keys())
+        erroneousProvidersMap[key] = m_erroneousProviders[key];
+    setData( name, erroneousProvidersMap );
     return true;
 }
 
@@ -2555,7 +2558,7 @@ int PublicTransportEngine::getSecsUntilUpdate( const QString &sourceName, QStrin
     }
 
     const QDateTime time = sourceUpdateTime( dataSource, updateFlags );
-    return qMax( -1, QDateTime::currentDateTime().secsTo(time) );
+    return qMax( -1, int( QDateTime::currentDateTime().secsTo(time) ) );
 }
 
 QDateTime PublicTransportEngine::sourceUpdateTime( TimetableDataSource *dataSource,
