@@ -34,6 +34,7 @@
 // Qt includes
 #include <QFile>
 #include <QFileInfo>
+#include <QStandardPaths>
 
 QList< Enums::ServiceProviderType > ServiceProviderGlobal::availableProviderTypes()
 {
@@ -89,7 +90,7 @@ QString ServiceProviderGlobal::defaultProviderForLocation( const QString &locati
 
 QString ServiceProviderGlobal::cacheFileName()
 {
-    return KGlobal::dirs()->saveLocation("data", "plasma_engine_publictransport/")
+    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport/")
             .append( QLatin1String("datacache") );
 }
 
@@ -164,7 +165,7 @@ QString ServiceProviderGlobal::fileNameFromId( const QString &serviceProviderId 
 {
     const QString subDirectory = installationSubDirectory();
     foreach ( const QString &extension, fileExtensions() ) {
-        const QString fileName = KGlobal::dirs()->findResource(
+        const QString fileName = KStandardDirs::locate(
                 "data", subDirectory + serviceProviderId + '.' + extension );
         if ( !fileName.isEmpty() ) {
             return fileName;
@@ -266,7 +267,7 @@ QStringList ServiceProviderGlobal::installedProviders()
     QStringList providers;
     const QString subDirectory = installationSubDirectory();
     foreach ( const QString &pattern, filePatterns() ) {
-        providers << KGlobal::dirs()->findAllResources( "data", subDirectory + pattern );
+        providers << QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, subDirectory + pattern );
     }
     return providers;
 }
@@ -275,7 +276,7 @@ bool ServiceProviderGlobal::isProviderInstalled( const QString &providerId )
 {
     const QString subDirectory = installationSubDirectory();
     foreach ( const QString &extension, fileExtensions() ) {
-        const QString providerFile = KGlobal::dirs()->findResource(
+        const QString providerFile = KStandardDirs::locate(
                 "data", subDirectory + providerId + '.' + extension );
         if ( !providerFile.isEmpty() ) {
             // Found the provider plugin source file in an installation directory

@@ -59,6 +59,7 @@
 #include <QDeclarativeView>
 #include <QDeclarativeContext>
 #include <QDeclarativeEngine>
+#include <QStandardPaths>
 
 GtfsDatabaseTab::GtfsDatabaseTab( Project *project, QWidget *parent )
         : AbstractTab(project, type(), parent), m_model(0), m_queryModel(0), m_tabWidget(0),
@@ -71,12 +72,12 @@ GtfsDatabaseTab::GtfsDatabaseTab( Project *project, QWidget *parent )
     setWidget( m_tabWidget );
 
     // Find the QML file used for the dashboard tab
-    const QString fileName = KGlobal::dirs()->findResource( "data", "timetablemate/gtfs_dashboard.qml" );
+    const QString fileName = QStandardPaths::locate(QStandardPaths::GenericDataLocation, "timetablemate/gtfs_dashboard.qml" );
     if ( fileName.isEmpty() ) {
         qWarning() << "gtfs_dashboard.qml not found! Check installation";
         return;
     }
-    const QString svgFileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.svg" );
+    const QString svgFileName = QStandardPaths::locate(QStandardPaths::GenericDataLocation, "timetablemate/dashboard.svg" );
 
     // Register classes in Qt's meta object system and for QML
     qRegisterMetaType< const ServiceProviderData* >( "const ServiceProviderData*" );

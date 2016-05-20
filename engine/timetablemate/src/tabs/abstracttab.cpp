@@ -57,6 +57,7 @@
 #include <QWebInspector>
 #include <QTimer>
 #include <QFileInfo>
+#include <QStandardPaths>
 
 AbstractTab::AbstractTab( Project *project, TabType type, QWidget *parent )
         : QWidget(parent), m_project(project), m_widget(0), m_modified(false)
@@ -147,7 +148,7 @@ void AbstractDocumentTab::viewCreated( KTextEditor::Document *document, KTextEdi
     QStringList katePartUIs = KGlobal::mainComponent().dirs()->findAllResources("data", uiFile);
     if ( !katePartUIs.isEmpty() ) {
         const QString katePartUI = katePartUIs.last();
-        const QString katePartLocalUI = KStandardDirs::locateLocal( "data", uiFile );
+        const QString katePartLocalUI = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + uiFile ;
         if ( !QFile::exists(katePartLocalUI) ) {
             // prevent warning: No such XML file ".../.kde/share/apps/timetablemate/katepartui.rc"
             QFile::copy( katePartUI, katePartLocalUI );

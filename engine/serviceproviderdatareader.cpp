@@ -33,7 +33,7 @@
 #include <KGlobal>
 #include <KLocale>
 #include <KDebug>
-#include <KStandardDirs>
+
 
 // Qt includes
 #include <QFile>
@@ -61,7 +61,7 @@ ServiceProviderData *ServiceProviderDataReader::read( const QString &providerId,
                  << country << "which is" << _serviceProviderId;
     } else {
         foreach ( const QString &extension, ServiceProviderGlobal::fileExtensions() ) {
-            filePath = KGlobal::dirs()->findResource( "data",
+            filePath = KStandardDirs::locate( "data",
                     ServiceProviderGlobal::installationSubDirectory() +
                     _serviceProviderId + '.' + extension );
             if ( !filePath.isEmpty() ) {

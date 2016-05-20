@@ -40,17 +40,18 @@
 #include <QAction>
 #include <QGraphicsEffect>
 #include <QContextMenuEvent>
+#include <QStandardPaths>
 
 DashboardTab::DashboardTab( Project *project, QWidget *parent )
         : AbstractTab(project, type(), parent), m_qmlView(0)
 {
     // Find the QML file used for the dashboard tab
-    const QString fileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.qml" );
+    const QString fileName = QStandardPaths::locate(QStandardPaths::GenericDataLocation, "timetablemate/dashboard.qml" );
     if ( fileName.isEmpty() ) {
         qWarning() << "dashboard.qml not found! Check installation";
         return;
     }
-    const QString svgFileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.svg" );
+    const QString svgFileName = QStandardPaths::locate(QStandardPaths::GenericDataLocation, "timetablemate/dashboard.svg" );
 
     // Register classes in Qt's meta object system and for QML
     qRegisterMetaType< const ServiceProviderData* >( "const ServiceProviderData*" );

@@ -30,7 +30,7 @@
 #include <KLocalizedString>
 #include <KToolBar>
 #include <KGlobal>
-#include <KStandardDirs>
+
 #include <KDebug>
 
 // Qt includes
@@ -46,6 +46,7 @@
 #include <QNetworkDiskCache>
 #include <QTimer>
 #include <QBuffer>
+#include <QStandardPaths>
 
 WebTab::WebTab( Project *project, QWidget *parent )
         : AbstractTab(project, type(), parent), m_webView(0), m_inspector(0), m_toolBar(0), m_urlBar(0),
@@ -74,7 +75,7 @@ WebTab::WebTab( Project *project, QWidget *parent )
             "<para><note>You can select a web element in the <emphasis>inspector</emphasis> "
             "using the context menu.</note></para>") );
     m_webView->settings()->setIconDatabasePath(
-            KGlobal::dirs()->saveLocation("data", "plasma_engine_publictransport") );
+            QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport");
 
     // Create a web inspector
     m_inspector = new QWebInspector( container );

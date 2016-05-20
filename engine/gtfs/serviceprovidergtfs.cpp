@@ -32,7 +32,7 @@
 #include <Plasma/Service>
 #include <KTimeZone>
 #include <KDateTime>
-#include <KStandardDirs>
+
 #include <KDebug>
 #include <KTemporaryFile>
 #include <KLocalizedString>

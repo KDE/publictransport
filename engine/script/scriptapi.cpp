@@ -26,7 +26,7 @@
 #include "serviceproviderglobal.h"
 
 // KDE includes
-#include <KStandardDirs>
+
 #include <KConfig>
 #include <KConfigGroup>
 #include <KDebug>
@@ -51,6 +51,7 @@
 
 // Other includes
 #include <zlib.h>
+#include <QStandardPaths>
 
 namespace ScriptApi {
 
@@ -1062,7 +1063,7 @@ void Helper::messageReceived( const QString &message, const QString &failedParse
 #endif
 
     // Log the complete message to the log file.
-    QString logFileName = KGlobal::dirs()->saveLocation( "data", "plasma_engine_publictransport" );
+    QString logFileName = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport" );
     logFileName.append( "serviceproviders.log" );
 
     if ( !logFileName.isEmpty() ) {

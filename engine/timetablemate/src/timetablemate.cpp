@@ -107,6 +107,7 @@
 #include <QtWebKit/QWebInspector>
 
 #include <unistd.h> // For KStandardDirs::checkAccess(), W_OK, in TimetableMate::fileOpenInstalled()
+#include <QStandardPaths>
 
 // This function returns all actions that get connected to the currently active project
 // in TimetableMate::activeProjectAboutToChange(). These actions are proxy actions for the actions
@@ -1403,7 +1404,7 @@ void TimetableMate::currentTabChanged( int index ) {
             m_qmlView->rootContext()->setContextProperty( "timetableMate", this );
 
             // Expose the name of the SVG to use
-            const QString svgFileName = KGlobal::dirs()->findResource( "data", "timetablemate/dashboard.svg" );
+            const QString svgFileName = QStandardPaths::locate(QStandardPaths::GenericDataLocation, "timetablemate/dashboard.svg" );
             m_qmlView->rootContext()->setContextProperty( "svgFileName", svgFileName );
 
             // Add Plasma QML import paths
@@ -1413,7 +1414,7 @@ void TimetableMate::currentTabChanged( int index ) {
             }
 
             // Find the QML file used for the timetablemate dashboard
-            const QString fileName = KGlobal::dirs()->findResource( "data", "timetablemate/timetablemate.qml" );
+            const QString fileName = QStandardPaths::locate(QStandardPaths::GenericDataLocation, "timetablemate/timetablemate.qml" );
             if ( fileName.isEmpty() ) {
                 qWarning() << "timetablemate.qml not found! Check installation";
             } else {
@@ -2285,7 +2286,7 @@ void TimetableMate::fetchProjectFinished()
 
         // Inform about fetched providers and show the target directory
         const QString saveDirectory =
-                KGlobal::dirs()->saveLocation( "data", "timetablemate/serviceProviders");
+                QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "timetablemate/serviceProviders");
         infoMessage( i18ncp("@info", "%1 provider plugin has been fetched to %2",
                                      "%1 provider plugins have been fetched to %2",
                             installedProviderFiles.count(), saveDirectory) );

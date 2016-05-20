@@ -21,7 +21,7 @@
 
 #include <KDebug>
 #include <KGlobal>
-#include <KStandardDirs>
+
 
 #include <QDate>
 #include <QColor>
@@ -30,10 +30,11 @@
 #include <QSqlDatabase>
 #include <QSqlError>
 #include <QSqlQuery>
+#include <QStandardPaths>
 
 QString GtfsDatabase::databasePath( const QString &providerName )
 {
-    const QString dir = KGlobal::dirs()->saveLocation("data", "plasma_engine_publictransport/gtfs/");
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport/gtfs/");
     return dir + providerName + ".sqlite";
 }
 
