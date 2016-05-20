@@ -29,7 +29,7 @@
 #include <KLocalizedString>
 #include <KGlobal>
 #include <KDebug>
-#include <KStandardDirs>
+
 #include <KAction>
 
 // Qt includes
@@ -107,7 +107,7 @@ void DocumentationDockWidget::showDocumentation( const QString &key )
             (className == QLatin1String("index") ? "script_functions_" + name
                                                  : scriptClassName + '-' + name);
 
-    const QString documentationFileName = KGlobal::dirs()->findResource(
+    const QString documentationFileName = KStandardDirs::locate(
             "data", QString("timetablemate/doc/%1.html").arg(className) );
     if ( documentationFileName.isEmpty() ) {
         qWarning() << "Documentation for" << className << "not found";
@@ -120,7 +120,7 @@ void DocumentationDockWidget::showDocumentation( const QString &key )
 void DocumentationDockWidget::documentationChosen( int index )
 {
     const QString page = m_documentationChooser->itemData( index ).toString();
-    const QString documentationFileName = KGlobal::dirs()->findResource(
+    const QString documentationFileName = KStandardDirs::locate(
             "data", QString("timetablemate/doc/%1.html").arg(page) );
     m_documentationWidget->load( QUrl("file://" + documentationFileName) );
 }

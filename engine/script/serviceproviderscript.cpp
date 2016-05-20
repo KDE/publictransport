@@ -33,7 +33,7 @@
 #include <KLocalizedString>
 #include <KConfig>
 #include <KConfigGroup>
-#include <KStandardDirs>
+
 #include <KDebug>
 #include <ThreadWeaver/Weaver>
 #include <ThreadWeaver/Job>

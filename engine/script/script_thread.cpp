@@ -34,7 +34,7 @@
 #include <KLocalizedString>
 #include <KDebug>
 #include <KGlobal>
-#include <KStandardDirs>
+
 #include <KLocale>
 
 // Qt includes
@@ -47,6 +47,7 @@
 #include <QEventLoop>
 #include <QFileInfo>
 #include <QApplication>
+#include <QStandardPaths>
 
 ScriptJob::ScriptJob( const ScriptData &data, const QSharedPointer< Storage > &scriptStorage,
                       QObject* parent )
@@ -469,7 +470,7 @@ QScriptValue include( QScriptContext *context, QScriptEngine *engine )
 
     // Find the script to be included
     const QString subDirectory = ServiceProviderGlobal::installationSubDirectory();
-    const QString filePath = KGlobal::dirs()->findResource( "data", subDirectory + fileName );
+    const QString filePath = QStandardPaths::locate(QStandardPaths::GenericDataLocation, subDirectory + fileName );
 
     // Check if the script was already included
     QStringList includedFiles =

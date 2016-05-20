@@ -34,7 +34,7 @@
 #include <QSignalSpy>
 #include <QWebView>
 #include <KGlobal>
-#include <KStandardDirs>
+
 #include <KWebView>
 
 void DebuggerTest::initTestCase()

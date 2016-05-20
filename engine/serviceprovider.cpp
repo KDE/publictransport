@@ -30,7 +30,7 @@
 
 // KDE includes
 #include <KIO/NetAccess>
-#include <KStandardDirs>
+
 #include <KLocale>
 #include <KDebug>
 #include <KMimeType>

@@ -41,7 +41,7 @@
 // KDE/Plasma includes
 #include <Plasma/DataContainer>
 #include <KDE/KLocalizedString>
-#include <kstandarddirs.h>
+
 #include <kconfig.h>
 #include <klocale.h>
 
@@ -51,6 +51,7 @@
 #include <QTimer>
 #include <QDebug>
 #include <QtDBus/QDBusConnection>
+#include <QStandardPaths>
 
 const int PublicTransportEngine::DEFAULT_TIME_OFFSET = 0;
 const int PublicTransportEngine::PROVIDER_CLEANUP_TIMEOUT = 10000; // 10 seconds
@@ -282,7 +283,7 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
     // If an installation directory gets removed, the file system watcher would need to watch the
     // parent directory instead to get notified when it gets created again.
     const QString installationSubDirectory = ServiceProviderGlobal::installationSubDirectory();
-    const QString saveDir = KGlobal::dirs()->saveLocation( "data", installationSubDirectory );
+    const QString saveDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + installationSubDirectory );
     QFile saveDirKeeper( saveDir + "Do not remove this directory" );
     saveDirKeeper.open( QIODevice::WriteOnly );
     saveDirKeeper.write( "If this directory gets removed, PublicTransport will not get notified "
@@ -291,7 +292,7 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
 
     // Create a file system watcher for the provider plugin installation directories
     // to get notified about new/modified/removed providers
-    const QStringList directories = KGlobal::dirs()->findDirs( "data", installationSubDirectory );
+    const QStringList directories = QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, installationSubDirectory );
     m_fileSystemWatcher = new QFileSystemWatcher( directories );
     connect( m_fileSystemWatcher, SIGNAL(directoryChanged(QString)),
              this, SLOT(serviceProviderDirChanged(QString)) );
