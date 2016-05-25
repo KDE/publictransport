@@ -40,10 +40,10 @@
 
 // KDE/Plasma includes
 #include <Plasma/DataContainer>
-#include <KDE/KLocalizedString>
-
-#include <kconfig.h>
-#include <klocale.h>
+#include <KLocalizedString>
+#include <KGlobal>
+#include <KConfig>
+#include <KLocale>
 
 // Qt includes
 #include <QFileSystemWatcher>
@@ -283,7 +283,7 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
     // If an installation directory gets removed, the file system watcher would need to watch the
     // parent directory instead to get notified when it gets created again.
     const QString installationSubDirectory = ServiceProviderGlobal::installationSubDirectory();
-    const QString saveDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + installationSubDirectory );
+    const QString saveDir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + installationSubDirectory;
     QFile saveDirKeeper( saveDir + "Do not remove this directory" );
     saveDirKeeper.open( QIODevice::WriteOnly );
     saveDirKeeper.write( "If this directory gets removed, PublicTransport will not get notified "

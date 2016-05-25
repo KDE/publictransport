@@ -23,11 +23,13 @@
 // Own includes
 #include "enums.h"
 
+// KDE includes
+#include <KConfig>
+#include <KConfigGroup>
+
 // Qt includes
 #include <QStringList>
-
-class KConfig;
-class KConfigGroup;
+#include <QSharedPointer>
 
 /** @brief Provides static functions for service providers. */
 class ServiceProviderGlobal {

@@ -23,8 +23,9 @@
 #include "serviceproviderdata.h"
 
 #include <KZip>
-#include <KStandardDirs>
 #include <KDebug>
+#include <KGlobal>
+#include <KStandardDirs>
 #include <KLocalizedString>
 
 #include <QDir>

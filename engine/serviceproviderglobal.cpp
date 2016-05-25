@@ -24,11 +24,10 @@
 #include "config.h"
 
 // KDE includes
-#include <KGlobal>
-#include <KStandardDirs>
 #include <KDebug>
+#include <KGlobal>
 #include <KMimeType>
-#include <KConfigGroup>
+#include <KStandardDirs>
 #include <KLocalizedString>
 
 // Qt includes
@@ -90,8 +89,7 @@ QString ServiceProviderGlobal::defaultProviderForLocation( const QString &locati
 
 QString ServiceProviderGlobal::cacheFileName()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport/")
-            .append( QLatin1String("datacache") );
+    return KGlobal::dirs()->saveLocation("data", "plasma_engine_publictransport/").append( QLatin1String("datacache") );
 }
 
 QSharedPointer< KConfig > ServiceProviderGlobal::cache()

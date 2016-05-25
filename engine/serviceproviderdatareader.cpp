@@ -30,6 +30,7 @@
 
 // KDE includes
 #include <KLocalizedString>
+#include <KStandardDirs>
 #include <KGlobal>
 #include <KLocale>
 #include <KDebug>
