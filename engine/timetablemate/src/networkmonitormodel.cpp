@@ -29,7 +29,7 @@
 #include <KGlobal>
 #include <KLocale>
 #include <QUrl>
-#include <KMimeType>
+
 #include <KIO/NetAccess>
 #include <KIO/Job>
 #include <KIcon>
@@ -44,6 +44,8 @@
 #include <QBuffer>
 #include <QTextCodec>
 #include <QImageReader>
+#include <QMimeDatabase>
+#include <QMimeType>
 
 NetworkMonitorModel::NetworkMonitorModel( QObject *parent ) : QAbstractListModel( parent )
 {
@@ -424,7 +426,8 @@ void NetworkMonitorModelItem::prepareAdditionalImageData()
 
 NetworkMonitorModelItem::ContentType NetworkMonitorModelItem::contentTypeFromUrl( const QUrl &url )
 {
-    KMimeType::Ptr mimeType = KMimeType::findByUrl( url );
+QMimeDatabase db;
+    QMimeType mimeType = db.mimeTypeForUrl( url );
     if ( mimeType == KMimeType::defaultMimeTypePtr() ) {
         // Mime type not found, use KIO to get the mime type asynchronously
         KIO::MimetypeJob *job = KIO::mimetype( url, KIO::HideProgressInfo );
@@ -434,8 +437,8 @@ NetworkMonitorModelItem::ContentType NetworkMonitorModelItem::contentTypeFromUrl
         return RetrievingContentType;
     } else {
         // Mime type found
-        m_mimeType = mimeType->name();
-        return contentTypeFromMimeType( mimeType->name() );
+        m_mimeType = mimeType.name();
+        return contentTypeFromMimeType( mimeType.name() );
     }
 }
 
@@ -443,13 +446,15 @@ NetworkMonitorModelItem::ContentType NetworkMonitorModelItem::contentTypeFromCon
         const QByteArray &content, const QUrl &url )
 {
     int accuracy;
-    KMimeType::Ptr mimeType = KMimeType::findByContent( content, &accuracy );
+    QMimeDatabase db;
+    QMimeType mimeType = db.mimeTypeForData( content, &accuracy );
     if ( (mimeType == KMimeType::defaultMimeTypePtr() || accuracy < 70) && url.isValid() ) {
         // No accurate mime type found, find mime type from URL
-        mimeType = KMimeType::findByUrl( url );
+QMimeDatabase db;
+        mimeType = db.mimeTypeForUrl( url );
     }
-    m_mimeType = mimeType->name();
-    return contentTypeFromMimeType( mimeType->name() );
+    m_mimeType = mimeType.name();
+    return contentTypeFromMimeType( mimeType.name() );
 }
 
 QString NetworkMonitorModelItem::nameFromType( NetworkMonitorModelItem::Type type )

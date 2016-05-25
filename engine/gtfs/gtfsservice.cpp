@@ -26,7 +26,7 @@
 
 // KDE includes
 #include <KTemporaryFile>
-#include <KMimeType>
+
 #include <KDebug>
 #include <KFileItem>
 #include <KIO/Job>
@@ -38,6 +38,8 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QTimer>
+#include <QMimeDatabase>
+#include <QMimeType>
 
 const qreal ImportGtfsToDatabaseJob::PROGRESS_PART_FOR_FEED_DOWNLOAD = 0.1;
 
@@ -350,13 +352,13 @@ void ImportGtfsToDatabaseJob::statFeedFinished( QNetworkReply *reply )
     if ( reply->error() == QNetworkReply::NoError ) {
         QString contentType = reply->header( QNetworkRequest::ContentTypeHeader ).toString();
         // If ';' is not included in contentType, QString::left() returns the whole string
-        const KMimeType::Ptr mimeType =
-                KMimeType::mimeType( contentType.left(contentType.indexOf(';')) );
-        if ( mimeType && mimeType->isValid() ) {
-            if ( !mimeType->is("application/zip") && !mimeType->is("application/octet-stream") ) {
+        QMimeDatabase db;
+        const QMimeType mimeType = db.mimeTypeForName( contentType.left(contentType.indexOf(';')) );
+        if ( mimeType.isValid() ) {
+            if ( !mimeType.inherits("application/zip") && !mimeType.inherits("application/octet-stream") ) {
                 kDebug() << "Invalid mime type:" << reply->header(QNetworkRequest::ContentTypeHeader).toString();
                 setError( GtfsErrorWrongFeedFormat );
-                setErrorText( i18nc("@info/plain", "Wrong GTFS feed format: %1", mimeType->name()) );
+                setErrorText( i18nc("@info/plain", "Wrong GTFS feed format: %1", mimeType.name()) );
                 setResult( false );
                 return;
             }
@@ -490,12 +492,13 @@ void ImportGtfsToDatabaseJob::downloadFeed()
 void ImportGtfsToDatabaseJob::mimeType( KIO::Job *job, const QString &type )
 {
     Q_UNUSED( job );
-    const KMimeType::Ptr mimeType = KMimeType::mimeType( type );
-    if ( mimeType && mimeType->isValid() ) {
-        if ( !mimeType->is("application/zip") && !mimeType->is("application/octet-stream") ) {
+    QMimeDatabase db;
+    const QMimeType mimeType = db.mimeTypeForName( type );
+    if ( mimeType.isValid() ) {
+        if ( !mimeType.inherits("application/zip") && !mimeType.inherits("application/octet-stream") ) {
             kDebug() << "Invalid mime type:" << type;
             setError( GtfsErrorWrongFeedFormat );
-            setErrorText( i18nc("@info/plain", "Wrong GTFS feed format: %1", mimeType->name()) );
+            setErrorText( i18nc("@info/plain", "Wrong GTFS feed format: %1", mimeType.name()) );
             setResult( false );
             return;
         }
