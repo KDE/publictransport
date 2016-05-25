@@ -88,12 +88,12 @@ DebuggerJob::~DebuggerJob()
         requestAbort();
     }
 
-    m_mutex->lockInline();
+    m_mutex->lock()();
     if ( m_agent ) {
         DEBUG_JOBS("Wait for the debugger to finish");
         m_agent->finish();
     }
-    m_mutex->unlockInline();
+    m_mutex->unlock()();
 
     delete m_mutex;
     delete m_engineSemaphore;
@@ -428,18 +428,18 @@ bool DebuggerJob::waitFor( QObject *sender, const char *signal, WaitForType type
     const int finishWaitTime = 1000;
     int finishWaitCounter = 0;
 
-    m_mutex->lockInline();
+    m_mutex->lock()();
     bool success = m_success;
     bool quit = m_quit;
     if ( !success || quit ) {
-        m_mutex->unlockInline();
+        m_mutex->unlock()();
         return true;
     }
 
     DebuggerAgent *agent = m_agent;
     ScriptObjects objects = m_objects;
     bool stoppedSignalWasProcessed = m_stoppedSignalWasProcessed;
-    m_mutex->unlockInline();
+    m_mutex->unlock()();
 
     while ( !agent->wasLastRunAborted() && finishWaitCounter < 50 && sender ) {
         if ( (type == WaitForNetwork && !objects.network->hasRunningRequests()) ||
@@ -457,24 +457,24 @@ bool DebuggerJob::waitFor( QObject *sender, const char *signal, WaitForType type
         QTimer::singleShot( finishWaitTime, &loop, SLOT(quit()) );
 
         // Store a pointer to the event loop, to be able to quit it from the destructor
-        m_mutex->lockInline();
+        m_mutex->lock()();
         m_currentLoop = &loop;
-        m_mutex->unlockInline();
+        m_mutex->unlock()();
 
         // Engine continues execution here / waits for a signal
         loop.exec();
         qApp->processEvents();
 
-        m_mutex->lockInline();
+        m_mutex->lock()();
         if ( !m_currentLoop || m_quit ) {
-            m_mutex->unlockInline();
+            m_mutex->unlock()();
             // Job was aborted
             destroyAgent();
             return false;
         }
         m_currentLoop = 0;
         stoppedSignalWasProcessed = m_stoppedSignalWasProcessed;
-        m_mutex->unlockInline();
+        m_mutex->unlock()();
 
         ++finishWaitCounter;
     }
@@ -494,7 +494,7 @@ bool DebuggerJob::waitFor( QObject *sender, const char *signal, WaitForType type
 
 void LoadScriptJob::debuggerRun()
 {
-    m_mutex->lockInline();
+    m_mutex->lock()();
     QScriptSyntaxCheckResult syntax = QScriptEngine::checkSyntax( m_data.program->sourceCode() );
     if ( syntax.state() == QScriptSyntaxCheckResult::Error ) {
         DEBUG_JOBS("Syntax error at" << syntax.errorLineNumber() << syntax.errorColumnNumber()
@@ -508,17 +508,17 @@ void LoadScriptJob::debuggerRun()
                                   syntax.errorMessage());
         }
         m_success = false;
-        m_mutex->unlockInline();
+        m_mutex->unlock()();
         return;
     }
 
     // Create new engine and agent
-    m_mutex->unlockInline();
+    m_mutex->unlock()();
     m_engineSemaphore->acquire();
     DebuggerAgent *agent = createAgent();
-    m_mutex->lockInline();
+    m_mutex->lock()();
     if ( !agent || m_quit ) {
-        m_mutex->unlockInline();
+        m_mutex->unlock()();
         if ( agent ) {
             destroyAgent();
         }
@@ -528,7 +528,7 @@ void LoadScriptJob::debuggerRun()
     const ScriptData data = m_data;
     const ScriptObjects objects = m_objects;
     const DebugFlags debugFlags = m_debugFlags;
-    m_mutex->unlockInline();
+    m_mutex->unlock()();
 
     agent->setDebugFlags( debugFlags );
     agent->setExecutionControlType( debugFlags.testFlag(InterruptAtStart)
@@ -632,9 +632,9 @@ void LoadScriptJob::debuggerRun()
 bool ExecuteConsoleCommandJob::runInForeignAgent( DebuggerAgent *agent )
 {
     // Execute the command
-    m_mutex->lockInline();
+    m_mutex->lock()();
     const ConsoleCommand command = m_command;
-    m_mutex->unlockInline();
+    m_mutex->unlock()();
 
     QString returnValue;
     bool success = agent->executeCommand( command, &returnValue );
@@ -674,14 +674,14 @@ bool ForeignAgentJob::waitForFinish( DebuggerAgent *agent, const ScriptObjects &
 
 void ForeignAgentJob::debuggerRun()
 {
-    m_mutex->lockInline();
+    m_mutex->lock()();
     const ScriptData data = m_data;
     DebuggerAgent *agent = m_agent;
     QScriptEngine *engine = 0;
     ScriptObjects objects = m_objects;
     m_success = true;
     const QPointer< DebuggerJob > parentJob = m_parentJob;
-    m_mutex->unlockInline();
+    m_mutex->unlock()();
 
     const bool useExistingEngine = agent;
     QThread *scriptObjectThread = 0;
@@ -709,10 +709,10 @@ void ForeignAgentJob::debuggerRun()
     } else {
         // Create new engine and agent
         m_engineSemaphore->acquire();
-        m_mutex->lockInline();
+        m_mutex->lock()();
         agent = createAgent();
         objects = m_objects;
-        m_mutex->unlockInline();
+        m_mutex->unlock()();
 
         if ( !agent ) {
             m_engineSemaphore->release();
@@ -788,11 +788,11 @@ void EvaluateInContextJob::handleUncaughtException( DebuggerAgent *agent )
 
 bool EvaluateInContextJob::runInForeignAgent( DebuggerAgent *agent )
 {
-    m_mutex->lockInline();
+    m_mutex->lock()();
     const QString program = m_program;
     const QString context = m_context;
     m_result.error = false;
-    m_mutex->unlockInline();
+    m_mutex->unlock()();
 
     // m_engineSemaphore is locked
     // Check syntax of the program to run
@@ -1121,7 +1121,7 @@ int DebuggerJob::getNextBreakableLineNumber( const QString &fileName, int lineNu
 void DebuggerJob::finish() const
 {
     DEBUG_JOBS("Wait for the job to finish...");
-    m_mutex->lockInline();
+    m_mutex->lock()();
     if ( m_agent ) {
         m_agent->finish();
     }
@@ -1129,11 +1129,11 @@ void DebuggerJob::finish() const
     if ( !isFinished() ) {
         QEventLoop loop;
         connect( this, SIGNAL(done(ThreadWeaver::Job*)), &loop, SLOT(quit()) );
-        m_mutex->unlockInline();
+        m_mutex->unlock()();
 
         loop.exec();
     } else {
-        m_mutex->unlockInline();
+        m_mutex->unlock()();
     }
     DEBUG_JOBS("...job finished");
 }

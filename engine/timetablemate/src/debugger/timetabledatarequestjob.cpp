@@ -369,21 +369,20 @@ void CallScriptFunctionJob::debuggerRun()
         handleError( engine, i18nc("@info/plain", "Error in the script at line %1"
                      "in function '%2': <message>%3</message>.",
                      agent->uncaughtExceptionLineNumber(), functionName, uncaughtException) );
-        m_mutex->lockInline();
+        m_mutex->lock();
         destroyAgent();
-        m_mutex->unlockInline();
+        m_mutex->unlock();
         m_engineSemaphore->release();
         return;
     }
-
     // Unlock engine mutex after execution was finished
     m_engineSemaphore->release();
 
-    m_mutex->lockInline();
+    m_mutex->lock();
     m_returnValue = returnValue;
     m_aborted = agent->wasLastRunAborted();
     bool quit = m_quit;
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     if ( !quit ) {
         if ( functionName == ServiceProviderScript::SCRIPT_FUNCTION_GETADDITIONALDATA ) {

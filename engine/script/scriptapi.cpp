@@ -88,14 +88,14 @@ void NetworkRequest::abort()
     }
 
     // isRunning() returned true => m_reply != 0
-    m_mutex->lockInline();
+    m_mutex->lock();
     disconnect( m_reply, 0, this, 0 );
     m_reply->abort();
     m_reply->deleteLater();
     m_reply = 0;
     const QString url = m_url;
     const QVariant userData = m_userData;
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     emit aborted( timedOut );
     emit finished( QByteArray(), true, i18nc("@info/plain", "The request was aborted"),
@@ -104,10 +104,10 @@ void NetworkRequest::abort()
 
 void NetworkRequest::slotReadyRead()
 {
-    m_mutex->lockInline();
+    m_mutex->lock();
     if ( !m_reply ) {
         // Prevent crashes on exit
-        m_mutex->unlockInline();
+        m_mutex->unlock();
         qWarning() << "Reply object already deleted, aborted?";
         return;
     }
@@ -119,7 +119,7 @@ void NetworkRequest::slotReadyRead()
     if ( data.isEmpty() ) {
         qWarning() << "Error downloading" << m_url << m_reply->errorString();
     }
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     emit readyRead( data );
 }
@@ -179,10 +179,10 @@ QByteArray gzipDecompress( QByteArray compressData )
 
 void NetworkRequest::slotFinished()
 {
-    m_mutex->lockInline();
+    m_mutex->lock();
     if ( !m_reply ) {
         // Prevent crashes on exit
-        m_mutex->unlockInline();
+        m_mutex->unlock();
         qWarning() << "Reply object already deleted, aborted?";
         return;
     }
@@ -203,7 +203,7 @@ void NetworkRequest::slotFinished()
             delete m_request;
             m_request = new QNetworkRequest( m_redirectUrl );
             const QUrl redirectUrl = m_redirectUrl;
-            m_mutex->unlockInline();
+            m_mutex->unlock();
 
             emit redirected( redirectUrl );
             return;
@@ -243,17 +243,17 @@ void NetworkRequest::slotFinished()
     const QByteArray data = m_data;
     const QString url = m_url;
     const QVariant userData = m_userData;
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     emit finished( data, hasError, errorString, statusCode, size, url, userData );
 }
 
 void NetworkRequest::started( QNetworkReply* reply, int timeout )
 {
-    m_mutex->lockInline();
+    m_mutex->lock();
     if ( !m_network ) {
         qWarning() << "Can't decode, no m_network given...";
-        m_mutex->unlockInline();
+        m_mutex->unlock();
         return;
     }
     m_data.clear();
@@ -268,7 +268,7 @@ void NetworkRequest::started( QNetworkReply* reply, int timeout )
         connect( m_reply, SIGNAL(readyRead()), this, SLOT(slotReadyRead()) );
     }
     connect( m_reply, SIGNAL(finished()), this, SLOT(slotFinished()) );
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     emit started();
 }
@@ -441,9 +441,9 @@ void Network::slotRequestStarted()
     NetworkRequest::Ptr sharedRequest = getSharedRequest( request );
     Q_ASSERT( sharedRequest ); // This slot should only be connected to signals of NetworkRequest
 
-    m_mutex->lockInline();
+    m_mutex->lock();
     m_lastDownloadAborted = false;
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     emit requestStarted( sharedRequest );
 }
@@ -459,11 +459,11 @@ void Network::slotRequestFinished( const QByteArray &data, bool error, const QSt
     // to not have it deleted here. The script might try to use the request object later,
     // eg. because of connected slots, and will crash if the request object was already deleted.
     // This way NetworkRequest objects stay alive at least as long as the Network object does.
-    m_mutex->lockInline();
+    m_mutex->lock();
     const QDateTime timestamp = QDateTime::currentDateTime();
     m_requests.removeOne( sharedRequest );
     m_finishedRequests << sharedRequest;
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     emit requestFinished( sharedRequest, data, error, errorString, timestamp, statusCode, size );
 
@@ -478,10 +478,10 @@ void Network::slotRequestRedirected( const QUrl &newUrl )
     NetworkRequest::Ptr sharedRequest = getSharedRequest( request );
     Q_ASSERT( sharedRequest ); // This slot should only be connected to signals of NetworkRequest
 
-    m_mutex->lockInline();
+    m_mutex->lock();
     QNetworkReply *reply = m_manager->get( *request->request() );
     m_lastUrl = newUrl.toString();
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     request->started( reply );
 
@@ -491,9 +491,9 @@ void Network::slotRequestRedirected( const QUrl &newUrl )
 
 void Network::slotRequestAborted()
 {
-    m_mutex->lockInline();
+    m_mutex->lock();
     if ( m_quit ) {
-        m_mutex->unlockInline();
+        m_mutex->unlock();
         return;
     }
 
@@ -506,7 +506,7 @@ void Network::slotRequestAborted()
 
     DEBUG_NETWORK("Aborted" << request->url());
     m_lastDownloadAborted = true;
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     emit requestAborted( sharedRequest );
 }
@@ -539,11 +539,11 @@ void Network::get( NetworkRequest* request, int timeout )
     }
 
     // Create a get request
-    m_mutex->lockInline();
+    m_mutex->lock();
     QNetworkReply *reply = m_manager->get( *request->request() );
     m_lastUrl = request->url();
     m_lastUserUrl = request->userUrl();
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     request->started( reply, timeout );
 }
@@ -555,11 +555,11 @@ void Network::head( NetworkRequest* request, int timeout )
     }
 
     // Create a head request
-    m_mutex->lockInline();
+    m_mutex->lock();
     QNetworkReply *reply = m_manager->head( *request->request() );
     m_lastUrl = request->url();
     m_lastUserUrl = request->userUrl();
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     request->started( reply, timeout );
 }
@@ -571,11 +571,11 @@ void Network::post( NetworkRequest* request, int timeout )
     }
 
     // Create a head request
-    m_mutex->lockInline();
+    m_mutex->lock();
     QNetworkReply *reply = m_manager->post( *request->request(), request->postDataByteArray() );
     m_lastUrl = request->url();
     m_lastUserUrl = request->userUrl();
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     request->started( reply, timeout );
 }
@@ -604,13 +604,13 @@ QByteArray Network::getSynchronous( const QString &url, const QString &userUrl, 
     QNetworkRequest request( url );
     DEBUG_NETWORK("Start synchronous request" << url);
 
-    m_mutex->lockInline();
+    m_mutex->lock();
     QNetworkReply *reply = m_manager->get( request );
     ++m_synchronousRequestCount;
     m_lastUrl = url;
     m_lastUserUrl = userUrl.isEmpty() ? url : userUrl;
     m_lastDownloadAborted = false;
-    m_mutex->unlockInline();
+    m_mutex->unlock();
 
     emit synchronousRequestStarted( url );
     const QTime start = QTime::currentTime();
@@ -1063,7 +1063,8 @@ void Helper::messageReceived( const QString &message, const QString &failedParse
 #endif
 
     // Log the complete message to the log file.
-    QString logFileName = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport" );
+    QString logFileName = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport" 
+);
     logFileName.append( "serviceproviders.log" );
 
     if ( !logFileName.isEmpty() ) {
@@ -1096,7 +1097,7 @@ void Helper::messageReceived( const QString &message, const QString &failedParse
 
 void ResultObject::addData( const QVariantMap &item )
 {
-    m_mutex->lockInline();
+    m_mutex->lock();
     TimetableData data;
     for ( QVariantMap::ConstIterator it = item.constBegin(); it != item.constEnd(); ++it ) {
         bool ok;
@@ -1123,9 +1124,9 @@ void ResultObject::addData( const QVariantMap &item )
                                 it.key(), value.toString());
             }
             const int count = m_timetableData.count();
-            m_mutex->unlockInline();
+            m_mutex->unlock();
             emit invalidDataReceived( info, message, context()->parentContext(), count, item );
-            m_mutex->lockInline();
+            m_mutex->lock();
             continue;
         } else if ( value.isNull() ) {
             // Null value received, simply leave the data empty
@@ -1135,9 +1136,9 @@ void ResultObject::addData( const QVariantMap &item )
             const QString message = i18nc("@info/plain", "Invalid value received for \"%1\"",
                                           it.key());
             const int count = m_timetableData.count();
-            m_mutex->unlockInline();
+            m_mutex->unlock();
             emit invalidDataReceived( info, message, context()->parentContext(), count, item );
-            m_mutex->lockInline();
+            m_mutex->lock();
             continue;
         } else if ( info == Enums::TypeOfVehicle &&
                     static_cast<Enums::VehicleType>(value.toInt()) == Enums::InvalidVehicleType &&
@@ -1147,9 +1148,9 @@ void ResultObject::addData( const QVariantMap &item )
             const QString message = i18nc("@info/plain",
                     "Invalid type of vehicle received: \"%1\"", value.toString());
             const int count = m_timetableData.count();
-            m_mutex->unlockInline();
+            m_mutex->unlock();
             emit invalidDataReceived( info, message, context()->parentContext(), count, item );
-            m_mutex->lockInline();
+            m_mutex->lock();
         } else if ( info == Enums::TypesOfVehicleInJourney || info == Enums::RouteTypesOfVehicles ) {
             const QVariantList types = value.toList();
             foreach ( const QVariant &type, types ) {
@@ -1162,10 +1163,10 @@ void ResultObject::addData( const QVariantMap &item )
                             "Invalid type of vehicle received in \"%1\": \"%2\"",
                             Global::timetableInformationToString(info), type.toString());
                     const int count = m_timetableData.count();
-                    m_mutex->unlockInline();
+                    m_mutex->unlock();
                     emit invalidDataReceived( info, message, context()->parentContext(),
                                               count, item );
-                    m_mutex->lockInline();
+                    m_mutex->lock();
                 }
             }
         } else if ( info == Enums::JourneyNewsUrl ) {
@@ -1212,10 +1213,10 @@ void ResultObject::addData( const QVariantMap &item )
 
     if ( m_features.testFlag(AutoPublish) && m_timetableData.count() == 10 ) {
         // Publish the first 10 data items automatically
-        m_mutex->unlockInline();
+        m_mutex->unlock();
         emit publish();
     } else {
-        m_mutex->unlockInline();
+        m_mutex->unlock();
     }
 }
 
