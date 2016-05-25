@@ -26,7 +26,7 @@
 // KDE includes
 #include <KDebug>
 #include <KGlobal>
-#include <KMimeType>
+
 #include <KStandardDirs>
 #include <KLocalizedString>
 
@@ -34,6 +34,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QStandardPaths>
+#include <QMimeDatabase>
+#include <QMimeType>
 
 QList< Enums::ServiceProviderType > ServiceProviderGlobal::availableProviderTypes()
 {
@@ -230,16 +232,16 @@ QString ServiceProviderGlobal::typeName( Enums::ServiceProviderType type, Provid
 
 QStringList ServiceProviderGlobal::filePatterns()
 {
-    const KMimeType::Ptr mimeType =
-            KMimeType::mimeType("application/x-publictransport-serviceprovider");
-    if ( mimeType.isNull() ) {
+    QMimeDatabase db;
+    const QMimeType mimeType = db.mimeTypeForName("application/x-publictransport-serviceprovider");
+    if (!mimeType.isValid() ) {
         qWarning() << "The application/x-publictransport-serviceprovider mime type was not found!";
         qWarning() << "No provider plugins will get loaded.";
         kDebug() << "Solution: Make sure 'serviceproviderplugin.xml' is installed correctly "
                     "and run kbuildsycoca4.";
         return QStringList();
     } else {
-        return mimeType->patterns();
+        return mimeType.globPatterns();
     }
 }
 

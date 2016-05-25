@@ -64,6 +64,8 @@
 #include <QLayout>
 #include <QFormLayout>
 #include <QToolBar>
+#include <QMimeDatabase>
+#include <QMimeType>
 
 ProjectSettingsDialog::ProjectSettingsDialog( QWidget *parent )
         : KDialog(parent), ui_provider(new Ui::timetablemateview_base()), m_providerData(0),
@@ -823,10 +825,11 @@ void ProjectSettingsDialog::browseForScriptFile()
     QStringList fileNames = dir.entryList();
     for( int i = 0; i < fileNames.count(); ++i ) {
         QString fileName = fileNames.at( i );
-        KMimeType::Ptr mimeType = KMimeType::findByUrl( QUrl( fileName ) );
-        if( mimeType->is("application/javascript") ||
-            mimeType->is("application/x-ruby") ||
-            mimeType->is("text/x-python") )
+QMimeDatabase db;
+        QMimeType mimeType = db.mimeTypeForUrl( QUrl( fileName ) );
+        if( mimeType.inherits("application/javascript") ||
+            mimeType.inherits("application/x-ruby") ||
+            mimeType.inherits("text/x-python") )
         {
             scriptFiles << fileName;
             if( fileName == ui_provider->scriptFile->text() ) {
