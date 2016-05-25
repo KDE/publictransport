@@ -30,24 +30,24 @@
 #include "request.h"
 
 // KDE includes
-#include <KLocalizedString>
 #include <KConfig>
 #include <KConfigGroup>
+#include <KLocalizedString>
 
 #include <KDebug>
-#include <ThreadWeaver/Weaver>
 #include <ThreadWeaver/Job>
+#include <ThreadWeaver/Weaver>
 
 // Qt includes
-#include <QTextCodec>
 #include <QFile>
-#include <QFileInfo>
-#include <QPointer>
 #include <QMutex>
 #include <QTimer>
+#include <QPointer>
+#include <QFileInfo>
+#include <QTextCodec>
 #include <QEventLoop>
-#include <QScriptProgram>
 #include <QScriptEngine>
+#include <QScriptProgram>
 #include <QScriptContextInfo>
 
 const char *ServiceProviderScript::SCRIPT_FUNCTION_FEATURES = "features";

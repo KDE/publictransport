@@ -34,7 +34,7 @@
 
 QString GtfsDatabase::databasePath( const QString &providerName )
 {
-    const QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport/gtfs/");
+    const QString dir = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport/gtfs/";
     return dir + providerName + ".sqlite";
 }
 

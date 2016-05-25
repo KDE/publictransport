@@ -32,7 +32,7 @@
 #include "serviceproviderdata.h"
 
 // KDE includes
-#include <ThreadWeaver/Job> // Base class
+#include <threadweaver/Job.h>
 
 // Qt includes
 #include <QScriptEngineAgent> // Base class

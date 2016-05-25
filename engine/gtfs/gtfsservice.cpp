@@ -30,6 +30,7 @@
 #include <KDebug>
 #include <KFileItem>
 #include <KIO/Job>
+#include <kdatetime.h>
 #include <Plasma/DataEngine>
 #include <kjobtrackerinterface.h>
 

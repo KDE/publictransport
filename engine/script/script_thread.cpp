@@ -29,12 +29,11 @@
 #include "serviceproviderglobal.h"
 
 // KDE includes
-#include <ThreadWeaver/Thread>
-#include <ThreadWeaver/Weaver>
+#include <threadweaver/Thread.h>
+#include <threadweaver/weaver.h>
 #include <KLocalizedString>
 #include <KDebug>
 #include <KGlobal>
-
 #include <KLocale>
 
 // Qt includes

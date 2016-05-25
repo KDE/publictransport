@@ -25,6 +25,7 @@
 #include <KDE/KLocalizedString>
 #include <kstandarddirs.h>
 #include <klocale.h>
+#include <KGlobal>
 #include <KDebug>
 
 // Qt includes

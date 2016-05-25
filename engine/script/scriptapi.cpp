@@ -1063,8 +1063,7 @@ void Helper::messageReceived( const QString &message, const QString &failedParse
 #endif
 
     // Log the complete message to the log file.
-    QString logFileName = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport" 
-);
+    QString logFileName = QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport";
     logFileName.append( "serviceproviders.log" );
 
     if ( !logFileName.isEmpty() ) {
@@ -1082,8 +1081,7 @@ void Helper::messageReceived( const QString &message, const QString &failedParse
             return;
         }
 
-        logFile.write( QString("%1 (%2, in function %3(), file %4, line %5):\n   \"%6\"\n   Failed while reading this text: 
-\"%7\"\n-------------------------------------\n\n")
+        logFile.write( QString("%1 (%2, in function %3(), file %4, line %5):\n   \"%6\"\n   Failed while reading this text:\"%7\"\n-------------------------------------\n\n")
                 .arg(serviceProviderId)
                 .arg(QDateTime::currentDateTime().toString())
                 .arg(info.functionName().isEmpty() ? "[anonymous]" : info.functionName())
