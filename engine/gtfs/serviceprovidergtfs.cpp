@@ -51,6 +51,7 @@
 #include <QTimer>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QVariantMap>
 #include <qmath.h>
 
 const qreal ServiceProviderGtfs::PROGRESS_PART_FOR_FEED_DOWNLOAD = 0.1;
@@ -230,8 +231,8 @@ void ServiceProviderGtfs::updateGtfsDatabase()
     Plasma::DataEngine *engine = qobject_cast< Plasma::DataEngine* >( parent() );
     Q_ASSERT( engine );
     m_service = engine->serviceForSource( "GTFS" );
-    KConfigGroup op = m_service->operationDescription("updateGtfsDatabase");
-    op.writeEntry( "serviceProviderId", m_data->id() );
+    QVariantMap op = m_service->operationDescription("updateGtfsDatabase");
+    op.insert( "serviceProviderId", m_data->id() );
     m_service->startOperationCall( op );
 }
 
