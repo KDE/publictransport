@@ -35,13 +35,17 @@
 #include <KLocalizedString>
 
 #include <KDebug>
-#include <ThreadWeaver/Job>
-#include <ThreadWeaver/Weaver>
+#include <threadweaver/Job.h>
+#include <threadweaver/queue.h>
+#include <threadweaver/weaver.h>
+#include <threadweaver/jobpointer.h>
+#include <threadweaver/JobCollection.h>
 
 // Qt includes
 #include <QFile>
 #include <QMutex>
 #include <QTimer>
+#include <QVector>
 #include <QPointer>
 #include <QFileInfo>
 #include <QTextCodec>
@@ -672,7 +676,8 @@ void ServiceProviderScript::enqueue( ScriptJob *job )
     connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
     connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );
-    ThreadWeaver::Weaver::instance()->enqueue( job );
+    //FIXME: Pass the correct arguments to enqueue()
+    //ThreadWeaver::Queue::instance()->enqueue(QVector<JobPointer>::fromList(m_runningJobs));
 }
 
 void ServiceProviderScript::import( const QString &import, QScriptEngine *engine )
