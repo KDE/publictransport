@@ -114,7 +114,7 @@ endif ( BUILD_TESTS )
 add_library(plasma_engine_publictransport MODULE ${publictransport_engine_SRCS} )
 
 # Collect all needed libraries in LIBS
-set( LIBS KF5::Plasma KF5::KIOCore KF5::KDELibs4Support KF5::ThreadWeaver z )
+set( LIBS KF5::Archive KF5::Plasma KF5::KIOCore KF5::KDELibs4Support KF5::ThreadWeaver z )
 
 # Add libraries needed for the script provider type
 if ( BUILD_PROVIDER_TYPE_SCRIPT )
