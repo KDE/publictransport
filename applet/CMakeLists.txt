@@ -68,6 +68,8 @@ install( FILES plasma-applet-publictransport.desktop
 install( FILES vehicles.svg
          DESTINATION ${DATA_INSTALL_DIR}/plasma_applet_publictransport )
 
+add_subdirectory(departures)
+
 if ( BUILD_TESTS )
     add_subdirectory( tests )
 endif ( BUILD_TESTS )

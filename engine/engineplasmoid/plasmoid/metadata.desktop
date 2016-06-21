@@ -1,0 +1,15 @@
+[Desktop Entry]
+Name=Publictransport engine plugin
+Comment=Transport timetable information
+Encoding=UTF-8
+Icon=applications-rss
+ServiceTypes=Plasma/Applet
+Type=Service
+X-KDE-PluginInfo-Author=R. Harish Navnit
+X-KDE-PluginInfo-Email=harishnavnit@gmail.com
+X-KDE-PluginInfo-Name=org.kde.plasma.engineplugin
+X-KDE-PluginInfo-License=LGPL
+X-KDE-PluginInfo-Version=1.0
+X-KDE-PluginInfo-Website=http://techbase.kde.org
+X-Plasma-API=declarativeappletscript
+X-Plasma-MainScript=ui/main.qml
