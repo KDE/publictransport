@@ -35,11 +35,9 @@
 #include <KLocalizedString>
 
 #include <KDebug>
-#include <threadweaver/Job.h>
-#include <threadweaver/queue.h>
-#include <threadweaver/weaver.h>
-#include <threadweaver/jobpointer.h>
-#include <threadweaver/JobCollection.h>
+#include <ThreadWeaver/Queue>
+#include <ThreadWeaver/Weaver>
+#include <ThreadWeaver/Collection>
 
 // Qt includes
 #include <QFile>

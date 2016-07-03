@@ -29,8 +29,8 @@
 #include "serviceproviderglobal.h"
 
 // KDE includes
-#include <threadweaver/Thread.h>
-#include <threadweaver/weaver.h>
+#include <ThreadWeaver/Thread>
+#include <ThreadWeaver/Weaver>
 #include <KLocalizedString>
 #include <KDebug>
 #include <KGlobal>
