@@ -25,6 +25,8 @@
 #ifndef SERVICEPROVIDERSCRIPT_HEADER
 #define SERVICEPROVIDERSCRIPT_HEADER
 
+#include <ThreadWeaver/JobPointer>
+
 // Own includes
 #include "../serviceprovider.h" // Base class
 #include "scriptapi.h"
@@ -230,13 +232,13 @@ protected slots:
                             bool couldNeedForcedUpdate = false );
 
     /** @brief A @p job was started. */
-    void jobStarted( ThreadWeaver::Job *job );
+    void jobStarted( ThreadWeaver::JobPointer job );
 
     /** @brief A @p job was done. */
-    void jobDone( ThreadWeaver::Job *job );
+    void jobDone( ThreadWeaver::JobPointer job );
 
     /** @brief A @p job failed. */
-    void jobFailed( ThreadWeaver::Job *job );
+    void jobFailed( ThreadWeaver::JobPointer job );
 
 protected:
     /** @brief Load the script file. */
