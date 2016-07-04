@@ -115,7 +115,7 @@ bool importExtension( QScriptEngine *engine, const QString &extension );
 /**
  * @brief Executes a script.
  **/
-class ScriptJob : public ThreadWeaver::Job {
+class ScriptJob : public QObject, public ThreadWeaver::Job {
     Q_OBJECT
 
 public:
@@ -195,7 +195,7 @@ protected slots:
 
 protected:
     /** @brief Perform the job. */
-    virtual void run();
+    virtual void run(ThreadWeaver::JobPointer self, ThreadWeaver::Thread *thread);
 
     /** @brief Return a pointer to the object containing information about the request of this job. */
     virtual const AbstractRequest* request() const = 0;

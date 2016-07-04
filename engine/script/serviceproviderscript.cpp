@@ -555,9 +555,9 @@ void ServiceProviderScript::additionalDataReady( const TimetableData &data,
     }
 }
 
-void ServiceProviderScript::jobStarted( ThreadWeaver::Job* job )
+void ServiceProviderScript::jobStarted( ThreadWeaver::JobPointer job )
 {
-    ScriptJob *scriptJob = qobject_cast< ScriptJob* >( job );
+    ScriptJob *scriptJob = static_cast< ScriptJob* >( job.data() );
     Q_ASSERT( scriptJob );
 
     // Warn if there is published data for the request,
@@ -565,16 +565,16 @@ void ServiceProviderScript::jobStarted( ThreadWeaver::Job* job )
     // There may be multiple AdditionalDataJob requests for the same data source but different
     // timetable items in the source.
     const QString sourceName = scriptJob->sourceName();
-    if ( !qobject_cast<AdditionalDataJob*>(scriptJob) &&
+    if ( !static_cast<AdditionalDataJob*>(scriptJob) &&
          m_publishedData.contains(sourceName) && !m_publishedData[sourceName].isEmpty() )
     {
         qWarning() << "Data source already exists for job" << scriptJob << sourceName;
     }
 }
 
-void ServiceProviderScript::jobDone( ThreadWeaver::Job* job )
+void ServiceProviderScript::jobDone( ThreadWeaver::JobPointer job )
 {
-    ScriptJob *scriptJob = qobject_cast< ScriptJob* >( job );
+    ScriptJob *scriptJob = static_cast< ScriptJob* >( job.data() );
     Q_ASSERT( scriptJob );
 
     m_publishedData.remove( scriptJob->sourceName() );
@@ -582,9 +582,9 @@ void ServiceProviderScript::jobDone( ThreadWeaver::Job* job )
     scriptJob->deleteLater();
 }
 
-void ServiceProviderScript::jobFailed( ThreadWeaver::Job* job )
+void ServiceProviderScript::jobFailed( ThreadWeaver::JobPointer job )
 {
-    ScriptJob *scriptJob = qobject_cast< ScriptJob* >( job );
+    ScriptJob *scriptJob = static_cast< ScriptJob* >( job.data() );
     Q_ASSERT( scriptJob );
 
     emit requestFailed( this, ErrorParsingFailed, scriptJob->errorString(),
@@ -670,12 +670,15 @@ void ServiceProviderScript::requestMoreItems( const MoreItemsRequest &moreItemsR
 
 void ServiceProviderScript::enqueue( ScriptJob *job )
 {
+    QVector<ThreadWeaver::JobPointer> runningJobs;
     m_runningJobs << job;
-    connect( job, SIGNAL(started(ThreadWeaver::Job*)), this, SLOT(jobStarted(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(done(ThreadWeaver::Job*)), this, SLOT(jobDone(ThreadWeaver::Job*)) );
-    connect( job, SIGNAL(failed(ThreadWeaver::Job*)), this, SLOT(jobFailed(ThreadWeaver::Job*)) );
-    //FIXME: Pass the correct arguments to enqueue()
-    //ThreadWeaver::Queue::instance()->enqueue(QVector<JobPointer>::fromList(m_runningJobs));
+    foreach (ScriptJob *scriptJob, m_runningJobs) {
+        runningJobs.push_back(ThreadWeaver::JobPointer(scriptJob));
+    }
+    connect( job, SIGNAL(started(ThreadWeaver::JobPointer)), this, SLOT(jobStarted(ThreadWeaver::JobPointer)) );
+    connect( job, SIGNAL(done(ThreadWeaver::JobPointer)), this, SLOT(jobDone(ThreadWeaver::JobPointer)) );
+    connect( job, SIGNAL(failed(ThreadWeaver::JobPointer)), this, SLOT(jobFailed(ThreadWeaver::JobPointer)) );
+    ThreadWeaver::Queue::instance()->enqueue( runningJobs );
 }
 
 void ServiceProviderScript::import( const QString &import, QScriptEngine *engine )

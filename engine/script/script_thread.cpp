@@ -50,7 +50,7 @@
 
 ScriptJob::ScriptJob( const ScriptData &data, const QSharedPointer< Storage > &scriptStorage,
                       QObject* parent )
-    : ThreadWeaver::Job(parent), m_engine(0), m_mutex(new QMutex(QMutex::Recursive)),
+    : ThreadWeaver::Job(), m_engine(0), m_mutex(new QMutex(QMutex::Recursive)),
       m_data(data), m_eventLoop(0), m_published(0), m_quit(false), m_success(true)
 {
     Q_ASSERT_X( data.isValid(), "ScriptJob constructor", "Needs valid script data" );
@@ -142,7 +142,7 @@ void ScriptAgent::checkExecution()
     }
 }
 
-void ScriptJob::run()
+void ScriptJob::run(ThreadWeaver::JobPointer self, ThreadWeaver::Thread *thread)
 {
     m_mutex->lock();
     if ( !loadScript(m_data.program) ) {
