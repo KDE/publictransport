@@ -114,7 +114,7 @@ endif ( BUILD_TESTS )
 add_library(plasma_engine_publictransport MODULE ${publictransport_engine_SRCS} )
 
 # Collect all needed libraries in LIBS
-set( LIBS KF5::Archive KF5::Plasma KF5::KIOCore KF5::KDELibs4Support KF5::ThreadWeaver z )
+set( LIBS KF5::Archive KF5::CoreAddons KF5::Plasma KF5::KIOCore KF5::KDELibs4Support KF5::ThreadWeaver z )
 
 # Add libraries needed for the script provider type
 if ( BUILD_PROVIDER_TYPE_SCRIPT )
@@ -132,9 +132,10 @@ endif ( BUILD_PROVIDER_TYPE_GTFS )
 # Link all collected libraries
 target_link_libraries( plasma_engine_publictransport ${LIBS} )
 
+kcoreaddons_desktop_to_json(plasma_engine_publictransport plasma-engine-publictransport.desktop)
 # Install engine and it's .desktop-file
 install( TARGETS plasma_engine_publictransport
-         DESTINATION ${PLUGIN_INSTALL_DIR} )
+         DESTINATION ${PLUGIN_INSTALL_DIR}/plasma/dataengine )
 install( FILES plasma-engine-publictransport.desktop
          DESTINATION ${SERVICES_INSTALL_DIR} )
 
