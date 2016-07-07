@@ -2745,7 +2745,7 @@ QStringList PublicTransportEngine::removeCityNameFromStops( const QStringList &s
 // This does the magic that allows Plasma to load
 // this plugin.  The first argument must match
 // the X-Plasma-EngineName in the .desktop file.
-K_EXPORT_PLASMA_DATAENGINE( publictransport, PublicTransportEngine )
+K_EXPORT_PLASMA_DATAENGINE_WITH_JSON( publictransport, PublicTransportEngine, "plasma-engine-publictransport.json")
 
 // this is needed since PublicTransportEngine is a QObject
 #include "build/publictransportdataengine.moc"

@@ -1,11 +1,15 @@
 project( plasma-publictransport )
 
 # Find the required Libaries
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 2.8.12 FATAL_ERROR)
+
+set(QT_MIN_VERSION "5.6.1")
+set(KF5_MIN_VERSION "5.23.0")
+
 find_package(ECM 1.7.0 REQUIRED NO_MODULE)
 set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake ${ECM_MODULE_PATH} ${ECM_MODULE_DIR} ${CMAKE_MODULE_PATH})
-find_package(Qt5 5.3.0  REQUIRED COMPONENTS Core DBus Xml Quick Test Sql Script)
-find_package(KF5 5.19.0 REQUIRED COMPONENTS CoreAddons Config I18n NewStuff ThreadWeaver KDELibs4Support Plasma PlasmaQuick)
+find_package(Qt5 ${QT_MIN_VERSION}  REQUIRED COMPONENTS Core DBus Xml Quick Test Sql Script)
+find_package(KF5 ${KF5_MIN_VERSION} REQUIRED COMPONENTS CoreAddons Config I18n NewStuff ThreadWeaver KDELibs4Support Plasma PlasmaQuick)
 find_package(Marble QUIET CONFIG)
 set_package_properties(Marble PROPERTIES DESCRIPTION "Marble is a virtual globe and world atlas" URL "http://marble.kde.org" TYPE OPTIONAL PURPOSE "Marble is used to show public transport stops in a map" )
 
@@ -64,10 +68,10 @@ if ( MARBLE_FOUND )
     list ( APPEND PUBLICTRANSPORTHELPER_INCLUDES ${MARBLE_INCLUDE_DIR} )
 endif ( MARBLE_FOUND )
 
-#[[message( " - PublicTransport Data Engine" )
+message( " - PublicTransport Data Engine" )
 add_subdirectory( engine )
 
-if ( INSTALL_ENGINE_OPENSTREETMAP )
+#[[if ( INSTALL_ENGINE_OPENSTREETMAP )
     message( " - OpenStreetMap Data Engine" )
     add_subdirectory( engine-openstreetmap )
 endif ( INSTALL_ENGINE_OPENSTREETMAP )
