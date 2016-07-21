@@ -62,7 +62,7 @@ ServiceProviderData *ServiceProviderDataReader::read( const QString &providerId,
                  << country << "which is" << _serviceProviderId;
     } else {
         foreach ( const QString &extension, ServiceProviderGlobal::fileExtensions() ) {
-            filePath = KStandardDirs::locate( "data",
+            filePath = QStandardPaths::locate( QStandardPaths::GenericDataLocation,
                     ServiceProviderGlobal::installationSubDirectory() +
                     _serviceProviderId + '.' + extension );
             if ( !filePath.isEmpty() ) {

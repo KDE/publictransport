@@ -91,7 +91,7 @@ QString ServiceProviderGlobal::defaultProviderForLocation( const QString &locati
 
 QString ServiceProviderGlobal::cacheFileName()
 {
-    return KGlobal::dirs()->saveLocation("data", "plasma_engine_publictransport/").append( QLatin1String("datacache") );
+    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport/";
 }
 
 QSharedPointer< KConfig > ServiceProviderGlobal::cache()
@@ -165,8 +165,8 @@ QString ServiceProviderGlobal::fileNameFromId( const QString &serviceProviderId 
 {
     const QString subDirectory = installationSubDirectory();
     foreach ( const QString &extension, fileExtensions() ) {
-        const QString fileName = KStandardDirs::locate(
-                "data", subDirectory + serviceProviderId + '.' + extension );
+        const QString fileName = QStandardPaths::locate(
+                QStandardPaths::GenericDataLocation, subDirectory + serviceProviderId + '.' + extension );
         if ( !fileName.isEmpty() ) {
             return fileName;
         }
@@ -267,7 +267,7 @@ QStringList ServiceProviderGlobal::installedProviders()
     QStringList providers;
     const QString subDirectory = installationSubDirectory();
     foreach ( const QString &pattern, filePatterns() ) {
-        providers << QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, subDirectory + pattern );
+        providers << KGlobal::dirs()->findAllResources( "data", subDirectory + pattern );
     }
     return providers;
 }
@@ -276,8 +276,8 @@ bool ServiceProviderGlobal::isProviderInstalled( const QString &providerId )
 {
     const QString subDirectory = installationSubDirectory();
     foreach ( const QString &extension, fileExtensions() ) {
-        const QString providerFile = KStandardDirs::locate(
-                "data", subDirectory + providerId + '.' + extension );
+        const QString providerFile = QStandardPaths::locate(
+                QStandardPaths::GenericDataLocation, subDirectory + providerId + '.' + extension );
         if ( !providerFile.isEmpty() ) {
             // Found the provider plugin source file in an installation directory
             return true;

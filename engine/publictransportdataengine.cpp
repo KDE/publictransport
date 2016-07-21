@@ -41,6 +41,7 @@
 // KDE/Plasma includes
 #include <Plasma/DataContainer>
 #include <KLocalizedString>
+#include <KStandardDirs>
 #include <KGlobal>
 #include <KConfig>
 #include <KLocale>
@@ -292,7 +293,7 @@ PublicTransportEngine::PublicTransportEngine( QObject* parent, const QVariantLis
 
     // Create a file system watcher for the provider plugin installation directories
     // to get notified about new/modified/removed providers
-    const QStringList directories = QStandardPaths::locateAll(QStandardPaths::GenericDataLocation, installationSubDirectory );
+    const QStringList directories = KGlobal::dirs()->findDirs( "data", installationSubDirectory );
     m_fileSystemWatcher = new QFileSystemWatcher( directories );
     connect( m_fileSystemWatcher, SIGNAL(directoryChanged(QString)),
              this, SLOT(serviceProviderDirChanged(QString)) );
