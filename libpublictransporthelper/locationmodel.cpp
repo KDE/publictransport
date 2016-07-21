@@ -26,8 +26,9 @@
 #include <Plasma/DataEngineConsumer>
 #include <KDebug>
 #include <KGlobal>
-#include <KStandardDirs>
+
 #include <KLocalizedString>
+#include <QStandardPaths>
 
 /** @brief Namespace for the publictransport helper library. */
 namespace PublicTransport {
@@ -75,7 +76,7 @@ public:
             }
 
             // Get a flag icon for the country
-            QString flag( KStandardDirs::locate("locale", QString::fromLatin1("l10n/%1/flag.png")
+            QString flag( QStandardPaths::locate(QStandardPaths::GenericDataLocation, QLatin1String("locale/") + QString::fromLatin1("l10n/%1/flag.png")
                     .arg(countryCode)) );
             icon.addFile( flag );
             itemType = LocationItem::Country;
