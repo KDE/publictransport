@@ -64,8 +64,7 @@ Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
     if ( name.toLower() == QLatin1String("gtfs") ) {
         GtfsService *service = new GtfsService( name, this );
         service->setDestination( name );
-        connect( service, SIGNAL(finished(Plasma::ServiceJob*)),
-                 this, SLOT(gtfsServiceJobFinished(Plasma::ServiceJob*)) );
+        connect( service, SIGNAL(finished(KJob*)), this, SLOT(gtfsServiceJobFinished(KJob*)) );
         return service;
     }
 #endif
@@ -191,7 +190,7 @@ bool PublicTransportEngine::tryToStartGtfsFeedImportJob( Plasma::ServiceJob *job
     return true;
 }
 
-void PublicTransportEngine::gtfsServiceJobFinished( Plasma::ServiceJob *job )
+void PublicTransportEngine::gtfsServiceJobFinished( KJob *job )
 {
     // Disconnect messages of the job
     disconnect( job, SIGNAL(infoMessage(KJob*,QString,QString)),

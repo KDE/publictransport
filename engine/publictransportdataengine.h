@@ -335,7 +335,7 @@ protected slots:
 
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     /** @brief A @p job of the GTFS service has finished. */
-    void gtfsServiceJobFinished( Plasma::ServiceJob *job );
+    void gtfsServiceJobFinished( KJob *job );
 
     /** @brief Received a message from a @p job of the GTFS service. */
     void gtfsImportJobInfoMessage( KJob *job, const QString &plain, const QString &rich );
