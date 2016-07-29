@@ -290,7 +290,8 @@ protected:
      **/
     virtual Plasma::ServiceJob* createJob( const QString &operation,
                                            QMap< QString, QVariant > &parameters );
-
+signals:
+    void finished(KJob *job);
 private:
     QString m_name;
 };
