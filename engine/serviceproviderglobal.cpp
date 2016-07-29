@@ -83,9 +83,15 @@ QString ServiceProviderGlobal::defaultProviderForLocation( const QString &locati
     if ( locationProviders.isEmpty() ) {
         qWarning() << "Couldn't find any providers for location" << location;
         return QString();
+    } else {
+        qDebug() << "Following service providers were found ...";
+        foreach (QString location, locationProviders) {
+            qDebug() << location;
+        }
     }
 
     // Simply return first found provider as default provider
+    qDebug() << "Default Provider = " << locationProviders.first();
     return locationProviders.first();
 }
 
