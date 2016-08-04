@@ -265,6 +265,30 @@ JourneyInfo::JourneyInfo( const TimetableData &data, Corrections corrections, QO
                 contains(Enums::StartStopName) && contains(Enums::TargetStopName);
 }
 
+QString JourneyInfo::startStopName()
+{
+    TimetableData data = this->data();
+    return data[Enums::StartStopName].toString();
+}
+
+QString JourneyInfo::destinationStopName()
+{
+    TimetableData data = this->data();
+    return data[Enums::TargetStopName].toString();
+}
+
+QStringList JourneyInfo::routeStops()
+{
+    TimetableData data = this->data();
+    return data[Enums::RouteStops].toStringList();
+}
+
+QStringList JourneyInfo::shortenedRouteStops()
+{
+    TimetableData data = this->data();
+    return data[Enums::RouteStopsShortened].toStringList();
+}
+
 StopInfo::StopInfo( QObject *parent ) : PublicTransportInfo(parent)
 {
     m_isValid = false;
@@ -303,6 +327,13 @@ StopInfo::StopInfo( const QString &name, const QString& id, int weight,
 
     m_isValid = !name.isEmpty();
 }
+
+QString StopInfo::stopName()
+{
+    TimetableData data = this->data();
+    return data[Enums::StopName].toString();
+}
+
 
 DepartureInfo::DepartureInfo( QObject *parent ) : PublicTransportInfo(parent)
 {
@@ -366,4 +397,40 @@ QStringList JourneyInfo::vehicleNames( bool plural ) const
         names << Global::vehicleTypeToString( static_cast<Enums::VehicleType>( vehicle.toInt() ), plural );
     }
     return names;
+}
+
+QDate DepartureInfo::arrivalDate()
+{
+    TimetableData data = this->data();
+    return data[Enums::ArrivalDate].toDate();
+}
+
+QTime DepartureInfo::arrivalTime()
+{
+    TimetableData data = this->data();
+    return data[Enums::ArrivalTime].toTime();
+}
+
+QDateTime DepartureInfo::arrivalDateTime()
+{
+    TimetableData data = this->data();
+    return data[Enums::ArrivalDateTime].toDateTime();
+}
+
+QDate DepartureInfo::departureDate()
+{
+    TimetableData data = this->data();
+    return data[Enums::DepartureDate].toDate();
+}
+
+QTime DepartureInfo::departureTime()
+{
+    TimetableData data = this->data();
+    return data[Enums::DepartureTime].toTime();
+}
+
+QDateTime DepartureInfo::departureDateTime()
+{
+    TimetableData data = this->data();
+    return data[Enums::DepartureDateTime].toDateTime();
 }

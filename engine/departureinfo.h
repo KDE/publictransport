@@ -124,6 +124,11 @@ public:
 
     QStringList vehicleIconNames() const;
     QStringList vehicleNames( bool plural = false ) const;
+
+    Q_INVOKABLE QString startStopName();
+    Q_INVOKABLE QString destinationStopName();
+    Q_INVOKABLE QStringList routeStops();
+    Q_INVOKABLE QStringList shortenedRouteStops();
 };
 
 /**
@@ -153,6 +158,14 @@ public:
 
     /** @brief Wheather or not the departing / arriving vehicle is an express line. */
     bool isExpressLine() const { return m_lineServices.testFlag( Enums::ExpressLine ); };
+
+    Q_INVOKABLE QDate departureDate();
+    Q_INVOKABLE QTime departureTime();
+    Q_INVOKABLE QDateTime departureDateTime();
+
+    Q_INVOKABLE QDate arrivalDate();
+    Q_INVOKABLE QTime arrivalTime();
+    Q_INVOKABLE QDateTime arrivalDateTime();
 
 private:
     LineServices m_lineServices;
@@ -189,6 +202,8 @@ public:
     StopInfo( const QString &name, const QString &id = QString(), int weight = -1,
               qreal longitude = 0.0, qreal latitude = 0.0, const QString &city = QString(),
               const QString &countryCode = QString(), QObject *parent = 0 );
+
+    Q_INVOKABLE QString stopName();
 };
 
 typedef DepartureInfo ArrivalInfo;
