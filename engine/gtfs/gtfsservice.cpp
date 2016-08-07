@@ -25,10 +25,10 @@
 #include "serviceprovidergtfs.h"
 
 // KDE includes
-#include <KTemporaryFile>
 
 #include <KDebug>
 #include <KFileItem>
+#include <KLocalizedString>
 #include <KIO/Job>
 #include <kdatetime.h>
 #include <Plasma/DataEngine>
@@ -40,6 +40,7 @@
 #include <QTimer>
 #include <QMimeDatabase>
 #include <QMimeType>
+#include <QTemporaryFile>
 
 const qreal ImportGtfsToDatabaseJob::PROGRESS_PART_FOR_FEED_DOWNLOAD = 0.1;
 
@@ -456,7 +457,7 @@ void ImportGtfsToDatabaseJob::downloadFeed()
     registerAtJobTracker();
 
     kDebug() << "Start GTFS feed import for" << m_data->id();
-    KTemporaryFile tmpFile;
+    QTemporaryFile tmpFile;
     if ( tmpFile.open() ) {
         kDebug() << "Downloading GTFS feed from" << m_data->feedUrl() << "to" << tmpFile.fileName();
         emit infoMessage( this, i18nc("@info/plain", "Downloading GTFS feed") );
@@ -476,7 +477,8 @@ void ImportGtfsToDatabaseJob::downloadFeed()
         KConfigGroup gtfsGroup = group.group( "gtfs" );
         gtfsGroup.writeEntry( "feedImportFinished", false );
 
-        KIO::FileCopyJob *job = KIO::file_copy( m_data->feedUrl(), QUrl(tmpFile.fileName()), -1,
+        const QUrl fileUrl = QUrl::fromLocalFile(tmpFile.fileName());
+        KIO::FileCopyJob *job = KIO::file_copy( m_data->feedUrl(), fileUrl, -1,
                                                 KIO::Overwrite | KIO::HideProgressInfo );
         connect( job, SIGNAL(result(KJob*)), this, SLOT(feedReceived(KJob*)) );
         connect( job, SIGNAL(percent(KJob*,ulong)), this, SLOT(downloadProgress(KJob*,ulong)) );

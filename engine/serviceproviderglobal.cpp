@@ -97,7 +97,8 @@ QString ServiceProviderGlobal::defaultProviderForLocation( const QString &locati
 
 QString ServiceProviderGlobal::cacheFileName()
 {
-    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/') + "plasma_engine_publictransport/";
+    return QStandardPaths::writableLocation(QStandardPaths::GenericDataLocation) + QLatin1Char('/')
+            + "plasma_engine_publictransport/" + QLatin1String("datacache");
 }
 
 QSharedPointer< KConfig > ServiceProviderGlobal::cache()
