@@ -64,23 +64,7 @@ Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
     if ( name.toLower() == QLatin1String("gtfs") ) {
         GtfsService *service = new GtfsService( name, this );
         service->setDestination( name );
-
-        QVariantMap importFeed = service->operationDescription("importGtfsFeed"),
-                    updateDb   = service->operationDescription("updateGtfsDatabase"),
-                    updateFeed = service->operationDescription("updateGtfsFeedInfo"),
-                    deleteDb   = service->operationDescription("deleteGtfsDatabase");
-
-        //FIXME: Don't hardcode the serviceProviderId. Use providerIdFromSourceName() instead
-        importFeed.insert("serviceProviderId", "no_ruter");
-        updateDb.insert("serviceProviderId", "no_ruter");
-        updateFeed.insert("serviceProviderId", "no_ruter");
-        deleteDb.insert("serviceProviderId", "no_ruter");
-
-        connect( service->startOperationCall(importFeed), SIGNAL(result(KJob*)), this, SLOT(gtfsServiceJobFinished(KJob*)) );
-        connect( service->startOperationCall(updateDb), SIGNAL(result(KJob*)), this, SLOT(gtfsServiceJobFinished(KJob*)) );
-        connect( service->startOperationCall(updateFeed), SIGNAL(result(KJob*)), this, SLOT(gtfsServiceJobFinished(KJob*)) );
-        connect( service->startOperationCall(deleteDb), SIGNAL(result(KJob*)), this, SLOT(gtfsServiceJobFinished(KJob*)) );
-
+        connect( service, SIGNAL(finished(KJob*)), this, SLOT(gtfsServiceJobFinished(KJob*)) );
         return service;
     }
 #endif

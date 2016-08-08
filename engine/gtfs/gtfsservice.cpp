@@ -204,7 +204,6 @@ void ImportGtfsToDatabaseJob::work()
 
     // Start the job by first requesting GTFS feed information
     statFeed();
-    emitResult();
 }
 
 void UpdateGtfsToDatabaseJob::tryToWork()
@@ -233,12 +232,10 @@ void UpdateGtfsToDatabaseJob::work()
 
         // Start the job by first requesting GTFS feed information
         statFeed();
-        emitResult();
     } else {
         setError( GtfsErrorFeedImportRequired );
         setErrorText( errorMessage );
         setResult( false );
-        emitResult();
     }
 }
 
@@ -256,7 +253,6 @@ void DeleteGtfsDatabaseJob::work()
         setError( GtfsErrorCannotDeleteDatabase );
         setErrorText( i18nc("@info/plain", "The GTFS database could not be deleted.") );
         setResult( false );
-        emitResult();
         return;
     }
     kDebug() << "Finished deleting GTFS database of" << m_serviceProviderId;
@@ -273,7 +269,6 @@ void DeleteGtfsDatabaseJob::work()
 
     // Finished successfully
     setResult( true );
-    emitResult();
 }
 
 bool ImportGtfsToDatabaseJob::doKill()
