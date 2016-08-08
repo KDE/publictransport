@@ -64,7 +64,31 @@ Plasma::Service* PublicTransportEngine::serviceForSource( const QString &name )
     if ( name.toLower() == QLatin1String("gtfs") ) {
         GtfsService *service = new GtfsService( name, this );
         service->setDestination( name );
-        connect( service, SIGNAL(finished(KJob*)), this, SLOT(gtfsServiceJobFinished(KJob*)) );
+
+        QStringList providersList = ServiceProviderGlobal::installedProviders();
+        QString defaultProviderFile = providersList.first();
+        QString defaultProviderId   = ServiceProviderGlobal::idFromFileName(defaultProviderFile);
+
+        QVariantMap importFeedParams = service->operationDescription("importGtfsFeed"),
+                    updateFeedParams = service->operationDescription("updateGtfsFeedInfo"),
+                    updateDbParams = service->operationDescription("updateGtfsDatabase"),
+                    deleteDbParams = service->operationDescription("deleteGtfsDatabase");
+
+        importFeedParams.insert("serviceProviderId", defaultProviderId);
+        updateFeedParams.insert("serviceProviderId", defaultProviderId);
+        updateDbParams.insert("serviceProviderId", defaultProviderId);
+        deleteDbParams.insert("serviceProviderId", defaultProviderId);
+
+        Plasma::ServiceJob  *importFeedJob = service->startOperationCall(importFeedParams),
+                            *updateFeedJob = service->startOperationCall(updateFeedParams),
+                            *updateDbJob = service->startOperationCall(updateDbParams),
+                            *deleteDbJob = service->startOperationCall(deleteDbParams);
+
+        connect( importFeedJob, SIGNAL(finished(KJob*)), this, SLOT(gtfsServiceJobFinished(KJob*)) );
+        connect( updateFeedJob, SIGNAL(finished(KJob*)), this, SLOT(gtfsServiceJobFinished(KJob*)) );
+        connect( updateDbJob, SIGNAL(finished(KJob*)), this, SLOT(gtfsServiceJobFinished(KJob*)) );
+        connect( deleteDbJob, SIGNAL(finished(KJob*)), this, SLOT(gtfsServiceJobFinished(KJob*)) );
+
         return service;
     }
 #endif
