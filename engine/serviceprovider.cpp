@@ -226,7 +226,7 @@ int ServiceProvider::minFetchWait( UpdateFlags updateFlags ) const
 
 QDateTime ServiceProvider::nextUpdateTime( UpdateFlags updateFlags, const QDateTime &lastUpdate,
                                            const QDateTime &latestForSufficientChanges,
-                                           const QVariantHash &data ) const
+                                           const QVariantMap &data ) const
 {
     if ( !lastUpdate.isValid() ) {
         return QDateTime::currentDateTime();
@@ -260,7 +260,7 @@ QDateTime ServiceProvider::nextUpdateTime( UpdateFlags updateFlags, const QDateT
     }
 }
 
-bool ServiceProvider::isRealtimeDataAvailable( const QVariantHash &data ) const
+bool ServiceProvider::isRealtimeDataAvailable( const QVariantMap &data ) const
 {
     return features().contains(Enums::ProvidesDelays) &&
            data.contains("delayInfoAvailable") ? data["delayInfoAvailable"].toBool() : false;

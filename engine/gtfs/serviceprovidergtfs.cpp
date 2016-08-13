@@ -95,7 +95,7 @@ ServiceProviderGtfs::~ServiceProviderGtfs()
 QString ServiceProviderGtfs::updateGtfsDatabaseState( const QString &providerId,
                                                       const QString &feedUrl,
                                                       const QSharedPointer< KConfig > &_cache,
-                                                      QVariantHash *stateData )
+                                                      QVariantMap *stateData )
 {
     // Read 'feedImportFinished' value from provider cache
     QSharedPointer< KConfig > cache = _cache.isNull() ? ServiceProviderGlobal::cache() : _cache;

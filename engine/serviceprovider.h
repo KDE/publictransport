@@ -162,7 +162,7 @@ public:
      **/
     virtual QDateTime nextUpdateTime( UpdateFlags updateFlags, const QDateTime &lastUpdate,
                                       const QDateTime &latestForSufficientChanges,
-                                      const QVariantHash &data = QVariantHash() ) const;
+                                      const QVariantMap &data = QVariantMap() ) const;
 
     /**
      * @brief Get a list of features that this provider supports.
@@ -400,7 +400,7 @@ protected:
      * checks @p data for a "delayInfoAvailable" key and returns it's boolean value if it exists,
      * otherwise it returns @c false.
      */
-    virtual bool isRealtimeDataAvailable( const QVariantHash &data ) const;
+    virtual bool isRealtimeDataAvailable( const QVariantMap &data ) const;
 
 private:
     static QString gethex( ushort decimal );

@@ -51,7 +51,7 @@ public:
     QString name() const { return m_name; };
 
     /** @brief Get data stored for the data source. */
-    virtual QVariantHash data() const = 0;
+    virtual QVariantMap data() const = 0;
 
     /** @brief Get data stored for the data source. */
     QVariant value( const QString &key ) const { return data()[key]; };
@@ -70,16 +70,16 @@ class SimpleDataSource : public DataSource {
 public:
     /** @brief Create a new data source object for a data source @p sourceName with @p data. */
     SimpleDataSource( const QString &sourceName = QString(),
-                      const QVariantHash &data = QVariantHash() );
+                      const QVariantMap &data = QVariantMap() );
 
     /** @brief Get data stored for the data source. */
-    virtual QVariantHash data() const { return m_data; };
+    virtual QVariantMap data() const { return m_data; };
 
     /** @brief Clear the data stored for the data source. */
     void clear() { m_data.clear(); };
 
     /** @brief Set data stored for the data source. */
-    virtual void setData( const QVariantHash &data ) { m_data = data; };
+    virtual void setData( const QVariantMap &data ) { m_data = data; };
 
     /** @brief Insert @p value as @p key into the data stored for the data source. */
     virtual void setValue( const QString &key, const QVariant &value ) {
@@ -87,7 +87,7 @@ public:
     };
 
 protected:
-    QVariantHash m_data;
+    QVariantMap m_data;
 };
 
 /**
@@ -128,22 +128,22 @@ public:
          * @param stateData Data for the providers current state. A field 'statusMessage' should
          *   always be contained.
          **/
-        ProviderData( const QVariantHash &data = QVariantHash(), const QString &stateId = QString(),
-                      const QVariantHash &stateData = QVariantHash() );
+        ProviderData( const QVariantMap &data = QVariantMap(), const QString &stateId = QString(),
+                      const QVariantMap &stateData = QVariantMap() );
 
         /** @brief Combine provider data with state ID and state data. */
-        QVariantHash data() const;
+        QVariantMap data() const;
 
-        QVariantHash dataWithoutState;
+        QVariantMap dataWithoutState;
         QString stateId;
-        QVariantHash stateData;
+        QVariantMap stateData;
     };
 
     /**
      * @brief Create a new data source object for all service provider data sources.
      **/
     ProvidersDataSource( const QString &sourceName = QString(),
-                         const QHash<QString, ProviderData> &data = QHash<QString, ProviderData>() );
+                         const QMap<QString, ProviderData> &data = QMap<QString, ProviderData>() );
 
     /**
      * @brief Replace dynamic states with static ones.
@@ -165,26 +165,26 @@ public:
     void removeProvider( const QString &providerId );
 
     /** @brief Get all provider data, ie. the data for the "ServiceProviders" data source. */
-    virtual QVariantHash data() const;
+    virtual QVariantMap data() const;
 
     /** @brief Get data for the provider with the given @p providerId. */
-    QVariantHash providerData( const QString &providerId ) const;
+    QVariantMap providerData( const QString &providerId ) const;
 
     /** @brief Get the current state of the provider with the given @p providerId. */
     QString providerState( const QString &providerId ) const;
 
     /** @brief Get state data of the provider with the given @p providerId. */
-    QVariantHash providerStateData( const QString &providerId ) const;
+    QVariantMap providerStateData( const QString &providerId ) const;
 
     /** @brief Set the state of the provider with the given @p providerId to @p stateId. */
     void setProviderState( const QString &providerId, const QString &stateId );
 
     /** @brief Set the state data of the provider with the given @p providerId to @p stateData. */
-    void setProviderStateData( const QString &providerId, const QVariantHash &stateData );
+    void setProviderStateData( const QString &providerId, const QVariantMap &stateData );
 
     /** @brief Set @p stateId and @p stateData for the provider with the given @p providerId. */
     inline void setProviderState( const QString &providerId, const QString &stateId,
-                                  const QVariantHash &stateData )
+                                  const QVariantMap &stateData )
     {
         setProviderState( providerId, stateId );
         setProviderStateData( providerId, stateData );
@@ -217,7 +217,7 @@ private:
 
     bool m_dirty;
     QStringList m_changedProviders;
-    QHash< QString, ProviderData > m_providerData;
+    QMap< QString, ProviderData > m_providerData;
 };
 
 /** @brief Contains data for a timetable data source, ie. for departures, arrivals or journeys. */
@@ -225,7 +225,7 @@ class TimetableDataSource : public SimpleDataSource {
 public:
     /** @brief Create a new timetable data source object for a data source @p sourceName. */
     TimetableDataSource( const QString &dataSource = QString(),
-                         const QVariantHash &data = QVariantHash() );
+                         const QVariantMap &data = QVariantMap() );
     virtual ~TimetableDataSource();
 
     /** @brief Remove obsolete cached data, eg. additional data for previous departures. */
@@ -280,13 +280,13 @@ public:
      * @brief Get all additional data of this data source.
      * Additional data gets stored by a hash value for the associated timetable item.
      **/
-    QHash< uint, TimetableData > additionalData() const { return m_additionalData; };
+    QMap< uint, TimetableData > additionalData() const { return m_additionalData; };
 
     /**
      * @brief Set all additional data to @p additionalData.
      * This replaces all previously set additional timetable data.
      **/
-    void setAdditionalData( const QHash< uint, TimetableData > &additionalData ) {
+    void setAdditionalData( const QMap< uint, TimetableData > &additionalData ) {
         // Cache all additional data for some time TODO
         m_additionalData.unite( additionalData );
     };
@@ -329,7 +329,7 @@ public:
 
     QSharedPointer< AbstractRequest > request( const QString &sourceName ) const;
 
-    inline static uint hashForDeparture( const QVariantHash &departure, bool isDeparture = true ) {
+    inline static uint hashForDeparture( const QVariantMap &departure, bool isDeparture = true ) {
         return hashForDeparture( departure[Enums::toString(Enums::DepartureDateTime)].toDateTime(),
                 static_cast<Enums::VehicleType>(departure[Enums::toString(Enums::TypeOfVehicle)].toInt()),
                 departure[Enums::toString(Enums::TransportLine)].toString(),
@@ -365,12 +365,12 @@ private:
         int count;
     };
 
-    QHash< uint, TimetableData > m_additionalData;
+    QMap< uint, TimetableData > m_additionalData;
     QTimer *m_updateTimer;
     QTimer *m_cleanupTimer;
     QTimer *m_updateAdditionalDataDelayTimer;
     QDateTime m_nextDownloadTimeProposal;
-    QHash< QString, SourceData > m_dataSources; // Connected data sources ("ambiguous" ones)
+    QMap< QString, SourceData > m_dataSources; // Connected data sources ("ambiguous" ones)
 };
 
 #endif // Multiple inclusion guard

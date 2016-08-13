@@ -204,7 +204,7 @@ QScriptValue MoreItemsRequest::toScriptValue( QScriptEngine *engine ) const
     Q_ASSERT( m_request );
     QScriptValue value = m_request->toScriptValue( engine );
     QScriptValue data = engine->newObject();
-    for ( QVariantHash::ConstIterator it = m_requestData.constBegin();
+    for ( QVariantMap::ConstIterator it = m_requestData.constBegin();
           it != m_requestData.constEnd(); ++it )
     {
         data.setProperty( it.key(), engine->toScriptValue(it.value()) );
