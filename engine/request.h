@@ -361,7 +361,7 @@ class MoreItemsRequest : public AbstractRequest {
 public:
     MoreItemsRequest( const QString &sourceName = QString(),
                       const QSharedPointer<AbstractRequest> &request = QSharedPointer<AbstractRequest>(),
-                      const QVariantHash &requestData = QVariantHash(),
+                      const QVariantMap &requestData = QVariantMap(),
                       Enums::MoreItemsDirection direction = Enums::LaterItems )
             : AbstractRequest(sourceName, request ? request->parseMode() : ParseInvalid),
               m_request(request), m_requestData(requestData), m_direction(direction)
@@ -383,12 +383,12 @@ public:
 #endif
 
     QSharedPointer< AbstractRequest > request() const { return m_request; };
-    QVariantHash requestData() const { return m_requestData; };
+    QVariantMap requestData() const { return m_requestData; };
     Enums::MoreItemsDirection direction() const { return m_direction; };
 
 protected:
     QSharedPointer< AbstractRequest > m_request;
-    QVariantHash m_requestData;
+    QVariantMap m_requestData;
     Enums::MoreItemsDirection m_direction;
 };
 

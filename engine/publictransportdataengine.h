@@ -230,7 +230,7 @@ public:
     /**
      * @brief Get a hash with information about the current GTFS feed import state.
      **/
-    QString updateProviderState( const QString &providerId, QVariantHash *stateData,
+    QString updateProviderState( const QString &providerId, QVariantMap *stateData,
                                  const QString &providerType, const QString &feedUrl = QString(),
                                  bool readFromCache = true );
 
@@ -601,7 +601,7 @@ protected:
      *   gets created using ServiceProviderGlobal::cache().
      * @return @c True, if the service provider is valid, @c false otherwise.
      **/
-    bool testServiceProvider( const QString &providerId, QVariantHash *providerData,
+    bool testServiceProvider( const QString &providerId, QVariantMap *providerData,
                               QString *errorMessage,
                               const QSharedPointer<KConfig> &cache = QSharedPointer<KConfig>() );
 
@@ -640,18 +640,18 @@ private:
      * @param provider The accessor to get information about. May be 0, see above.
      * @return A QHash with values keyed with strings.
      **/
-    QVariantHash serviceProviderData( const ServiceProviderData &data,
+    QVariantMap serviceProviderData( const ServiceProviderData &data,
                                       const ServiceProvider *provider = 0 );
 
     /** @brief Overload, use if @p provider is @em not 0. */
-    QVariantHash serviceProviderData( const ServiceProvider *provider );
+    QVariantMap serviceProviderData( const ServiceProvider *provider );
 
     /**
      * @brief Gets a hash with information about available locations.
      *
      * Locations are here countries plus some special locations like "international".
      **/
-    QVariantHash locations();
+    QVariantMap locations();
 
     /**
      * @brief Get a pointer to the provider with the given @p providerId.
@@ -770,7 +770,7 @@ private:
 
     QHash< QString, ProviderPointer > m_providers; // Currently used providers by ID
     QHash< QString, ProviderPointer > m_cachedProviders; // Unused but still cached providers by ID
-    QVariantHash m_erroneousProviders; // Error messages for erroneous providers by ID
+    QVariantMap m_erroneousProviders; // Error messages for erroneous providers by ID
     QHash< QString, DataSource* > m_dataSources; // Data objects for data sources, stored by
                                                  // unambiguous data source name
     QFileSystemWatcher *m_fileSystemWatcher; // Watches provider installation directories

@@ -113,7 +113,7 @@ public:
      **/
     static QString updateGtfsDatabaseState( const QString &providerId, const QString &feedUrl,
             const QSharedPointer< KConfig > &cache = QSharedPointer<KConfig>(),
-            QVariantHash *stateData = 0 );
+            QVariantMap *stateData = 0 );
 
     /**
      * @brief Whether or not the GTFS feed import for the provider with @p data is finished.
@@ -253,7 +253,7 @@ protected:
     /**
      * @brief Whether or not realtime data is available in the @p data of a timetable data source.
      */
-    virtual bool isRealtimeDataAvailable( const QVariantHash &data ) const {
+    virtual bool isRealtimeDataAvailable( const QVariantMap &data ) const {
         Q_UNUSED( data );
         return isRealtimeDataAvailable();
     };

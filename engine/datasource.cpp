@@ -38,17 +38,17 @@ DataSource::~DataSource()
 }
 
 ProvidersDataSource::ProvidersDataSource( const QString &dataSource,
-                                          const QHash<QString, ProviderData> &providerData )
+                                          const QMap<QString, ProviderData> &providerData )
         : DataSource(dataSource), m_dirty(true), m_providerData(providerData)
 {
 }
 
-SimpleDataSource::SimpleDataSource( const QString &dataSource, const QVariantHash &data )
+SimpleDataSource::SimpleDataSource( const QString &dataSource, const QVariantMap &data )
         : DataSource(dataSource), m_data(data)
 {
 }
 
-TimetableDataSource::TimetableDataSource( const QString &dataSource, const QVariantHash &data )
+TimetableDataSource::TimetableDataSource( const QString &dataSource, const QVariantMap &data )
         : SimpleDataSource(dataSource, data), m_updateTimer(0), m_cleanupTimer(0),
           m_updateAdditionalDataDelayTimer(0)
 {
@@ -70,27 +70,27 @@ QString ProvidersDataSource::toStaticState( const QString &dynamicStateId )
     }
 }
 
-ProvidersDataSource::ProviderData::ProviderData( const QVariantHash &data, const QString &_stateId,
-                                                 const QVariantHash &_stateData )
+ProvidersDataSource::ProviderData::ProviderData( const QVariantMap &data, const QString &_stateId,
+                                                 const QVariantMap &_stateData )
         : dataWithoutState(data), stateId(ProvidersDataSource::toStaticState(_stateId)),
           stateData(_stateData)
 {
 }
 
-QVariantHash ProvidersDataSource::ProviderData::data() const
+QVariantMap ProvidersDataSource::ProviderData::data() const
 {
     // Combine all provider data with state ID and state data
-    QVariantHash data = dataWithoutState;
+    QVariantMap data = dataWithoutState;
     data[ "state" ] = stateId;
     data[ "stateData" ] = stateData;
     return data;
 }
 
-QVariantHash ProvidersDataSource::data() const
+QVariantMap ProvidersDataSource::data() const
 {
-    // Combine all provider data QVariantHash's into one
-    QVariantHash data;
-    for ( QHash<QString, ProviderData>::ConstIterator it = m_providerData.constBegin();
+    // Combine all provider data QVariantMap's into one
+    QVariantMap data;
+    for ( QMap<QString, ProviderData>::ConstIterator it = m_providerData.constBegin();
           it != m_providerData.constEnd(); ++it )
     {
         data.insert( it.key(), it.value().data() );
@@ -116,7 +116,7 @@ bool TimetableDataSource::enoughDataAvailable( const QDateTime &dateTime, int co
     int foundCount = 0;
     const QVariantList items = timetableItems();
     for ( int i = 0; i < items.count(); ++i ) {
-        const QVariantHash data = items[i].toHash();
+        const QVariantMap data = items[i].toMap();
         const QDateTime itemDateTime = data["DepartureDateTime"].toDateTime();
         if ( itemDateTime < dateTime ) {
             foundTime = true;
@@ -192,11 +192,11 @@ void TimetableDataSource::cleanup()
     const QVariantList items = timetableItems();
     const bool isDeparture = timetableItemKey() != QLatin1String("arrivals");
     foreach ( const QVariant &item, items ) {
-        itemHashes << hashForDeparture( item.toHash(), isDeparture );
+        itemHashes << hashForDeparture( item.toMap(), isDeparture );
     }
 
     // Remove cached additional data for no longer present timetable items
-    QHash< uint, TimetableData >::Iterator it = m_additionalData.begin();
+    QMap< uint, TimetableData >::Iterator it = m_additionalData.begin();
     while ( it != m_additionalData.end() ) {
         if ( itemHashes.contains(it.key()) ) {
             // The associated timetable item is still available
@@ -250,7 +250,7 @@ QStringList ProvidersDataSource::markUninstalledProviders()
     }
 
     QStringList providerIDs;
-    QHash<QString, ProviderData>::ConstIterator it = m_providerData.constBegin();
+    QMap<QString, ProviderData>::ConstIterator it = m_providerData.constBegin();
     while ( it != m_providerData.constEnd() ) {
         if ( !installedProviderIDs.contains(it.key()) ) {
             // Provider was uninstalled, ie. removed from the installation directory
@@ -262,7 +262,7 @@ QStringList ProvidersDataSource::markUninstalledProviders()
     return providerIDs;
 }
 
-QVariantHash ProvidersDataSource::providerData( const QString &providerId ) const
+QVariantMap ProvidersDataSource::providerData( const QString &providerId ) const
 {
     return m_providerData.value( providerId ).data();
 }
@@ -272,7 +272,7 @@ QString ProvidersDataSource::providerState( const QString &providerId ) const
     return m_providerData.value( providerId ).stateId;
 }
 
-QVariantHash ProvidersDataSource::providerStateData( const QString &providerId ) const
+QVariantMap ProvidersDataSource::providerStateData( const QString &providerId ) const
 {
     return m_providerData.value( providerId ).stateData;
 }
@@ -290,7 +290,7 @@ void ProvidersDataSource::setProviderState( const QString &providerId, const QSt
     m_providerData[ providerId ].stateId = stateId;
 }
 
-void ProvidersDataSource::setProviderStateData( const QString &providerId, const QVariantHash &stateData )
+void ProvidersDataSource::setProviderStateData( const QString &providerId, const QVariantMap &stateData )
 {
     if ( mayProviderBeNewlyChanged(providerId) ) {
         // Provider data available and not marked as changed alraedy

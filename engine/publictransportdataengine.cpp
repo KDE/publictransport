@@ -172,7 +172,7 @@ bool PublicTransportEngine::tryToStartGtfsFeedImportJob( Plasma::ServiceJob *job
     }
 
     // Update provider state in service provider data source(s)
-    QVariantHash stateData = dataSource->providerStateData( providerId );
+    QVariantMap stateData = dataSource->providerStateData( providerId );
     const QString databasePath = GtfsDatabase::databasePath( providerId );
     stateData[ "gtfsDatabasePath" ] = databasePath;
     stateData[ "gtfsDatabaseSize" ] = 0;
@@ -194,7 +194,7 @@ bool PublicTransportEngine::tryToStartGtfsFeedImportJob( Plasma::ServiceJob *job
     KConfigGroup group = cache->group( providerId );
     group.writeEntry( "state", state );
     KConfigGroup stateGroup = group.group( "stateData" );
-    for ( QVariantHash::ConstIterator it = stateData.constBegin();
+    for ( QVariantMap::ConstIterator it = stateData.constBegin();
           it != stateData.constEnd(); ++it )
     {
         if ( isStateDataCached(it.key()) ) {
@@ -235,7 +235,7 @@ void PublicTransportEngine::gtfsServiceJobFinished( KJob *job )
     // Reset state in "ServiceProviders", "ServiceProvider <id>" data sources
     // Do not read and give the current feed URL for the provider to updateProviderState(),
     // because the feed URL should not have changed since the beginning of the feed import
-    QVariantHash stateData;
+    QVariantMap stateData;
     const QString state = updateProviderState( providerId, &stateData, "GTFS", QString(), false );
     ProvidersDataSource *dataSource = providersDataSource();
     dataSource->setProviderState( providerId, state, stateData );
@@ -249,7 +249,7 @@ void PublicTransportEngine::gtfsImportJobInfoMessage( KJob *job, const QString &
     // Update "ServiceProviders", "ServiceProvider <id>" data sources
     const QString providerId = job->property( "serviceProviderId" ).toString();
     ProvidersDataSource *dataSource = providersDataSource();
-    QVariantHash stateData = dataSource->providerStateData( providerId );
+    QVariantMap stateData = dataSource->providerStateData( providerId );
     stateData[ "statusMessage" ] = plain;
     if ( rich.isEmpty() ) {
         stateData.remove( "statusMessageRich" );
@@ -265,7 +265,7 @@ void PublicTransportEngine::gtfsImportJobPercent( KJob *job, ulong percent )
     // Update "ServiceProviders", "ServiceProvider <id>" data sources
     const QString providerId = job->property( "serviceProviderId" ).toString();
     ProvidersDataSource *dataSource = providersDataSource();
-    QVariantHash stateData = dataSource->providerStateData( providerId );
+    QVariantMap stateData = dataSource->providerStateData( providerId );
     stateData[ "progress" ] = int( percent );
     dataSource->setProviderStateData( providerId, stateData );
     publishData( dataSource );
@@ -501,16 +501,16 @@ void PublicTransportEngine::cleanup()
     m_cachedProviders.clear();
 }
 
-QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProvider *provider )
+QVariantMap PublicTransportEngine::serviceProviderData( const ServiceProvider *provider )
 {
     Q_ASSERT( provider );
     return serviceProviderData( *(provider->data()), provider );
 }
 
-QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderData &data,
+QVariantMap PublicTransportEngine::serviceProviderData( const ServiceProviderData &data,
                                                          const ServiceProvider *provider )
 {
-    QVariantHash dataServiceProvider;
+    QVariantMap dataServiceProvider;
     dataServiceProvider.insert( "id", data.id() );
     dataServiceProvider.insert( "fileName", data.fileName() );
     dataServiceProvider.insert( "type", ServiceProviderGlobal::typeName(data.type()) );
@@ -604,9 +604,9 @@ QVariantHash PublicTransportEngine::serviceProviderData( const ServiceProviderDa
     return dataServiceProvider;
 }
 
-QVariantHash PublicTransportEngine::locations()
+QVariantMap PublicTransportEngine::locations()
 {
-    QVariantHash ret;
+    QVariantMap ret;
     const QStringList providers = ServiceProviderGlobal::installedProviders();
 
     // Update ServiceProviders source to fill m_erroneousProviders
@@ -641,17 +641,17 @@ QVariantHash PublicTransportEngine::locations()
                         ServiceProviderGlobal::idFromFileName( defaultProviderFileName );
 
                 // Store location values in a hash and insert it into [ret]
-                QVariantHash locationHash;
-                locationHash.insert( "name", location );
+                QVariantMap locationMap;
+                locationMap.insert( "name", location );
                 if ( location == "international" ) {
-                    locationHash.insert( "description", i18n("International providers. "
+                    locationMap.insert( "description", i18n("International providers. "
                                          "There is one for getting flight departures/arrivals.") );
                 } else {
-                    locationHash.insert( "description", i18n("Service providers for %1.",
+                    locationMap.insert( "description", i18n("Service providers for %1.",
                             KGlobal::locale()->countryCodeToName(location)) );
                 }
-                locationHash.insert( "defaultProvider", defaultProviderId );
-                ret.insert( location, locationHash );
+                locationMap.insert( "defaultProvider", defaultProviderId );
+                ret.insert( location, locationMap );
             }
         }
     }
@@ -738,8 +738,8 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const SourceR
 
         // The defaultParameter stored in data is a location code
         // (ie. "international" or a two letter country code)
-        QVariantHash locations = m_dataSources[ sourceTypeKeyword(LocationsSource) ]->data();
-        QVariantHash locationCountry = locations[ data.defaultParameter.toLower() ].toHash();
+        QVariantMap locations = m_dataSources[ sourceTypeKeyword(LocationsSource) ]->data();
+        QVariantMap locationCountry = locations[ data.defaultParameter.toLower() ].toMap();
         QString defaultProvider = locationCountry[ "defaultProvider" ].toString();
         if ( defaultProvider.isEmpty() ) {
             // No provider for the location found
@@ -757,13 +757,13 @@ bool PublicTransportEngine::updateServiceProviderForCountrySource( const SourceR
 bool PublicTransportEngine::updateProviderData( const QString &providerId,
                                                 const QSharedPointer<KConfig> &cache )
 {
-    QVariantHash providerData;
+    QVariantMap providerData;
     QString errorMessage;
     ProvidersDataSource *providersSource = providersDataSource();
 
     // Test if the provider is valid
     if ( testServiceProvider(providerId, &providerData, &errorMessage, cache) ) {
-        QVariantHash stateData;
+        QVariantMap stateData;
         const QString state = updateProviderState( providerId, &stateData,
                 providerData["type"].toString(), providerData.value("feedUrl").toString() );
         providerData["error"] = false;
@@ -779,7 +779,7 @@ bool PublicTransportEngine::updateProviderData( const QString &providerId,
         // Prepare state data with the error message and a boolean whether or not the provider
         // is installed or could not be found (only possible if the provider data source was
         // manually requested)
-        QVariantHash stateData;
+        QVariantMap stateData;
         stateData["statusMessage"] = errorMessage;
         stateData["isInstalled"] = ServiceProviderGlobal::isProviderInstalled( providerId );
 
@@ -841,7 +841,7 @@ bool PublicTransportEngine::updateServiceProviderSource()
 }
 
 QString PublicTransportEngine::updateProviderState( const QString &providerId,
-                                                    QVariantHash *stateData,
+                                                    QVariantMap *stateData,
                                                     const QString &providerType,
                                                     const QString &feedUrl,
                                                     bool readFromCache )
@@ -919,7 +919,7 @@ QString PublicTransportEngine::updateProviderState( const QString &providerId,
 
     // Write state data to the cache
     KConfigGroup stateGroup = group.group( "stateData" );
-    for ( QVariantHash::ConstIterator it = stateData->constBegin();
+    for ( QVariantMap::ConstIterator it = stateData->constBegin();
         it != stateData->constEnd(); ++it )
     {
         if ( isStateDataCached(it.key()) ) {
@@ -941,7 +941,7 @@ bool PublicTransportEngine::isStateDataCached( const QString &stateDataKey )
 }
 
 bool PublicTransportEngine::testServiceProvider( const QString &providerId,
-                                                 QVariantHash *providerData, QString *errorMessage,
+                                                 QVariantMap *providerData, QString *errorMessage,
                                                  const QSharedPointer<KConfig> &_cache )
 {
     const bool providerUsed = m_providers.contains( providerId );
@@ -1259,7 +1259,7 @@ bool PublicTransportEngine::requestAdditionalData( const QString &sourceName,
     }
 
     // Get the timetable item stored in the data source at the given index
-    QVariantHash item = items[ itemNumber ].toHash();
+    QVariantMap item = items[ itemNumber ].toMap();
 
     // Check if additional data is already included or was already requested
     const QString additionalDataState = item["additionalDataState"].toString();
@@ -1862,13 +1862,13 @@ bool PublicTransportEngine::requestOrUpdateSourceEvent( const SourceRequestData 
 
 void PublicTransportEngine::initVehicleTypesSource()
 {
-    QVariantHash vehicleTypes;
+    QVariantMap vehicleTypes;
     const int index = Enums::staticMetaObject.indexOfEnumerator("VehicleType");
     const QMetaEnum enumerator = Enums::staticMetaObject.enumerator( index );
     // Start at i = 1 to skip Enums::InvalidVehicleType
     for ( int i = 1; i < enumerator.keyCount(); ++i ) {
         Enums::VehicleType vehicleType = static_cast< Enums::VehicleType >( enumerator.value(i) );
-        QVariantHash vehicleTypeData;
+        QVariantMap vehicleTypeData;
         vehicleTypeData.insert( "id", enumerator.key(i) );
         vehicleTypeData.insert( "name", Global::vehicleTypeToString(vehicleType) );
         vehicleTypeData.insert( "namePlural", Global::vehicleTypeToString(vehicleType, true) );
@@ -1903,7 +1903,7 @@ void PublicTransportEngine::timetableDataReceived( ServiceProvider *provider,
     const QString itemKey = isDepartureData ? "departures" : "arrivals";
 
     foreach( const DepartureInfoPtr &departureInfo, items ) {
-        QVariantHash departureData;
+        QVariantMap departureData;
         TimetableData departure = departureInfo->data();
         for ( TimetableData::ConstIterator it = departure.constBegin();
               it != departure.constEnd(); ++it )
@@ -2072,7 +2072,7 @@ void PublicTransportEngine::additionalDataReceived( ServiceProvider *provider,
     // and insert the new data into it
     bool newDataInserted = false;
     TimetableData _data = data;
-    QVariantHash item = items[ request.itemNumber() ].toHash();
+    QVariantMap item = items[ request.itemNumber() ].toMap();
     for ( TimetableData::ConstIterator it = data.constBegin(); it != data.constEnd(); ++it ) {
         // Check if there already is data in the current additional data field
         const QString key = Global::timetableInformationToString( it.key() );
@@ -2239,7 +2239,7 @@ void PublicTransportEngine::journeysReceived( ServiceProvider* provider,
             continue;
         }
 
-        QVariantHash journeyData;
+        QVariantMap journeyData;
         TimetableData journey = journeyInfo->data();
         for ( TimetableData::ConstIterator it = journey.constBegin();
               it != journey.constEnd(); ++it )
@@ -2297,7 +2297,7 @@ void PublicTransportEngine::stopsReceived( ServiceProvider *provider,
 
     QVariantList stopsData;
     foreach( const StopInfoPtr &stopInfo, stops ) {
-        QVariantHash stopData;
+        QVariantMap stopData;
         TimetableData stop = stopInfo->data();
         for ( TimetableData::ConstIterator it = stop.constBegin();
               it != stop.constEnd(); ++it )
@@ -2345,7 +2345,7 @@ void PublicTransportEngine::requestFailed( ServiceProvider *provider,
             if ( additionalDataRequest->itemNumber() < items.count() ) {
                 // Found the item for which the request failed,
                 // reset additional data included/waiting fields
-                QVariantHash item = items[ additionalDataRequest->itemNumber() ].toHash();
+                QVariantMap item = items[ additionalDataRequest->itemNumber() ].toMap();
                 item[ "additionalDataState" ] = "error";
                 item[ "additionalDataError" ] = errorMessage;
 
@@ -2475,12 +2475,12 @@ bool PublicTransportEngine::requestMoreItems( const QString &sourceName,
                 i18nc("@info", "No timetable items in data source") );
         return false;
     }
-    const QVariantHash item =
-            (direction == Enums::EarlierItems ? items.first() : items.last()).toHash();
+    const QVariantMap item =
+            (direction == Enums::EarlierItems ? items.first() : items.last()).toMap();
     const QVariantMap _requestData = item[Enums::toString(Enums::RequestData)].toMap();
 
     // TODO Convert to hash from map..
-    QVariantHash requestData;
+    QVariantMap requestData;
     for ( QVariantMap::ConstIterator it = _requestData.constBegin(); it != _requestData.constEnd(); ++it ) {
         requestData.insert( it.key(), it.value() );
     }
@@ -2518,7 +2518,7 @@ bool PublicTransportEngine::request( const SourceRequestData &data )
         ProvidersDataSource *dataSource = providersDataSource();
         const QString state = dataSource->providerState( data.defaultParameter );
         if ( state != QLatin1String("ready") ) {
-            const QVariantHash stateData = dataSource->providerStateData( data.defaultParameter );
+            const QVariantMap stateData = dataSource->providerStateData( data.defaultParameter );
             setData( sourceName, "serviceProvider", data.defaultParameter );
             setData( sourceName, "parseMode", data.request->parseModeName() );
             setData( sourceName, "receivedData", "nothing" );
