@@ -768,6 +768,8 @@ private:
     // if 0 gets returned all additional data requests on sourceName will fail
     TimetableDataSource *testDataSourceForAdditionalDataRequests( const QString &sourceName );
 
+    QVariantMap hashToMap(QVariantHash data);
+
     QHash< QString, ProviderPointer > m_providers; // Currently used providers by ID
     QHash< QString, ProviderPointer > m_cachedProviders; // Unused but still cached providers by ID
     QVariantHash m_erroneousProviders; // Error messages for erroneous providers by ID

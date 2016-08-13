@@ -2766,6 +2766,17 @@ QStringList PublicTransportEngine::removeCityNameFromStops( const QStringList &s
     }
 }
 
+QVariantMap PublicTransportEngine::hashToMap(QVariantHash data)
+{
+    QVariantMap mapData;
+    QHashIterator<QString, QVariant> it(data);
+    while (it.hasNext()) {
+        it.next();
+        mapData.insert(it.key(), it.value());
+    }
+    return mapData;
+}
+
 // This does the magic that allows Plasma to load
 // this plugin.  The first argument must match
 // the X-Plasma-EngineName in the .desktop file.
