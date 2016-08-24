@@ -5,6 +5,6 @@
 
 void TimetablePlugin::registerTypes(const char *uri)
 {
-    Q_ASSERT( uri == QLatin1String("org.kde.plasma.timetableplugin") );
-    qmlRegisterType<TimetableHelper>( uri, 0, 1, "TimetableHelper");
+    Q_ASSERT( uri == QLatin1String("org.kde.plasma.private.publictransport.timetable") );
+    qmlRegisterType<TimetableHelper>( uri, 0, 1, "TimetableHelper" );
 }

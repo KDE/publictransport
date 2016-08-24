@@ -5,7 +5,12 @@
 #include <QWidget>
 
 #include <KDialog>
+#include <Plasma/Applet>
 
+/**
+ * Class that aims to display the GHNS dialog
+ * Enables the user to download new service providers
+ */
 class TimetableHelper : public KDialog
 {
     Q_OBJECT
@@ -15,6 +20,18 @@ public:
     ~TimetableHelper();
 
     Q_INVOKABLE void displayDownloadDialog();
+};
+
+/**
+ * Class to export the desktop file to json format
+ */
+class TimetableExporter : public Plasma::Applet
+{
+    Q_OBJECT
+
+public:
+    TimetableExporter(QObject *parent, const QVariantList &data);
+    ~TimetableExporter() override;
 };
 
 #endif // TIMETABLEHELPER_H

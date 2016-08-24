@@ -7,9 +7,11 @@ set ( timetable_SRCS
         plugin/timetablehelper.cpp
 )
 
-install (FILES plugin/qmldir DESTINATION ${QML_INSTALL_DIR}/org/kde/plasma/publictransport/timetable)
+install (FILES plugin/qmldir DESTINATION ${QML_INSTALL_DIR}/org/kde/plasma/private/publictransport/timetable)
 
-add_library (timetable SHARED ${timetableplugin_SRCS})
+add_library (timetable SHARED ${timetable_SRCS})
+
+kcoreaddons_desktop_to_json(timetable plasmoid/metadata.desktop)
 
 target_link_libraries (timetable
     Qt5::Core
@@ -18,7 +20,8 @@ target_link_libraries (timetable
     Qt5::Widgets
     KF5::Plasma
     KF5::NewStuff
+    KF5::CoreAddons
     KF5::KDELibs4Support
 )
 
-install (TARGETS timetable DESTINATION ${QML_INSTALL_DIR}/org/kde/plasma/publictransport/timetable)
+install (TARGETS timetable DESTINATION ${QML_INSTALL_DIR}/org/kde/plasma/private/publictransport/timetable)
