@@ -1,5 +1,5 @@
-#include "backend.h"
-#include "engineplugin.h"
+#include "timetableplugin.h"
+#include "timetablehelper.h"
 
 #include <QtQml>
 

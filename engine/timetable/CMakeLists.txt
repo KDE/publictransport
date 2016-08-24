@@ -1,21 +1,24 @@
 add_definitions(-DTRANSLATION_DOMAIN=\"plasma_applet_org.kde.plasma.publictransport.timetable\")
 
-plasma_install_package(package org.kde.plasma.publictransport.timetable)
+plasma_install_package(plasmoid org.kde.plasma.publictransport.timetable)
 
-set ( timetableplugin_SRCS
+set ( timetable_SRCS
         plugin/timetableplugin.cpp
         plugin/timetablehelper.cpp
 )
 
 install (FILES plugin/qmldir DESTINATION ${QML_INSTALL_DIR}/org/kde/plasma/publictransport/timetable)
 
-add_library (engine SHARED ${timetableplugin_SRCS})
+add_library (timetable SHARED ${timetableplugin_SRCS})
 
 target_link_libraries (timetable
     Qt5::Core
     Qt5::Qml
     Qt5::Quick
+    Qt5::Widgets
     KF5::Plasma
+    KF5::NewStuff
+    KF5::KDELibs4Support
 )
 
-install (TARGETS timetableplugin DESTINATION ${QML_INSTALL_DIR}/org/kde/plasma/publictransport/timetable)
+install (TARGETS timetable DESTINATION ${QML_INSTALL_DIR}/org/kde/plasma/publictransport/timetable)

@@ -1,9 +1,9 @@
-#include "enginehelper.h"
+#include "timetablehelper.h"
 
-#include <KNewStuff3/KNS3/DownloadDialog>
+#include <KNewStuff3/kns3/downloaddialog.h>
 
-TimetableHelper::TimetableHelper(QObject* parent)
-    : QObject(parent)
+TimetableHelper::TimetableHelper(QWidget* parent)
+    : KDialog(parent)
 {
 }
 

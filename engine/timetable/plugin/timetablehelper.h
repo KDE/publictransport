@@ -2,15 +2,16 @@
 #define TIMETABLEHELPER_H
 
 #include <QObject>
-#include <QHash>
-#include <QVariantMap>
+#include <QWidget>
 
-class TimetableHelper : public QObject
+#include <KDialog>
+
+class TimetableHelper : public KDialog
 {
     Q_OBJECT
 
 public:
-    TimetableHelper(QObject *parent=0);
+    TimetableHelper(QWidget *parent=0);
     ~TimetableHelper();
 
     Q_INVOKABLE void displayDownloadDialog();
