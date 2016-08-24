@@ -57,6 +57,7 @@ Item {
         anchors.verticalCenter: parent.verticalCenter
         text: i18n("Configure")
         visible: {
+            var data = mainDataSource.data["ServiceProviders"][defaultProviderId()]["state"]
             if ( data == undefined) {
                 return true
             } else if (gtfsState == "gtfs_feed_import_pending") {
