@@ -1,17 +1,16 @@
-#ifndef ENGINEPLUGIN_H
-#define ENGINEPLUGIN_H
+#ifndef TIMETABLEPLUGIN_H
+#define TIMETABLEPLUGIN_H
 
 #include <QQmlEngine>
 #include <QQmlExtensionPlugin>
 
-class EnginePlugin : public QQmlExtensionPlugin
+class TimetablePlugin : public QQmlExtensionPlugin
 {
     Q_OBJECT
     Q_PLUGIN_METADATA(IID "org.qt-project.Qt.QQmlExtensionInterface");
 
 public:
     virtual void registerTypes(const char *uri);
-    //virtual void initializeEngine(QQmlEngine *engine, const char *uri);
 };
 
-#endif // ENGINEPLUGIN_H
+#endif // TIMETABLEPLUGIN_H
