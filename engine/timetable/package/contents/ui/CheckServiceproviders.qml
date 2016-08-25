@@ -37,7 +37,7 @@ Item {
         horizontalAlignment: Text.AlignHCenter
         text: i18n("Failed to locate any service providers"
                 + "\nPlease download a service provider and try again")
-        visible: false
+        visible: true
     }
 
     PlasmaComponents.Button {
@@ -48,18 +48,20 @@ Item {
             horizontalCenter: parent.horizontalCenter
         }
         text: i18n("Download")
-        visible: false
+        visible: true
 
         // TODO: Integrate the applet code with the engine code
         //       Add a Q_INVOKABLE method to show service provider
         //       download dialog.
-        onClicked: plasmoid.nativeInterface.downloadNewProviders()
+        onClicked: plasmoid.nativeInterface.getNewProviders()
     }
 
     Loader {
         id: gtfsImportLoader
         anchors.fill: parent
         source: "GtfsService.qml"
+        active: false
+        /**
         active: {
             var data = mainDataSource.data["ServiceProviders"]
             if (data == undefined) {
@@ -71,5 +73,6 @@ Item {
             }
             return true
         }
+        */
     }
 }
