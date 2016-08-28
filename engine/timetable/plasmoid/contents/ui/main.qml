@@ -18,10 +18,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import QtQuick 2.0
 import QtQuick.Layouts 1.1
 
-import org.kde.plasma.plasmoid 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.extras 2.0 as PlasmaExtras
 import org.kde.plasma.components 2.0 as PlasmaComponents
+
 
 Item {
     id: timetableApplet
@@ -56,8 +56,6 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.verticalCenter: parent.verticalCenter
         text: i18n("Configure")
-        visible: true
-        /**
         visible: {
             var data = mainDataSource.data["ServiceProviders"][defaultProviderId()]["state"]
             if ( data == undefined) {
@@ -70,7 +68,6 @@ Item {
                 return false
             }
         }
-        */
         onClicked: {
             this.visible = false
             serviceproviderCheckLoader.active = true
