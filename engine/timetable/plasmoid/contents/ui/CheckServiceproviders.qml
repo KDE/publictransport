@@ -22,10 +22,16 @@ import QtQuick 2.0
 import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.components 2.0 as PlasmaComponents
 
+import org.kde.plasma.private.publictransport.timetable 0.1 as Timetable
+
 Item {
     id: serviceproviderCheckRoot
 
     anchors.fill: parent
+
+    Timetable.TimetableBackend {
+        id: backend
+    }
 
     PlasmaComponents.Label {
         id: errorLabel
@@ -49,11 +55,7 @@ Item {
         }
         text: i18n("Download")
         visible: false
-
-        // TODO: Integrate the applet code with the engine code
-        //       Add a Q_INVOKABLE method to show service provider
-        //       download dialog.
-        onClicked: plasmoid.nativeInterface.downloadNewProviders()
+        onClicked: backend.ghnsDialogRequested()
     }
 
     Loader {

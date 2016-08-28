@@ -19,19 +19,7 @@ public:
     TimetableHelper(QWidget *parent=0);
     ~TimetableHelper();
 
-    Q_INVOKABLE void displayDownloadDialog();
-};
-
-/**
- * Class to export the desktop file to json format
- */
-class TimetableExporter : public Plasma::Applet
-{
-    Q_OBJECT
-
-public:
-    TimetableExporter(QObject *parent, const QVariantList &data);
-    ~TimetableExporter() override;
+    Q_INVOKABLE void showDialog();
 };
 
 #endif // TIMETABLEHELPER_H
