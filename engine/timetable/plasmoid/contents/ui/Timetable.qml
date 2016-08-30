@@ -22,8 +22,6 @@ import org.kde.plasma.extras 2.0 as PlasmaExtras
 
 Item {
     id: timetableRoot
-    height: parent.height
-    width: parent.width
     anchors.fill: parent
 
     property var timetableSourceExists: false
@@ -34,6 +32,24 @@ Item {
     })
     property var departureSource: ( function isDepartureSource(source) {
         return source.indexOf("Departures") >= 0
+    })
+
+    property var eta: ( function etaFromDateTime(stopDateTime) {
+        var currentDate = new Date()
+
+        if (currentDate.getHours() == stopDateTime.getHours()) {
+            if (Math.abs(currentDate.getMinutes() - stopDateTime.getMinutes()) <= 1) {
+                return stopDateTime.getMinutes() - currentDate.getMinutes() + " min"
+            } else {
+                return stopDateTime.getMinutes() - currentDate.getMinutes() + " mins"
+            }
+        } else {
+            if (Math.abs(currentDate.getHours() - stopDateTime.getHours()) <= 1) {
+                return stopDateTime.getHours() - currentDate.getHours() + " hour"
+            } else {
+                return stopDateTime.getHours() - currentDate.getHours()  + " hours"
+            }
+        }
     })
 
     PlasmaCore.DataModel {

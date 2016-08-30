@@ -56,7 +56,7 @@ PlasmaComponents.ListItem {
             right: parent.right
             rightMargin: 5
         }
-        text: model.DepartureDateTime
+        text: eta(model.DepartureDateTime)
         elide: Text.ElideRight
         wrapMode: Text.Wrap
         textFormat: Text.StyledText
