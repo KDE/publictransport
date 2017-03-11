@@ -159,7 +159,7 @@ ServiceProviderData* ServiceProviderDataReader::read( QIODevice* device,
                 addComments( comments, text() );
             }
         } else if ( isStartElement() ) {
-            if ( name().compare("serviceProvider", Qt::CaseInsensitive) != 0 ) {
+            if ( name().compare(QLatin1String("serviceProvider"), Qt::CaseInsensitive) != 0 ) {
                 if ( !handleError(QString("Wrong root element for %1, should be <serviceProvider>, "
                                   "is <%2>.").arg(serviceProvider, name().toString()),
                                   errorAcceptance, errorMessage) )
@@ -364,13 +364,13 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
             } else if ( name().compare(QLatin1String("credit"), Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setCredit( readElementText() );
 #ifdef BUILD_PROVIDER_TYPE_GTFS
-            } else if ( name().compare("feedUrl", Qt::CaseInsensitive) == 0 ) {
+            } else if ( name().compare(QLatin1String("feedUrl"), Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setFeedUrl( readElementText() );
-            } else if ( name().compare("realtimeTripUpdateUrl", Qt::CaseInsensitive) == 0 ) {
+            } else if ( name().compare(QLatin1String("realtimeTripUpdateUrl"), Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setRealtimeTripUpdateUrl( readElementText() );
-            } else if ( name().compare("realtimeAlertsUrl", Qt::CaseInsensitive) == 0 ) {
+            } else if ( name().compare(QLatin1String("realtimeAlertsUrl"), Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setRealtimeAlertsUrl( readElementText() );
-            } else if ( name().compare("timeZone", Qt::CaseInsensitive) == 0 ) {
+            } else if ( name().compare(QLatin1String("timeZone"), Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setTimeZone( readElementText() );
 #endif
 #ifdef BUILD_PROVIDER_TYPE_SCRIPT
@@ -447,7 +447,7 @@ void ServiceProviderDataReader::readAuthor( QString *fullname, QString *shortNam
     while ( !atEnd() ) {
         readNext();
 
-        if ( isEndElement() && name().compare( "author", Qt::CaseInsensitive ) == 0 ) {
+        if ( isEndElement() && name().compare( QLatin1String("author"), Qt::CaseInsensitive ) == 0 ) {
             break;
         }
 
@@ -537,7 +537,7 @@ QList<ChangelogEntry> ServiceProviderDataReader::readChangelog( QString *comment
     QList<ChangelogEntry> changelog;
     while ( !atEnd() ) {
         readNext();
-        if ( isEndElement() && name().compare("changelog", Qt::CaseInsensitive) == 0 ) {
+        if ( isEndElement() && name().compare(QLatin1String("changelog"), Qt::CaseInsensitive) == 0 ) {
             break;
         }
 
@@ -546,7 +546,7 @@ QList<ChangelogEntry> ServiceProviderDataReader::readChangelog( QString *comment
                 addComments( comments, text() );
             }
         } else if ( isStartElement() ) {
-            if ( name().compare("entry", Qt::CaseInsensitive) == 0 ) {
+            if ( name().compare(QLatin1String("entry"), Qt::CaseInsensitive) == 0 ) {
                 ChangelogEntry currentEntry;
                 if ( attributes().hasAttribute(QLatin1String("version")) ) {
                     currentEntry.version = attributes().value( QLatin1String("version") ).toString();
