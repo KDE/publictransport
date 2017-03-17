@@ -13,7 +13,7 @@ TimetableHelper::~TimetableHelper()
 
 void TimetableHelper::showDialog()
 {
-    KNS3::DownloadDialog *dialog = new KNS3::DownloadDialog("publictransport.knsrc", this);
+    KNS3::DownloadDialog *dialog = new KNS3::DownloadDialog("timetable.knsrc", this);
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     dialog->show();
 }

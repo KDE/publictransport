@@ -1,5 +1,0 @@
-[KNewStuff3]
-ProvidersUrl=http://notmart.org/misc/legacykdelookproviders.xml
-Categories=Plasma public transport timetable
-TargetDir=plasma_engine_publictransport/serviceProviders
-Uncompress=archive

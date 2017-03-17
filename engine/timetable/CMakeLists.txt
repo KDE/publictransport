@@ -8,7 +8,7 @@ set ( timetable_SRCS
         plugin/timetablebackend.cpp
 )
 
-install (FILES publictransport.knsrc DESTINATION ${CONFIG_INSTALL_DIR})
+install (FILES timetable.knsrc DESTINATION ${CONFIG_INSTALL_DIR})
 install (FILES plugin/qmldir DESTINATION ${QML_INSTALL_DIR}/org/kde/plasma/private/publictransport/timetable)
 
 add_library (timetable SHARED ${timetable_SRCS})
