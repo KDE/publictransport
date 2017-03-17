@@ -22,7 +22,6 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 import org.kde.plasma.extras 2.0 as PlasmaExtras
 import org.kde.plasma.components 2.0 as PlasmaComponents
 
-
 Item {
     id: timetableApplet
 
@@ -72,6 +71,18 @@ Item {
             this.visible = false
             serviceproviderCheckLoader.active = true
         }
+    }
+
+    PlasmaComponents.ToolButton {
+        id: configureShortcutButton
+        anchors {
+            right: parent.right
+            rightMargin: 5
+        }
+        iconSource: "configure"
+        tooltip: i18n("Configure Settings")
+        visible: !configureButton.visible
+        onClicked: plasmoid.action("configure").trigger()
     }
 
     Loader {
