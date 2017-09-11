@@ -25,7 +25,6 @@
 #include "serviceprovider.h"
 #include "serviceproviderdata.h"
 #include "serviceproviderglobal.h"
-#include "script/serviceproviderscript.h"
 #include "global.h"
 
 // KDE includes
@@ -288,17 +287,12 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
         }
     } else {
         // No provider type in the XML file, use a default one
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        serviceProviderType = Enums::ScriptedProvider;
-        serviceProviderTypeString = ServiceProviderGlobal::typeToString( serviceProviderType );
-#else
-    #ifdef BUILD_PROVIDER_TYPE_GTFS
+#ifdef BUILD_PROVIDER_TYPE_GTFS
         serviceProviderType = Enums::GtfsProvider;
         serviceProviderTypeString = ServiceProviderGlobal::typeToString( serviceProviderType );
-    #else
+#else
         kFatal() << "Internal error: No known provider type is supported, "
                     "tried ScriptedProvider and GtfsProvider";
-    #endif
 #endif
         qWarning() << "No provider type in the provider plugin file, using default type"
                    << ServiceProviderGlobal::typeName(serviceProviderType);
@@ -372,25 +366,6 @@ ServiceProviderData *ServiceProviderDataReader::readProviderData( const QString 
                 serviceProviderData->setRealtimeAlertsUrl( readElementText() );
             } else if ( name().compare(QLatin1String("timeZone"), Qt::CaseInsensitive) == 0 ) {
                 serviceProviderData->setTimeZone( readElementText() );
-#endif
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-            } else if ( serviceProviderType == Enums::ScriptedProvider &&
-                        name().compare(QLatin1String("script"), Qt::CaseInsensitive) == 0 )
-            {
-                const QStringList extensions = attributes().value( QLatin1String("extensions") )
-                        .toString().split( ',', QString::SkipEmptyParts );
-                const QString scriptFile = QFileInfo( fileName ).path() + '/' + readElementText();
-                if ( !QFile::exists(scriptFile) ) {
-                    if ( !handleError(QString("The script file %1 referenced by the service "
-                                      "provider plugin %2 was not found")
-                                      .arg(scriptFile, serviceProviderId),
-                                      errorAcceptance, errorMessage) )
-                    {
-                        delete serviceProviderData;
-                        return 0;
-                    }
-                }
-                serviceProviderData->setScriptFile( scriptFile, extensions );
 #endif
             } else if ( name().compare(QLatin1String("samples"), Qt::CaseInsensitive) == 0 ) {
                 QStringList stops;

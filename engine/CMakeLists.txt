@@ -90,8 +90,6 @@ if ( BUILD_PROVIDER_TYPE_GTFS )
     add_subdirectory( gtfs )
 endif ( BUILD_PROVIDER_TYPE_GTFS )
 
-add_subdirectory(timetable)
-
 # Message, when debug output is enabled for specific events
 if ( ENABLE_DEBUG_NETWORK )
     message( "   - Enable debug output for script network events" )

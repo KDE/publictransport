@@ -40,25 +40,13 @@
 QList< Enums::ServiceProviderType > ServiceProviderGlobal::availableProviderTypes()
 {
     QList< Enums::ServiceProviderType > types;
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    types << Enums::ScriptedProvider;
-#endif
-#ifdef BUILD_PROVIDER_TYPE_GTFS
     types << Enums::GtfsProvider;
-#endif
     return types;
 }
 
 bool ServiceProviderGlobal::isProviderTypeAvailable( Enums::ServiceProviderType type )
 {
     switch ( type ) {
-    case Enums::ScriptedProvider:
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        return true;
-#else
-        return false;
-#endif
-
     case Enums::GtfsProvider:
 #ifdef BUILD_PROVIDER_TYPE_GTFS
         return true;
@@ -188,10 +176,10 @@ Enums::ServiceProviderType ServiceProviderGlobal::typeFromString(
         const QString &serviceProviderType )
 {
     QString s = serviceProviderType.toLower();
-    if ( s == QLatin1String("script") ||
-         s == QLatin1String("html") ) // DEPRECATED
+    if ( s == QLatin1String("script") ||    // DEPRECATED
+         s == QLatin1String("html") )       // DEPRECATED
     {
-        return Enums::ScriptedProvider;
+        return Enums::InvalidProvider;
     } else if ( s == QLatin1String("gtfs") ) {
         return Enums::GtfsProvider;
     } else {
@@ -202,13 +190,11 @@ Enums::ServiceProviderType ServiceProviderGlobal::typeFromString(
 QString ServiceProviderGlobal::typeToString( Enums::ServiceProviderType type )
 {
     switch ( type ) {
-    case Enums::ScriptedProvider:
-        return "script";
-    case Enums::GtfsProvider:
-        return "gtfs";
-    case Enums::InvalidProvider:
-    default:
-        return "invalid";
+        case Enums::GtfsProvider:
+            return "gtfs";
+        case Enums::InvalidProvider:
+        default:
+            return "invalid";
     }
 }
 
@@ -216,16 +202,13 @@ QString ServiceProviderGlobal::typeName( Enums::ServiceProviderType type, Provid
 {
     QString name;
     switch ( type ) {
-    case Enums::ScriptedProvider:
-        name = i18nc("@info/plain Name of a service provider plugin type", "Scripted");
-        break;
-    case Enums::GtfsProvider:
-        name = i18nc("@info/plain Name of a service provider plugin type", "GTFS");
-        break;
-    case Enums::InvalidProvider:
-    default:
-        qWarning() << "Invalid provider type" << type;
-        return i18nc("@info/plain Name of the invalid service provider plugin type", "Invalid");
+        case Enums::GtfsProvider:
+            name = i18nc("@info/plain Name of a service provider plugin type", "GTFS");
+            break;
+        case Enums::InvalidProvider:
+        default:
+            qWarning() << "Invalid provider type" << type;
+            return i18nc("@info/plain Name of the invalid service provider plugin type", "Invalid");
     }
 
     // Append "(unsupported)" if the engine gets build without support for the provider type

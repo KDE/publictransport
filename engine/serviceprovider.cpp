@@ -42,7 +42,6 @@
 #include <QFile>
 #include <QTimer>
 #include <QFileInfo>
-#include <QScriptEngine>
 
 ServiceProvider::ServiceProvider( const ServiceProviderData *data, QObject *parent,
                                   const QSharedPointer< KConfig > &cache )

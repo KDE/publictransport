@@ -28,8 +28,6 @@
 #include "config.h"
 #include "enums.h"
 
-// Qt includes
-#include <QScriptValue>
 
 /**
  * @brief Stores information about a request to the publictransport data engine.
@@ -68,14 +66,6 @@ public:
     QString parseModeName() const;
     static QString parseModeName( ParseDocumentMode parseMode );
 
-
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const = 0;
-
-    /** @brief Get the name of the script function that is associated with this request. */
-    virtual QString functionName() const = 0;
-#endif
-
 protected:
     QString m_sourceName;
     ParseDocumentMode m_parseMode;
@@ -101,12 +91,6 @@ public:
     virtual AbstractRequest *clone() const = 0;
     virtual QString argumentsString() const = 0;
 
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const = 0;
-
-    /** @brief Get the name of the script function that is associated with this request. */
-    virtual QString functionName() const = 0;
-#endif
 
     /** @brief The date and time to get results for. */
     QDateTime dateTime() const { return m_dateTime; };
@@ -160,12 +144,6 @@ public:
     virtual AbstractRequest *clone() const { return new StopSuggestionRequest(*this); };
     virtual QString argumentsString() const;
 
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
-
-    /** @brief Get the name of the script function that is associated with this request. */
-    virtual QString functionName() const;
-#endif
 };
 
 class StopsByGeoPositionRequest : public StopSuggestionRequest {
@@ -186,10 +164,6 @@ public:
 
     virtual AbstractRequest *clone() const { return new StopsByGeoPositionRequest(*this); };
     virtual QString argumentsString() const;
-
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
-#endif
 
     /** @brief The longitude of the stop. */
     qreal longitude() const { return m_longitude; };
@@ -225,12 +199,6 @@ public:
     virtual AbstractRequest *clone() const { return new DepartureRequest(*this); };
     virtual QString argumentsString() const;
 
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
-
-    /** @brief Get the name of the script function that is associated with this request. */
-    virtual QString functionName() const;
-#endif
 };
 
 class ArrivalRequest : public DepartureRequest {
@@ -246,9 +214,6 @@ public:
     virtual AbstractRequest *clone() const { return new ArrivalRequest(*this); };
     virtual QString argumentsString() const;
 
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
-#endif
 };
 
 /**
@@ -287,12 +252,6 @@ public:
     virtual JourneyRequest *clone() const { return new JourneyRequest(*this); };
     virtual QString argumentsString() const;
 
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
-
-    /** @brief Get the name of the script function that is associated with this request. */
-    virtual QString functionName() const;
-#endif
 
     /** @brief The target stop name of the request. */
     QString targetStop() const { return m_targetStop; };
@@ -338,13 +297,6 @@ public:
     virtual AbstractRequest *clone() const { return new AdditionalDataRequest(*this); };
     virtual QString argumentsString() const;
 
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
-
-    /** @brief Get the name of the script function that is associated with this request. */
-    virtual QString functionName() const;
-#endif
-
     int itemNumber() const { return m_itemNumber; };
     QString transportLine() const { return m_transportLine; };
     QString target() const { return m_target; };
@@ -374,13 +326,6 @@ public:
 
     virtual AbstractRequest *clone() const { return new MoreItemsRequest(*this); };
     virtual QString argumentsString() const;
-
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    virtual QScriptValue toScriptValue( QScriptEngine *engine ) const;
-
-    /** @brief Get the name of the script function that is associated with this request. */
-    virtual QString functionName() const { return QString(); }; // TODO
-#endif
 
     QSharedPointer< AbstractRequest > request() const { return m_request; };
     QVariantMap requestData() const { return m_requestData; };

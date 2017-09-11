@@ -74,5 +74,9 @@ Note: Add "-D" before the option name to the command line, like above.
     BUILD_TESTS (default: OFF)
             Turn this option on to build unit tests.
 
+P.S: Scripted service providers have been deprecated, since QtScript is deprecated since Qt 5.5.
+	 As a result, the BUILD_PROVIDER_TYPE_SCRIPT definition is useless as such.
+	 Please use GTFS service providers instead.
+
 CMake options can also be toggled using a CMake GUI program
 or by running cmake in interactive mode (cmake -i ..).

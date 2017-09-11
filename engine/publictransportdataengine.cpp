@@ -30,9 +30,6 @@
 #include "timetableservice.h"
 #include "datasource.h"
 
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    #include "script/serviceproviderscript.h"
-#endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     #include "gtfs/serviceprovidergtfs.h"
     #include "gtfs/gtfsservice.h"
@@ -514,16 +511,13 @@ QVariantMap PublicTransportEngine::serviceProviderData( const ServiceProviderDat
     dataServiceProvider.insert( "id", data.id() );
     dataServiceProvider.insert( "fileName", data.fileName() );
     dataServiceProvider.insert( "type", ServiceProviderGlobal::typeName(data.type()) );
+
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     if ( data.type() == Enums::GtfsProvider ) {
         dataServiceProvider.insert( "feedUrl", data.feedUrl() );
     }
 #endif
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    if ( data.type() == Enums::ScriptedProvider ) {
-        dataServiceProvider.insert( "scriptFileName", data.scriptFileName() );
-    }
-#endif
+
     dataServiceProvider.insert( "name", data.name() );
     dataServiceProvider.insert( "url", data.url() );
     dataServiceProvider.insert( "shortUrl", data.shortUrl() );
@@ -963,21 +957,12 @@ bool PublicTransportEngine::testServiceProvider( const QString &providerId,
     // TODO Needs to be done for each provider sub class here
     foreach ( Enums::ServiceProviderType type, ServiceProviderGlobal::availableProviderTypes() ) {
         switch ( type ) {
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-        case Enums::ScriptedProvider:
-            if ( !ServiceProviderScript::isTestResultUnchanged(providerId, cache) ) {
-                qDebug() << "Script changed" << providerId;
-                testData.setSubTypeTestStatus( ServiceProviderTestData::Pending );
-                testData.write( providerId, cache );
-            }
-            break;
-#endif
-        case Enums::GtfsProvider:
-            break;
-        case Enums::InvalidProvider:
-        default:
-            qWarning() << "Provider type unknown" << type;
-            break;
+            case Enums::GtfsProvider:
+                break;
+            case Enums::InvalidProvider:
+            default:
+                qWarning() << "Provider type unknown" << type;
+                break;
         }
     }
 
@@ -1502,11 +1487,7 @@ void PublicTransportEngine::reloadChangedProviders()
     foreach( const QString &cachedSource, cachedSources ) {
         const QString providerId = providerIdFromSourceName( cachedSource );
         if ( !providerId.isEmpty() &&
-             (ServiceProviderGlobal::isSourceFileModified(providerId, cache)
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-             || !ServiceProviderScript::isTestResultUnchanged(providerId, cache)
-#endif
-            ) )
+             (ServiceProviderGlobal::isSourceFileModified(providerId, cache)) )
         {
             m_providers.remove( providerId );
             m_cachedProviders.remove( providerId );
@@ -2644,10 +2625,6 @@ ServiceProvider *PublicTransportEngine::createProviderForData( const ServiceProv
     }
 
     switch ( data->type() ) {
-#ifdef BUILD_PROVIDER_TYPE_SCRIPT
-    case Enums::ScriptedProvider:
-        return new ServiceProviderScript( data, parent, cache );
-#endif
 #ifdef BUILD_PROVIDER_TYPE_GTFS
     case Enums::GtfsProvider:
         return new ServiceProviderGtfs( data, parent, cache );

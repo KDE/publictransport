@@ -357,7 +357,7 @@ public:
         * journeys/stop suggestions, cache values, parse HTML, notify about errors, etc.
         * QtScript extensions can be used, eg. qt.xml to parse XML documents.
         **/
-        ScriptedProvider = 1,
+        // ScriptedProvider = 1, # Deprecated; Please use Gtfs service providers
 
         /**
         * The accessor uses a database filled with GTFS data.
