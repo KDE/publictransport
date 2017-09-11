@@ -71,6 +71,8 @@ if ( INSTALL_ICONS )
     add_subdirectory( icons )
 endif ( INSTALL_ICONS )
 
+message(" - PublicTransport timetable application")
+add_subdirectory(timetable)
 
 message( "*****************************************************" )
 
