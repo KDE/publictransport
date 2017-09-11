@@ -22,7 +22,6 @@ find_package( SharedMimeInfo )
 
 # Create some variables to control the build,
 # each provider type can be disabled, ie. not build, but at least one needs to be enabled
-option( BUILD_PROVIDER_TYPE_SCRIPT "Build with support for scripted providers" ON )
 option( BUILD_PROVIDER_TYPE_GTFS "Build with support for GTFS providers" ON )
 option( ENABLE_DEBUG_ENGINE_JOBS "Enable debug output for started/finished jobs in the engine" OFF )
 option( ENABLE_DEBUG_NETWORK "Enable debug output for network events in scripts" OFF )
@@ -30,11 +29,10 @@ option( ENABLE_DEBUG_SCRIPT_HELPER "Enable debug output for warnings/errors in t
 option( ENABLE_DEBUG_SCRIPT_ERROR "Enable debug output for error messages from scripts" OFF )
 
 # Fatal error if no provider types are enabled
-if ( NOT BUILD_PROVIDER_TYPE_SCRIPT AND NOT BUILD_PROVIDER_TYPE_GTFS )
+if ( NOT BUILD_PROVIDER_TYPE_GTFS )
     message( FATAL_ERROR "   - No provider types enabled, this would make the engine useless!\n"
-                         "Solution: Use at least one of the available provider types\n"
-                         "          BUILD_PROVIDER_TYPE_SCRIPT or BUILD_PROVIDER_TYPE_GTFS." )
-endif ( NOT BUILD_PROVIDER_TYPE_SCRIPT AND NOT BUILD_PROVIDER_TYPE_GTFS )
+                         "Solution: Use the available provider type : BUILD_PROVIDER_TYPE_GTFS.")
+endif ( NOT  BUILD_PROVIDER_TYPE_GTFS )
 
 # Source files
 qt5_wrap_cpp( publictransport_engine_MOC_SRCS enums.h )
@@ -87,11 +85,6 @@ if ( INSTALL_TIMETABLEMATE )
 endif ( INSTALL_TIMETABLEMATE )
 
 # Add provider types (adding their sources to publictransport_engine_SRCS)
-if ( BUILD_PROVIDER_TYPE_SCRIPT )
-    message( "   - Build script provider type" )
-    add_subdirectory( script )
-endif ( BUILD_PROVIDER_TYPE_SCRIPT )
-
 if ( BUILD_PROVIDER_TYPE_GTFS )
     message( "   - Build GTFS provider type" )
     add_subdirectory( gtfs )
@@ -117,11 +110,6 @@ add_library(plasma_engine_publictransport MODULE ${publictransport_engine_SRCS} 
 
 # Collect all needed libraries in LIBS
 set( LIBS KF5::Archive KF5::CoreAddons KF5::Plasma KF5::KIOCore KF5::KDELibs4Support KF5::ThreadWeaver z )
-
-# Add libraries needed for the script provider type
-if ( BUILD_PROVIDER_TYPE_SCRIPT )
-    set( LIBS ${LIBS} Qt5::Core Qt5::Script )
-endif ( BUILD_PROVIDER_TYPE_SCRIPT )
 
 # Add libraries needed for the GTFS provider type
 if ( BUILD_PROVIDER_TYPE_GTFS )
