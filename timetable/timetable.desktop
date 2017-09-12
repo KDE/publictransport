@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Timetable
+Exec=timetable %i -caption "%c"
+Icon=timetable
+Type=Application
+MimeType=application-x-publictransport-engine;application/xml;
+X-DocPath=timetablemate/index.html
+GenericName=Launch the Public Transport timetable application
+Terminal=false
+Categories=Qt;KDE;Development;IDE;
