@@ -52,12 +52,20 @@ Kirigami.ApplicationWindow {
             Kirigami.Action {
                 text: "Stops"
                 iconName: "dialog-cancel"
-                onTriggered: stopsLoader.active  = true
+                onTriggered: {
+                    stopsLoader.active  = true
+                    locationsLoader.active = false
+                    serviceprovidersLoader.active = false
+                }
             },
             Kirigami.Action {
                 text: "Locations"
                 iconName: "bookmarks"
-                onTriggered: locationsLoader.active = true
+                onTriggered: {
+                    stopsLoader.active = false
+                    locationsLoader.active = true
+                    serviceprovidersLoader.active = false
+                }
             },
             Kirigami.Action {
                 text: "Alarms"
@@ -67,7 +75,11 @@ Kirigami.ApplicationWindow {
             Kirigami.Action {
                 text: "Service Providers"
                 iconName: "folder"
-                onTriggered: serviceprovidersLoader.active = true
+                onTriggered: {
+                    stopsLoader.active = false
+                    locationsLoader.active = false
+                    serviceprovidersLoader.active = true
+                }
             }
         ]
     }
@@ -87,7 +99,7 @@ Kirigami.ApplicationWindow {
     }
 
     Loader {
-        id: serviceProvidersLoader
+        id: serviceprovidersLoader
         anchors.fill: parent
         source: "Serivecproviders.qml"
         active: false
