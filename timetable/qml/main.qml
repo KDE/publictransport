@@ -1,5 +1,5 @@
 /********************************************************************
-Copyright (C) 2016 R. Harish Navnit <harishnavnit@gmail.com>
+Copyright (C) 2017 R. Harish Navnit <harishnavnit@gmail.com>
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -12,36 +12,24 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
+along with this program.  If not, see <http://www.gnu.org/licenses/>
 *********************************************************************/
 
-import QtQuick 2.0
-import QtQuick.Layouts 1.1
-import QtQuick.Controls 2.2
+import QtQuick 2.1
+import QtQuick.Controls 2.2 as Controls
 
+import org.kde.kirigami 2.0 as Kirigami
 import org.kde.plasma.core 2.0 as PlasmaCore
-import org.kde.plasma.extras 2.0 as PlasmaExtras
-import org.kde.plasma.components 2.0 as PlasmaComponents
 
-ApplicationWindow {
-    id: timetableApplet
 
-    visible: true
+Kirigami.ApplicationWindow {
+    id: root
 
-    Layout.minimumWidth: 300
-    Layout.minimumHeight: 200
-    Layout.fillWidth: true
-    Layout.fillHeight: true
-    LayoutMirroring.enabled: Qt.application.layoutDirection === Qt.RightToLeft
-    LayoutMirroring.childrenInherit: true
-
-    property string gtfsState: mainDataSource.data["ServiceProviders"][defaultProviderId()]["state"]
     property var defaultProviderId: (function getDefaultServiceProviderId() {
         var data = mainDataSource.data["ServiceProviders"]
         var serviceproviders = Object.keys(data)
         return serviceproviders[0]
     })
-
 
     PlasmaCore.DataSource {
         id: mainDataSource
@@ -54,52 +42,54 @@ ApplicationWindow {
         connectedSources: ["ServiceProviders"]
     }
 
-    PlasmaComponents.Button {
-        id: configureButton
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.verticalCenter: parent.verticalCenter
-        text: i18n("Configure")
-        visible: {
-            var data = mainDataSource.data["ServiceProviders"][defaultProviderId()]["state"]
-            if ( data == undefined) {
-                return true
-            } else if (gtfsState == "gtfs_feed_import_pending") {
-                timetableLoader.active = false
-                return true
-            } else {
-                timetableLoader.active = true
-                return false
-            }
-        }
-        onClicked: {
-            this.visible = false
-            serviceproviderCheckLoader.active = true
-        }
-    }
+    header: Kirigami.ApplicationHeader {}
 
-    PlasmaComponents.ToolButton {
-        id: configureShortcutButton
-        anchors {
-            right: parent.right
-            rightMargin: 5
-        }
-        iconSource: "configure"
-        tooltip: i18n("Configure Settings")
-        visible: !configureButton.visible
-        onClicked: plasmoid.action("configure").trigger()
+    globalDrawer: Kirigami.GlobalDrawer {
+        title: "Public Transport"
+        titleIcon: "applications-graphics"
+
+        actions: [
+            Kirigami.Action {
+                text: "Stops"
+                iconName: "dialog-cancel"
+                onTriggered: stopsLoader.active  = true
+            },
+            Kirigami.Action {
+                text: "Locations"
+                iconName: "bookmarks"
+                onTriggered: locationsLoader.active = true
+            },
+            Kirigami.Action {
+                text: "Alarms"
+                iconName: "document-edit"
+                enabled: false
+            },
+            Kirigami.Action {
+                text: "Service Providers"
+                iconName: "folder"
+                onTriggered: serviceprovidersLoader.active = true
+            }
+        ]
     }
 
     Loader {
-        id: serviceproviderCheckLoader
+        id: stopsLoader
         anchors.fill: parent
-        source: "CheckServiceproviders.qml"
+        source: "Stops.qml"
         active: false
     }
 
     Loader {
-        id: timetableLoader
+        id: locationsLoader
         anchors.fill: parent
-        source: "Timetable.qml"
+        source: "Locations.qml"
+        active: false
+    }
+
+    Loader {
+        id: serviceProvidersLoader
+        anchors.fill: parent
+        source: "Serivecproviders.qml"
         active: false
     }
 }

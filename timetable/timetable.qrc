@@ -1,8 +1,9 @@
 <RCC>
     <qresource>
         <file alias="main.qml">qml/main.qml</file>
-        <file alias="Timetable.qml">qml/Timetable.qml</file>
-        <file alias="TimetableDelegate.qml">qml/TimetableDelegate.qml</file>
+        <file alias="Stops.qml">qml/Stops.qml</file>
+        <file alias="Locations.qml">qml/Locations.qml</file>
+        <file alias="Serviceproviders.qml">qml/Serviceproviders.qml</file>
         <file alias="GtfsService.qml">qml/GtfsService.qml</file>
         <file alias="GtfsServiceDelegate.qml">qml/GtfsServiceDelegate.qml</file>
         <file alias="CheckServiceproviders.qml">qml/CheckServiceproviders.qml</file>
