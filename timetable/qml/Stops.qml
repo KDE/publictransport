@@ -46,17 +46,8 @@ Kirigami.ScrollablePage {
         }
     })
 
-    PlasmaCore.DataSource {
-        id: timetableSource
-        interval: 6000
-        engine: "publictransport"
-        connectedSources: ["Departures no_ruter | stop=Oslo Bussterminal"]
-    }
-
-    PlasmaCore.DataModel {
-        id: timetableData
-        dataSource: timetableSource
-        keyRoleFilter: "departures"
+    background: Rectangle {
+        color: Kirigami.Theme.viewBackgroundColor
     }
 
     Controls.Button {
@@ -75,6 +66,19 @@ Kirigami.ScrollablePage {
                     return false
             }
         }
+    }
+
+    PlasmaCore.DataSource {
+        id: timetableSource
+        interval: 6000
+        engine: "publictransport"
+        connectedSources: ["Departures no_ruter | stop=Oslo Bussterminal"]
+    }
+
+    PlasmaCore.DataModel {
+        id: timetableData
+        dataSource: timetableSource
+        keyRoleFilter: "departures"
     }
 
     ListView {
