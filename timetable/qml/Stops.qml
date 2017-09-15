@@ -17,6 +17,7 @@
 
 
 import QtQuick 2.1
+import QtQuick.Layouts 1.1 as Layouts
 import QtQuick.Controls 2.2 as Controls
 
 import org.kde.kirigami 2.0 as Kirigami
@@ -25,24 +26,20 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 Kirigami.ScrollablePage {
     id: stopsPage
 
-    /*
-     * Return the ETA of arrival/departure for a given transport line
-     */
-    property var eta: ( function etaFromDateTime(stopDateTime) {
+    property string sourceStr: sourceSwitcher.currentText + defaultProviderId() +
+                                     "|stop=" + stopSwitcher.currentText
+
+    property var stopEta: (function etaFromDateTime(stopDateTime) {
         var currentDate = new Date()
+        var etaHrsString = Math.abs(stopDateTime.getHours() - currentDate.getHours())
+        var etaMinString = Math.abs(stopDateTime.getMinutes() - currentDate.getMinutes())
 
         if (currentDate.getHours() == stopDateTime.getHours()) {
-            if (Math.abs(currentDate.getMinutes() - stopDateTime.getMinutes()) <= 1) {
-                return stopDateTime.getMinutes() - currentDate.getMinutes() + " min"
-            } else {
-                return stopDateTime.getMinutes() - currentDate.getMinutes() + " mins"
-            }
+            etaMinString <= 1 ? etaMinString += " min" : etaMinString += " mins"
+            return etaMinString
         } else {
-            if (Math.abs(currentDate.getHours() - stopDateTime.getHours()) <= 1) {
-                return stopDateTime.getHours() - currentDate.getHours() + " hour"
-            } else {
-                return stopDateTime.getHours() - currentDate.getHours()  + " hours"
-            }
+            etaHrsString <= 1 ? etaHrsString += " hour" : etaHrsString += " hours"
+            return etaHrsString
         }
     })
 
@@ -72,46 +69,59 @@ Kirigami.ScrollablePage {
         id: timetableSource
         interval: 6000
         engine: "publictransport"
-        connectedSources: ["Departures no_ruter | stop=Oslo Bussterminal"]
+        connectedSources: [sourceStr]
     }
 
     PlasmaCore.DataModel {
         id: timetableData
         dataSource: timetableSource
-        keyRoleFilter: "departures"
+        keyRoleFilter: sourceSwitcher.currentIndex ? "departures" : "arrivals"
+    }
+
+    header: Controls.ToolBar {
+        Layouts.RowLayout {
+            spacing: Kirigami.Units.smallSpacing
+
+            Controls.ComboBox {
+                id: providerSwitcher
+                model: serviceproviderModel
+                textRole: "id"
+            }
+
+            // TODO: Read stop names from the dataengine
+            //       Might require re-introducing the stop completion module
+            Controls.ComboBox {
+                id: stopSwitcher
+                model: ["Villingstadveien", "Oslo Bussterminal", "Brattilia", "Sandli", "Listad"]
+            }
+
+            Controls.ComboBox {
+                id: sourceSwitcher
+                model: ["Arrivals", "Departures" ]
+            }
+        }
     }
 
     ListView {
         id: stopsList
         anchors.fill: parent
         model: timetableData
-        delegate: stopsDelegate
-    }
-
-    Component {
-        id: stopsDelegate
-
-        Kirigami.BasicListItem {
-            id: stopItem
-
+        delegate: Kirigami.BasicListItem {
             Kirigami.Label {
-                id: transportLineLabel
                 anchors.left: parent.left
-                anchors.leftMargin: 5
+                anchors.leftMargin: Kirigami.Units.smallSpacing
                 text: model.TransportLine
             }
 
             Kirigami.Label {
-                id: targetStopLabel
                 anchors.centerIn: parent
                 text: model.Target
             }
 
             Kirigami.Label {
-                id: dateTimeLabel
                 anchors.right: parent.right
-                anchors.rightMargin: 5
-                text: eta(model.DepartureDateTime)
+                anchors.rightMargin: Kirigami.Units.smallSpacing
+                text: stopEta(model.DepartureDateTime)
             }
         }
     }

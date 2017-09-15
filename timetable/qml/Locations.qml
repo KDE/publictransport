@@ -17,7 +17,6 @@
 
 
 import QtQuick 2.1
-import QtQuick.Layouts 1.1 as Layouts
 import QtQuick.Controls 2.2 as Controls
 
 import org.kde.kirigami 2.0 as Kirigami
