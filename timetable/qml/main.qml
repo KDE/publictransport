@@ -25,11 +25,11 @@ import org.kde.plasma.core 2.0 as PlasmaCore
 Kirigami.ApplicationWindow {
     id: root
 
-    property var defaultProviderId: (function getDefaultServiceProviderId() {
+    function defaultProviderId() {
         var data = mainDataSource.data["ServiceProviders"]
         var serviceproviders = Object.keys(data)
         return serviceproviders[0]
-    })
+    }
 
     PlasmaCore.DataSource {
         id: mainDataSource
@@ -40,6 +40,15 @@ Kirigami.ApplicationWindow {
         // At this point we don't know if service providers exist locally
         // Hence it's not possible to form and connect to a arrival/departure source
         connectedSources: ["ServiceProviders"]
+    }
+
+    // TODO: How do we handle multiple service providers here ?
+    PlasmaCore.SortFilterModel {
+        id: serviceproviderModel
+        sourceModel: PlasmaCore.DataModel {
+            dataSource: mainDataSource
+            keyRoleFilter: defaultProviderId()
+        }
     }
 
     header: Kirigami.ApplicationHeader {}
