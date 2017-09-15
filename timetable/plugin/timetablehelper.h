@@ -1,11 +1,11 @@
 #ifndef TIMETABLEHELPER_H
 #define TIMETABLEHELPER_H
 
-#include <QObject>
-#include <QWidget>
-
 #include <KDialog>
-#include <Plasma/Applet>
+
+class QWidget;
+
+namespace Timetable {
 
 /**
  * Class that aims to display the GHNS dialog
@@ -19,7 +19,14 @@ public:
     TimetableHelper(QWidget *parent=0);
     ~TimetableHelper();
 
-    Q_INVOKABLE void showDialog();
+    Q_INVOKABLE void downloadProviders();
+    Q_INVOKABLE QString countryName(QString ) const;
+
+private:
+    KDialog *m_download;
 };
+
+}
+
 
 #endif // TIMETABLEHELPER_H
